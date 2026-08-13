@@ -1,0 +1,672 @@
+﻿@{
+    ViewBag.Title = "Auditor Compliance Report";
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+<script src="~/scripts/myjslib/AuditorComplianceController.js"></script>
+<style type="text/css">
+	  body, div, table, thead, tbody, tfoot, tr, th, td, p {
+        font-family: "Arial";
+        font-size: x-small;
+    }
+
+    a.comment-indicator:hover + comment {
+        background: #ffd;
+        position: absolute;
+        display: block;
+        border: 1px solid black;
+        padding: 0.5em;
+    }
+
+    a.comment-indicator {
+        background: red;
+        display: inline-block;
+        border: 1px solid black;
+        width: 0.5em;
+        height: 0.5em;
+    }
+
+    comment {
+        display: none;
+    }
+    /* body, div, table, thead, tbody, tfoot, tr, th, td, p {
+            font-family: "Arial";
+            font-size: x-small;
+            border: 1px solid;
+        } */
+    /* reset */
+
+    * {
+        border: 0;
+        box-sizing: content-box;
+        color: black;
+        font-family: inherit;
+        font-size: inherit;
+        font-style: inherit;
+        font-weight: inherit;
+        line-height: inherit;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        text-decoration: none;
+        vertical-align: top;
+    }
+
+        /* content editable */
+
+        *[contenteditable] {
+            border-radius: 0.25em;
+            min-width: 1em;
+            outline: 0;
+        }
+
+        *[contenteditable] {
+            cursor: pointer;
+        }
+
+            *[contenteditable]:hover, *[contenteditable]:focus, td:hover *[contenteditable], td:focus *[contenteditable], img.hover {
+                background: #DEF;
+                box-shadow: 0 0 1em 0.5em #DEF;
+            }
+
+    span[contenteditable] {
+        display: inline-block;
+    }
+
+    /* heading */
+
+    h1 {
+        font: bold 100% sans-serif;
+        letter-spacing: 0.5em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    /* table */
+
+    table {
+        font-size: 75%;
+        table-layout: auto;
+        width: 100%;
+    }
+
+    table {
+        border-collapse: separate;
+        border-spacing: 2px;
+    }
+
+    th, td {
+        border-width: 1px;
+        padding: 0.5em;
+        position: relative;
+        text-align: left;
+    }
+
+    th, td {
+        border-radius: 0.25em;
+        border-style: solid;
+    }
+
+    th {
+       background: #f1f1f1;
+    border-color: #BBB;
+    font-size: 12px;
+    font-weight: bold;
+    }
+
+    td {
+        border-color: #DDD;
+        height: auto;
+    }
+
+    /* page */
+
+    html {
+        font: 16px/1 'Open Sans', sans-serif;
+        overflow: auto;
+        padding: 0.5in;
+    }
+
+   html {
+    background: #fff;
+    cursor: default;
+    margin: 0 !important;
+    padding: 0;
+}
+
+    body {
+        box-sizing: border-box;
+        margin: 0 auto;
+        padding: 0.5in;
+        width: 100%;
+    }
+
+    body {
+        background: #FFF;
+        border-radius: 1px;
+        box-shadow: 0 0 1in -0.25in rgba(0, 0, 0, 0.5);
+    }
+
+    /* header */
+
+    header {
+        margin: 0 0 3em;
+    }
+
+        header:after {
+            clear: both;
+            content: "";
+            display: table;
+        }
+
+        header h1 {
+            background: #000;
+            border-radius: 0.25em;
+            color: #FFF;
+            margin: 0 0 1em;
+            padding: 0.5em 0;
+        }
+
+        header address {
+            float: left;
+            font-size: 75%;
+            font-style: normal;
+            line-height: 1.25;
+            margin: 0 1em 1em 0;
+        }
+
+            header address p {
+                margin: 0 0 0.25em;
+            }
+
+        header span, header img {
+            display: block;
+            float: right;
+        }
+
+        header span {
+            margin: 0 0 1em 1em;
+            max-height: 25%;
+            max-width: 60%;
+            position: relative;
+        }
+
+        header img {
+            max-height: 100%;
+            max-width: 100%;
+        }
+
+        header input {
+            cursor: pointer;
+            -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+            height: 100%;
+            left: 0;
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            width: 100%;
+        }
+
+    /* article */
+
+    article, article address, table.meta, table.inventory {
+        margin: 0 0 3em;
+    }
+
+        article:after {
+            clear: both;
+            content: "";
+            display: table;
+        }
+
+        article h1 {
+            clip: rect(0 0 0 0);
+            position: absolute;
+        }
+
+        article address {
+            float: left;
+            font-size: 125%;
+            font-weight: bold;
+        }
+
+    /* table meta & balance */
+
+    table.meta, table.balance {
+        float: right;
+        width: 36%;
+    }
+
+        table.meta:after, table.balance:after {
+            clear: both;
+            content: "";
+            display: table;
+        }
+
+        /* table meta */
+
+        table.meta th {
+            width: 40%;
+        }
+
+        table.meta td {
+            width: 60%;
+        }
+
+    /* table items */
+
+    table.inventory {
+        clear: both;
+        width: 100%;
+    }
+
+        table.inventory th {
+            font-weight: bold;
+            text-align: center;
+        }
+
+        table.inventory td:nth-child(1) {
+            width: 26%;
+        }
+
+        table.inventory td:nth-child(2) {
+            width: 38%;
+        }
+
+        table.inventory td:nth-child(3) {
+            text-align: right;
+            width: 12%;
+        }
+
+        table.inventory td:nth-child(4) {
+            text-align: right;
+            width: 12%;
+        }
+
+        table.inventory td:nth-child(5) {
+            text-align: right;
+            width: 12%;
+        }
+
+    /* table balance */
+
+    table.balance th, table.balance td {
+        width: 50%;
+    }
+
+    table.balance td {
+        text-align: right;
+    }
+
+    /* aside */
+
+    aside h1 {
+        border: none;
+        border-width: 0 0 1px;
+        margin: 0 0 1em;
+    }
+
+    aside h1 {
+        border-color: #999;
+        border-bottom-style: solid;
+    }
+
+    /* javascript */
+
+    .add, .cut {
+        border-width: 1px;
+        display: block;
+        font-size: .8rem;
+        padding: 0.25em 0.5em;
+        float: left;
+        text-align: center;
+        width: 0.6em;
+    }
+
+    .add, .cut {
+        background: #9AF;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        background-image: -moz-linear-gradient(#00ADEE 5%, #0078A5 100%);
+        background-image: -webkit-linear-gradient(#00ADEE 5%, #0078A5 100%);
+        border-radius: 0.5em;
+        border-color: #0076A3;
+        color: #FFF;
+        cursor: pointer;
+        font-weight: bold;
+        text-shadow: 0 -1px 2px rgba(0,0,0,0.333);
+    }
+
+    .add {
+        margin: -2.5em 0 0;
+    }
+
+        .add:hover {
+            background: #00ADEE;
+        }
+
+    .cut {
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        left: -1.5em;
+    }
+
+    .cut {
+        -webkit-transition: opacity 100ms ease-in;
+    }
+
+    tr:hover .cut {
+        opacity: 1;
+    } 
+</style><div style="text-align: right;">
+    <ol class="breadcrumb">
+        <li><span>Communication</span></li>
+        <li><span>Transcation</span></li>
+        <li class="active"><span>Compliance Master</span></li>
+    </ol>
+</div>
+<div id="printDiv" ng-cloak>
+
+    <table style="border:2px solid #ccc;margin-bottom:10px; padding:10px; width:100%" ng-init="LoadData()">
+        <tr>
+            <td style="color: #fff !important; border: none; font-size: 18px; text-align: center;   background-image: linear-gradient(#dd3623,#e77f27);
+padding: 0.5em; " colspan=9 height="27" >COMPLIANCE AUDIT REPORT [{{DocumentStatus}}  ]</td>
+        </tr>
+    </table>
+    
+    <table ng-init="LoadData()" style="border:2px solid #ccc;margin-bottom:10px; padding:10px; width:100%">
+        <tr>
+            <th colspan="2" style="background: #e4e4e4;border-color: #BBB; text-align:center;">Client</th>
+            <th colspan="2" style="background: #e4e4e4;border-color: #BBB; text-align:center;">Vendor</th>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Client Name
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{ClientName}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Authorized Person Name
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+
+                {{PartyName}}
+
+            </td>
+           
+            
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                State
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{StateName}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                UserName
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{VenderSite}}
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Issue Date
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{IssueDate}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Vendor Site
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+             --   @*{{SiteName}}*@
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Site Name
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{SiteName}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Contact
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{ContactNo}}
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Location
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{Location}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Email ID
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{Email}}
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Upload Document Count :  {{TUDC}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Total Document Count :  {{TDC}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Vendor Company Name
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+               {{CompanyName}}
+            </td>
+           
+        </tr>
+        <tr ng-show="IsUploadVENQ  !='0' ">
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                &nbsp;
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                &nbsp;
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Vendor Query
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;" ng-show="OpenFlag=='1'">
+            
+                <div><a target="_blank"  href="{{VendorQuery}}" download>View/Download Vendor Query</a></div>
+                <p  ng-show="IsUploadVENQ =='3'" style="color:red">{{RejectOn}}</p>
+                <p  ng-show="IsUploadVENQ =='2'" style="color:darkgreen">{{ApproveOn}}</p>
+                <table  style="border-style: solid;border-width: 1px; width: 100%;"   ng-hide="IsUploadVENQ  =='2'">
+                    <tr> 
+                        <td  colspan="2"><textarea style="border-style: solid;width:100%;height: 30px;" placeholder="Any Remark" ng-model="Remark" ></textarea></td> 
+                        <td><input type="button" style="background:green;color:whitesmoke;cursor:pointer; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);width: 40%;height: 25px;border:2px solid" value="Approve" ng-click="ApproveAuditor()" />
+                        &nbsp<input type="button" style="background:red;color:whitesmoke;cursor:pointer; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);width: 40%;height: 25px;border:2px solid" value="Reject" ng-click="RejectAuditor()" /></td>
+                        </tr>
+                </table> 
+            </td>
+            <td  ng-show="OpenFlag =='0'">
+                <p  style="color:red">Not Updated yet</p>
+            </td>
+
+        </tr>
+        <tr>
+            <th colspan="2" style="background: #e4e4e4;border-color: #BBB; text-align:center;">
+                Invoice Details
+            </th>
+            <th colspan="2" style="background: #e4e4e4;border-color: #BBB; text-align:center;">
+                Audit Details
+            </th>
+        </tr>
+
+  
+
+        <tr>
+          
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{TypeInvoice}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{VendorInvNum}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Name of Auditor
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{Auditer}}
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{InvoiceDate}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{InvDate}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Audit Score
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Score Obtained :  &nbsp; &nbsp;   {{TotalComplianceScoreAchieved}}
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Date of Document Upload
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{DocDate}}
+            </td>
+
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+             Compliance 
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                &nbsp; &nbsp; {{ScorePer}}%
+            </td>
+        </tr>
+        <tr>
+            
+            <td ng-hide="TypeInvoice=='Unique No.'" style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+             Invoice Amount
+            </td>
+            <td ng-hide="TypeInvoice=='Unique No.'" style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{grossAmount}}
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Date of Audit Report
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{AuditDate}}
+            </td>
+        </tr>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Audit Month
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                {{MONTH}}
+            </td>
+            @*<td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+            Nature of Work
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+            --
+            </td>*@
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Auditor Query
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+             
+                <div ng-show="FinalSave !='2'">
+                    <input type="file" ng-hide="IsUploadVENQ =='1'" id="fuCandidatePhoto" onchange="angular.element(this).scope().show(this, '#AlbumIcon')">
+                </div>
+                       <div><a target="_blank" ng-show="IsUploadAQ !='-1'" href="{{AuditorQuery}}" download>View/Download Auditor Query</a></div>
+           
+            </td>
+        </tr>
+
+    </table>
+    <br />
+    <table>
+        <tr>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">SNO</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Act</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Forms/Description (Applicability and Form No. shall be checked in the Help menu)</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Nature of Compliance</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Compliance Score</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Compliance Score achieved</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Compliance Status</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Auditor Remarks</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">Vendor Remarks</td>
+        </tr>
+        <tr ng-repeat="x in DocList">
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                <input type="hidden" ng-model="AuditorList[$index].DocId" ng-init="AuditorList[$index].DocId=x.Id" />
+                <input type="hidden" ng-model="AuditorList[$index].SrNo" ng-init="AuditorList[$index].SrNo=x.Id" value="{{x.Id}}" />
+                {{x.SRNO}}
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">{{x.Act}}</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">{{x.Form}}</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">{{x.Nature}} </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;"><input readonly  type="text" class="form-control-capitalize"  ng-model="AuditorList[$index].ComplianceScore" ng-disabled="true" ng-init="AuditorList[$index].ComplianceScore=x.ComplianceScore"/> </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;"><input readonly type="text" ng-disabled="true" class="form-control-capitalize"  ng-keyup="SumTableList()" ng-model="AuditorList[$index].ComplianceScoreAchieved" ng-init="AuditorList[$index].ComplianceScoreAchieved=x.ComplianceScoreAchieved"/></td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                <select class="validate" ng-disabled="FinalSave =='2'" ng-model="AuditorList[$index].CompalianceStatus" ng-init="AuditorList[$index].CompalianceStatus=x.CompalianceStatus" ng-change="SetAchievedScore($index);SumTableList()">
+                    <option value="">Select</option>
+                    <option value="100">Complied</option> 
+                    <option value="50">Partially Complied</option>
+                    <option value="0">Non-Complied</option>
+                    <option value="100">Not Applicable</option>
+                </select>
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+            
+                <textarea type="text" class="form-control-capitalize" ng-disabled="FinalSave =='2'" ng-keyup="SumTableList()"  ng-model="AuditorList[$index].Remark" ng-init="AuditorList[$index].Remark=x.Remark" onkeyup="this.value = this.value.replace(/[^a-zA-Z0-9'! ?.-]+/g, '')" ></textarea>
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+             {{x.VendorRemark}} </td>
+        </tr>
+        <tr>
+            <td colspan="3" style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+               
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">
+                Total :
+            </td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">{{TotalComplianceScore}}</td>
+            <td style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;">{{TotalComplianceScoreAchieved}}</td>
+           <td colspan="3" style="border-color: #DDD;height: auto;border: 1px solid #ddd;border-radius: 2px;padding: 5px 9px;"></td>
+        </tr>
+
+    </table>
+    
+</div>
+<table><tr><td>
+<button id="btnSave" type="button" value="Save" ng-disabled="FinalSave =='1'||FinalSave =='2'" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="saveButton"
+ng-model="Save" ng-init="Save='Save'" ng-click="SaveRecord()">
+<span class="triangle-box" title="Save"></span>
+<span id="btnSavetxt" ng-bind="Save">Save </span>
+</button>
+</td>
+<td>
+<button id="btnSave" type="button" value="Draft" ng-disabled="FinalSave =='-1'||FinalSave =='1'||FinalSave =='2'" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="DraftButton"
+ng-model="Draft" ng-init="Draft='Draft'" ng-click="DraftRecord()">
+<span class="triangle-box" title="Draft"></span>
+<span id="btnDrafttxt" ng-bind="Draft">Draft </span>
+</button>
+</td>
+<td>
+<button id="btnFinalSubmittion" ng-disabled="FinalSave =='-1'||FinalSave =='0'||FinalSave =='2'" type="button" value="FinalSubmittion" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="FinalSubmittionButton"
+ng-model="FinalSubmittion" ng-init="FinalSubmittion='Final Submittion '" ng-click="SaveAllRecord()">
+<span class="triangle-box" title="FinalSubmittion"></span>
+<span id="btnFinalSubmittiontxt" ng-bind="FinalSubmittion">Final Submittion </span>
+</button></td></tr></table>
+
+
+ 

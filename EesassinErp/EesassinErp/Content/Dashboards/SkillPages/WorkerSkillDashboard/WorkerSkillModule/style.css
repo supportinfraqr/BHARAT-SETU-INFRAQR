@@ -1,0 +1,685 @@
+﻿.workerSkillModule {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+
+    /* =====================================================
+   LAYOUT
+===================================================== */
+
+    .workerSkillModule .workerSkillModuleLayout {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) 420px;
+        gap: 28px;
+        align-items: start;
+    }
+
+
+    /* =====================================================
+   LEFT
+===================================================== */
+
+    .workerSkillModule .workerSkillLeft {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+
+    /* =====================================================
+   TOP BAR
+===================================================== */
+
+    .workerSkillModule .workerSkillTopBar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .workerSkillModule .workerSkillModuleName {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+    .workerSkillModule .workerSkillBadge {
+        display: inline-flex;
+        align-items: center;
+        background: #138A43;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 50px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+
+    /* =====================================================
+   VIDEO
+===================================================== */
+
+    .workerSkillModule .workerSkillVideoCard {
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 12px 35px rgba(0,0,0,.08);
+    }
+
+    .workerSkillModule .workerSkillVideo {
+        width: 100%;
+        display: block;
+        aspect-ratio: 16/9;
+        object-fit: cover;
+        background: #000;
+    }
+
+
+    /* =====================================================
+   INFO CARD
+===================================================== */
+
+    .workerSkillModule .workerSkillInfoCard {
+        background: #fff;
+        border-radius: 18px;
+        padding: 28px;
+        border: 1px solid #ececec;
+        box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    }
+
+        .workerSkillModule .workerSkillInfoCard h2 {
+            font-size: 20px;
+            margin-bottom: 18px;
+            font-weight: 500;
+            color: #222;
+        }
+
+        .workerSkillModule .workerSkillInfoCard p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--muted);
+            margin-bottom: 28px;
+        }
+
+
+    /* =====================================================
+   META
+===================================================== */
+
+    .workerSkillModule .workerSkillMeta {
+        display: flex;
+        gap: 34px;
+        flex-wrap: wrap;
+        padding-top: 22px;
+        border-top: 1px solid #ececec;
+    }
+
+    .workerSkillModule .workerSkillMetaItem {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #444;
+        font-size: 15px;
+    }
+
+        .workerSkillModule .workerSkillMetaItem i {
+            font-size: 22px;
+            color: var(--primary);
+        }
+
+
+    /* =====================================================
+   FOOTER
+===================================================== */
+
+    .workerSkillModule .workerSkillFooter {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+        margin-top: 6px;
+    }
+
+    .workerSkillModule .workerSkillNextArea {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+        .workerSkillModule .workerSkillNextArea small {
+            color: #d11a2a;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+
+    /* =====================================================
+   BUTTONS
+===================================================== */
+
+    .workerSkillModule .workerSkillPrevBtn,
+    .workerSkillModule .workerSkillNextBtn {
+        /*height: 40px;*/
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 16px;
+        transition: .3s;
+    }
+
+    .workerSkillModule .workerSkillPrevBtn {
+        border: 1px solid #d9d9d9;
+        background: #fff;
+        color: #333;
+    }
+
+        .workerSkillModule .workerSkillPrevBtn:hover {
+            background: #f7f7f7;
+        }
+
+    .workerSkillModule .workerSkillNextBtn {
+        background: var(--primary);
+        color: #fff;
+    }
+
+        .workerSkillModule .workerSkillNextBtn:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+
+
+    /* =====================================================
+   SIDEBAR
+===================================================== */
+
+    .workerSkillModule .workerSkillSidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        position: sticky;
+        top: 20px;
+    }
+
+
+    /* =====================================================
+   CARD
+===================================================== */
+
+    .workerSkillModule .workerSkillCard {
+        background: var(--card-bg);
+        border-radius: 18px;
+        border: 1px solid #ececec;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    }
+
+
+    /* =====================================================
+   PROGRESS
+===================================================== */
+
+    .workerSkillModule .workerSkillProgressHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px;
+    }
+
+        .workerSkillModule .workerSkillProgressHeader h5 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .workerSkillModule .workerSkillProgressHeader strong {
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+    .workerSkillModule .workerSkillProgressBar {
+        margin: 0 24px;
+        height: 9px;
+        border-radius: 50px;
+    }
+
+    .workerSkillModule .workerSkillCard p {
+        padding: 18px;
+        font-size: 14px;
+        margin: 0;
+        color: var(--muted);
+    }
+
+
+    /* =====================================================
+   COURSE CONTENT
+===================================================== */
+
+    .workerSkillModule .workerSkillContentTitle {
+        padding: 18px;
+        margin: 0;
+        font-size: 18px;
+        font-weight: 500;
+        border-bottom: 1px solid #ececec;
+    }
+
+
+    /* =====================================================
+   LESSON
+===================================================== */
+
+    .workerSkillModule .workerLesson {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: .25s;
+        cursor: pointer;
+    }
+
+        .workerSkillModule .workerLesson:last-child {
+            border-bottom: none;
+        }
+
+        .workerSkillModule .workerLesson:hover {
+            background: #fafafa;
+        }
+
+    .workerSkillModule .workerLessonIcon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #eef4ff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+        .workerSkillModule .workerLessonIcon i {
+            font-size: 22px;
+        }
+
+
+    /* =====================================================
+   LESSON STATES
+===================================================== */
+
+    .workerSkillModule .lessonCompleted .workerLessonIcon {
+        background: #E8F7ED;
+    }
+
+    .workerSkillModule .lessonCompleted i {
+        color: #159947;
+    }
+
+    .workerSkillModule .lessonCompleted h6 {
+        text-decoration: line-through;
+    }
+
+    .workerSkillModule .lessonCompleted span {
+        color: #6f6f6f;
+    }
+
+    .workerSkillModule .lessonActive {
+        background: rgba(2,43,94,.06);
+        border-left: 5px solid var(--primary);
+    }
+
+        .workerSkillModule .lessonActive .workerLessonIcon {
+            background: var(--primary);
+        }
+
+        .workerSkillModule .lessonActive i {
+            color: white;
+        }
+
+        .workerSkillModule .lessonActive h6 {
+            color: var(--primary);
+        }
+
+        .workerSkillModule .lessonActive span {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+    .workerSkillModule .lessonLocked {
+        opacity: .55;
+    }
+
+        .workerSkillModule .lessonLocked .workerLessonIcon {
+            background: #ededed;
+        }
+
+        .workerSkillModule .lessonLocked i {
+            color: #777;
+        }
+
+
+    /* =====================================================
+   LESSON TEXT
+===================================================== */
+
+    .workerSkillModule .workerLessonInfo h6 {
+        margin: 0 0 2px;
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .workerSkillModule .workerLessonInfo span {
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+
+    /* =====================================================
+   SUPPORT
+===================================================== */
+
+    .workerSkillModule .workerSkillSupport {
+        background: var(--primary);
+        color: white;
+        border-radius: 18px;
+        padding: 18px;
+    }
+
+        .workerSkillModule .workerSkillSupport h5 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .workerSkillModule .workerSkillSupport p {
+            color: rgba(255,255,255,.85);
+            margin-bottom: 20px;
+        }
+
+    .workerSkillModule .workerSkillSupportBtn {
+        width: 100%;
+        height: 40px;
+        border-radius: 12px;
+        background: white;
+        color: var(--primary);
+        font-weight: 500;
+        transition: .3s;
+    }
+
+        .workerSkillModule .workerSkillSupportBtn:hover {
+            background: #f4f4f4;
+        }
+
+
+/* =====================================================
+   RESPONSIVE - LARGE DESKTOP
+===================================================== */
+
+@media (max-width:1400px) {
+
+    .workerSkillModule .workerSkillModuleLayout {
+        grid-template-columns: minmax(0,2fr) 380px;
+    }
+}
+
+
+
+/* =====================================================
+   RESPONSIVE - LAPTOP
+===================================================== */
+
+@media (max-width:1200px) {
+
+    .workerSkillModule .workerSkillModuleLayout {
+        grid-template-columns: 1fr 340px;
+    }
+
+    .workerSkillModule .workerSkillInfoCard h2 {
+        font-size: 30px;
+    }
+}
+
+
+
+/* =====================================================
+   RESPONSIVE - TABLET
+===================================================== */
+
+@media (max-width:992px) {
+
+    .workerSkillModule {
+        padding: 24px !important;
+    }
+
+        .workerSkillModule .workerSkillModuleLayout {
+            grid-template-columns: 1fr;
+            gap: 28px;
+        }
+
+        .workerSkillModule .workerSkillSidebar {
+            position: relative;
+            top: auto;
+        }
+
+        .workerSkillModule .workerSkillFooter {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .workerSkillModule .workerSkillNextArea {
+            align-items: stretch;
+        }
+
+        .workerSkillModule .workerSkillPrevBtn,
+        .workerSkillModule .workerSkillNextBtn {
+            width: 100%;
+        }
+}
+
+
+
+/* =====================================================
+   RESPONSIVE - MOBILE
+===================================================== */
+
+@media (max-width:768px) {
+
+    .workerSkillModule {
+        padding: 18px !important;
+    }
+
+        .workerSkillModule .workerSkillTopBar {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .workerSkillModule .workerSkillModuleName {
+            font-size: 21px;
+        }
+
+        .workerSkillModule .workerSkillBadge {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .workerSkillModule .workerSkillInfoCard {
+            padding: 22px;
+        }
+
+            .workerSkillModule .workerSkillInfoCard h2 {
+                font-size: 26px;
+            }
+
+            .workerSkillModule .workerSkillInfoCard p {
+                font-size: 15px;
+                line-height: 1.75;
+            }
+
+        .workerSkillModule .workerSkillMeta {
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .workerSkillModule .workerSkillContentTitle {
+            font-size: 22px;
+        }
+}
+
+
+
+/* =====================================================
+   RESPONSIVE - SMALL MOBILE
+===================================================== */
+
+@media (max-width:576px) {
+
+    .workerSkillModule {
+        padding: 14px !important;
+    }
+
+        .workerSkillModule .workerSkillVideoCard {
+            border-radius: 14px;
+        }
+
+        .workerSkillModule .workerSkillInfoCard {
+            padding: 18px;
+        }
+
+            .workerSkillModule .workerSkillInfoCard h2 {
+                font-size: 22px;
+            }
+
+        .workerSkillModule .workerSkillProgressHeader {
+            padding: 18px 18px 12px;
+        }
+
+        .workerSkillModule .workerSkillProgressBar {
+            margin: 0 18px;
+        }
+
+        .workerSkillModule .workerSkillCard p {
+            padding: 12px 18px 18px;
+        }
+
+        .workerSkillModule .workerSkillContentTitle {
+            padding: 18px;
+        }
+
+        .workerSkillModule .workerLesson {
+            padding: 18px;
+            gap: 14px;
+        }
+
+        .workerSkillModule .workerLessonIcon {
+            width: 36px;
+            height: 36px;
+        }
+
+            .workerSkillModule .workerLessonIcon i {
+                font-size: 18px;
+            }
+
+        .workerSkillModule .workerLessonInfo h6 {
+            font-size: 15px;
+        }
+
+        .workerSkillModule .workerLessonInfo span {
+            font-size: 13px;
+        }
+
+        .workerSkillModule .workerSkillSupport {
+            padding: 22px;
+        }
+
+            .workerSkillModule .workerSkillSupport h5 {
+                font-size: 20px;
+            }
+}
+
+
+
+/* =====================================================
+   VIDEO PLAYER
+===================================================== */
+
+.workerSkillModule .workerSkillVideo {
+    border-radius: 18px;
+    outline: none;
+}
+
+.workerSkillModule video::-webkit-media-controls-panel {
+    background: #f8f8f8;
+}
+
+
+
+/* =====================================================
+   TRANSITIONS
+===================================================== */
+
+.workerSkillModule *,
+.workerSkillModule *::before,
+.workerSkillModule *::after {
+    transition: all .25s ease;
+}
+
+.workerSkillModule img,
+.workerSkillModule video {
+    display: block;
+    max-width: 100%;
+}
+
+
+
+/* =====================================================
+   SCROLLBAR
+===================================================== */
+
+.workerSkillModule ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.workerSkillModule ::-webkit-scrollbar-thumb {
+    background: #c9c9c9;
+    border-radius: 30px;
+}
+
+    .workerSkillModule ::-webkit-scrollbar-thumb:hover {
+        background: #aaaaaa;
+    }
+
+
+
+/* =====================================================
+   BUTTON HOVER
+===================================================== */
+
+.workerSkillModule .workerSkillPrevBtn:hover,
+.workerSkillModule .workerSkillNextBtn:hover,
+.workerSkillModule .workerSkillSupportBtn:hover {
+    transform: translateY(-2px);
+}
+
+
+
+/* =====================================================
+   FOCUS
+===================================================== */
+
+.workerSkillModule button:focus,
+.workerSkillModule video:focus {
+    outline: none;
+    box-shadow: none;
+}

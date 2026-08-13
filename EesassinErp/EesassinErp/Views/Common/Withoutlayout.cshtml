@@ -1,0 +1,265 @@
+﻿ 
+<!DOCTYPE html>
+
+<html ng-app="myApp" ng-controller="myController" ng-cloak>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bharatshramsetu</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- AngularJS Core (CDN Recommended) -->
+    @*<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular-route.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular-sanitize.min.js"></script>*@
+
+
+
+    <script src="~/scripts/angular.min.js"></script>
+    <script src="~/scripts/Rootfile/angular-route.min.js"></script>
+    <script src="~/scripts/angular-sanitize.min.js"></script>
+
+
+
+    <script src="~/scripts/myjslib/myJs.js"></script>
+    <!-- Angular Plugins -->
+    <script src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+
+    <!-- TinyMCE -->
+    @*<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.9.5/tinymce.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js"></script>*@
+    <script src="~/scripts/Rootfile/tinymce.js"></script>
+    <script src="~/scripts/Rootfile/tinymce.min.js"></script>
+
+
+    <!-- Other Libraries -->
+    <script src="@Url.Content("~/Scripts/jscolor.js")"></script>
+    <script src="@Url.Content("~/Scripts/moment.js")"></script>
+    @*<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>*@
+    @*<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>*@
+
+
+    <script src="~/scripts/Rootfile/html2pdf.bundle.min.js"></script>
+    <script src="~/Scripts/Rootfile/xlsx.full.min.js"></script>
+    <script src="~/scripts/Rootfile/jspdf.umd.min.js"></script>
+
+    <!-- Your Angular App Files (ALWAYS AFTER Angular & Plugins) -->
+    <script src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
+    <script src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
+    <script src="@Url.Content("~/Scripts/myjslib/controller.js?Ver="+ViewBag.Version+"")"></script>
+    <script src="@Url.Content("~/Scripts/myjslib/ddlBindings.js?Ver="+ViewBag.Version+"")"></script>
+    <script src="@Url.Content("~/Scripts/myjslib/Authorization.js?Ver="+ViewBag.Version+"")"></script>
+
+
+
+
+    @*<script src="~/scripts/RetailJsLib/RController.js"></script>*@
+    <script src="~/scripts/managebyuser.js"></script>
+
+    <!-- CSS Files -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    @*<script src="~/scripts/Rootfile/bootstrap.bundle.min.js"></script>
+        <link href="~/scripts/Rootfile/bootstrap-icons.css" rel="stylesheet" />*@
+
+
+
+    <link rel="stylesheet" href="~/CommonDashboard/Style.css">
+    @*<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">*@
+    <link href="~/scripts/Rootfile/all.min.css" rel="stylesheet" />
+    <link href="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function toggleNotification() {
+            var panel = document.getElementById("notificationPanel");
+
+            if (panel.style.right === "0px") {
+                panel.style.right = "-360px";
+                panel.style.top = "60px";
+            } else {
+                panel.style.right = "0px";
+                panel.style.top = "50px";
+            }
+        }
+
+    </script>
+
+
+    <style>
+        button.swal2-confirm.swal2-styled {
+            background-color: #fd670b !important;
+        }
+
+        .orange-checkbox {
+            accent-color: orange;
+        }
+
+        .btn-primary {
+            --bs-btn-color: #fff;
+            --bs-btn-bg: #e45d27 !important;
+            --bs-btn-border-color: #e45d27 !important;
+            --bs-btn-hover-color: #ff;
+            --bs-btn-hover-bg: #e45d 2 !important;
+            --bs-btn-hover-border-color: #e45d27 !important;
+            --bs-btn-focus-shadow-rgb: 49, 132, 253;
+            --bs-btn-active-color: #fff;
+            --bs-btn-active-bg: #0a58ca;
+            --bs-btn-active-border-color: #0a53be;
+            --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+            --bs-btn-disabled-color: #fff;
+            --bs-btn-disabled-bg: #0d6efd;
+            --bs-btn-disabled-border-color: #0d6efd;
+        }
+
+        .btn-warning {
+            --bs-btn-color: #000;
+            --bs-btn-bg: #e45d27 !important;
+            --bs-btn-border-color: #e45d27 !important;
+            --bs-btn-hover-color: #ff;
+            --bs-btn-hover-bg: #e45d 2 !important;
+            --bs-btn-hover-border-color: #e45d 2 !important;
+            --bs-btn-focus-shadow-rgb: 217, 164, 6;
+            --bs-btn-active-color: #000;
+            --bs-btn-active-bg: #ffcd39;
+            --bs-btn-active-border-color: #ffc720;
+            --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+            --bs-btn-disabled-color: #000;
+            --bs-btn-disabled-bg: #ffc107;
+            --bs-btn-disabled-border-color: #ffc107;
+        }
+
+        .loader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader-message {
+            background: #fff;
+            padding: 20px 40px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+            .loader-message .spinner {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                margin: 0 auto 10px;
+                animation: spin 1s linear infinite;
+            }
+
+        .red-validation {
+            border: none !important;
+            border-bottom: 2px solid #e74c3c !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        /* select2 */
+        .select2-container .select2-selection.red-validation {
+            border: none !important;
+            border-bottom: 2px solid #e74c3c !important;
+            border-radius: 0 !important;
+        }
+    </style>
+
+    <style>
+        #cover-spin {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.7);
+            z-index: 9999;
+            display: none;
+        }
+
+            #cover-spin::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 40px;
+                height: 40px;
+                margin: -20px 0 0 -20px;
+                border: 4px solid #ddd;
+                border-top: 4px solid #F37437;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+    </style>
+
+    <style>
+        .navbar {
+            background: #F4F9FF;
+            color: #022B5E;
+        }
+
+        .dropbtn {
+            border: none;
+            color: #022B5E;
+            background: transparent;
+            border-radius: 999px;
+            padding: 6px 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.3s;
+            border: 1px solid #022B5E;
+        }
+
+            .dropbtn:hover {
+                background: transparent;
+                color: #022B5E;
+                border: 2px solid #022B5E;
+            }
+
+
+        .profile-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid #022B5E;
+            background: transparent;
+            padding: 0;
+        }
+
+        .logo {
+            height: 18px;
+        }
+    </style>
+
+</head>
+<body>
+    <div>
+        @RenderBody()
+    </div>
+    <script src="~/scripts/Rootfile/bootstrap.bundle.min.js"></script>
+    <script src="~/scripts/Rootfile/pdf.min.js"></script>
+    <script src="~/scripts/Rootfile/tesseract.min.js"></script>
+
+    <script src="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.js"></script>
+    <script src="~/CommonDashboard/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Addcompliancefile";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/EnitfyController.js?Ver=@ViewBag.Version"></script>
+
+<div class="pagecontentbody">
+    <button onclick="history.back()" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back
+    </button>
+    <div class="pagebody">
+
+        <div class="col-md-12 pageheader">
+            <div class="card mt-4">
+                <div class="card-body">
+                    <!-- ENTITY DETAILS -->
+
+                    <fieldset class="border p-3 mb-4" ng-init="BindList()">
+                        <legend class="w-auto px-2 fw-bold text-danger">Entity Details</legend>
+                        <div class="row">
+                            <!-- Type of Entity -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Type of Entity<span class="text-danger">*</span></label>
+                                <select class="form-select validate" ng-model="EntityType" ng-change="openListedcompany()">
+                                    <option value="">Select</option>
+                                    <option>Private Limited Company</option>
+                                    <option>Public Limited Company</option>
+                                    @*<option>Listed Public Company</option>
+                                    <option>Unlisted Public Company</option>*@
+                                    <option>One Person Company (OPC)</option>
+                                    <option>Small Company</option>
+                                    <option>Nidhi Company</option>
+                                    <option>Section 8 Company</option>
+                                    <option>Producer Company</option>
+                                    <option>Dormant Company</option>
+                                    <option>Government Company</option>
+                                    <option>Foreign Company (ROC reg.)</option>
+                                    <option>Limited Liability Partnership (LLP)</option>
+                                    <option>Society</option>
+                                    <option>Trust</option>
+                                    <option>Partnership Firm</option>
+                                </select>
+                            </div>
+                            <!-- Listed company  -->
+                            @*<div class="col-md-4 mb-3" ng-show="Iopencompany">
+                                <label class="form-label">Listed Company<span class="text-danger">*</span></label>
+                                <select class="form-select" ng-model="ListedCompany">
+                                    <option value="">Select</option>
+                                    <option value="Listed Public Company">Listed Public Company  </option>
+                                    <option value="Unlisted Public Company">Unlisted Public Company</option>
+                                </select>
+                            </div>*@
+                            <!-- Listed Status -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Listed Status<span class="text-danger">*</span></label>
+                                <select class="form-select validate" ng-model="ListedStatus">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+
+                            <!-- Stock Exchange Name -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Stock Exchange Name</label>
+                                <select class="form-select" ng-model="StockExchange">
+                                    <option value="">Select</option>
+                                    <option>BSE (Bombay Stock Exchange Limited)</option>
+                                    <option>NSE (National Stock Exchange of India Ltd.)</option>
+                                    <option>CSE (Calcutta Stock Exchange Limited)</option>
+                                    <option>MSEI (Metropolitan Stock Exchange of India Ltd.)</option>
+                                    <option>MCX</option>
+                                    <option>NCDEX</option>
+                                    <option>BSE SME</option>
+                                    <option>NSE Emerge</option>
+                                </select>
+                            </div>
+
+                            <!-- Funding Status -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Funding Status<span class="text-danger">*</span></label>
+                                <select class="form-select validate" ng-model="FundingStatus" ng-change="openfunding()">
+                                    <option value="">Select</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+
+
+                            <div class="col-md-4 mb-3" ng-show="isfundiung">
+                                <label class="form-label">Funding Type</label>
+                                <select class="form-select" ng-model="FundingType">
+                                    <option value="">Select</option>
+                                    <option>ODI</option>
+                                    <option>FDI</option>
+                                    <option>Domestic</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <!-- Financial Inputs -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Turnover</label>
+                                <input type="text" class="form-control" ng-model="Turnover">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Net Profit</label>
+                                <input type="text" class="form-control" ng-model="NetProfit">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Borrowing</label>
+                                <input type="text" class="form-control" ng-model="Borrowing">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Authorized Share Cap</label>
+                                <input type="text" class="form-control" ng-model="AuthorizedShareCap">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Issued Share Cap</label>
+                                <input type="text" class="form-control" ng-model="IssuedShareCap">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Paid up Cap</label>
+                                <input type="text" class="form-control" ng-model=" PaidupCap">
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    Average Net Profit of Last 3 Years
+                                </label>
+                                <input type="text" class="form-control" ng-model="AverageNetProfit">
+                            </div>
+
+
+
+                            <!-- Yes/No Fields -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Holding / Subsidiary</label>
+                                <select class="form-select" ng-model="HoldingSubsidiary">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">
+                                    NBFC Registerd
+                                </label>
+                                <select class="form-select" ng-model="NBFCRegisterd">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    RBI Registered
+
+                                </label>
+                                <select class="form-select" ng-model="RBIRegistered">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    Startup (DPIIT-registered)
+
+                                </label>
+                                <select class="form-select" ng-model="Startup">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    MSME Registered
+                                </label>
+                                <select class="form-select" ng-model="MSMERegistered ">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">
+                                    Registered under GST
+                                </label>
+                                <select class="form-select" ng-model=" RegisteredunderGST ">
+                                    <option value="">Select</option>
+                                    <option>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+
+                        </div>
+                    </fieldset>
+
+                    <!-- COMPANY STRUCTURE -->
+                    <fieldset class="border p-3 mb-4">
+                        <legend class="w-auto px-2 fw-bold text-primary">Company Structure & Identification</legend>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">CIN (Corporate Identity No.)</label>
+                                <input type="text" class="form-control" ng-model="CIN">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">PAN of Company</label>
+                                <input type="text" class="form-control" ng-model="PAN">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">TAN of Company</label>
+                                <input type="text" class="form-control" ng-model="TAN">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Date of Incorporation</label>
+                                <input type="date" class="form-control" ng-model="IncorporationDate">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Registered Office State</label>
+                                <input type="text" class="form-control" ng-model="RegisteredState">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Business Activity (NIC Code)</label>
+                                <input type="text" class="form-control" ng-model="NICCode">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Financial Year End</label>
+                                <input type="text" class="form-control" placeholder="e.g. 31-Mar" ng-model="FinancialYearEnd">
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- DIRECTOR / KMP DETAILS -->
+                        @*<fieldset class="border p-3 mb-4">
+                            <legend class="w-auto px-2 fw-bold text-danger">Director / KMP Details</legend>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Resident Director Present?</label>
+                                    <select class="form-select" ng-model="ResidentDirector">
+                                        <option value="">Select</option>
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Number of Independent Directors</label>
+                                    <input type="text" class="form-control" ng-model="IndependentDirectors">
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Women Director Present?</label>
+                                    <select class="form-select" ng-model="WomenDirector">
+                                        <option value="">Select</option>
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">CS Appointed?</label>
+                                    <select class="form-select" ng-model="CSAppointed">
+                                        <option value="">Select</option>
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">CEO/CFO/KMP Appointed?</label>
+                                    <select class="form-select" ng-model="KMPAppointed">
+                                        <option value="">Select</option>
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </fieldset>*@
+
+                    <!-- Submit Button -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label d-block">&nbsp;</label>
+                            <button type="button" class="btn btn-warning w-50" ng-click="SaveRecord()">Submit</button>
+                            <button onclick="history.back()" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                        </div>
+                    </div>
+
+                </div> <!-- card-body -->
+            </div> <!-- card -->
+        </div> <!-- pageheader -->
+    </div> <!-- pagebody -->
+</div> <!-- pagecontentbody -->

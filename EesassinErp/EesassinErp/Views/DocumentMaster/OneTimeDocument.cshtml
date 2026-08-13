@@ -1,0 +1,123 @@
+﻿
+@{
+    ViewBag.Title = "Auditor DashBoard";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<style>
+	.btn-sm {
+		padding: 2px 10px !important;
+		font-size: 12px !important;
+	}
+	.justify-content-end {
+		justify-content: end;
+	}
+    .onloadhidecss { display: none }
+</style>
+<script src="~/scripts/myjslib/OneTimeDocumentController.js"></script> 
+<div class="container-fluid">
+    <div class="page-title-box">
+        <h4>One Time Document </h4>
+    </div>
+
+    <div class="col-md-8" ng-show="{{loginType}}=='4'">
+        <div>
+            <div>
+
+                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindVendor()">
+                    <label class="control-label">Select Vendor<span class="vd_red">*</span></label>
+                    <div class="input-box">
+                        <select autocomplete='address-level2' class="select2 form-control validate" id="ddlVendorId" ng-model="VendorId" ng-change="AllUserListsLoad(VendorId)">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                        </select>
+                        <div class="text-box-msg-r">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                    <label class="control-label">Select User<span class="vd_red">*</span></label>
+                    <div class="input-box">
+                        <select autocomplete='address-level2' class="select2 form-control validate" id="ddlUserList" ng-model="UserId" ng-change="BindDocument(UserId);">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in AllUserList" value="{{x.LoginId}}">{{x.Name}}</option>
+                        </select>
+                        <div class="text-box-msg-r">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                    <label class="control-label"> </label>
+                    <div class="input-box">
+                        <button id="btnPrint" type="button" value="Print" class="btn2 btn-common btn-3 btn-3d pe-7s-print"
+                                name="printButton" ng-model="Print" ng-click="PrintRecord()">
+                            <span class="triangle-box" title="Print"></span>
+                            <span>Print </span>
+                        </button>
+                        <div class="text-box-msg-r">
+                        </div>
+                    </div>
+                </div>
+               
+            </div>
+        </div>
+    </div>
+    <div id="printDiv" ng-cloak>
+        <div class="card  col-md-12">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm" ng-init="BindDocument()">
+                        <thead>
+                            <tr>
+                                <th>SNo</th>
+                                <th>Document Name</th>
+                                <th>Description</th>
+                                <th>Vaild From</th>
+                                <th>Vaild To</th>
+                                <th>Status</th>
+                                <th class="text-right hidecss">View/Upload</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="xx in InOneTimeDocList">
+                                <td>{{xx.Orderby}}</td>
+                                <td>{{xx.DocumentName}}</td>
+                                <td>
+                                    <input class="hidecss" type="text" ng-model="InOneTimeDocList[$index].Description" ng-bind="InOneTimeDocList[$index].Description=xx.Description" />
+                                    <div class="onloadhidecss">{{xx.Description}}</div>
+
+
+                                </td>
+                                <td>
+                                    <div ng-show="{{xx.AllowExpire}}=='1' && {{xx.Status}} !='0'  ">{{xx.VaildFrom}}</div>
+                                    <input class="hidecss" type="date" ng-show="{{xx.AllowExpire}}=='1' && {{xx.Status}}=='0' " ng-model="InOneTimeDocList[$index].VaildFrom" ng-bind="InOneTimeDocList[$index].VaildFrom=xx.VaildFrom| date" date-format />
+                                </td>
+                                <td>
+                                    <div ng-show="{{xx.AllowExpire}}=='1' && {{xx.Status}} !='0'  ">{{xx.VaildTo}}</div>
+                                    <input class="hidecss" type="date" ng-show="{{xx.AllowExpire}}=='1'  && {{xx.Status}} =='0' " ng-model="InOneTimeDocList[$index].VaildTo" ng-bind="InOneTimeDocList[$index].vaildTo=xx.VaildTo| date" date-format />
+                                </td>
+                                <td>
+                                  
+                                    <label class="badge badge-warning onloadhidecss" >{{xx.Slabel}} </label>
+                                    <label class="badge badge-warning hidecss" ng-show="{{xx.Status}}=='0'">Pending</label>
+                                    <label class="badge badge-success hidecss" ng-show="{{xx.Status}}=='1'">Active</label>
+                                    <label class="badge badge-danger hidecss" ng-show="{{xx.Status}}=='2'">Expire</label>
+                                </td>
+                                <td class="hidecss">
+                                    <div class="d-flex justify-content-end">
+                                       
+                                        <img ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='0'  &&  {{IsView}}=='0'" id="CandidatePhoto{{$index}}" src="~/Content/img/upload.png" ng-click="SetValue($index,'#fuCandidatePhoto'+$index)" style="width: 24px;height:24px; margin-right:10px;" />
+                                        <input type="file" ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='0' &&  {{IsView}} =='0'" id="fuCandidatePhoto{{$index}}" style="display:none" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InOneTimeDocList[$index].FileDoc">
+                                        <div class="btn btn-sm btn-success " ng-show="{{xx.Status}}=='0' &&  {{IsView}} =='0'" ng-click="UploadValidDoc(xx.DocumentName,xx.Id,$index,xx.AllowFileUpload,xx.AllowExpire)">Save</div>
+                                        <div ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='1'"><a target="_blank" href="{{xx.FileDoc}}">View Document</a></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,1003 @@
+﻿<!DOCTYPE html>
+<html>
+<!-- InstanceBegin template="/Templates/template.dwt" codeOutsideHTMLIsLocked="false" -->
+<head>
+    <!-- InstanceBeginEditable name="doctitle" -->
+    <title>Admin</title>
+    <!-- InstanceEndEditable -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="favicon.png" />
+    <link href="css/bootstrap.css" rel='stylesheet' />
+    <link href="css/all.css" rel="stylesheet" />
+    <link href="css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+    <link href="css/datepicker.min.css" rel='stylesheet' />
+    <link href="css/custom_theme.css" rel='stylesheet' />
+    <link href="css/colorTheme/default.css" rel='stylesheet' />
+    <link href="css/draggle.css" rel="stylesheet" />
+    <link href="css/jquery.dropdown.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel='stylesheet' />
+    <link href="css/jquery-ui.css" rel="stylesheet" />
+    <link href="css/datepicker.css" rel="stylesheet" />
+    <link href="css/sweetalert2.css" rel="stylesheet" />
+    <!-- InstanceBeginEditable name="head" -->
+    <!-- InstanceEndEditable -->
+</head>
+<body class="dashbg">
+    <div class="contentwraper menumarginleft">
+        <header class="header menuheader-width">
+            <div class="container-fluid">
+                <div class="row cmmenu">
+                    <div class="col col-md-12">
+                        <div class="row">
+                            <div class="col">
+                                <h4 class="moudlename">
+                                    <div class="list-control">
+                                        <a class="sidemenutoggle">
+                                            <span class="fa fa-ellipsis-v"></span>
+                                        </a>
+                                        <span class="pagehed">License Master</span>
+                                        <div class="menusidebar menusidebar-width">
+                                            <div class="profiletitle">
+                                                <img src="images/dash-logo.png" alt="" class="dash-logo" />
+                                            </div>
+                                            <div class="menuscrollwrap">
+                                                <div class="nano-content">
+                                                    <!--<span class="profiletxt">General</span>-->
+                                                    <ul class="navsidebar">
+                                                        <li class="nav-item">
+                                                            <a href="dasboard.html">
+                                                                <span class="icons icon-grid"></span>Dashboard
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="storeMaster.html">
+                                                                <span class="icons icon-home"></span>Store Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="complianceDoc.html">
+                                                                <span class="icons icon-globe"></span>Compliance Doc.
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item active">
+                                                            <a href="licenseMaster.html">
+                                                                <span class="icons icon-docs"></span>License Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="employeeMaster.html">
+                                                                <span class="icons icon-user"></span>Employees Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item seprat">
+                                                            <a href="#">
+                                                                <span class="icons icon-login"></span>Logout
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </h4>
+                            </div>
+                            <div class="col col-md-auto">
+                                <div class="nav-item dropdown d-inline me-3">
+                                    <a href="#" class="micon dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="fas fa-bell"></span>
+                                        <span class="notifi"></span>
+                                    </a>
+                                    <ul class="dropdown-menu" id="notification_event" aria-labelledby="navbarDropdown">
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="#" class="micon me-3"><span class="fas fa-cog"></span></a>
+                                <a href="profile.html" class="micon"><span class="fas fa-user-circle"></span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- InstanceBeginEditable name="Content Area" -->
+        <div class="pagecontentbody">
+            <div class="pagebody">
+                <div class="col-md-12 pageheader pb-2">
+                    <div class="row">
+                        <div class="col-md-9">
+                            <h4 class="mb-0"></h4>
+                        </div>
+                        <div class="col-sm-3 text-end">
+                            <a class="btn btn-dark" href="licenseMaster.html">Back</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row mb-3 p-3 pt-0">
+                        <div class="card p-0">                           
+                            <div class="card-body">
+                                <div class="tab-content" id="myTabContent">
+                                    <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                                        <div class="row mb-3">
+                                            <div class="col-md-9 mt-3">
+                                                <ul class="filter-search">
+                                                    <li class="p-0">
+                                                        <div class="input-group">
+                                                            <input class="form-control" type="text" id="searchbox" value="" placeholder="Search">
+                                                            <button class="btn btn-default" type="button" id="button-addon2"><span class="icons icon-magnifier"></span></button>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-3 mt-3">
+                                                <ul class="btngroup">
+                                                    <li></li>
+                                                    <li class="nav-item submenu"><a class="btn btn-default" type="button" id="A1">Short by <span class="fa fa-arrow-down"></span></a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="table-responsive nosearch">
+                                            <table class="table table-bordred table-hover unittbl">
+                                                <thead class="bg-warning text-white">
+                                                    <tr>
+                                                        <th>Select</th>
+                                                        <th width="12%">Store Code</th>
+                                                        <th>Store Address</th>
+                                                        <th>Proposed Date</th>
+                                                        <th>License Name</th>
+                                                        <th>License Type</th>
+                                                        <th>Requested Date</th>
+                                                        <th>Doc. Date </th>
+                                                        <th>Application Status </th>
+                                                        <th>Application Date </th>
+                                                        <th>Upload Application Copy </th>
+                                                        <th>Upload Challan Copy</th>
+                                                        <th>Upload Fees Copy </th>
+                                                        <th>License  Status </th>
+                                                        <th>Issued Date </th>
+                                                        <th>License Number </th>
+                                                        <th>Validity Start </th>
+                                                        <th>Validity End </th>
+                                                        <th>Upload License Copy</th>
+                                                        <th>Renewal Request Date</th>
+                                                        <th>Renewal Status</th>
+                                                        <th>Renewal Start</th>
+                                                        <th>Renewal End</th>
+                                                        <th>Upload Renewed License</th>
+                                                        <th>User Name</th>
+                                                        <th>User Password</th>
+                                                        <th>Mobile No.</th>
+                                                        <th>Email ID.</th>
+                                                        <th>Tentative Date</th>
+                                                        <th>Invoice Status</th>
+                                                        <th>Invoice Date</th>
+                                                        <th>Invoice No.</th>
+                                                        <th>
+                                                            Invoice Amount<br />
+                                                            (to be paid)
+                                                        </th>
+                                                        <th>Upload Invoice</th>
+                                                        <th>Payment Status</th>
+                                                        <th>Payment TAT</th>
+                                                        <th>Payment Due Date</th>
+                                                        <th>Over Due Date</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><input type="checkbox" value=""/></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><input type="checkbox" value="" /></td>
+                                                        <td><b>123456</b></td>
+                                                        <td>Noida Sec. 2</td>
+                                                        <td>01/06/2023</td>
+                                                        <td>FSCI</td>
+                                                        <td>Fresh</td>
+                                                        <td>10/02/2023</td>
+                                                        <td>12/02/2023</td>
+                                                        <td>Applied</td>
+                                                        <td>10/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Issued</td>
+                                                        <td>12/07/2023</td>
+                                                        <td>123456789123</td>
+                                                        <td>12/09/2023</td>
+                                                        <td>12/07/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Renewed</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>12/03/2023</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Priya</td>
+                                                        <td>xxxxxxxxxx</td>
+                                                        <td>+91xxxxxxx</td>
+                                                        <td>dummy@11.in</td>
+                                                        <td>12/03/2023</td>
+                                                        <td>Done</td>
+                                                        <td>10/07/2023</td>
+                                                        <td>1g1h2366777</td>
+                                                        <td>10000</td>
+                                                        <td><a href="#" class="vdoc">View Doc&nbsp; <i class="fa fa-download"></i></a></td>
+                                                        <td>Pending</td>
+                                                        <td>10</td>
+                                                        <td>20/07/2023</td>
+                                                        <td>10</td>
+                                                        <td><a href="checkout.html" class="text-danger">Make Payment</a></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="row mt-3 justify-content-center">
+                                            <div class="col-md-3 d-grid pt-3">
+                                                <a href="checkout.html" class="btn btn-md btn-warning">Procced For Payment</a>
+                                            </div>
+                                        </div>
+                                    </div>                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content notiModal">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notificationModalLabel">News</h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>News Title</h4>
+                        <p class="mb-5">In publishing and graphic design, Lorem ipsum is a placeholder text commonly used to demonstrate the visual form of a document or a typeface without relying on meaningful content. Lorem ipsum may be used as a placeholder before final copy is available</p>
+                        <p>Today 10:30 PM</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal right fade createpop" id="profileview" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">X</button>
+                    </div>
+                    <form class="needs-validation" novalidate>
+                        <div class="modal-body" style="padding-top: 0 !important;">
+                            <div class="popup-content-scroll popupheit">
+                                <div class="nano-content form-design">
+                                    <div class="text-center prodit profilprog">
+                                        <div class="progress" data-percentage="80">
+                                            <span class="progress-left">
+                                                <span class="progress-bar"></span>
+                                            </span>
+                                            <span class="progress-right">
+                                                <span class="progress-bar"></span>
+                                            </span>
+                                            <div class="progress-value">
+                                                <div class="text-center">
+                                                    <span class="licncsts">License Status</span><br />
+                                                    80%                                                               
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <br />
+                                        <span>Unit Code: 205678</span><br />
+                                        <span>Last Updated: 08/07/2023</span>
+                                    </div>
+                                    <div class="seprathed">
+                                        <a class="hedd">Documents</a>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="table-responsive">
+                                                <table class="cusmtbl">
+                                                    <tr>
+                                                        <td><b>FSSAI License</b></td>
+                                                        <td style="width: 10%"><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center" style="width: 15%"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>Shop and Establishment</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>Trade License</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>Health Trade License</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>Police Permission</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>Pollution NOC</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>Signage License</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><b>DG Set License</b></td>
+                                                        <td><a href="#" class="viewlink">View</a></td>
+                                                        <td class="text-center"><span class="browtext"><i class="fa fa-download"></i></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="row w-100 justify-content-center">
+                                <div class="col-md-6 d-grid">
+                                    <button type="submit" class="btn btn-warning">View More</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="requestForm" tabindex="-1" aria-labelledby="requestFormModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content modalbr">
+                    <div class="modal-header reqstfrmhed">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <a href="#" class="btnarrow" data-bs-dismiss="modal" aria-label="Close"><i class="fa fa-arrow-left"></i></a>
+                            </div>
+                            <div class="col-md-8 text-center">
+                                <h5 class="modal-title mt-2" id="requestFormModalLabel">Request Form</h5>
+                            </div>
+                            <div class="col-md-2 text-right">
+                                <div class="progress" data-percentage="80">
+                                    <span class="progress-left">
+                                        <span class="progress-bar"></span>
+                                    </span>
+                                    <span class="progress-right">
+                                        <span class="progress-bar"></span>
+                                    </span>
+                                    <div class="progress-value">
+                                        <div class="text-center">
+                                            80%                                                               
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="table-responsive">
+                                    <table class="table table-hover text-center bgw">
+                                        <thead class="">
+                                            <tr>
+                                                <th>S.No.</th>
+                                                <th>Applicable License</th>
+                                                <th>Approval</th>
+                                                <th>Upload Doc.</th>
+                                                <th>View</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>1</td>
+                                                <td>FSSAI</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>2</td>
+                                                <td>Shop and Establishment</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>3</td>
+                                                <td>Trade License</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>4</td>
+                                                <td>Health Trade License</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>5</td>
+                                                <td>Police Permission</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>6</td>
+                                                <td>Pollution NOC</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>7</td>
+                                                <td>Signage License</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                            <tr>
+                                                <td>8</td>
+                                                <td>DG Set License</td>
+                                                <td>
+                                                    <button class="btn btn-default bgr">Approve</button></td>
+                                                <td>
+                                                    <a href="storeMasterDoc.html" class="btn btn-default">Click Here</a></td>
+                                                <td><a href="#" class="text-dark"><i class="fa fa-eye fa-x2"></i></a></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- InstanceEndEditable -->
+    </div>
+
+
+    <script type="text/javascript" src="js/mock.js"></script>
+    <script type="text/javascript" src="js/jquery-min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/jquery.nanoscroller.min.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script type="text/javascript" src="js/datepicker.en.js"></script>
+    <script type="text/javascript" src="js/builder.js"></script>
+    <script type="text/javascript" src="js/beautifyhtml.js"></script>
+    <script type="text/javascript" src="js/dragble.js"></script>
+    <script type="text/javascript" src="js/jquery.dropdown.js"></script>
+    <script type="text/javascript" src="js/sweetalert2.js"></script>
+    <script type="text/javascript" src="js/theme-script.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script>
+        var Random = Mock.Random;
+        var json1 = Mock.mock({
+            "data|10-50": [{
+                name: function () {
+                    return Random.name(true)
+                },
+                "id|+1": 1,
+                "disabled|1-2": true,
+                groupName: 'Group Name',
+                "groupId|1-4": 1,
+                "selected": false
+            }]
+        });
+
+        $('.dropdown-mul-1').dropdown({
+            data: json1.data,
+            limitCount: 40,
+            multipleMode: 'label',
+            choice: function () {
+                // console.log(arguments,this);
+            }
+        });
+    </script>
+    <!-- InstanceBeginEditable name="for-javascript" -->
+    <script>
+        $(document).ready(function () {
+            $('.ddfile').change(function () {
+                //console.log(this.files);
+                var f = this.files;
+                var el = $(this).parent();
+                if (f.length > 1) {
+                    console.log(this.files, 1);
+                    el.text('Sorry, multiple files are not allowed');
+                    return;
+                }
+                // el.removeClass('focus');
+                el.html(f[0].name + '<br>' +
+						'<span class="sml">' +
+						'type: ' + f[0].type + ', ' +
+						Math.round(f[0].size / 1024) + ' KB</span>');
+            });
+
+            $('input[type=file]').on('focus', function () {
+                $(this).parent().addClass('focus');
+            });
+
+            $('input[type=file]').on('blur', function () {
+                $(this).parent().removeClass('focus');
+            });
+
+        });
+    </script>
+    <!-- InstanceEndEditable -->
+</body>
+<!-- InstanceEnd -->
+</html>

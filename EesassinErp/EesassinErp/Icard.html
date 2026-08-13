@@ -1,0 +1,224 @@
+﻿<!DOCTYPE html>
+<html ng-app="myApp">
+<head>
+    <title>ID Card</title>
+
+    <!-- Angular + jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- PDF + Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
+</head>
+
+<body>
+
+    <div ng-app="myApp" ng-controller="empCtrl"
+         style="font-family:Arial;background:#eef2f7;padding:20px;">
+
+        <!-- Buttons -->
+        <div style="text-align:right;margin-bottom:15px;">
+            <button ng-click="printCard()"
+                    style="background:#007bff;color:#fff;padding:8px 18px;border:none;border-radius:5px;cursor:pointer;margin-right:5px;">
+                Print
+            </button>
+
+            <button ng-click="downloadPDF()"
+                    style="background:#28a745;color:#fff;padding:8px 18px;border:none;border-radius:5px;cursor:pointer;">
+                Download
+            </button>
+        </div>
+
+        <!-- CARD -->
+        <div id="Card"
+             style="max-width:1000px;margin:auto;background:#fff;border-radius:12px;
+                box-shadow:0 4px 15px rgba(0,0,0,0.15);overflow:hidden;">
+
+            <!-- Header -->
+            <div style="background: #022b5e; color: #fff; padding: 15px; text-align: center; ">
+                <h2 style="margin:0;">Worker Profile</h2>
+            </div>
+
+            <!-- Photo + Basic -->
+            <div style="display:flex;align-items:center;padding:20px;border-bottom:1px solid #eee;">
+
+                <!-- Circle Photo -->
+                <div style="flex:0 0 150px;text-align:center;">
+                    <img ng-src="{{EMP.EmployeePhotos  || 'images/no-image.png'}}"
+                         style="width: 120px; height: 120px; border-radius: 50%; border: 3px solid #022b5e; object-fit: cover; ">
+                </div>
+
+                <!-- Name + Basic Info -->
+                <div style="flex:1;padding-left:20px;">
+                    <h3 style="margin:0;color:#333;">{{EMP.EmployeeName}}</h3>
+                    <p style="margin:5px 0;color:#666;">{{EMP.EmployeeDesignation}} - {{EMP.EmployeeDepartment}}</p>
+                    <p style="margin:5px 0;font-size:14px;"><b>Worker Code:</b> {{EMP.EmployeeCode}}</p>
+                    <p style="margin:5px 0;font-size:14px;"><b>Mobile:</b> {{EMP.MobileNumber}}</p>
+                </div>
+
+            </div>
+            <div style="padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:14px;display:none;">
+                <div><b>Principal Employer Name:</b> {{EMP.ClientName}}</div>
+                <div><b>Contractor Name:</b> {{EMP.VendorName}}</div>
+            </div>
+            <!-- GRID DETAILS -->
+            <div style="padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:14px;">
+
+                <div><b>Ref Code:</b> {{EMP.RefEmployeeCode}}</div>
+                <div><b>Father/Husband:</b> {{EMP.Father_Husband_Name}}</div>
+                <div><b>Gender:</b> {{EMP.Gendar}}</div>
+
+                <div><b>Marital Status:</b> {{EMP.MaritalStatus}}</div>
+                <div><b>DOB:</b> {{ convertToDate(EMP.DateOfBirth) | date:'dd/MM/yyyy' }}</div>
+                <div><b>Blood Group:</b> {{EMP.BloodGroup}}</div>
+
+                <div><b>Email:</b> {{EMP.EmployeeEmailID}}</div>
+                <div><b>Aadhar:</b> {{EMP.AdharCardNumber}}</div>
+                <div><b>PAN:</b> {{EMP.PANNumber}}</div>
+
+                <div><b>Bank Acc:</b> {{EMP.BankAccountNumber}}</div>
+                <div><b>IFSC:</b> {{EMP.BankIFSCCode}}</div>
+                <div><b>UAN:</b> {{EMP.PreviousUAN}}</div>
+
+                <div><b>ESI:</b> {{EMP.PreviousESI}}</div>
+                <div hidden><b>Salary:</b> {{EMP.GrossSalary}}</div>
+                <div><b>DOJ:</b>{{ convertToDate(EMP.DOJ) | date:'dd/MM/yyyy' }} </div>
+
+                <div hidden><b>Site Name:</b> {{EMP.SiteName}}</div>
+                <div hidden><b>Location:</b> {{EMP.LocationCode}}</div>
+
+                <div><b>IssueDate:</b> {{ convertToDate(EMP.IssueDate) | date:'dd/MM/yyyy' }} </div>
+                <div><b>ValidTill:</b> {{ convertToDate(EMP.IcardValiditi) | date:'dd/MM/yyyy' }}</div>
+                <div><b>Status:</b> {{EMP.Status}}</div>
+                <div><b>Camp Number:</b> {{EMP.CampNo}}</div>
+
+
+
+                
+
+                <div><b>Nominee:</b> {{EMP.NomineeName}}</div>
+                <div><b>Relation:</b> {{EMP.NomineeRelation}}</div>
+                <div><b>Nominee DOB:</b> {{ convertToDate(EMP.NomineeDOB) | date:'dd/MM/yyyy' }}   </div>
+                <div><b>Nominee Address:</b> {{EMP.NomineeAddress}}</div>
+				<div style="grid-column:span 3;"><b>Present Address:</b> {{EMP.PresentAddress}}</div>
+                <div style="grid-column:span 3;"><b>Permanent Address:</b> {{EMP.PermanemtAddress}}</div>
+                <div hidden><b>Transport:</b> {{EMP.Transport}}</div>
+                <div hidden><b>Route:</b> {{EMP.RouteId}}</div>
+                <div hidden><b>PF:</b> {{EMP.PFAccount}}</div>
+
+
+                <div hidden><b>Applicable Minimum Wages Category:</b> {{EMP.MinimumWageCategory}}</div>
+                <div hidden><b>Wage Type:</b> {{EMP.WageType}}</div>
+                <div hidden><b>Wage Disbursement Mode:</b> {{EMP.WageDisbursementMode}}</div>
+
+                <div hidden><b>PPE:</b> {{EMP.PPE}}</div>
+                <div hidden><b>Types of PPE Given:</b> {{EMP.PPEType}}</div>
+                <div hidden><b>Safety Training Status:</b> {{EMP.SafetyTrainingStatus}}</div>
+
+                <div hidden><b>Induction:</b> {{EMP.SiteInductionStatus}}</div>
+                <div hidden><b>Police Verification :</b> {{EMP.PoliceVerificationStatus}}</div>
+
+                <div hidden><b>Temporary Gate Pass Status:</b> {{EMP.TempIDStatus}}</div>
+                <div hidden><b>Temporary Gate Pass No:</b> {{EMP.TempIDNumber||'-'}}</div>
+                <div hidden><b>Temporary Gate Pass Start Date:</b> {{EMP.TempIDStartDate||'-'}}</div>
+                <div hidden><b>Temporary Gate Pass End Date:</b> {{EMP.TempIDEndDate||'-'}}</div>
+
+                <div hidden><b>Permanent Gate Pass Status:</b> {{EMP.PermanentIDStatus}}</div>
+                <div hidden><b>Permanent Gate Pass No:</b> {{EMP.PermanentIDNumber||'-'}}</div>
+                <div hidden><b>Permanent Gate Pass Start Date:</b> {{EMP.PermanentIDStartDate||'-'}}</div>
+                <div hidden><b>Permanent Gate Pass End Date:</b> {{EMP.PermanentIDEndDate||'-'}}</div>
+
+            </div>
+
+            <!-- Photos -->
+
+
+        </div>
+
+    </div>
+
+    <script>
+
+        var app = angular.module("myApp", []);
+
+        app.controller("empCtrl", function ($scope, $http) {
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const empId = urlParams.get('id');
+
+            $scope.EMP = {};
+
+            $scope.GetEmployeeMaster = function () {
+
+                var obj = { ActionType: 23, PartyId: empId };
+
+                $http.post("../api/RetailSectionApi/GetEmployeeMaster", obj)
+                    .then(function (res) {
+
+                        var data = res.data;
+
+                        // 🔥 string ko JSON me convert karo
+                        if (typeof data === "string") {
+                            data = JSON.parse(data);
+                        }
+                        $scope.convertToDate = function (dateStr) {
+                            if (!dateStr) return null;
+
+                            dateStr = dateStr.replace('AM', '').replace('PM', '').trim();
+
+                            var parts = dateStr.split('/');
+
+                            if (parts.length === 3) {
+                                var day = parseInt(parts[0], 10);
+                                var month = parseInt(parts[1], 10) - 1;
+                                var year = parseInt(parts[2], 10);
+
+                                var d = new Date(year, month, day);
+
+                                if (isNaN(d)) return null;
+
+                                return d;
+                            }
+
+                            var d = new Date(dateStr);
+                            return isNaN(d) ? null : d;
+                        };
+
+                        // ✅ correct access
+                        if (data.Result && data.Result.length > 0) {
+                            $scope.EMP = data.Result[0];
+                        }
+
+                    }, function (err) {
+                        console.log(err);
+                    });
+            };
+
+            $scope.printCard = function () {
+                var content = document.getElementById("Card").innerHTML;
+                var w = window.open('', '', 'width=900,height=700');
+                w.document.write('<html><head><title>Print</title></head><body>');
+                w.document.write(content);
+                w.document.write('</body></html>');
+                w.document.close();
+                w.print();
+            };
+
+            $scope.downloadPDF = function () {
+                html2canvas(document.getElementById("Card")).then(canvas => {
+                    var imgData = canvas.toDataURL("image/png");
+                    var pdf = new jspdf.jsPDF();
+                    pdf.addImage(imgData, 'PNG', 10, 10, 180, 0);
+                    pdf.save("Employee.pdf");
+                });
+            };
+
+            $scope.GetEmployeeMaster();
+        });
+    </script>
+
+</body>
+</html>

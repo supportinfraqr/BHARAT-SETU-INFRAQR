@@ -1,0 +1,245 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Subscription";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/AdminSetup/Subscription/style.css" rel="stylesheet"/> 
+<script src="~/AdminSetup/Subscription/script.js"></script>
+
+<div class="subscriptionPage px-4 py-2">
+
+    <!-- SUMMARY : Balances -->
+    <div class="subscription-summary mb-3">
+        <h5>Payment Summary</h5>
+        <div class="summary-item">
+            <label>Total outstanding balance</label>
+            <span class="amount">₹ 0.00 <small>INR</small></span>
+        </div>
+           
+        <div class="summary-item"> 
+            <label>Next renewal amount</label>
+            <span class="amount">₹ 2,999.00 <small>INR</small></span>
+        </div>
+
+        <div class="summary-item">
+            <label>Next renewal date</label>
+            <span class="date">12 / 05 / 2026</span>
+        </div>
+    </div>
+
+
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="Payments Due, Transactions">
+            <button type="button" class="btn btn-pill active" data-target="#paymentsDue" aria-pressed="true">Payments Due</button>
+            <button type="button" class="btn btn-pill" data-target="#transactions" aria-pressed="false">Transactions</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- CARD 1 : Payments Due (default visible) -->
+        <div id="paymentsDue" class="card section-card active">
+            <div class="card-body">
+                <!-- Payments Due Content -->
+                <div class="paymentsDue-wrap">
+
+                    <!-- Header Row -->
+                    <div class="paymentsDue-header">
+                        <h5>Payments due (0)</h5>
+
+                        <div class="paymentsDue-actions">
+                            <!-- Search  -->
+                            <div class="paymentsDue-search">
+                                <input type="text" class="form-control form-control-sm" placeholder="Search..." />
+                            </div>
+                            <button class="btn btn-sm style-btn">Download</button>
+                            <button class="btn btn-sm style-btn">Make payment</button>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-responsive rounded-3">
+                        <table class="table paymentsDue-table">
+                            <thead>
+                                <tr>
+                                    <th class="chk-col">
+                                        <input type="checkbox" id="chkAllPayments">
+                                    </th>
+                                    <th>Due date</th>
+                                    <th>Issued date</th>
+                                    <th>Invoice Number</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Currency</th>
+                                    <th>Invoice amount</th>
+                                    <th>Balance due</th>
+                                    <th>Billing period</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="chk-col">
+                                        <input type="checkbox" class="row-check">
+                                    </td>
+                                    <td>12/05/2026</td>
+                                    <td>01/05/2026</td>
+                                    <td>#INV-1024</td>
+                                    <td>Subscription</td>
+                                    <td>
+                                        <span class="status-badge due">Due</span>
+                                    </td>
+                                    <td>₹ INR</td>
+                                    <td>₹ 2,999</td>
+                                    <td>₹ 2,999</td>
+                                    <td>May 2026</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+        </div>
+
+        <!-- CARD 2 : Transactions (default visible) -->
+        <div id="transactions" class="card section-card d-none">
+            <div class="card-body">
+                <div class="transactions-wrap">
+
+                    <!-- Header -->
+                    <div class="transactions-header">
+                        <div class="transactions-header-left">
+                            <h5>Transactions (3)</h5>
+
+                            <!-- Time period dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-sm period-btn dropdown-toggle"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    Time Period
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#">Previous 1 month</a></li>
+                                    <li><a class="dropdown-item" href="#">Previous 3 months</a></li>
+                                    <li><a class="dropdown-item" href="#">Previous 6 months</a></li>
+                                    <li><a class="dropdown-item" href="#">Previous 1 year</a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Right actions -->
+                        <div class="transactions-actions">
+                            <!-- Search -->
+                            <div class="transactions-search">
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..." />
+                            </div>
+
+                            <button class="btn btn-sm style-btn outline">Print</button>
+
+                            <div class="dropdown">
+                                <button class="btn btn-sm style-btn dropdown-toggle"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
+                                    Download all
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <p class="transactions-desc">
+                        This table provides a consolidated view of all financial activities including invoices and payments.
+                    </p>
+
+
+                    <!-- Table -->
+                    <div class="table-responsive rounded-3">
+                        <table class="table transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Issued date</th>
+                                    <th>Invoice Number</th>
+                                    <th>Transaction ID</th>
+                                    <th>Payment method</th>
+                                    <th>Amount</th>
+                                    <th>Balance</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr>
+                                    <td>01 Jan 2026</td>
+                                    <td>12345677</td>
+                                    <td>
+                                        <a href="#" class="txn-link">
+                                            2453442589
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </td>
+                                    <td>Bank Transfered/Gateway</td>
+                                    <td>₹ 54,744.29</td>
+                                    <td>₹ 0.00</td>
+                                    <td>
+                                        <span class="status-badge paid">Paid</span>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>01 Dec 2025</td>
+                                    <td>Invoice</td>
+                                    <td>
+                                        <a href="#" class="txn-link">
+                                            2407791029
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </td>
+                                    <td>BankRedirect</td>
+                                    <td>₹ 52,167.55</td>
+                                    <td>₹ 0.00</td>
+                                    <td>
+                                        <span class="status-badge paid">Paid</span>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>01 Nov 2025</td>
+                                    <td>Invoice</td>
+                                    <td>
+                                        <a href="#" class="txn-link">
+                                            2378766261
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </td>
+                                    <td>BankRedirect</td>
+                                    <td>₹ 53,335.13</td>
+                                    <td>₹ 0.00</td>
+                                    <td>
+                                        <span class="status-badge paid">Paid</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+
+
+            </div>
+        </div>
+
+    </div>
+</div>

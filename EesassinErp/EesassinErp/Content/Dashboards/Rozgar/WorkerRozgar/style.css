@@ -1,0 +1,982 @@
+﻿/* ===================================================
+   Worker ROZGAR
+=================================================== */
+
+.workerRozgar {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 20px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+
+/* ===================================================
+   MAIN LAYOUT
+=================================================== */
+
+.workerRozgarMain {
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+}
+
+/* ===================================================
+   FILTERS
+=================================================== */
+
+.workerRozgarFilters {
+    flex: 0 0 324px;
+    width: 324px;
+}
+
+.workerRozgarFilterTitle {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.workerRozgarFilterCard {
+    background: var(--card-bg);
+    border-radius: 18px;
+    border: 1px solid #D8D8D8;
+    padding: 14px;
+}
+
+.workerRozgarSearch {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+    .workerRozgarSearch i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #222;
+        font-size: 20px;
+    }
+
+    .workerRozgarSearch input {
+        width: 100%;
+        height: 44px;
+        border-radius: 18px;
+        border: 1px solid #BFC2C7;
+        background: #fff;
+        padding-left: 52px;
+        padding-right: 16px;
+        font-size: 17px;
+        outline: none;
+    }
+
+.workerRozgarAccordionItem {
+    border-top: 1px solid #D6D6D6;
+}
+
+    .workerRozgarAccordionItem:first-of-type {
+        border-top: none;
+    }
+
+.workerRozgarAccordionBtn {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 6px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #222;
+}
+
+    .workerRozgarAccordionBtn i {
+        font-size: 15px;
+    }
+
+.workerRozgarAccordionBody {
+    padding: 0 4px 14px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 20px;
+}
+
+.workerRozgarCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+    .workerRozgarCheckbox input {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+    }
+
+    .workerRozgarCheckbox span {
+        font-size: 13px;
+        color: #666;
+    }
+
+/* ===================================================
+   CONTENT AREA
+=================================================== */
+
+.workerRozgarContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.workerRozgarContentHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.workerRozgarWorkerHeading {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+
+
+/* ===================================================
+   RESPONSIVE
+=================================================== */
+
+@media (max-width: 1400px) {
+
+    .workerRozgarFilters {
+        width: 320px;
+        flex: 0 0 320px;
+    }
+
+    .workerRozgarWorkerHeading {
+        font-size: 34px;
+    }
+}
+
+@media (max-width: 1199px) {
+
+    
+    .workerRozgarMain {
+        gap: 20px;
+    }
+
+    .workerRozgarFilters {
+        width: 300px;
+        flex: 0 0 300px;
+    }
+
+    .workerRozgarWorkerHeading {
+        font-size: 30px;
+    }
+}
+
+@media (max-width: 991px) {
+
+    .workerRozgarMain {
+        flex-direction: column;
+    }
+
+    .workerRozgarFilters {
+        width: 100%;
+        flex: unset;
+    }
+
+    .workerRozgarContent {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767px) {
+
+
+    .workerRozgarFilterTitle {
+        font-size: 30px;
+    }
+
+    .workerRozgarWorkerHeading {
+        font-size: 26px;
+    }
+
+    .workerRozgarAccordionBody {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/*========== Hero section heading style =============*/
+.workerRozgarHero {
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.workerRozgarHeroTitle {
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--primary);
+    margin-bottom: 1px;
+}
+
+.workerRozgarHeroDesc {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1;
+    color: #6B7280;
+}
+
+.workerRozgarHeroButton {
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    padding: 6px 12px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.workerRozgarHeroButton:hover{
+    background: var(--primary-dark);
+}
+
+
+/* ===================================================
+   GRID VIEW
+=================================================== */
+.workerRozgarGridView {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+.workerRozgarJobCard {
+    background: var(--card-bg);
+    border: 1px solid #E5E7EB;
+    border-radius: 18px;
+    padding: 14px;
+    transition: all .25s ease;
+}
+
+    .workerRozgarJobCard:hover {
+        transform: translateY(-2px);
+    }
+
+.workerRozgarJobHeader {
+    margin-bottom: 18px;
+}
+
+.workerRozgarJobTitle {
+    margin: 0 0 2px;
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 500;
+    color: #1F2937;
+}
+
+.workerRozgarCompanyName {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #374151;
+    font-weight: 500;
+}
+
+.workerRozgarJobInfo {
+    background: #FFF;
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.workerRozgarInfoItem label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #9CA3AF;
+    margin-bottom: 6px;
+}
+
+.workerRozgarInfoItem span {
+    display: block;
+    font-size: 15px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.workerRozgarJobActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workerRozgarApplyBtn,
+.workerRozgarViewBtn {
+    flex: 1;
+    height: 32px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: .25s ease;
+}
+
+.workerRozgarApplyBtn {
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+    .workerRozgarApplyBtn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.workerRozgarViewBtn {
+    border: 1px solid var(--primary);
+    background: #fff;
+    color: var(--primary);
+}
+
+    .workerRozgarViewBtn:hover {
+        border-color: var(--primary);
+        background: var(--primary);
+        color : #fff;
+    }
+
+.workerRozgarSaveBtn {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .25s ease;
+}
+
+    .workerRozgarSaveBtn i {
+        font-size: 16px;
+        color: var(--primary);
+    }
+
+    .workerRozgarSaveBtn:hover {
+        border-color: var(--primary);
+        background: var(--primary);
+    }
+
+        .workerRozgarSaveBtn:hover i {
+            color: #fff;
+        }
+
+/* ===================================================
+   FOOTER / PAGINATION
+=================================================== */
+
+.workerRozgarFooter {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.workerRozgarRecordCount {
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.workerRozgarPagination {
+    gap: 6px;
+}
+
+    .workerRozgarPagination .page-link {
+        border: none;
+        border-radius: 10px;
+        min-width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #374151;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .workerRozgarPagination .page-item.active .page-link {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .workerRozgarPagination .page-link:focus {
+        box-shadow: none;
+    }
+
+    .workerRozgarPagination .page-item.disabled .page-link {
+        background: transparent;
+        color: #9CA3AF;
+    }
+
+@media (max-width: 1399px) {
+
+    .workerRozgarGridView {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+
+    .workerRozgarGridView {
+        grid-template-columns: 1fr;
+    }
+
+    .workerRozgarJobTitle {
+        font-size: 22px;
+    }
+
+    .workerRozgarHeroTitle {
+        font-size: 28px;
+    }
+
+    .workerRozgarJobInfo {
+        grid-template-columns: 1fr;
+    }
+
+    .workerRozgarJobActions {
+        flex-wrap: wrap;
+    }
+
+    .workerRozgarApplyBtn,
+    .workerRozgarViewBtn {
+        flex: 1 1 calc(50% - 6px);
+    }
+
+    .workerRozgarSaveBtn {
+        width: 100%;
+    }
+}
+
+
+/* ===================================================
+   MOBILE
+=================================================== */
+
+@media (max-width: 767px) {
+
+    .workerRozgarFooter {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .workerRozgarPagination {
+        flex-wrap: wrap;
+    }
+}
+
+
+
+/*------View More Modal-----*/
+.workerRozgarViewMoreModal .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.workerRozgarViewMoreModal .modal-header {
+    /*padding: 18px 24px;*/
+    background: var(--primary);
+    color: #fff;
+}
+
+.workerRozgarViewMoreModal .modal-title {
+    font-weight: 500;
+}
+
+.workerRozgarViewMoreModal .modal-body {
+    /*max-height: 80vh;*/
+    overflow-y: auto;
+    padding: 24px;
+    background: #fff;
+}
+
+/* ===================================
+   MODAL GRID
+=================================== */
+
+.workerRozgarJobModalWrapper {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+}
+
+/* ===================================
+   COMMON CARD
+=================================== */
+
+.workerRozgarModalCard,
+.workerRozgarEmployerCard,
+.workerRozgarModalTopCard,
+.workerRozgarSimilarRoles {
+    background: var(--card-bg);
+    border: 1px solid #E5E7EB;
+    border-radius: 20px;
+    padding: 14px;
+}
+
+    .workerRozgarModalCard h4,
+    .workerRozgarEmployerCard h4,
+    .workerRozgarSimilarRoles h4 {
+        font-size: 20px;
+        margin-bottom: 18px;
+        font-weight: 500;
+    }
+
+/* ===================================
+   TOP CARD
+=================================== */
+
+.workerRozgarModalTopCard {
+    grid-column: span 2;
+}
+
+.workerRozgarModalTopContent {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.workerRozgarModalJobIcon {
+    width: 54px;
+    height: 54px;
+    border: 1px solid #D8D8D8;
+    border-radius: 12px;
+    display: flex;
+    background: #022B5E20;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 22px;
+}
+
+.workerRozgarModalJobInfo {
+    flex: 1;
+}
+
+    .workerRozgarModalJobInfo h2 {
+        font-size: 26px;
+        margin-bottom: 4px;
+    }
+
+.workerRozgarModalCompany {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    color: #666;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.workerRozgarModalPosted {
+    color: #777;
+    font-size: 14px;
+}
+
+.workerRozgarModalActions {
+    display: flex;
+    flex:0.2;
+    gap: 10px;
+}
+
+.workerRozgarModalStats {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #ECECEC;
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 20px;
+}
+
+    .workerRozgarModalStats label {
+        display: block;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: #9CA3AF;
+        margin-bottom: 4px;
+    }
+
+    .workerRozgarModalStats span {
+        display: block;
+        font-weight: 500;
+        font-size: 18px;
+    }
+
+    .workerRozgarModalStats small {
+        display: block;
+        color: #6B7280;
+        font-size: 0.75rem;
+    }
+
+.workerRozgarUrgentTag {
+    display: inline-block !important;
+    background: #FFB4B44D;
+    color: #AC2F01 !important;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+
+/* ===================================
+   EMPLOYER
+=================================== */
+    .workerRozgarEmployerInfo{
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.workerRozgarEmployerIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #022B5E20;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.workerRozgarEmployerDesc {
+    color: #555;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ===================================
+   JOB DESCRIPTION
+=================================== */
+
+ .workerRozgarJobDesc p{
+     font-size : 14px
+ }
+
+/* ===================================
+   SKILLS
+=================================== */
+
+.workerRozgarSkillTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+    .workerRozgarSkillTags span {
+        background: #F3F4F6;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-size: 12px;
+    }
+
+/* ===================================
+   SIMILAR ROLES
+=================================== */
+
+.workerRozgarSimilarCard {
+    background: #FAFAFA;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+    .workerRozgarSimilarCard + .workerRozgarSimilarCard {
+        margin-top: 12px;
+    }
+
+.workerRozgarSimilarCard h5{
+    font-size : 16px;
+}
+
+.workerRozgarSimilarCard p {
+        font-size: 14px;
+}
+.workerRozgarSimilarCard span {
+        font-size: 14px;
+}
+
+
+/* ===================================
+   PROJECT
+=================================== */
+
+.workerRozgarProjectItem {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+    .workerRozgarProjectItem i {
+        color: var(--primary);
+        font-size: 18px;
+    }
+
+    .workerRozgarProjectItem strong {
+        display: block;
+        font-size:16px;
+        font-weight :500;
+    }
+
+    .workerRozgarProjectItem span {
+        display: block;
+        color: #666;
+        font-size : 14px;
+    }
+
+/* ===================================
+   BENEFITS
+=================================== */
+
+.workerRozgarBenefitItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #FFF;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+    .workerRozgarBenefitItem i {
+        color: var(--primary);
+    }
+
+/* ===================================
+   RESPONSIVE
+=================================== */
+
+@media (max-width: 1199px) {
+
+    .workerRozgarJobModalWrapper {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .workerRozgarModalTopCard {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 767px) {
+
+    .workerRozgarJobModalWrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .workerRozgarModalTopCard {
+        grid-column: auto;
+    }
+
+    .workerRozgarModalStats {
+        grid-template-columns: repeat(2,1fr);
+    }
+
+    .workerRozgarModalTopContent {
+        flex-direction: column;
+    }
+
+    .workerRozgarModalActions {
+        width: 100%;
+    }
+
+        .workerRozgarModalActions button {
+            flex: 1;
+        }
+}
+
+/* ===================================
+   APPLY MODAL
+=================================== */
+
+.workerRozgarApplyModal .modal-dialog {
+    max-width: 900px;
+}
+
+.workerRozgarApplyModal .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.workerRozgarApplyModal .modal-header {
+    display: none;
+}
+
+.workerRozgarApplyModal .modal-body {
+    padding: 0;
+    background: #FFF;
+}
+
+/* ===================================
+   HEADER
+=================================== */
+
+.workerRozgarApplyHeader {
+    padding: 26px;
+    text-align: center;
+    background: #fff;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+    .workerRozgarApplyHeader h2 {
+        margin: 0 0 6px;
+        font-size: 26px;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+    .workerRozgarApplyHeader p {
+        margin: 0;
+        font-size: 14px;
+        color: #6B7280;
+    }
+
+/* ===================================
+   FORM
+=================================== */
+
+.workerRozgarApplyForm {
+    background: #fff;
+}
+
+.workerRozgarApplyGrid {
+    padding: 32px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.workerRozgarFullWidth {
+    grid-column: span 2;
+}
+
+.workerRozgarField label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.workerRozgarField .form-control,
+.workerRozgarField .form-select {
+    height: 50px;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    background: var(--card-bg);
+    box-shadow: none;
+    font-size: 16px;
+}
+
+    .workerRozgarField .form-control:focus,
+    .workerRozgarField .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: none;
+    }
+
+/* ===================================
+   LOCATION
+=================================== */
+
+.workerRozgarLocationInput {
+    position: relative;
+}
+
+    .workerRozgarLocationInput i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--primary);
+        font-size: 18px;
+    }
+
+    .workerRozgarLocationInput input {
+        padding-left: 48px;
+    }
+
+/* ===================================
+   FOOTER
+=================================== */
+
+.workerRozgarApplyFooter {
+    padding: 0 32px 32px;
+    display: flex;
+    justify-content: center;
+    background: #fff;
+}
+
+.workerRozgarSubmitBtn {
+    min-width: 210px;
+    height: 50px;
+    border: none;
+    border-radius: 14px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    transition: .25s ease;
+}
+
+    .workerRozgarSubmitBtn:hover {
+        background: var(--primary-dark);
+    }
+
+/* ===================================
+   MOBILE
+=================================== */
+
+@media (max-width: 767px) {
+
+    .workerRozgarApplyGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .workerRozgarFullWidth {
+        grid-column: auto;
+    }
+
+    .workerRozgarApplyHeader {
+        padding: 24px;
+    }
+
+    .workerRozgarApplyGrid {
+        padding: 24px;
+    }
+
+    .workerRozgarApplyFooter {
+        padding: 0 24px 24px;
+    }
+
+    .workerRozgarSubmitBtn {
+        width: 100%;
+    }
+}

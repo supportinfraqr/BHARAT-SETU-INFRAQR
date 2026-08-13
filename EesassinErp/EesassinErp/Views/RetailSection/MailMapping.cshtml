@@ -1,0 +1,277 @@
+﻿@{
+    ViewBag.Title = "ReportHeader Master";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/ckeditor/ckeditor.js"></script>
+<script src="~/Content/ckfinder/ckfinder.js"></script>
+<script src="~/Scripts/RetailJsLib/MailingController.js"></script>
+
+
+
+
+@*<h2>Board Master</h2>*@
+<input type="hidden" ng-model="hfId" id="Id" name="Id" value="" />
+
+<div class="autohide-scroll autoheightset" ng-init="AllParty()">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Mail Mapping</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Ulitiy</span></a></li>
+                <li class="active"><span>Mail Mapping</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form" ng-init="AllParty()">
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Party<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select class="select2 form-control validate" ng-model="PartyId">
+                                                    <option value="">Select</option>
+                                                    <option value="0">All</option>
+                                                    <option ng-repeat="x in AllPartyList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Mail For<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlReportCategory" ng-model="MailFor" class="select2 form-control validate">
+                                                    <option value="">Select</option>
+                                                    <option value="UserRegistration">UserRegistration</option>
+                                                    <option value="Compliance Documents Submitted to Auditor">Compliance Documents Submitted to Auditor</option>
+                                                    <option value="compliance report has been created for your response">compliance report has been created for your response</option>
+                                                    <option value="final Compliance report submitted">final Compliance report submitted</option>
+                                                    <option value="Store submitted">Store submitted</option>
+                                                    <option value="License Approved in Store">License Approved in Store</option>
+                                                    <option value="Store detail Submitted">Store detail Submitted</option>
+                                                    <option value="Retail Send a mail for Store">Retail Send a mail for Store</option>
+                                                    <option value="Notices & Inspections  Arrise from  Store">Notices & Inspections  Arrise from Store</option>
+                                                    <option value="Mapped with New Store">Mapped with New Store</option>
+                                                    <option value="Document has been Added for Compliance Doc">Document has been Added for Compliance Doc</option>
+                                                    <option value="Document file has been uploaded for Compliance Doc">Document file has been uploaded for Compliance Doc</option>
+                                                    <option value="Document No invoice has been submitted">Document No :  invoice has been submitted</option>
+                                                    <option value="New Document has been  Uploaded">New Document has been  Uploaded</option>
+                                                    <option value="Invoice Batch No has been submitted successfully">Invoice Batch No has been submitted successfully</option>
+                                                    <option value="New Document  has been  Approved">UserRegistration</option>
+                                                    <option value="Time Rest in Invoice No has been  Approved">Time Rest in Invoice No has been  Approved</option>
+                                                    <option value="Your One-Time Password for Account Verification">Your One-Time Password for Account Verification</option>
+                                                    <option value="Mapped with StoreCode">Mapped with StoreCode</option>
+                                                    <option value="Reminder: Your License">Reminder Your License</option>
+                                                    <option value="Action Required: Complete Your Registration for Store Code">Action Required: Complete Your Registration for Store Code</option>
+                                                    <option value="Action Required: Complete Your Registration for Store Code">Action Required: Complete Your Registration for Store Code</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">
+                                                Select Template<span class="vd_red">*</span>
+                                                <i class="fa fa-plus-circle text-primary"
+                                                   style="cursor:pointer; margin-left:6px;"
+                                                   ng-click="openTemplatePopup()"
+                                                   title="Add / Edit Template"></i>
+                                            </label>
+                                            <div class="input-box" ng-init="Bindtemplte()">
+                                                <select class="select2 form-control validate" ng-model="TemplateId">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in templatelist" value="{{x.TemplateId}}">{{x.TemplateName}}</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">To<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlReportCategory" ng-model="To" class="select2 form-control validate">
+
+                                                    <option value="">Select</option>
+                                                    <option value="Store">Store Manager </option>
+                                                    <option value="User">User</option>
+                                                    <option value="Party">Party</option>
+
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">CC<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlReportCategory" ng-model="CC" class="select2 form-control validate">
+
+                                                    <option value="">Select</option>
+
+                                                    <option value="Store">Store Manager </option>
+                                                    <option value="User">User</option>
+                                                    <option value="Party">Party</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">BCC<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlReportCategory" ng-model="BCC" class="select2 form-control validate">
+
+                                                    <option value="">Select</option>
+
+                                                    <option value="Store">Store Manager </option>
+                                                    <option value="User">User</option>
+                                                    <option value="Party">Party</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Template Master</h4>
+
+                <!-- Edit Template Button -->
+                <button class="btn btn-primary btn-sm ms-3"
+                        ng-click="isEditMode = !isEditMode">
+                    {{isEditMode ? 'Add New' : 'Edit Template'}}
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row">
+                    <!-- Template Dropdown (Show only in Edit Mode) -->
+                    <div class="col-md-6" ng-show="isEditMode">
+                        <label>Select Template<span class="vd_red">*</span></label>
+                        <select class="select2 form-control"
+                                ng-model="SelectedTemplate"
+                                ng-options="x as x.TemplateName for x in templatelist"
+                                ng-change="settemplate(SelectedTemplate)">
+                            <option value="">Select</option>
+                        </select>
+                    </div>
+
+                    <!-- Template Name Textbox -->
+                    <div class="col-md-6" ng-hide="isEditMode">
+                        <label>Template Name<span class="vd_red">*</span></label>
+                        <input type="text"
+                               class="form-control"
+                               ng-model="Template.TemplateName" />
+                    </div>
+
+                    <div class="col-md-12">
+                        <label>Subject<span class="vd_red">*</span></label>
+                        <input type="text"
+                               class="form-control"
+                               ng-model="Template.Subject" />
+                    </div>
+                </div>
+
+                <div class="row m-t-15">
+                    <div class="col-md-12">
+
+                        <label>Template Format <span class="vd_red">*</span></label>
+
+                        <div class="mb-2">
+                            <span class="badge bg-info me-1"
+                                  ng-repeat="f in Placeholders"
+                                  data-field="{{f}}"
+                                  ng-click="insertCKField(f)"
+                                  style="cursor: grab;">
+                                {{f}}
+                            </span>
+                        </div>
+
+                        <textarea id="txtPopupTemplate"></textarea>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success" ng-show="isEditMode"  ng-click="updateTemplate()">Update</button>
+                <button class="btn btn-success" ng-hide="isEditMode" ng-click="InsertTemplate()">Save</button>
+                <button class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@*<script>
+        function dragCKField(ev, field) {
+            ev.dataTransfer.setData("text/plain", field);
+        }
+
+        // CKEDITOR READY hone ke baad drop enable karo
+        CKEDITOR.on('instanceReady', function (evt) {
+
+            var editor = evt.editor;
+
+            editor.document.on('dragover', function (e) {
+                e.data.preventDefault(true);
+            });
+
+            editor.document.on('drop', function (e) {
+                e.data.preventDefault(true);
+
+                var field = e.data.$.dataTransfer.getData("text/plain");
+                if (!field) return;
+
+                var text = "'+" + field + "+'";
+                editor.insertText(text);
+            });
+
+        });
+    </script>*@

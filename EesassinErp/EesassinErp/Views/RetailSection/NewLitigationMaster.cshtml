@@ -1,0 +1,685 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "New Litigation Master";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="~/Masters/NewLitigationMaster/script.js"></script>
+<link href="~/Masters/NewLitigationMaster/style.css" rel="stylesheet" />
+
+<div class="licenseMasterPage px-4 py-2">
+    <!-- Main CARD -->
+    <div id="mainCard" class="card section-card active">
+        <h4 class="mt-2 px-4" style="color: #E45D27">License Master </h4>
+
+
+        <div class="card-body p-3 h-100 d-flex flex-column">
+
+            <!-- Toolbar -->
+            <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Status
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Document Pending</a></li>
+                            <li><a class="dropdown-item" href="#">Application Pending</a></li>
+                            <li><a class="dropdown-item" href="#">Approval Pending</a></li>
+                            <li><a class="dropdown-item" href="#">Renewal Pending</a></li>
+                            <li><a class="dropdown-item" href="#">Amendment Pending</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Delay Days
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">0-15</a></li>
+                            <li><a class="dropdown-item" href="#">15-30</a></li>
+                            <li><a class="dropdown-item" href="#">More than 30</a></li>
+                            <!-- ... -->
+                        </ul>
+                    </div>
+
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                    <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                        <div class="input-group input-group-sm">
+                            <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                            <button class="btn btn-sm" id="scSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                        <div class="dropdown">
+                            <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">CSV</a></li>
+                                <li><a class="dropdown-item" href="#">PDF</a></li>
+                                <li><a class="dropdown-item" href="#">Print</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm download-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Download</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">Application Copies</a></li>
+                                <li><a class="dropdown-item" href="#">Challan Copies</a></li>
+                                <li><a class="dropdown-item" href="#">Fees Copies</a></li>
+                                <li><a class="dropdown-item" href="#">License Copies</a></li>
+                                <li><a class="dropdown-item" href="#">Renewed License Copies</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table wrapper -->
+            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 small-table" id="licMasterTable">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Location Code</th>
+                                <th>Ref Location Code</th>
+                                <th>Proposed Date</th>
+                                <th>License Name</th>
+                                <th>License Type</th>
+                                <th>Requested Date</th>
+                                <th>License Status</th>
+                                <th>License Number</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="licMasterTableBody">
+                            <tr ng-repeat="license in LicenseRequestList | filter: filterByStatus" ng-disabled="{{IsValid}}">
+                                <td class="checkbox-cell">
+                                    <input type="checkbox"
+                                           class="select-license-checkbox"
+                                           data-license='{{ license | json }}'
+                                           ng-model="license.selected" />
+                                    <span>{{ $index + 1 }}</span>
+                                </td>
+                                <td>
+                                    <a class="store-code-link text-success"
+                                       href="#" ng-Click="SetLicense(license,$index)"
+                                       data-bs-toggle="modal"
+                                       data-bs-target="#requestForm">
+                                        <b>{{license.StoreCode}}</b>
+                                    </a>
+                                </td>
+                                <td><b>{{license.RefStoreCode}}</b></td>
+                                <td>{{license.ProposedDate}}</td>
+                                <td>{{license.LicenseName}}</td>
+                                <td>{{license.LicenseType}}</td>
+                                <td>{{license.RequestedDate}}</td>
+                                <td>{{license.IssuedDate}}</td>
+                                <td>{{license.LicenseNumber}}</td>
+
+                                @*<td class="license-copy-cell uploaded">
+                                        <button class="btn btn-icon" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-icon" title="Download">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                    </td>*@
+                                <td class="action-menu">
+                                    <button class="btn btn-sm" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item js-view-license">View More</a></li>
+                                    </ul>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="licMasterPaginationWrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-primary" id="licMasterPrev" type="button">Previous</button>
+                        <button class="btn btn-sm btn-outline-primary" id="licMasterNext" type="button">Next</button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div id="licMasterPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                        <button class="btn btn-sm btn-primary" id="viewAllRows" type="button">View All Rows</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= License Master Modal ================= -->
+    <div class="modal fade" id="licenseMasterModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 14px; background: #FEF3EC; overflow: hidden; ">
+
+                <!-- Header -->
+                <div class="licMaster-header d-flex align-items-center">
+                    <button type="button" class="btn licMaster-back-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+
+                    <h3 class="modal-title text-center flex-grow-1" style="color:#fff">License Master</h3>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body" style="background: #FEF3EC; font-size: 0.9rem;">
+
+                    <div class="container-fluid">
+                        <!-- Top Section : License Type + Uploads  -->
+                        <div class="row g-3 mb-4 align-items-end">
+
+                            <!-- License Type -->
+                            <div class="col-md-3">
+                                <label class="form-label">License Type</label>
+                                <select class="form-select form-select-sm">
+                                    <option value="">Select</option>
+                                    <option>Fresh</option>
+                                    <option>Renewal</option>
+                                </select>
+                            </div>
+
+                            <!-- License Copy -->
+                            <div class="col-md-3">
+                                <label class="form-label">License Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Application Copy -->
+                            <div class="col-md-3">
+                                <label class="form-label">Application Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Challan Copy -->
+                            <div class="col-md-3">
+                                <label class="form-label">Challan Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+
+                            <div class="col-md-3"></div>
+
+                            <!-- Fees Copy -->
+                            <div class="col-md-3">
+                                <label class="form-label">Fees Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Renewal Copy -->
+                            <div class="col-md-3">
+                                <label class="form-label">Renewal Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Amendment Copy -->
+                            <div class="col-md-3">
+                                <label class="form-label">Amendment Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <!-- Location Details-->
+                        <div class="lic-section">
+                            <div class="lic-section-title">Location Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Location Code</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Ref Location Code</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Location Address</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Proposed Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Requested Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Document Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Application Details -->
+                        <div class="lic-section">
+                            <div class="lic-section-title">Application Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Application Status</label>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Applied</option>
+                                        <option>Not Applied</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Application Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LICENSE DETAILS -->
+                        <div class="lic-section">
+                            <div class="lic-section-title">License Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">License Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">License Status</label>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Issued</option>
+                                        <option>Not Issued</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">License Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">License Number</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Validity Start Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Validity End Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Tentative Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">License Cost</label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Govt Fees</label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Remark</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- USER DETAILS -->
+                        <div class="lic-section">
+                            <div class="lic-section-title">User Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">User Password</label>
+                                    <input type="password" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Mobile Number</label>
+                                    <input type="tel" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save button -->
+                        <div class="d-flex justify-content-end mt-4">
+                            <button class="btn px-4" id="saveBtn" style="background:var(--primary); color:#fff;">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= License Master View More Modal ================= -->
+    <div class="modal fade" id="licenseMasterViewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content" style="border-radius:14px; background:#FEF3EC; overflow:hidden;">
+
+                <!-- Header -->
+                <div class="licMaster-header d-flex align-items-center">
+                    <button type="button" class="btn licMaster-back-btn" data-bs-dismiss="modal">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+
+                    <h3 class="modal-title text-center flex-grow-1" style="color:#fff">
+                        License Details
+                    </h3>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body" style="background:#FEF3EC; font-size:0.9rem;">
+                    <div class="container-fluid">
+
+                        <!-- ================= Uploads (NO License Type here) ================= -->
+                        <div class="row g-3 mb-4">
+
+                            <div class="col-md-4">
+                                <label class="form-label">License Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Application Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Challan Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Fees Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Renewal Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Amendment Copy</label>
+                                <div class="lic-upload-field">
+                                    <input type="file" class="form-control form-control-sm">
+                                    <div class="lic-upload-actions">
+                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-download"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <hr>
+
+                        <!-- Location Details-->
+                        <div class="lic-section">
+                            <div class="lic-section-title">Location Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Location Code</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Ref Location Code</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Location Address</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Proposed Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Requested Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Document Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Application Details -->
+                        <div class="lic-section">
+                            <div class="lic-section-title">Application Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Application Status</label>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Applied</option>
+                                        <option>Not Applied</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Application Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LICENSE DETAILS -->
+                        <div class="lic-section">
+                            <div class="lic-section-title">License Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">License Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">License Status</label>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Issued</option>
+                                        <option>Not Issued</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">License Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">License Number</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Validity Start Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Validity End Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Tentative Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">License Cost</label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Govt Fees</label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Remark</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- USER DETAILS -->
+                        <div class="lic-section">
+                            <div class="lic-section-title">User Details</div>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">User Password</label>
+                                    <input type="password" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Mobile Number</label>
+                                    <input type="tel" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save button -->
+                        <div class="d-flex justify-content-end mt-4">
+                            <button class="btn px-4" id="saveBtn" style="background:var(--primary); color:#fff;">
+                                Save
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<script src="~/scripts/RetailJsLib/LicenseRequestMasterController.js?Ver=@ViewBag.Version"></script>
+<script src="~/Content/lib/moment/moment.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- For PDF Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

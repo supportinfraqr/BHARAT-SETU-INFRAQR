@@ -1,0 +1,1240 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "License Common Compliance";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/LicenseCommonComplianceController.js"></script>
+<script src="~/ReportsDashboard/LicenseCommonCompliance/script.js"></script>
+<script src="~/scripts/Rootfile/chart.umd.min.js"></script>
+<link href="~/ReportsDashboard/LicenseCommonCompliance/style.css" rel="stylesheet" />
+ 
+<style>
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+
+    .filter-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        font-size: 13px;
+        border-radius: 20px;
+        border: 1px solid #ff7a2f;
+        background: #fff;
+        color: #ff7a2f;
+        cursor: pointer;
+        transition: all 0.25s ease;
+    }
+
+        .filter-btn i {
+            font-size: 12px;
+        }
+
+        .filter-btn:hover {
+            background: #ff7a2f;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(255,122,47,0.35);
+        }
+
+    /* Reset */
+    .reset-btn {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.75rem;
+    }
+
+        .reset-btn:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+</style>
+
+<div class="licCommonCompPage px-4 py-2">
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="Overview, License Report, Expiry Report or Report">
+            <button type="button" class="btn btn-pill active" data-target="#overview" ng-click="ManageLog('Click on Overview')" aria-pressed="true">Overview</button> 
+            <button type="button" class="btn btn-pill" data-target="#expiryReport" aria-pressed="false" ng-click="BindSecondPart();LoadLicenseReg();ManageLog('Click on Expiry License')">Expiry License</button>
+            <button type="button" class="btn btn-pill" data-target="#masterReport" aria-pressed="false" ng-click="started()">Reports</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- CARD 1 : Overview (default visible) -->
+        <div id="overview" class="card section-card active">
+            <!-- Header -->
+            <div class="licCommonCompPage-header mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h4 class="mb-0">License Overview</h4>
+                    <button type="button" class="btn btn-sm export-btn" ng-click="printoverview();ManageLog('Click on print button License Overview')">
+                        <i class="bi bi-download me-1"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <div class="grbox box curved-div margin3" ng-if="hasAppliedFilters()">
+                <div class="bhed"><b style="font-weight: 400; color: var(--primary);">Applied Filters</b></div>
+
+                <div class="filter-scroll" style="font-size: 0.75rem; color: #6e6e6e;">
+                    <span ng-if="dvRegion==1" class="filter-chip">
+                        <i class="bi bi-globe"></i> Region
+                    </span>
+
+                    <span ng-if="dvStatus==1" class="filter-chip">
+                        <i class="bi bi-info-circle"></i> Status
+                    </span>
+
+                    <span ng-if="dvLicenceStatus==1" class="filter-chip">
+                        <i class="bi bi-id-card"></i> Licence Status
+                    </span>
+
+                    <span ng-if="dvLicenceApplicable==1" class="filter-chip">
+                        <i class="bi bi-check-circle"></i> Licence Applicable
+                    </span>
+
+                    <span ng-if="dvExpiryStatus==1" class="filter-chip">
+                        <i class="bi bi-clock"></i> Expiry Status
+                    </span>
+
+                    <span ng-if="dvFreshRenewal==1" class="filter-chip">
+                        <i class="bi bi-sync"></i> Fresh / Renewal
+                    </span>
+
+                    <span ng-if="dvClient==1" class="filter-chip">
+                        <i class="bi bi-user"></i> Client
+                    </span>
+
+                    <span ng-if="dvInvoice==1" class="filter-chip">
+                        <i class="bi bi-file-text"></i> Invoice
+                    </span>
+
+                    <span ng-if="dvPayment==1" class="filter-chip">
+                        <i class="bi bi-credit-card"></i> Payment
+                    </span>
+
+                    <span ng-if="dvOutlet==1" class="filter-chip">
+                        <i class="bi bi-store"></i> Outlet
+                    </span>
+
+                    <span ng-if="dvLicenceType==1" class="filter-chip">
+                        <i class="bi bi-certificate"></i> Licence Type
+                    </span>
+
+                    <span ng-if="dvState==1" class="filter-chip">
+                        <i class="bi bi-map-marker"></i> State
+                    </span>
+
+                    <span ng-if="dvAddress==1" class="filter-chip">
+                        <i class="bi bi-location-arrow"></i> Address
+                    </span>
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown"  ng-click="GetRegion()">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-globe"></i> Region
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-repeat="x in RegionList  | orderBy:'Name'" ng-click="SetRegion(x.RegionId);ManageLog('Click on License Overview Region buuton '+ x.Name)">{{x.Name}}</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown" ng-click="BindState()">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-marker-tip"></i>     State
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-repeat="x in StateList  | orderBy:'STATE_NAME'" ng-click="SetState(x.STATE_ID);ManageLog('Click on License Overview ' + x.STATE_NAME)">{{x.STATE_NAME}}</a></li>
+
+                            </ul>
+                        </div>
+
+                        <div class="dropdown" ng-click="BindSStore()">
+
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-outlet"></i>   Outlet
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-repeat="x in StoreLList  | orderBy:'StoreName'| unique:'Id'" ng-click="SetStore(x.Id);ManageLog('Click on License Overview ' + x.StoreName)">{{x.StoreName}}</a></li>
+
+                            </ul>
+                        </div>
+
+                        <div class="dropdown" ng-click="BindAddress()">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-lock"></i>   Address
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-repeat="x in AddressList | orderBy:'CompleteAddress.toLowerCase()'" ng-click="SetAddress(x.CompleteAddress);ManageLog('Click on License Overview ' + x.CompleteAddress)">{{x.CompleteAddress}}</a></li>
+                            </ul>
+                        </div>
+
+
+                        <div class="dropdown" ng-click="BindLicence()">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-card-image"></i>  License
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-repeat="x in LicenceList | orderBy: 'LicenseName.toLowerCase()'" ng-click="SetLicense(x.LicenseId);ManageLog('Click on License Overview ' + x.LicenseName)">{{x.LicenseName}}</a></li>
+
+                            </ul>
+                        </div>
+
+
+                        <div class="dropdown" ng-click="BindLicenceStatus()">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-card-checklist"></i>   License Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-click="SetLicenceStatus('Applied');ManageLog('Click on License Overview Applied button')">Applied</a></li>
+                                <li><a class="dropdown-item" ng-click="SetLicenceStatus('Issued');ManageLog('Click on License Overview Issued button')">Issued</a></li>
+                                <li><a class="dropdown-item" ng-click="SetLicenceStatus('Surrender');ManageLog('Click on License Overview Surrender button')">Surrender</a></li>
+                                <li><a class="dropdown-item" ng-click="SetLicenceStatus('Not Applied');ManageLog('Click on License Overview Not Applied button')">Not Applied</a></li>
+
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-activity"></i>   Expiry Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-click="SetExpiryStatus('Expiring Soon');ManageLog('Click on License Overview Expiring Soon button')">Expiring Soon</a></li>
+                                <li><a class="dropdown-item" ng-click="SetExpiryStatus('Expired');ManageLog('Click on License Overview Expired button')">Expired</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown" ng-click="BindLicenceType();BindSStore()">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-sign-yield"></i>       License Stage
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" ng-repeat="x in LicenseTypeList  | orderBy:'LicenseType'" ng-click="SetLicenceType(x.LStatus)">{{x.LicenseType}}</a></li>
+
+                            </ul>
+                        </div>
+
+
+
+
+
+
+                        <button class="btn btn-sm reset-btn" ng-click="Reset();ManageLog('Click on License Overview Reset')">  <i class="bi bi-refresh"></i>Reset</button>
+                    </div>
+
+
+                </div>
+
+                <!--  Dashboard Chart -->
+                <div id="licenseoverview" class="licCommonCompPage-chartWrap mt-3" ng-init="FilterGraph()">
+                    <div class="licCommonCompPage-chartContainer" style="height:350px;">
+                        <canvas id="licCommonComplianceChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CARD 2 -->
+        <!--<div id="licenseReport" class="card section-card d-none">
+           
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">License Report</h4>
+                <button type="button" class="btn btn-sm export-btn" ng-click="LicensePRINTReport();ManageLog('Click on License Overview Print button')">
+                    <i class="bi bi-download me-1"></i> Print
+                </button>
+            </div>  
+            <div id="licenseReportp">
+                <div class="licenseReport-summary card-body mb-4">
+                    <div class="licenseReport-summary-row">
+                          
+                        <div class="licenseReport-client" ng-init="BindSecondPart()">
+                            <h4 class="client-name">{{MapUser}}</h4>
+                            <div class="client-meta">
+                            <span>Report Generated by : {{UserName}}</span>
+                            <span class="dot">•</span>
+                                <span>{{MapUser}}</span>
+                                <span class="dot">•</span>
+                                <span>{{BranchAddress}}</span>
+                            </div>
+                            <div class="client-date">
+                                Report Generated by: {{MapUser}}<br />
+                                Report Generated on: {{ currentDateTime | date:'MMMM d, yyyy \'at\' hh:mm a' }}
+                            </div>
+                        </div>
+                         
+                        <div class="licenseReport-health">
+                            <div class="health-label">Overall Risk Score</div>
+                            <div class="health-score">{{SExpired}}<span>/{{STotalLicense}}</span></div>
+                            <div class="health-status">Needs Attention</div>
+                        </div>
+
+                    </div>
+                </div>-->
+
+                <!-- ================= KPI Bar ================= -->
+                <!--<div class="container mb-4">
+                    <div class="licCommonCompPage-kpi-row d-flex gap-3">-->
+
+                        <!-- Total License -->
+                        <!--<div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Total License</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{STotalLicense}}</div>
+                        </div>
+
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Active</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{SActive}}</div>
+                        </div>-->
+
+                        <!-- Expiring Soon License -->
+                        <!--<div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Expiring Soon</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{SExpiringSoon}}</div>
+                        </div>-->
+
+                        <!-- Expired -->
+                        <!--<div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Expired</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{SExpired}}</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Pending Approval</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{SPendingApproval}}</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-card">
+                                <div>
+                                    <div class="licCommonCompPage-kpi-title">Total Documents</div>
+                                </div>
+                                <div class="licCommonCompPage-kpi-value">{{STotalLicense}}</div>
+                            </div>
+
+                    </div>
+                </div>
+                 
+                <div class="licenseReport-priorityActions card-body">-->
+
+                    <!-- Header -->
+                    <!--<div class="priorityActions-header">
+                        <h5 class="priorityActions-title">Priority Actions</h5>
+                        <span class="priorityActions-badge">4 Actions Required</span>
+                    </div>-->
+
+                    <!-- Actions Grid -->
+                    <!--<div class="priorityActions-body">
+
+                        <div class="priorityActions-item">
+                            <div class="priorityActions-icon">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+
+                            <div class="priorityActions-content">
+                                <div class="priorityActions-item-title">
+                                    <h4>Renew Expired Licenses</h4>
+                                </div>
+                                <div class="priorityActions-desc">
+                                    {{ SExpired }} license(s) have expired.
+                                    Immediate renewal required to avoid penalties.
+                                </div>
+                            </div>
+
+                            <div class="priorityActions-date">Overdue</div>
+                        </div>
+
+                        <div class="priorityActions-item">
+                            <div class="priorityActions-icon">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+
+                            <div class="priorityActions-content" ng-if="SExpiringSoon > 0">
+                                <div class="priorityActions-item-title">
+                                    <h4>Licenses Expiring Soon</h4>
+                                </div>
+                                <div class="priorityActions-desc">
+                                    {{ SExpiringSoon }} license(s) will expire soon.
+                                    Submit renewal application immediately.
+                                </div>
+                            </div>
+
+                            <div class="priorityActions-date">Jan 31, 2026</div>
+                        </div>
+
+                        <div class="priorityActions-item">
+                            <div class="priorityActions-icon">
+                                <i class="bi bi-exclamation-circle"></i>
+                            </div>
+
+                            <div class="priorityActions-content">
+                                <div class="priorityActions-item-title">
+                                    <h4>Active Licenses</h4>
+                                </div>
+                                <div class="priorityActions-desc">
+                                    {{ SActive }} license(s) are currently active and compliant.
+                                </div>
+                            </div>
+
+                            <div class="priorityActions-date">Feb 28, 2026</div>
+                        </div>
+
+                        <div class="priorityActions-item">
+                            <div class="priorityActions-icon">
+                                <i class="bi bi-exclamation-circle"></i>
+                            </div>
+
+                            <div class="priorityActions-content">
+                                <div class="priorityActions-item-title">
+                                    Follow up
+                                </div>
+                                <div class="priorityActions-desc">
+                                    {{ SExpired + SExpiringSoon + SPendingApproval }} Actions Required
+                                </div>
+                            </div>
+
+                            <div class="priorityActions-date">Jan 20, 2026</div>
+                        </div>
+
+                    </div>
+                </div>
+                 
+                <div class="licReportInsights mt-3">
+
+                    <div class="row g-3 align-items-stretch">
+                 LEFT 
+                <div class="col-lg-6">
+                    <div class="licReportInsights-card">
+                        <h5 class="licReportInsights-title">License Status Distribution</h5>
+                        <div class="licReportInsights-chartWrap licReportInsights-chart-lg">
+                            <canvas id="licStatusDonut"></canvas>
+                 Legend 
+                <div class="licReportInsights-legend single-row">
+                                <span class="active">Active: {{SActive}}</span>
+                                <span class="expiring">Expiring Soon: {{SExpiringSoon}}</span>
+                                <span class="expired">Expired: {{SExpired}}</span>
+                                <span class="pending">Pending Approval: {{SPendingApproval}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 RIGHT 
+                <div class="col-lg-6 d-flex flex-column gap-3">
+                 Risk 
+                <div class="licReportInsights-card">
+                    <h5 class="licReportInsights-title">Risk Assessment</h5>
+                    <div class="licReportInsights-riskWrap">
+                        <div class="risk-chart">
+                            <canvas id="riskDonut"></canvas>
+                            <div class="risk-score">{{SExpired}}</div>
+                            <div class="risk-label">Risk</div>
+                        </div>
+
+                        <ul class="licReportInsights-riskList">
+                            <li class="high">High Risk: {{SExpired}}</li>
+                            <li class="medium">Medium Risk: {{SExpiringSoon}}</li>
+                            <li class="low">Low Risk:  {{SActive}}</li>
+                        </ul>
+                    </div>
+                </div>
+                 Document 
+                <div class="licReportInsights-card">
+                                <h6 class="licReportInsights-title">License Status</h6>
+                                <div class="licReportInsights-chartWrap licReportInsights-chart-sm">
+                                    <canvas id="docStatusBar"></canvas>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+                 ================= License Report : Charts Row ================= 
+                <div class="row g-3 mt-1">
+                 Left: Licenses by Category 
+                <div class="col-lg-6">
+                    <div class="licReportInsights-card h-100">
+                        <h5 class="licReportInsights-title">Licenses</h5>
+                        <div class="licReportInsights-chartWrap licReportInsights-chart-lg">
+                            <canvas id="licensesByCategory"></canvas>
+                        </div>
+                    </div>
+                </div>
+                 Right: Expiry Timeline 
+                <div class="col-lg-6">
+                        <div class="licReportInsights-card h-100">
+                            <h5 class="licReportInsights-title">Expiry Timeline</h5>
+                            <div class="licReportInsights-chartWrap licReportInsights-chart-lg">
+                                <canvas id="expiryTimeline"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                 ================= License Details & Status Table ================= 
+                <div class="small-table-wrapper exLicTableWrapper flex-grow-1 overflow-auto rounded-3 mt-3" ng-init="LoadLicenseReg()">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 exLicTable" id="exLicTable">
+                            <thead>
+                                <tr>
+                                    <th>Location</th>
+                                    <th>License</th>
+                                    <th>License No.</th>
+                                    <th>Status</th>
+                                    <th>Issue Date</th>
+                                    <th>Expiry Date</th>
+                                    <th>Days to Expiry</th>
+                                    <th>Risk</th>
+                                    <th>Compliance</th>
+                <th>Documents (P/A/C)</th>
+                </tr>
+                </thead>
+                <tr ng-repeat="licenseMaster in LoadMasterList">
+                        <td> {{ licenseMaster.StoreCode }} </td>
+                        <td>{{ licenseMaster.LicenseName }}</td>
+                        <td>{{ licenseMaster.LicenseNumber }}</td>
+                        <td>{{ licenseMaster.ExpiryStatus }}</td>
+                        <td>{{ licenseMaster.ValidityStartDate }}</td>
+                        <td>{{ licenseMaster.ValidityEndDate }}</td>
+                        <td>{{ licenseMaster.DaysOfExpire }}</td>
+                        <td ng-class="{ 'ex-risk ex-medium': licenseMaster.ExpiryStatus === 'expire soon' }">
+                            {{ licenseMaster.ExpiryStatus }}
+                        </td>
+                        <td><span class="ex-status ex-danger">Expired</span></td>
+                        <td><span class="ex-risk ex-medium">Medium</span></td>
+
+                    </tr>
+                <tbody>
+                    <tr ng-repeat="licenseMaster in LoadMasterList">
+
+                        <td>{{ licenseMaster.StoreCode }}</td>
+                        <td>{{ licenseMaster.LicenseName }}</td>
+                        <td>{{ licenseMaster.LicenseNumber }}</td>
+                 Expiry Status 
+                <td>
+                                            <span ng-class="{
+                        'ex-status ex-active': licenseMaster.ExpiryStatus === 'Active',
+                        'ex-risk ex-medium': licenseMaster.ExpiryStatus === 'Expiring Soon',
+                        'ex-status ex-danger': licenseMaster.ExpiryStatus === 'Expired'
+                    }">
+                                                {{ licenseMaster.ExpiryStatus }}
+                                            </span>
+                                        </td>
+
+                                        <td>{{ licenseMaster.ValidityStartDate }}</td>
+                                        <td>{{ licenseMaster.ValidityEndDate }}</td>
+
+                                        <td class="ex-days"
+                                            ng-class="{
+                    'ex-good': licenseMaster.ExpiryStatus === 'Active',
+                    'ex-warn': licenseMaster.ExpiryStatus === 'Expiring Soon',
+                    'ex-bad':  licenseMaster.ExpiryStatus === 'Expired'
+                }">
+                                            {{ licenseMaster.DaysOfExpire }}
+                                        </td>
+                 Risk Level 
+                <td>
+                                        <span ng-class="{
+                    'ex-status ex-active': licenseMaster.ExpiryStatus === 'Active',
+                    'ex-risk ex-medium': licenseMaster.ExpiryStatus === 'Expiring Soon',
+                    'ex-status ex-danger': licenseMaster.ExpiryStatus === 'Expired'
+                }">
+                                            {{ licenseMaster.ExpiryStatus === 'Active' ? 'Low' :
+                   licenseMaster.ExpiryStatus === 'Expiring Soon' ? 'Medium' : 'High' }}
+                                        </span>
+                                    </td>
+                 Progress Bar + % 
+                <td>
+                                        <div class="ex-progress">
+                                            <span class="bar"
+                                                  ng-class="{
+                          'bar-green': licenseMaster.ExpiryStatus === 'Active',
+                          'bar-orange': licenseMaster.ExpiryStatus === 'Expiring Soon',
+                          'bar-red': licenseMaster.ExpiryStatus === 'Expired'
+                      }"
+                                                  ng-style="{
+                          width:
+                              (licenseMaster.ExpiryStatus === 'Active' ? '100%' :
+                               licenseMaster.ExpiryStatus === 'Expiring Soon' ? '60%' :
+                               '30%')
+                      }">
+                                            </span>
+                                        </div>
+
+                                        <span class="ex-percent">
+                                            {{ licenseMaster.ExpiryStatus === 'Active' ? '100%' :
+                   licenseMaster.ExpiryStatus === 'Expiring Soon' ? '60%' :
+                   '30%' }}
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                 ================= Recommended Actions & Next Steps ================= 
+                <div class="licActionNextSteps mt-4">
+                    <div class="row g-3 align-items-stretch">
+                         
+                        <div class="col-lg-8">
+                            <div class="licAction-card h-100">
+                                 
+                                <div class="licAction-header d-flex align-items-center justify-content-between mb-3">
+                                    <h6 class="mb-0">Recommended Actions &amp; Next Steps</h6>
+                                    <span class="licAction-tag">Strategic Guidance</span>
+                                </div>
+                                 
+                                <div class="row g-3">
+                                     
+                                    <div class="col-md-6">
+                                        <div class="licAction-block">
+                                            <div class="licAction-title immediate">
+                                                <i class="bi bi-bullseye"></i>
+                                                Immediate Actions (Next 7 Days)
+                                            </div>
+                                            <ul class="licAction-list">
+                                                <li>Initiate renewal process for expired Health &amp; Safety Certificate</li>
+                                                <li>Submit all pending documents for Import/Export License renewal</li>
+                                                <li>Schedule compliance audit for low-scoring licenses</li>
+                                            </ul>
+                                        </div>
+                                    </div>-->
+
+                                    <!-- Short-term Actions -->
+                                    <!--<div class="col-md-6">
+                                        <div class="licAction-block">
+                                            <div class="licAction-title short">
+                                                <i class="bi bi-activity"></i>
+                                                Short-term Actions (Next 30 Days)
+                                            </div>
+                                            <ul class="licAction-list">
+                                                <li>Complete renewal applications for Environmental Permit</li>
+                                                <li>Follow up on Trade License approval status</li>
+                                                <li>Upload pending documents for all licenses with incomplete documentation</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                         
+                        <div class="col-lg-4">
+                            <div class="licAction-summary h-100">
+
+                                <div class="licAction-summaryItem compliant">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span><strong>{{SExpiringSoon}}</strong> of <strong>{{STotalLicense}}</strong> License Expiring Soon</span>
+                                </div>
+
+                                <div class="licAction-summaryItem attention">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <span><strong>{{SExpired}}</strong> need attention</span>
+                                </div>
+
+                                <hr />
+
+                                <div class="licAction-review">
+                                    Review: <strong>{{ currentDateTime | date:'MMMM d, yyyy \'at\' hh:mm a' }}</strong>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                 
+                <div class="licReportNotes card-body my-4">
+                     
+                    <div class="licReportNotes-header">
+                      
+                        <h5 class="licReportNotes-title">Quick Notes & Client Annotations</h5>
+                    </div>
+                     
+                    <div class="licReportNotes-editor" contenteditable="true">
+                        <ul>
+                            <li>Contact John from EPA office regarding permit extension timeline</li>
+                            <li>Review internal safety procedures before audit on Jan 25th</li>
+                            <li>Budget allocation needed for Q2 license renewals (~$15,000)</li>
+                        </ul>
+
+                        <div class="licReportNotes-placeholder">
+                            Additional notes can be added here…
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>-->
+
+        <!-- CARD 3 -->
+        <div id="expiryReport" class="card section-card d-none">
+            @*<h4 class="mb-4">Expiry Report </h4>*@
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Expiry License</h4>
+                @*<button type="button" class="btn btn-sm export-btn">
+                        <i class="bi bi-download me-1"></i> Export
+                    </button>*@
+            </div>
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- ================= KPI Bar ================= -->
+                <div class="container mb-4">
+                    <div class="licCommonCompPage-kpi-row d-flex gap-2">
+
+                        <!-- Total License -->
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Total License</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">
+                                {{ STotalLicense || 0 }}
+                            </div>
+                        </div>
+
+                        <!-- Expiring Soon License -->
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Expring Soon</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{SExpiringSoon || 0}}</div>
+                        </div>
+
+                        <!-- Expired -->
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Expired</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">{{SExpired || 0}}</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                {{ selectedLicense || 'License Name' }}
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="selectLicense('')">
+                                        All Licenses
+                                    </a>
+                                </li>
+                                <li ng-repeat="l in licenseList  | orderBy">
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="selectLicense(l)">
+                                        {{l}}
+                                    </a>
+                                </li>
+                                <p class="text-center" style="cursor:pointer; font-weight:600;"
+                                   ng-click="LoadLicenseReg(1,99999)">
+                                    Load All License
+                                </p>
+
+                            </ul>
+
+
+                        </div>
+
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                {{ selectedLocation || 'Location Code' }}
+                             
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href=""
+                                       ng-click="selectLocation('')">All</a>
+                                </li>
+
+
+                                <li ng-repeat="loc in locationList  | orderBy">
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="selectLocation(loc)">
+                                        {{loc}}
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm filter-btn"
+                                ng-click="resetLicenseFilter()">
+                            Reset
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch"
+                                       type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..."
+                                       ng-model="searchText">
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" ng-click="downloadCSV();ManageLog('Click on License Overview CSV button')">CSV</a></li>
+                                    <li><a class="dropdown-item" ng-click="printTable();ManageLog('Click on License Overview Print button')">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        
+                        <table class="table table-sm mb-0 small-table" id="exLicTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Location Code</th>
+                                    <th>License Name</th>
+									 <th>Unit Name</th>
+                                    <th>License Number</th>
+									
+                                    <th>Validity Start</th>
+                                    <th>Validity End</th>
+                                    <th>Days to Expire</th>
+                                    <th>License Status</th>
+                                    <th>Expiry Status</th>
+                                    <th>Renewal Request </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="licenseMaster in LoadMasterList | filter:licenseFilter | filter:searchText">
+                                    <td>
+                                        {{licenseMaster.SrNo}}
+                                    </td>
+                                    <td>
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top" title="Location Name: Mumbai • Store Type: Retail • Region: West">
+                                            {{licenseMaster.StoreCode }}
+                                        </span>
+                                    </td>
+                                    <td>{{ licenseMaster.LicenseName }}</td>
+									 <td>{{ licenseMaster.StoreName }}</td>
+                                    <td>{{ licenseMaster.LicenseNumber }}</td>
+                                    <td>{{ licenseMaster.ValidityStartDate }}</td>
+                                    <td>{{ licenseMaster.ValidityEndDate }}</td>
+
+                                    <td class="ex-days" ng-class="{'ex-good': licenseMaster.ExpiryStatus === 'Active', 'ex-warn': licenseMaster.ExpiryStatus === 'Expiring Soon','ex-bad':  licenseMaster.ExpiryStatus === 'Expired' }">
+                                        
+                                        {{ (licenseMaster.LicenseStatus === 'Surrender' && licenseMaster.DaysOfExpire < 0) ? 0  : licenseMaster.DaysOfExpire }}
+                                    </td>
+                                    <td>{{licenseMaster.LicenseStatus}}</td>
+                                    <td>
+                                        <span ng-class="{ 'ex-status ex-active': licenseMaster.ExpiryStatus === 'Active',
+                'ex-risk ex-medium': licenseMaster.ExpiryStatus === 'Expiring Soon',
+                'ex-status ex-danger': licenseMaster.ExpiryStatus === 'Expired'
+            }">
+                                            {{ licenseMaster.ExpiryStatus }}
+                                        </span>
+                                    </td>
+                                    <td class="action-menu" ng-if="licenseMaster.ExpiryStatus === 'Expiring Soon' && LM_EditFlag==true && licenseMaster.LicenseStatus !== 'Surrender'">
+                                        <button class="btn btn-sm" ng-click="ApprovalRecord(licenseMaster.Id);ManageLog('Click on '+licenseMaster.LicenseName +' Expiring Soon')">
+                                            Initiate Renewal
+                                        </button>
+                                    </td>
+                                    <td class="action-menu" ng-if="licenseMaster.ExpiryStatus === 'Expired' && LM_EditFlag==true && licenseMaster.LicenseStatus !== 'Surrender'">
+                                        <button class="btn btn-sm" ng-click="ApprovalRecord(licenseMaster.Id);ManageLog('Click on '+licenseMaster.LicenseName +' Expired')">
+                                            Approve
+                                        </button>
+                                    </td>
+                                    <td class="action-menu" ng-if="licenseMaster.ExpiryStatus === 'Active' && licenseMaster.LicenseStatus !== 'Surrender'">
+                                        <button class="btn btn-sm">
+                                            Disable
+                                        </button>
+                                    </td>
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="exLicPaginationWrap">
+                        <div class="d-flex align-items-center gap-4">
+                            <button class="btn btn-sm" id="exLicPrev" ng-click="prevPage()" type="button">Previous</button>
+                                      <span>Page {{currentPage}}</span>
+        <button class="btn btn-sm" id="exLicNext" ng-click="nextPage()" type="button">Next</button> 
+
+
+
+                          
+                        </div>
+                        <button class="btn btn-sm btn-primary"
+                                type="button"
+                                ng-click="toggleRows()"
+                                ng-disabled="isLoading">
+
+                            <span ng-if="!isLoading">
+                                {{ showAll ? 'Show 10 Rows' : 'View All Rows' }}
+                            </span>
+
+                            <span ng-if="isLoading">
+                                <i class="fa fa-spinner fa-spin"></i> Please wait...
+                            </span>
+
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 4 -->
+        <div id="masterReport" class="card section-card d-none">
+            @*<h4 class="mb-4">License Master Report</h4>*@
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Reports</h4>
+                @*<button type="button" class="btn btn-sm export-btn">
+                        <i class="bi bi-download me-1"></i> Export
+                    </button>*@
+            </div>
+            <div class="card-body p-3 d-flex flex-column" >
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                {{SelectedLicenseName || 'License Name'}}
+                            </button>
+
+                            <ul class="dropdown-menu">
+
+                                <li>
+                                    <a class="dropdown-item"
+                                       ng-click="selectLicenseReport('')">
+                                        All Licenses
+                                    </a>
+                                </li>
+
+                                <li ng-repeat="lic in LicenseNameList | orderBy: 'LicenseName.toLowerCase()'">
+                                    <a class="dropdown-item"
+                                       ng-click="selectLicenseReport(lic.LicenseName)">
+                                        {{lic.LicenseName}}
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                Location Code
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="xx in StoreList | orderBy:'StoreCode.toLowerCase()'">
+                                    <a class="dropdown-item"
+                                       ng-click="calldata(xx.StoreCode,1)">
+                                        {{xx.StoreCode + ' [ ' + xx.RefStoreCode + ' ]'}}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Application Status
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="xx in ApplicationStatusList  | orderBy:AttributeValue">
+                                    <a class="dropdown-item"
+                                       ng-click="calldata(xx.AttributeValue,2)">
+                                        {{xx.AttributeValue}}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                License Status
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="xx in LicenseStatusList  | orderBy:AttributeValue">
+                                    <a class="dropdown-item"
+                                       ng-click="calldata(xx.AttributeValue,3)">
+                                        {{xx.AttributeValue}}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Renewal Status
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="xx in RenewalStatusList  | orderBy:AttributeValue">
+                                    <a class="dropdown-item"
+                                       ng-click="calldata(xx.AttributeValue,4)">
+                                        {{xx.AttributeValue}}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm search-btn"
+                                ng-click="ResetFilter();ManageLog('Click on Reset')"
+                                ng-disabled="isResetting">
+
+                            {{isResetting ? 'Please Wait...' : 'Reset'}}
+
+                        </button>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch"
+                                       type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..."
+                                       ng-model="searchText" />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="ReportexportToExcel();ManageLog('Click on License Dashboard CSV')">CSV</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="ReportprintTable();ManageLog('Click on License Dashboard Print')">Print</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="reportTable" style="margin-bottom:10px;">
+
+
+                        <button class="btn btn-sm mb-2" ng-click="toggleColumnMenu()" style="border: none; background: var(--primary); color: #fff; border-radius: 999px">
+                            {{ showColumnMenu ? 'Hide Columns' : 'Show Columns' }}
+                        </button>
+
+                        <!-- Column toggle menu -->
+                        <div ng-show="showColumnMenu" class="column-menu-horizontal reportTable__columnMenu">
+
+                            <!-- ✅ Select All -->
+                            <div class="column-item">
+                                <input type="checkbox"
+                                       ng-model="selectAllColumns" ng-change="toggleSelectAll()" />
+                                <strong>Select All</strong>
+                            </div>
+
+                            <!-- ✅ Individual Columns -->
+                            <div ng-repeat="col in tblHeader" class="column-item">
+                                <input type="checkbox"
+                                       ng-model="col.ShowColumn" ng-disabled="col.FixedColumn"
+                                       ng-change="updateVisibleColumns(col)" />
+                                {{col.HeaderText}}
+                            </div>
+
+                        </div>
+
+                        <!-- Table -->
+                        <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                            <div class="table-responsive">
+
+                                <!-- TABLE -->
+                                <table id="rpt" class="table table-sm mb-0 small-table"
+                                       style="border-color: inherit; border-style: solid; border-width: 0;">
+
+                                    <thead style="position: sticky; top: 0; z-index: 1; background-color: #F37437; color: #fff;">
+                                        <tr>
+                                            <th ng-repeat="col in tblHeader" ng-show="col.ShowColumn">
+                                                {{col.HeaderText}}
+                                            </th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="exLicTableBody">
+                                        <tr ng-repeat="row in tableData | filter:licenseFilter | filter:searchText">
+                                            <td ng-repeat="col in tblHeader" ng-show="col.ShowColumn">
+                                                {{row[col.HeaderValue]}}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- FOOTER CONTROLS -->
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+
+                                    <!-- LEFT SIDE (Prev/Next) -->
+                                    <div class="d-flex align-items-center gap-2">
+
+                                        <button class="btn btn-sm search-btn"
+                                                ng-click="prevPageR()"
+                                                ng-disabled="pno == 1"> Prev  </button>
+
+                                        <button class="btn btn-sm search-btn"
+                                                ng-click="nextPageR()"
+                                                ng-disabled="pno * psize >= totalC">
+                                            Next  </button>
+
+                                        <span class="ms-2">
+                                            Page {{pno}} of {{ Math.ceil(totalC / psize) || 1 }}
+                                        </span>
+
+                                    </div>
+                                     
+                                    <div>
+                                        <button class="btn btn-sm search-btn"
+                                                type="button"
+                                                ng-click="started(1,99999)"
+                                                ng-disabled="isLoading1">
+
+                                            <span ng-if="!isLoading1">
+                                                {{ showAll1 ? 'Show 10 Rows' : 'View All Rows' }}
+                                            </span>
+
+                                            <span ng-if="isLoading1">
+                                                <i class="fa fa-spinner fa-spin"></i> Please wait...
+                                            </span>
+
+                                        </button>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <style>
+            /* Column menu container */
+            #masterReport .column-menu-horizontal {
+                border: 1px solid var(--primary);
+                padding: 10px;
+                margin-top: 5px;
+                width: 100%;
+                overflow-x: auto;
+                margin: 8px 0;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            }
+
+            /* Each column item */
+            #masterReport .column-item {
+                display: inline-block;
+                margin-right: 15px;
+            }
+
+            #masterReport .reportTable {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            /* Table wrapper and hide scrollbar visually */
+            #masterReport .small-table-wrapper .table-responsive {
+                max-height: 75vh;
+                overflow-y: auto;
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none; /* IE and Edge */
+                scroll-behavior: smooth;
+                position: relative;
+            }
+
+                #masterReport .small-table-wrapper .table-responsive::-webkit-scrollbar {
+                    display: none;
+                }
+
+            /* table header sticky */
+            #masterReport .small-table thead th {
+                position: sticky;
+                top: 0;
+                z-index: 1;
+                background-color: #F37437;
+                color: #fff;
+                font-weight: 600;
+                font-size: 0.78rem;
+                text-align: left;
+                vertical-align: middle;
+                white-space: nowrap;
+                padding: 8px 10px;
+            }
+
+            /* table body */
+            #masterReport .small-table tbody td {
+                background-color: var(--card-bg);
+                font-size: 0.78rem;
+                vertical-align: middle;
+                text-align: left;
+                padding: 8px 10px;
+                white-space: nowrap;
+                font-weight: 400;
+            }
+
+            /* hover */
+            #masterReport .small-table tbody tr:hover td {
+                background-color: #FFE8D9;
+            }
+
+            #masterReport .small-table tbody td .store-code-link,
+            #masterReport .small-table tbody td .event-link {
+                text-decoration: none;
+            }
+            }
+        </style>
+
+    </div>
+</div>

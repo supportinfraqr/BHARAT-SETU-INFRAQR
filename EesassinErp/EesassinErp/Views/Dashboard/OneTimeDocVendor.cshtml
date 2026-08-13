@@ -1,0 +1,195 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "One Time Document Vendor";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<style>
+    #oneTimeDocVendor {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27; /* theme accent */
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        color: #223;
+        min-height: 85vh;
+    } 
+
+    .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    /* Section cards */
+    #oneTimeDocVendor .section-card {
+        background: transparent;
+        border: none;
+    }
+
+        #oneTimeDocVendor .section-card .card-body {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            min-height: 320px;
+        }
+
+    /* Table wrapper and hide scrollbar visually */
+    #oneTimeDocVendor .small-table-wrapper .table-responsive {
+        max-height: 75vh;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scroll-behavior: smooth;
+        position: relative;
+    }
+
+        #oneTimeDocVendor .small-table-wrapper .table-responsive::-webkit-scrollbar {
+            display: none;
+        }
+
+    /* table header sticky */
+    #oneTimeDocVendor .small-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #F37437;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+    /* table body */
+    #oneTimeDocVendor .small-table tbody td {
+        background-color: var(--card-bg);
+        font-size: 0.78rem;
+        vertical-align: middle;
+        text-align: center;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    /* hover */
+    #oneTimeDocVendor .small-table tbody tr:hover td {
+        background-color: #FFE8D9;
+    }
+
+    /* filter button */
+    #oneTimeDocVendor .filter-btn {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        #oneTimeDocVendor .filter-btn.active,
+        #oneTimeDocVendor .filter-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    #oneTimeDocVendor #goBtn,
+    #oneTimeDocVendor #refBtn {
+        border-radius: 999px;
+        border: none;
+        color: #fff;
+        background: var(--primary);
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        #oneTimeDocVendor #goBtn:hover,
+        #oneTimeDocVendor #refBtn:hover {
+            background: var(--primary-dark);
+        }
+
+    /* Table Buttons*/
+
+    .btn-upload, .btn-view, .btn-submit {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.78rem;
+    }
+
+        .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Table Selects*/
+
+    #oneTimeDocVendor .form-control {
+        font-size: .78rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid #dcdcdc;
+        outline: none;
+    }
+</style>
+<div id="oneTimeDocVendor" class="px-4 py-2">
+    <div class="card section-card">
+        <h4 class="my-4" style="color: #E45D27">One Time Document</h4>
+        <div class="card-body p-3 h-100 d-flex flex-column">
+
+
+            <!-- Table wrapper -->
+            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 small-table">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Document Name</th>
+                                <th>Description</th>
+                                <th>Valid From</th>
+                                <th>Valid To</th>
+                                <th>Status</th>
+                                <th>Upload</th>
+                                <th>View</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scTableBody">
+                            <tr>
+                                <td>1</td>
+                                <td>Email ID</td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td><input type="date" class="form-control form-control-sm"></td>
+                                <td><input type="date" class="form-control form-control-sm"></td>
+                                <td>Active</td> 
+                                <!--Upload File column-->
+                                <td>
+                                    <label class="btn btn-sm btn-upload px-3" style="white-space:nowrap; cursor:pointer;">
+                                        Choose File
+                                        <input type="file" hidden>
+                                    </label>
+                                </td>
+                                <!--View column-->
+                                <td>
+                                    <button class="btn btn-sm btn-view">View</button>
+                                </td>
+                                <!--Action column-->
+                                <td>
+                                    <button class="btn btn-sm btn-submit px-3">Submit</button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

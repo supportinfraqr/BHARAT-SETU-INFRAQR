@@ -1,0 +1,422 @@
+﻿<!DOCTYPE html>
+<html>
+<!-- InstanceBegin template="/Templates/template.dwt" codeOutsideHTMLIsLocked="false" -->
+<head>
+    <!-- InstanceBeginEditable name="doctitle" -->
+    <title>Admin</title>
+    <!-- InstanceEndEditable -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="favicon.png" />
+    <link href="css/bootstrap.css" rel='stylesheet' />
+    <link href="css/all.css" rel="stylesheet" />
+    <link href="css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+    <link href="css/datepicker.min.css" rel='stylesheet' />
+    <link href="css/custom_theme.css" rel='stylesheet' />
+    <link href="css/colorTheme/default.css" rel='stylesheet' />
+    <link href="css/draggle.css" rel="stylesheet" />
+    <link href="css/jquery.dropdown.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel='stylesheet' />
+    <link href="css/jquery-ui.css" rel="stylesheet" />
+    <link href="css/datepicker.css" rel="stylesheet" />
+    <link href="css/sweetalert2.css" rel="stylesheet" />
+    <!-- InstanceBeginEditable name="head" -->
+    <!-- InstanceEndEditable -->
+</head>
+<body class="dashbg newtemp">
+    <div class="contentwraper menumarginleft">
+        <header class="header menuheader-width">
+            <div class="container-fluid">
+                <div class="row cmmenu">
+                    <div class="col col-md-12">
+                        <div class="row">
+                            <div class="col">
+                                <h4 class="moudlename">
+                                    <div class="list-control">
+                                        <a class="sidemenutoggle">
+                                            <span class="fa fa-ellipsis-v"></span>
+                                        </a>
+                                        <span class="pagehed">Checkout</span>
+                                        <div class="menusidebar menusidebar-width">
+                                            <div class="profiletitle">
+                                                <img src="images/dash-logo.png" alt="" class="dash-logo" />
+                                            </div>
+                                            <div class="menuscrollwrap">
+                                                <div class="nano-content">
+                                                    <!--<span class="profiletxt">General</span>-->
+                                                    <ul class="navsidebar">
+                                                        <li class="nav-item">
+                                                            <a href="dasboard.html">
+                                                                <span class="icons icon-grid"></span>Dashboard
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="storeMaster.html">
+                                                                <span class="icons icon-home"></span>Store Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="complianceDoc.html">
+                                                                <span class="icons icon-globe"></span>Compliance Doc.
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item active">
+                                                            <a href="licenseMaster.html">
+                                                                <span class="icons icon-docs"></span>License Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="employeeMaster.html">
+                                                                <span class="icons icon-user"></span>Employees Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item seprat">
+                                                            <a href="#">
+                                                                <span class="icons icon-login"></span>Logout
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </h4>
+                            </div>
+                            <div class="col col-md-auto">
+                                <div class="nav-item dropdown d-inline me-3">
+                                    <a href="#" class="micon dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="fas fa-bell"></span>
+                                        <span class="notifi"></span>
+                                    </a>
+                                    <ul class="dropdown-menu" id="notification_event" aria-labelledby="navbarDropdown">
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="#" class="micon me-3"><span class="fas fa-cog"></span></a>
+                                <a href="profile.html" class="micon"><span class="fas fa-user-circle"></span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- InstanceBeginEditable name="Content Area" -->
+        <div class="pagecontentbody">
+            <div class="pagebody">
+                <div class="col-md-12 pageheader">
+                    <div class="row">
+                        <div class="col-md-9">
+                        </div>
+                        <div class="col-sm-3 text-end">
+                            <a class="btn btn-dark" href="checkout.html">Back</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="mb-3">Payment Options</h5>
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-9">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="paymentOptions" id="upi" value="upi">
+                                                        <label class="form-check-label" for="upi">
+                                                            <b>Pay with UPI</b><br />
+                                                            <small>
+                                                                You will be redirected to PayPal website to complete your purchase securely.
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 text-end pt-2">
+                                                    <img src="images/ic_paypal.png" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="row mb-3">
+                                                <div class="col-md-9">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="paymentOptions" id="creddebit" value="creddebit">
+                                                        <label class="form-check-label" for="creddebit">
+                                                            <b>
+                                                                Credit / Debit Card
+                                                            </b><br />
+                                                            <small>
+                                                                We support Mastercard, Visa, Discover and Stripe.
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 text-end pt-2">
+                                                    <img src="images/visa.png" />
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label class="form-label">Card</label>
+                                                    <select class="form-select form-control form-control-lg">
+                                                        <option value="">Select</option>
+                                                        <option selected>
+                                                            **** **** **** 5678 - Opi Watihana
+                                                        </option>
+                                                        <option>-</option>
+                                                        <option>-</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-12">
+                                                    <a href="#" class="text-decoration-none text-dark">
+                                                        <b><i class="fa fa-plus"></i> Add new address</b>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card mt-3">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="paymentOptions" id="upi" value="upi">
+                                                        <label class="form-check-label" for="upi">
+                                                            <b>Easy Monthly Installments (EMI)</b><br />
+                                                            <small>
+                                                                Pay in installments.
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6"><h5 class="mb-3">Account</h5></div>
+                                        <div class="col-6 text-end"><a href="#" class="text-dark text-decoration-none"><b><i class="fa fa-pencil-alt"></i> Edit</b></a></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <p><b>Manual Cooper</b></p>
+                                            <p>Manual.cooper@gmail.com</p>
+                                            <p>(512)588-7852</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <h5 class="mb-3">Order Summary</h5>
+                                    <div class="row mb-3">
+                                        <div class="col-6">Sub Total</div>
+                                        <div class="col-6 text-end">Rs. 10,250</div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12"><div class="spreator"></div></div>
+                                    </div>
+                                    <div class="row py-2">
+                                        <div class="col-4"><b>Total</b></div>
+                                        <div class="col-8 text-end">
+                                            <b class="text-danger">Rs. 10,250</b><br />
+                                            <small>(GST included if applicable)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12 d-grid">
+                                    <a href="thankyou.html" class="btn btn-lg btn-warning">Pay Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content notiModal">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notificationModalLabel">News</h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>News Title</h4>
+                        <p class="mb-5">In publishing and graphic design, Lorem ipsum is a placeholder text commonly used to demonstrate the visual form of a document or a typeface without relying on meaningful content. Lorem ipsum may be used as a placeholder before final copy is available</p>
+                        <p>Today 10:30 PM</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- InstanceEndEditable -->
+    </div>
+
+
+    <script type="text/javascript" src="js/mock.js"></script>
+    <script type="text/javascript" src="js/jquery-min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/jquery.nanoscroller.min.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script type="text/javascript" src="js/datepicker.en.js"></script>
+    <script type="text/javascript" src="js/builder.js"></script>
+    <script type="text/javascript" src="js/beautifyhtml.js"></script>
+    <script type="text/javascript" src="js/dragble.js"></script>
+    <script type="text/javascript" src="js/jquery.dropdown.js"></script>
+    <script type="text/javascript" src="js/sweetalert2.js"></script>
+    <script type="text/javascript" src="js/theme-script.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script>
+        var Random = Mock.Random;
+        var json1 = Mock.mock({
+            "data|10-50": [{
+                name: function () {
+                    return Random.name(true)
+                },
+                "id|+1": 1,
+                "disabled|1-2": true,
+                groupName: 'Group Name',
+                "groupId|1-4": 1,
+                "selected": false
+            }]
+        });
+
+        $('.dropdown-mul-1').dropdown({
+            data: json1.data,
+            limitCount: 40,
+            multipleMode: 'label',
+            choice: function () {
+                // console.log(arguments,this);
+            }
+        });
+    </script>
+    <!-- InstanceBeginEditable name="for-javascript" -->
+    <script>
+        $(document).ready(function () {
+            $('input[type=file]').change(function () {
+                //console.log(this.files);
+                var f = this.files;
+                var el = $(this).parent();
+                if (f.length > 1) {
+                    console.log(this.files, 1);
+                    el.text('Sorry, multiple files are not allowed');
+                    return;
+                }
+                // el.removeClass('focus');
+                el.html(f[0].name + '<br>' +
+                    '<span class="sml">' +
+                    'type: ' + f[0].type + ', ' +
+                    Math.round(f[0].size / 1024) + ' KB</span>');
+            });
+
+            $('input[type=file]').on('focus', function () {
+                $(this).parent().addClass('focus');
+            });
+
+            $('input[type=file]').on('blur', function () {
+                $(this).parent().removeClass('focus');
+            });
+
+        });
+    </script>
+    <script>
+        function succesmsg() {
+            Swal.fire('Your Approval Request sent Sucssefully')
+        }
+    </script>
+    <!-- InstanceEndEditable -->
+</body>
+<!-- InstanceEnd -->
+</html>

@@ -1,0 +1,300 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html ng-app="myLoginApp">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>E-vendor Management System</title>
+    <!-- VENDOR CSS -->
+    <!-- FAVICON ICON -->
+    <link rel="icon" href="@Url.Content("~/favicon.ico")" type="image/x-icon" media="all">
+
+    <link href="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap/dist/css/bootstrap.min.css")"
+          rel="stylesheet" media="all" />
+    <link href="@Url.Content("~/Content/plugins/assets/css/font-icons/font-awesome.css")" rel="stylesheet" media="all" />
+    <!-- MAIN CSS -->
+
+    <link href="@Url.Content("~/Content/plugins/login/css/main.css?Ver="+ViewBag.Version+"")" rel="stylesheet" media="all" />
+    <link href="@Url.Content("~/Content/plugins/login/css/color_skins.css")" rel="stylesheet" media="all" />
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/forgetpasswordcontroller.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/myjslib/myJs.js?Ver="+ViewBag.Version+"")"></script>
+
+   
+  
+    <script>
+
+        $(window).ready(function()
+        {
+            $("#txtContactNo").inputFilter(function (value) {
+                return /^\d*$/.test(value);    // Allow digits only, using a RegExp
+            });
+            $(".login-welcome-back-main-container-button-container").click(function () {
+                $(".login-colored-container").removeClass("login-colored-container-left");
+                $(".login-welcome-back").removeClass("login-welcome-back-active");
+                $(".login-create-container").removeClass("login-create-container-active");
+                $(".login-login-container").removeClass("login-login-container-inactive");
+                $(".login-hello-container").removeClass("login-hello-container-inactive");
+                $(".login-colored-container").addClass("login-colored-container-right");
+                $(".login-welcome-back").addClass("login-welcome-back-inactive");
+                $(".login-create-container").addClass("login-create-container-inactive");
+                $(".login-login-container").addClass("login-login-container-active");
+                $(".login-hello-container").addClass("login-hello-container-active");
+            });
+
+
+            $(".input-effect input").val("");
+
+            $(".input-effect input").focusout(function () {
+                if ($(this).val() != "") {
+                    $(this).addClass("has-content");
+                } else {
+                    $(this).removeClass("has-content");
+                }
+            })
+
+
+            $("#txtPassWord").focus(function () {
+                //debugger;
+                var text_val = $(this).val();
+                if (text_val === "") {
+
+                    if ($('#PasswordShowHide').css('display') == 'block') {
+                        $('#PasswordShow').css("display", "none");
+                        $('#LoginLock').css("display", "none");
+                    } else {
+                        $('#LoginLock').css("display", "none");
+                        $('#PasswordShow').css("display", "block");
+                    }
+                }
+                else
+                {
+                    if ($('#PasswordShowHide').css('display') == 'block') {
+                        $('#PasswordShow').css("display", "none");
+                        $('#LoginLock').css("display", "none");
+                    } else {
+                        $('#LoginLock').css("display", "none");
+                        $('#PasswordShow').css("display", "block");
+                    }
+                }
+            }).blur(function () {
+                if ($(this).val().length === 0) {
+                    $('#PasswordShow').css("display", "none");
+                    $('#PasswordShowHide').css("display", "none");
+                    $('#LoginLock').css("display", "block");
+                    $('#txtPassWord').attr('type', 'password');
+                }
+            });
+            $('#PasswordShow').click(function () {
+                $('#PasswordShow').css("display", "none");
+                $('#LoginLock').css("display", "none");
+                $('#PasswordShowHide').css("display", "block");
+                $('#txtPassWord').attr('type', 'text');
+            });
+            $('#PasswordShowHide').click(function () {
+                $('#PasswordShowHide').css("display", "none");
+                $('#LoginLock').css("display", "none");
+                $('#PasswordShow').css("display", "block");
+                $('#txtPassWord').attr('type', 'password');
+            });
+            $('#SupportOH').click(function () {
+                var hasClass = $('#SupportO').hasClass('show');
+                if (hasClass === true) {
+                    $('#SupportO').removeClass('show');
+                    $('#SupportM').removeClass('move');
+                }
+                else {
+                    $('#SupportO').addClass('show');
+                    $('#SupportM').addClass('move');
+                }
+            });
+        });
+        $(".removespacer").keyup(function () {
+            $(this).val($(this).val().replace(/\s/g, ""));
+        });
+    </script>
+
+
+</head>
+<body class="theme-orange" oncontextmenu="return false;">
+    <!-- Page Loader -->
+    <div class="page-loader-wrapper">
+        <div class="loader">
+            <div class="m-t-20">
+                <img src="@Url.Content("../Content/plugins/login/images/logo-base.png")" style="width:350px" alt="E-VENDOR MANAGEMENT IN CAPITAL">
+            </div>
+
+            @*<p>Please wait...</p>*@
+        </div>
+    </div>
+    <!-- Overlay For Sidebars -->
+    <!-- WRAPPER -->
+    <div id="wrapper">
+        <div class="login-wrapper">
+            <div class="login">
+          
+                <div class="login-create-container login-create-container-active">
+                    <img class="login-welcome-back-logo-container-image" src="../Content/plugins/login/images/img1.jpg" alt="" />
+                </div>
+                <div class="login-login-container login-login-container-active">
+                    <div class="login-login-container-logo-container">
+                        <img class="login-login-container-logo-container-image" src="../Content/plugins/login/images/logo.png" alt="EZCompliance" />
+                    </div>
+                    <div class="login-login-container-main-container">
+                        <div class="login-login-container-main-container-form-container">
+                            <div class="logo-form-area">
+                                <div class="form-box" ng-controller="myLoginController">
+                                    <div class="logo-box">
+                                        <img class="desktop-logo" ng-model="Logo" src="../Content/plugins/login/images/logo.png" alt="Logo" />
+                                        <img id="imgSchoolLogo" class="mobile-logo" ng-model="Logo" src="../Content/plugins/login/images/logoadmin.png" alt="Logo" />
+                                    </div>
+                                    <div class="sub-title">
+                                        E-vendor Management System<label id="lblBranchCode" style="display:none;" ng-model="BranchCode" ng-bind="BranchCode"></label>
+                                    </div>
+                                    <div class="signin-msg-box">
+                                        <div id="msgbox" style="display:none;">
+                                            <label id="lblmsg"></label>
+                                        </div>
+                                    </div>
+                                    <div class="form-body">
+                                        <form class="form-auth-small" id="loginbox">
+                                            <div class="form-group" ng-show="hidemobile">
+                                               
+                                                <input id="txtContactNo"    class = "form-control removespacer" name="number" placeholder = "Register Mobile No or Email Id" ng_model = "MobileNo" autocomplete = "off"  />  @*onblur = "validatePhoneNo('#txtContactNo')"  onkeyup="if (/\D/g.test(this.value)) this.value = this.value.replace(/\D/g,'')" *@ 
+                                                <span class="focus-border"></span>
+                                                <div class="input-icon">
+                                                    <i class="fa fa-user"></i>
+                                                </div>
+                                            </div>
+                                            <div class="form-group" ng-show="IshideOtp">
+                                                @Html.TextBox("txtOtp", "", new { @class = "form-control removespacer", @placeholder = "Enter OTP", @type = "text", @ng_model = "notp", @autocomplete = "off", @maxlength = "10" })
+
+                                                <span class="focus-border"></span>
+                                                <div class="input-icon">
+                                                    <i id="LoginLock" class="fa fa-lock"></i>
+                                                    <i id="PasswordShow" class="fa fa-eye-slash" style="display:none"></i>
+                                                    <i id="PasswordShowHide" class="fa fa-eye" style="display:none"></i>
+                                                </div>
+                                            </div>
+                                            <div class="form-group"  ng-show="IshideSubmit">
+                                                @Html.TextBox("txtPassWord", "", new { @class = "form-control", @placeholder = "Password", @type = "password", @ng_keyup = "PassWordEnterKey($event);", @ng_model = "NewPassword", @autocomplete = "off" })
+                                                <span class="focus-border"></span>
+                                                <div class="input-icon">
+                                                    <i id="LoginLock" class="fa fa-lock"></i>
+                                                    <i id="PasswordShow" class="fa fa-eye-slash" style="display:none"></i>
+                                                    <i id="PasswordShowHide" class="fa fa-eye" style="display:none"></i>
+                                                </div>
+                                            </div>
+                                         
+                                          
+                                            <div class="form-group mb-20 form-btn">
+                                                <button id="btnLogin2" type="button" ng-show="IshideSubmit" class="btn login-btn" ng-click="ResetPass();">Submit</button>
+                                                <button id="btnLogin1" type="button"  ng-show="IshideOtp" class="btn login-btn" ng-click="verifypass();">Verify OTP</button>
+                                                <button id="btnLogin" type="button" ng-show="hidemobile" class="btn login-btn" ng-click="Login();">Send OTP</button>
+                                            </div>
+                                            <div class="text-center forgot-pass-link">
+                                                <a href="../Login/Login">Sign In</a>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="login-hello-container login-hello-container-inactive">
+                    <div class="login-welcome-back-main-container-text-container">
+                        <div class="login--container-logo-container">
+                            <img class="login-login-container-logo-container-image" src="../Content/plugins/login/images/logoadmin.png" alt="logo" />
+                        </div>
+                        <span class="login-welcome-back-main-container-text-container-title">Welcome Back!</span>
+                        <span class="login-welcome-back-main-container-text-container-secondary">To keep connected with us please login with your personal info.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+   
+
+    </div>
+    <!-- END WRAPPER -->
+
+    <script type="text/javascript" src="@Url.Content("~/Content/plugins/login/js/libscripts.bundle.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/plugins/login/js/vendorscripts.bundle.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/plugins/login/js/mainscripts.bundle.js")"></script>
+
+    <script>
+        $(document).ready(function () {
+            var focusableEls = document.getElementById('loginbox').querySelectorAll('a, button, input')
+            $.each(focusableEls, function (index, elem) {
+                elem.addEventListener('keydown', function (e) {
+                    //UP Arrow--->Move Prev as like Shift+Tab keypress
+                    if (e.keyCode == "38") {
+                        if (index == 0) {
+                            for (var i = focusableEls.length; i > 0; i--) {
+                                if (!$(focusableEls[i - 1]).attr('disabled')) {
+                                    focusableEls[i - 1].focus();
+                                    e.preventDefault();
+                                    return;
+                                }
+                                e.preventDefault();
+                            }
+                        }
+                        else {
+                            for (var i = index; i > 0; i--) {
+                                if (!$(focusableEls[i - 1]).attr('disabled')) {
+                                    focusableEls[i - 1].focus();
+                                    e.preventDefault();
+                                    return;
+                                }
+                                e.preventDefault();
+                            }
+                        }
+                        e.preventDefault();
+                    }
+                    if (e.keyCode == "40") {
+                        //Down Arrow--->Move Next as like Tab keypress
+                        if (index == focusableEls.length - 1) {
+                            for (var i = -1; i < focusableEls.length; i++) {
+                                if (!$(focusableEls[i + 1]).attr('disabled')) {
+                                    focusableEls[i + 1].focus();
+                                    e.preventDefault();
+                                    return;
+                                }
+                                e.preventDefault();
+                            }
+                        }
+                        else {
+                            for (var i = index; i < focusableEls.length; i++) {
+                                if (!$(focusableEls[i + 1]).attr('disabled')) {
+                                    focusableEls[i + 1].focus();
+                                    e.preventDefault();
+                                    return;
+                                }
+                                e.preventDefault();
+                            }
+                        }
+                        e.preventDefault();
+                    }
+
+                });
+            });
+        });
+    </script>
+</body>
+
+
+</html>
+

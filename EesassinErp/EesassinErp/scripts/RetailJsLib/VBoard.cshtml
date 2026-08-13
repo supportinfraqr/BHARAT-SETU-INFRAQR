@@ -1,0 +1,2122 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Supplier Admin";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="~/Masters/NewEmployeeMaster/script.js"></script>
+<link href="~/Masters/NewEmployeeMaster/style.css" rel="stylesheet" />
+<script src="~/Dashboards/SupplierAdmin/script.js"></script>
+<link href="~/Dashboards/SupplierAdmin/style.css" rel="stylesheet" />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="~/scripts/RetailJsLib/VendorDashboardController.js"></script>
+<script src="~/scripts/RetailJsLib/TransportController.js"></script>
+<div class="supplierAdminPage px-4 py-2">
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="Overview, Party, User, Site Management, Location Management or Site Mapping">
+            @*<button type="button" class="btn btn-pill" data-target="#overview" aria-pressed="true">Overview</button>*@
+            <button type="button" class="btn btn-pill active" data-target="#party" aria-pressed="true">Contractor</button>
+            <button type="button" class="btn btn-pill" data-target="#user" aria-pressed="false">User</button>
+            <button type="button" class="btn btn-pill" data-target="#siteManagement" aria-pressed="false">Site Management</button>
+            @*<button type="button" class="btn btn-pill" data-target="#locationManagement" aria-pressed="false">Location Management</button>
+                <button type="button" class="btn btn-pill" data-target="#siteMapping" aria-pressed="false">Site Mapping</button>*@
+            <button type="button" class="btn btn-pill" data-target="#empCompDocs" aria-pressed="false" ng-show="loginType==5">Employee Compliance Docs</button>
+            <button type="button" class="btn btn-pill" data-target="#activityReport" ng-click="ManageLog('Log Report');BindActivity()" aria-pressed="false">Log Report</button>
+            <button type="button" class="btn btn-pill" data-target="#Transportmapping" aria-pressed="false" ng-click="GetTransport()">Transport</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+
+        <!-- CARD 1 : Overview (default visible) -->
+        @*<div id="overview" class="card section-card active adminOverview">
+            <div class="card-body">
+
+
+
+            </div>
+
+        </div>*@
+
+
+        <!-- CARD 2 : party -->
+        <div id="party" class="card section-card active">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Contractor Management</h4>
+                <button type="button" class="btn btn-sm add-btn" ng-show="loginType=='5'" data-bs-toggle="modal" data-bs-target="#addPartyModal">
+                    <i class="bi bi-plus me-1"></i> Add Contractor
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2" ng-init="bindtiles()">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Contractor</div>
+                        </div>
+                        <div class="kpi-value">{{AllowContractorLimit || 0}}</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Used Contractor</div>
+                        </div>
+                        <div class="kpi-value">{{FullContractorLimit || 0}}</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Remaining Contractor</div>
+                        </div>
+                        <div class="kpi-value">{{ContractorLimit || 0}}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                {{SelectedContractor || 'Contractor'}}
+                            </button>
+                       
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="PartySelectContractor()">
+                                        All
+                                    </a>
+                                </li>
+                                <li ng-repeat="item in NIndustryList ">
+                                    <button type="button"
+                                            class="dropdown-item"
+                                            ng-click="PartySelectContractor(item)">
+                                        {{item}}
+                                    </button>
+                                </li>
+
+
+                            </ul>
+                        </div>
+
+
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch"
+                                       type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..."
+                                       ng-model="SearchText" />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="" ng-click="ExportVendorCSV()">CSV</a></li>
+                                    <li><a class="dropdown-item" href="" ng-click="PrintVendorList()">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3" ng-init="PartySearch()">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Contractor Code</th>
+                                    <th>Contractor Name</th>
+                                    <th>Email</th>
+                                    <th>Valid From</th>
+                                    <th>Valid To</th>
+
+                                    @*<th>Mobile</th>
+        <th>Contact Person</th>
+        <th>Industry</th>
+        <th>UserLimit</th>*@
+
+                                    <th>Status</th>
+                                    <th>Craetion Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in FilteredVendorList | filter:SearchText">
+                                    <td>{{x.SNO}}</td>
+                                    <td>
+                                        {{x.PartyCode}}
+                                    </td>
+                                    <td>
+                                        {{x.PartyName}}
+                                    </td>
+                                    <td>
+                                        {{x.EmailId }}
+                                    </td>
+                                    @*<td>{{x.ContactNo }}</td>
+        <td>
+            {{x.ContactPerson }}
+        </td>
+        <td>
+            {{x.IndustryName}}
+        </td><td>
+                                        {{x.UserLimit}}
+                                    </td>*@
+                                    <td>
+                                        {{x.Startdtt}}
+                                    </td>
+                                    <td>
+                                        {{x.Valid}}
+                                    </td>
+
+                                    <td>{{x.IsActived}}</td>
+                                    <td>{{x.Createddt}}</td>
+                                    @*<td class="action-menu">
+            <button class="btn btn-sm">
+                Edit
+            </button>
+        </td>*@
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!--  Add Party Modal -->
+        <div class="modal fade supplierAdminModal"
+             id="addPartyModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Contractor</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+
+                                <!-- Party Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contractor Name </label>
+                                    <input type="text" id="txtPartyName" class="form-control form-control-sm validate" ng-model="PartyName">
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Address</label>
+                                    <input id="txtAddress" type="text" class="form-control form-control-sm" ng-model="Address">
+                                </div>
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Pincode</label>
+                                    <input class="form-control form-control-sm" id="txtPincode" ng-model="Pincode" type="text" maxlength="6" onblur="validateNumberAndDecimalOnly('#txtPincode')">
+                                </div>
+
+                                <!-- Email -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Email Id </label>
+                                    <input id="txtEmail" class="form-control form-control-sm validate" ng-model="EmailId" type="email" onblur="validateEmail('#txtEmail')" />
+
+                                </div>
+
+                                <!-- Contact No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No </label>
+                                    <input id="txtContactNo" class="form-control form-control-sm validate" onblur="validatePhoneNo('#txtContactNo')" maxlength="10" placeholder="" ng-model="MobileNo" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Name </label>
+                                    <input type="text" id="txtContactPerson" class="form-control form-control-sm validate" ng-model="ContactPerson">
+                                </div>
+
+                                <!-- Contact Person Mobile -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Mobile No.</label>
+                                    <input type="text" id="txtContactMobile" class="form-control form-control-sm" onblur="validatePhoneNo('#txtContactMobile')" maxlength="10" placeholder="" ng-model="ContactMobile" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                </div>
+                                <!-- User Limit -->
+                                <div class="col-lg-3 col-md-4 col-sm-6 hidden" style="display:none;">
+                                    <label class="form-label">User Limit </label>
+                                    <input id="txtUserLimit" type="text" ng-model="UserLimit" onblur="validateNumberAndDecimalOnly('#txtUserLimit')"
+                                           class="form-control form-control-sm text-right clear" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                                </div>
+
+                                <!-- Valid Date -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid From</label>
+                                    <input type="date" id="txtstartdt" class="form-control form-control-sm" ng-model="Startdt">
+
+                                </div>
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid To</label>
+                                    <input type="date" id="txtValidTo" class="form-control form-control-sm" ng-model="ValidTo">
+
+                                </div>
+
+                                <!-- Industry -->
+                                <div class="col-lg-3 col-md-4 col-sm-6" ng-init="AllIndustry()" style="display:none;">
+                                    <label class="form-label">Industry </label>
+                                    <select id="ddlIndustry" autocomplete='address-level2' class="form-select form-select-sm" ng-model="NIndustryId">
+                                        <option value="">Select Industry</option>
+                                        <option ng-repeat="x in IndustryList" value="{{x.Id}}">{{x.Industry}}</option>
+                                    </select>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Description</label>
+                                    <input id="txtDescritpion" type="text" class="form-control form-control-sm" ng-model="Descritpion">
+                                </div>
+
+                                <!-- Is Active -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Is Active</label>
+                                    <select id="ddlIsActive" ng-init="IsActive='True'" class="form-select form-select-sm" ng-model="IsActive">
+                                        <option value="">Select</option>
+                                        <option value="True">Yes</option>
+                                        <option value="False">No</option>
+                                    </select>
+
+                                </div>
+
+                                <!-- Month Expired -->
+                                @*<div class="col-lg-3 col-md-4 col-sm-6" style="display:none;">
+                                    <label class="form-label">Month Expired</label>
+                                    <select id="ddlMonthExpired" class="form-select form-select-sm" ng-model="MonthExpired">
+                                        <option value="">Select</option>
+                                        <option value="1">1 Month</option>
+                                        <option value="2">2 Month</option>
+                                        <option value="3">3 Month</option>
+                                        <option value="4">4 Month</option>
+                                        <option value="5">5 Month</option>
+                                        <option value="6">6 Month</option>
+                                        <option value="7">7 Month</option>
+                                        <option value="8">8 Month</option>
+                                        <option value="9">9 Month</option>
+                                        <option value="10">10 Month</option>
+                                        <option value="11">11Month</option>
+                                        <option value="12">12 Month</option>
+
+                                    </select>
+                                </div>*@
+                               
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">State <span class="text-danger">*</span></label>
+
+                                    <select class="form-select form-select-sm validate"  ng-init="AllCity()"
+                                            ng-model="State">
+                                        <option value="">Select State</option>
+                                        <option ng-repeat="x in AllCityList | unique:'STATE_NAME'"
+                                                value="{{x.STATE_NAME}}">
+                                            {{x.STATE_NAME}}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">City <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm validate"
+                                            ng-model="City">
+                                        <option value="">Select City</option>
+                                        <option ng-repeat="x in AllCityList | filter:{STATE_NAME: State}"
+                                                value="{{x.CITY_NAME}}">
+                                            {{x.CITY_NAME}}
+                                        </option>
+                                    </select>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button" id="btnCancel"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button" ng-click="Contractorlimit();" class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- CARD 3 : user -->
+        <div id="user" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">User Management</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i class="bi bi-plus me-1"></i> Add User
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total User</div>
+                        </div>
+                        <div class="kpi-value">{{AllowUserLimit || 0}}</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Used User</div>
+                        </div>
+                        <div class="kpi-value">{{(FullUserLimit || 0) }}</div>
+                    </div>
+
+                    <!-- Expired -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Remaining User</div>
+                        </div>
+                        <div class="kpi-value">
+                            {{ULimit ||0}}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                {{ SelectedPartyName || 'Contractor List' }}
+                            </button>
+
+                            <ul class="dropdown-menu">
+
+                                <!-- All Option -->
+                                <li>
+                                    <a class="dropdown-item" href="" ng-click="SelectPartyAll()">
+                                        All
+                                    </a>
+                                </li>
+
+                                <li ng-repeat="x in EmployeeList | unique:'PartyName'">
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="SelectParty(x)">
+                                        {{ x.PartyName }}
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </div>
+                        <!--Add new  Desing Code For Filter -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                {{ SelectedUserName || 'User List' }}
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="x in FilteredUsers">
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="SelectUsername(x)">
+                                        {{ x.UserName }}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-sm filter-btn active" ng-click="reset()">Reset</button>
+                        @*<div class="dropdown">
+                            <button class="btn btn-sm"
+                                    type="button">Reset
+                            </button>
+                        </div>*@
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..."
+                                       ng-model="searchText" />
+
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="" ng-click="ExportUserCSV()">CSV</a></li>
+                                    <li><a class="dropdown-item" href="" ng-click="PrintUserList()">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 rounded-3" ng-init="UserList();AllVendorCity()">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>User Name</th>
+                                    <th>Contractor Name</th>
+                                    <th>EmailId</th>
+                                    <th>Contact No</th>
+                                    <th>Creation Date</th>
+                                    @*<th>Role</th> Old code*@
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in EmployeeList
+    | filter:(SelectedUserName ? {UserName: SelectedUserName} : '')
+    | filter:(SelectedPartyId ? {PartyId: SelectedPartyId} : '')
+    | filter:searchText">
+                                    @*<tr ng-repeat="x in EmployeeList
+                                    | filter:(SelectedPartyId ? {PartyId: SelectedPartyId} : '')
+                                    | filter:searchText">*@
+
+                                    <td>{{x.Id}}</td>
+                                    <td>
+                                        {{x.UserName}}
+                                    </td>
+                                    <td>{{x.PartyName}}</td>
+
+                                    <td>
+                                        {{x.EmailId}}
+                                    </td>
+                                    <td>
+                                        {{x.ContactNo}}
+                                    </td>
+                                    <td>
+                                        {{x.Createdon}}
+                                    </td>
+                                    @*<td>      {{ x.Usertype}}</td> old code *@
+
+                                    @*<td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Edit
+                                        </button>
+                                    </td>*@
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!--  Add User Modal -->
+        <div class="modal fade supplierAdminModal"
+             id="addUserModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add User</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+
+
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Select Contractor</label>
+                                    <select ng-model="PPId" id="ddlPPId" class="form-control">
+                                        <option value="">Select</option>
+                                        <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" id="txtUName" class="form-control" ng-model="UName">
+                                </div>
+
+                                <!-- User Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">User Name </label>
+                                    <input type="text" id="txtUserNames"
+                                           class="form-control"
+                                           ng-model="UserNames"
+                                           oninput="this.value = this.value.replace(/[^A-Za-z]/g,'')">
+                                </div>
+
+                                <!-- Password -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Password</label>
+                                    <input type="text" id="txtPassword"
+                                           class="form-control"
+                                           ng-model="Password"
+                                           oninput="this.value = this.value.replace(/\s/g,'')">
+                                </div>
+
+                                <!-- Contact No. -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No.</label>
+                                    <input id="txtContactNo" class="form-control" onblur="validatePhoneNo('#txtContactNumber')" maxlength="10" placeholder="" ng-model="ContactNumber" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+                                </div>
+
+                                <!-- Email ID -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Email ID</label>
+                                    <input ng-model="UserEmail" id="txtUserEmail" class="form-control">
+                                </div>
+                                @*<div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">User Type</label>
+                                    <select ng-model="VendorType" id="ddlUser" class="form-control">
+                                        <option value="">Select</option>
+                                        <option value="6">Vendor Admin</option>
+                                        <option value="2">Vendor User</option>
+                                    </select>
+                                </div>*@
+
+
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn" ng-click="VUserlimit()">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- CARD 4 : Site Management -->
+        <div id="siteManagement" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Site Management</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" id="btnsite" data-bs-target="#addSiteModal" ng-click="Resetsite()">
+                    <i class="bi bi-plus me-1"></i> Add Site
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Sites</div>
+                        </div>
+                        <div class="kpi-value">{{AllowSitelimit||0}}</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Used Sites</div>
+                        </div>
+                        <div class="kpi-value">{{FullSitelimit || 0}}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Remaining Sites</div>
+                        </div>
+                        <div class="kpi-value">{{SiteLimit || 0}}</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column" ng-init="getsitevendor()">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                        <div class="table-toolbar mb-2 ">
+
+                            <!-- Top Buttons -->
+                            <div class="d-flex gap-2 mb-2">
+
+                                <button class="btn btn-sm"
+                                        ng-class="ActiveTab=='mapping' ? 'save-btn' : 'filter-btn'"
+                                        ng-click="ToggleTab('mapping')">
+                                    Mapping
+                                </button>
+
+                                <button class="btn btn-sm"
+                                        ng-class="ActiveTab=='filter' ? 'save-btn' : 'filter-btn'"
+                                        ng-click="ToggleTab('filter')">
+                                    Filter
+                                </button>
+
+                            </div>
+
+
+                            <!-- ================= MAPPING PANEL ================= -->
+                            <div class="card p-3 shadow-sm mb-2"
+                                 ng-show="ActiveTab=='mapping'">
+
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown">
+                                            {{ SelectedPartyName || 'Contractor List' }}
+                                        </button>
+
+                                        <ul class="dropdown-menu">
+
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="javascript:void(0)"
+                                                   ng-click="SelectedPartyName=''; GetSitemapping()">
+                                                    All
+                                                </a>
+                                            </li>
+
+                                            <li ng-repeat="x in VendorPartyNameSiteList | unique:'PartyName'">
+                                                <a class="dropdown-item"
+                                                   href="javascript:void(0)"
+                                                   ng-click="GetSitemapping(x)">
+                                                    {{ x.PartyName }}
+                                                </a>
+                                            </li>
+
+                                        </ul>
+                                    </div>
+
+                                    <button class="btn btn-sm save-btn"
+                                            ng-click="SaveVendorSiteMapping()">
+                                        Save
+                                    </button>
+
+                                    <button class="btn btn-sm filter-btn active"
+                                            ng-click="ResetSiteFilters()">
+                                        Reset
+                                    </button>
+
+                                </div>
+                            </div>
+
+
+                            <!-- ================= FILTER PANEL ================= -->
+                            <div class="card p-3 shadow-sm"
+                                 ng-show="ActiveTab=='filter'">
+
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+
+                                    <!-- Contractor -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown">
+                                            {{ SelectedPartyName || 'Contractor List' }}
+                                        </button>
+
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href=""
+                                                   ng-click="SelectContractor()">
+                                                    All
+                                                </a>
+                                            </li>
+
+                                            <li ng-repeat="x in VendorSiteList | unique:'PartyName'">
+                                                <a class="dropdown-item"
+                                                   href=""
+                                                   ng-click="SelectContractor(x)">
+                                                    {{x.PartyName}}
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Site -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown">
+                                            {{ SelectedSite || 'Site List' }}
+                                        </button>
+
+                                        <ul class="dropdown-menu">
+                                            <li ng-repeat="x in VendorSiteList | unique:'SiteName'">
+                                                <a class="dropdown-item"
+                                                   href=""
+                                                   ng-click="SelectSite(x)">
+                                                    {{x.SiteName}}
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Location -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown">
+                                            {{ SelectedLocation || 'Location List' }}
+                                        </button>
+
+                                        <ul class="dropdown-menu">
+                                            <li ng-repeat="x in (SelectedSite ? FilteredLocationList : VendorSiteList) | unique:'LocationCode'">
+                                                <a class="dropdown-item"
+                                                   href=""
+                                                   ng-click="SelectLocation(x)">
+                                                    {{x.LocationCode}}
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <button class="btn btn-sm filter-btn active"
+                                            ng-click="ResetFilters()">
+                                        Reset
+                                    </button>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                        <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                            <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                                <div class="input-group input-group-sm">
+                                    <input id="scSearch" type="text" class="form-control form-control-sm" ng-model="SiteSearch" placeholder="Search..." />
+                                    <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2 justify-content-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="" ng-click="ExportSiteCSV()">CSV</a></li>
+                                        <li><a class="dropdown-item" href="" ng-click="PrintSiteList()">Print</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 rounded-3" ng-init="BindVendorSiteList()">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th ng-show="ActiveTab=='mapping'"><input type="checkbox" ng-model="SelectSiteAll" ng-click="SitetoggleAll()" /></th>
+                                    <th>S.No</th>
+                                    <th>Site Id</th>
+                                    <th>Site Code</th>
+                                    <th>Site Name</th>
+                                    <th>Location Code</th>
+                                    <th>Email Id</th>
+                                    <th>State</th>
+                                    <th>Creation Date</th>
+                                    <th>Edit</th>
+                                    <th>Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in (VendorSiteList | unique:'SiteId')" ng-show="ActiveTab=='mapping'">
+                                    <td>
+                                        <input type="checkbox" ng-model="x.SiteIsSelected" ng-click="hideshowfiltewrforsite()" />
+                                    </td>
+                                    <td>
+                                        {{$index +1 }}
+                                    </td>
+                                    <td>
+                                        {{x.SiteId}}
+                                    </td>
+
+                                    <td>
+                                        {{x.SiteCode}}
+                                    </td>
+
+                                    <td>
+                                        {{x.SiteName}}
+                                    </td>
+                                    <td>
+                                        {{x.LocationCode}}
+                                    </td>
+                                    <td>
+                                        {{x.EmailId}}
+                                    </td>
+
+                                    <td>
+                                        {{x.STATE_NM}}
+                                    </td>
+                                    <td>
+                                        {{x.CreatedOn}}
+                                    </td>
+                                    @*<td>
+            {{x.ContactNo}}
+        </td>
+        <td>
+            {{x.Address}}
+        </td>*@
+                                    <td class="action-menu">
+                                        <button class="btn btn-danger btn-sm"
+                                                ng-click="EditVendorSite(x)">
+                                            Edit
+                                        </button>
+                                    </td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-danger btn-sm"
+                                                ng-click="DeleteVendorSite(x.deleteid)">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr ng-repeat="x in VendorSiteList | filter:SiteSearch | filter:filterData" ng-show="ActiveTab=='filter'">
+
+                                    <td>
+                                        {{x.SNo}}
+                                    </td>
+                                    <td>
+                                        {{x.SiteId}}
+                                    </td>
+
+                                    <td>
+                                        {{x.SiteCode}}
+                                    </td>
+
+                                    <td>
+                                        {{x.SiteName}}
+                                    </td>
+                                    <td>
+                                        {{x.LocationCode}}
+                                    </td>
+                                    <td>
+                                        {{x.EmailId}}
+                                    </td>
+
+                                    <td>
+                                        {{x.STATE_NM}}
+                                    </td>
+                                    <td>
+                                        {{x.CreatedOn}}
+                                    </td>
+                                    @*<td>
+            {{x.ContactNo}}
+        </td>
+        <td>
+            {{x.Address}}
+        </td>*@
+                                    <td class="action-menu">
+                                        <button class="btn btn-danger btn-sm"
+                                                ng-click="EditVendorSite(x)">
+                                            Edit
+                                        </button>
+                                    </td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-danger btn-sm"
+                                                ng-click="DeleteVendorSite(x.deleteid)">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!--  Add Site Modal -->
+        <div class="modal fade supplierAdminModal"
+             id="addSiteModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Site</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+                                <!-- Party Name -->
+                                <div class="col-lg-2 col-md-4 col-sm-6" ng-hide="Editetime=='1'">
+                                    <label class="form-label">Contractor Name  </label>
+                                    @*<select ng-model="PartyId" id="ddlparty" class="form-select form-select-sm">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                </select>*@
+
+
+
+                                    <div class="dropdown">
+                                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Select Contractor
+                                        </button>
+
+                                        <ul class="dropdown-menu p-2" style="max-height:250px; overflow:auto;">
+
+                                            <!-- Select All -->
+                                            <li>
+                                                <input type="checkbox" ng-model="IsAllSelected" ng-change="SelectAll()">
+                                                <b>Select All</b>
+                                            </li>
+
+                                            <li ng-repeat="x in VendorList">
+                                                <input type="checkbox" ng-model="x.Selected" ng-change="UpdateSelection()">
+                                                {{x.PartyName}}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Assign Color</label>
+                                    <select id="ddlAssignColor" class="form-select form-select-sm" ng-model="AssignColor">
+                                        <option value="">Select</option>
+                                        <option value="Red">Red</option>
+                                        <option value="Green">Green</option>
+                                        <option value="Yellow">Yellow</option>
+                                        <option value="Blue">Blue</option>
+                                        <option value="Orange">Orange</option>
+                                    </select>
+                                </div>
+
+                                <!-- Site Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Site Name </label>
+                                    <input id="txtSiteName" type="text" class="form-control form-control-sm" ng-model="SiteName">
+                                </div>
+
+                                <!-- Location Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Location Name</label>
+                                    <input id="txtLocationCode" type="text" class="form-control form-control-sm" ng-model="LocationCode">
+                                </div>
+
+                                <!-- Manpower Count -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Manpower Count</label>
+                                    <input id="txtManpowerCount" type="text" ng-model="ManPowerCount" onblur="validateNumberAndDecimalOnly('#txtManpowerCount')"
+                                           class="form-control  form-control-sm text-right clear" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Address </label>
+                                    <input id="txtSiteAddress" type="text" class="form-control form-control-sm" ng-model="SiteAddress">
+                                </div>
+
+                                <!-- Pincode -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Pincode</label>
+                                    <input class="form-control form-control-sm" id="txtpincode" ng-model="Pincode" type="text" maxlength="6" onblur="validateNumberAndDecimalOnly('#txtpincode')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+                                </div>
+
+                                <!-- Country -->
+                                <div class="col-lg-3 col-md-4 col-sm-6" ng-init="AllCountry()">
+                                    <label class="form-label">Country </label>
+                                    <select id="ddlcountry" autocomplete='address-level2' class="form-select form-select-sm" ng-change="AllState()" ng-model="CountryId">
+                                        <option value="">Select Country</option>
+                                        <option ng-repeat="x in AllCountryList" value="{{x.CountryId}}">{{x.CountryName}}</option>
+                                    </select>
+                                </div>
+
+                                <!-- State -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">State </label>
+                                    <select id="ddlstate" autocomplete='address-level2' class="form-select form-select-sm" ng-change="AllCity()" ng-model="StateId">
+                                        <option value="">Select State</option>
+                                        <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                    </select>
+                                </div>
+
+                                <!-- City -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">City </label>
+                                    <select id="ddlcity" autocomplete='address-level2' class="form-select form-select-sm" ng-model="CityId">
+                                        <option value="">Select City</option>
+                                        <option ng-repeat="x in AllCityList" value="{{x.CITY_CODE}}">{{x.CITY_NAME}}</option>
+                                    </select>
+                                </div>
+
+                                <!-- Contact No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No</label>
+                                    <input id="txtContactNo" class="form-control form-control-sm" maxlength="10" onblur="validatePhoneNo('#txtContactNo')" placeholder="" ng-model="MobileNo" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+                                </div>
+
+                                <!-- PAN No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">PAN No.</label>
+                                    <input type="text" id="txtPanitno" maxlength="10" class="form-control form-control-sm" ng-model="Panitno">
+                                </div>
+
+                                <!-- GSTIN/UIN -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">GSTIN/UIN</label>
+                                    <input type="text" id="txtGstinuin" class="form-control form-control-sm" ng-model="Gstinuin">
+                                </div>
+
+                                <!-- CLRA RC -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">CLRA RC </label>
+
+                                    <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="CLRARC">
+                                        <option value="">Select</option>
+                                        <option value="1">Yes</option>
+                                        <option value="0">No</option>
+                                    </select>
+                                </div>
+
+                                <!-- Contact Person Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Name</label>
+                                    <input type="text" id="txtContactPerson" class="form-control form-control-sm" ng-model="ContactPerson">
+                                </div>
+
+                                <!-- Contact Person Mobile No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Mobile No.</label>
+                                    <input id="txtContactMobile" class="form-control form-control-sm" maxlength="10" onblur="validatePhoneNo('#txtContactMobile')" placeholder="" ng-model="ContactMobile" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                                </div>
+
+                                <!-- Contact Person Email Id -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Email Id</label>
+                                    <input class="form-control form-control-sm " id="txtEmailID" ng-model="EmailId" onblur="validateEmail('#txtEmailID')" type="email" />
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Description</label>
+                                    <input id="txtDescritpion" type="text" class="form-control form-control-sm" ng-model="Descritpion">
+
+                                </div>
+
+                                <!-- Valid From -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid From</label>
+                                    <input type="date" id="txtValidFrom" class="form-control form-control-sm" ng-model="ValidFrom">
+                                </div>
+
+                                <!-- Valid To -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid To</label>
+
+                                    <input id="txtValidTo" type="date" class="form-control form-control-sm" ng-model="ValidTo">
+                                </div>
+
+                                <!-- File Upload -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Only Contractor can Upload, Format will be PDF</label>
+                                    <input type="file" id="Vendor{{$index}}" class="form-control form-control-sm" onchange="angular.element(this).scope().Vendorshow(this, '#AlbumIcon')" ng-model="VendorFileDoc">
+                                    <a target="_blank" href="{{VendorFileDoc}}" ng-show="vendoc"><img style="width:50px" src="~/Content/img/upload.png" /></a>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Nearest Labour Office</label>
+                                    <input type="text" class="form-control form-control-sm" ng-model="NLabourOffice">
+                                </div>
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Select Nature</label>
+                                    <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="Nature">
+                                        <option value="">Select</option>
+                                        <option value="Factory">Factory</option>
+                                        <option value="Corporate Office">Corporate Office</option>
+                                        <option value="Warehouse">Warehouse</option>
+                                        <option value="Project Site">Project Site</option>
+                                        <option value="Others">Others</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <br />   <br />
+                            <!-- ===================== 2. CLRA ===================== -->
+                            <div class="form-section row g-3">
+                                <div class="section-title">Under Contract Labour (Regulation and Abolition) Act, 1970</div>
+
+                                <div class="row g-3">
+
+                                    <!-- CLRA RC -->
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Principal Employer Registration Number</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="CLRA_RegNo">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Issuing Authority</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="CLRA_IssuingAuth">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Max Contract Workers Allowed</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="CLRA_MaxWorkers">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Validity</label>
+                                        <input type="date" class="form-control form-control-sm" ng-model="CLRA_Validity">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Upload RC Copy</label>
+                                        <input type="file" id="RCCopy{{$index}}" class="form-control form-control-sm" onchange="angular.element(this).scope().RCCopyShow(this, '#AlbumIcon')" ng-model="RCCopy">
+                                        <a target="_blank" href="{{RCCopy}}" ng-show="RCCopy"><img style="width:50px" src="~/Content/img/upload.png" /></a>
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Upload Renewal RC</label>
+                                        <input type="file" id="RenewalRCCopy{{$index}}" class="form-control form-control-sm" onchange="angular.element(this).scope().RenewalRCCopyShow(this, '#AlbumIcon')" ng-model="RenewalRCCopy">
+                                        <a target="_blank" href="{{RenewalRCCopy}}" ng-show="RenewalRCCopy"><img style="width:50px" src="~/Content/img/upload.png" /></a>
+                                    </div>
+
+                                    <!-- BOCW -->
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">BOCW Registration</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="BOCW_Reg">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">BOCW Issuing Authority</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="BOCW_IssuingAuth">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">BOCW Max Workers</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="BOCW_MaxWorkers">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">BOCW Validity</label>
+                                        <input type="date" class="form-control form-control-sm" ng-model="BOCW_Validity">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Upload BOCW RC</label>
+                                        <input type="file" id="BOCWRCCopy{{$index}}" class="form-control form-control-sm" onchange="angular.element(this).scope().BOCWRCCopyShow(this, '#AlbumIcon')" ng-model="BOCWRCCopy">
+                                        <a target="_blank" href="{{BOCWRCCopy}}" ng-show="BOCWRCCopy"><img style="width:50px" src="~/Content/img/upload.png" /></a>
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Upload BOCW Renewal</label>
+                                        <input type="file" id="RenewalBOCWRCCopy{{$index}}" class="form-control form-control-sm" onchange="angular.element(this).scope().RenewalBOCWRCCopyShow(this, '#AlbumIcon')" ng-model="RenewalBOCWRCCopy">
+                                        <a target="_blank" href="{{RenewalBOCWRCCopy}}" ng-show="RenewalBOCWRCCopy"><img style="width:50px" src="~/Content/img/upload.png" /></a>
+                                    </div>
+
+                                    <!-- Types of Vendors Allowed (Static Dropdown) -->
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Types of Contractors Allowed</label>
+                                        <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="Nature">
+                                            <option value="">Select Contractor Type</option>
+                                            <option value="Manpower Supply">Manpower Supply</option>
+                                            <option value="Security Services">Security Services</option>
+                                            <option value="Housekeeping">Housekeeping</option>
+                                            <option value="Facility Management">Facility Management</option>
+                                            <option value="Others Services">Others Services</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Max Contractors Allowed</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="MaxContractors">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Max Workers at Site</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="MaxWorkersSite">
+                                    </div>
+
+                                </div>
+                            </div>
+                            <br />   <br />
+                            <!-- ===================== 3. SAFETY ===================== -->
+                            <div class="form-section  row g-3">
+                                <div class="section-title">Safety & Security Requirements</div>
+
+                                <div class="row g-3">
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">PPE Mandatory</label><br>
+                                        <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="PPEMandatory">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Types of PPE</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="PPEType">
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Safety Training Required</label>
+                                        <select id="ddlSafetyTraining" class="form-select form-select-sm" ng-model="SafetyTraining">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Site Induction Mandatory</label><br>
+                                        <select id="ddlSiteInduction" class="form-select form-select-sm" ng-model="SiteInduction">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Police Verification Required</label><br>
+                                        <select id="ddlPoliceVerification" class="form-select form-select-sm" ng-model="PoliceVerification">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">ID Card Issuance Required</label><br>
+
+                                        <select id="ddlIDCardRequired" class="form-select form-select-sm" ng-model="IDCardRequired">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <br />   <br />
+                            <!-- ===================== 3. SAFETY ===================== -->
+                            <div class="form-section  row g-3">
+                                <div class="section-title">Safety & Security Requirements</div>
+
+                                <div class="row g-3">
+
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Drinking Water</label><br>
+                                        <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="Drinkingwater">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Washroom Facility</label><br>
+                                        <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="Washroom">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Rest Shelter</label><br>
+                                        <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="RestShelter">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">First Aid Kit</label><br>
+                                        <select id="ddlCLRARC" class="form-select form-select-sm" ng-model="FirstAid">
+                                            <option value="">Select</option>
+                                            <option value="Yes">Yes</option>
+                                            <option value="No"> No</option>
+                                        </select>
+
+                                    </div>
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
+                                        <label class="form-label">Trainer Name</label>
+                                        <input type="text" class="form-control form-control-sm" ng-model="TrainerName">
+                                    </div>
+
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button" ng-hide="Editetime=='1'"
+                                class="btn btn-sm save-btn" ng-click="Sitelimit()">
+                            Save
+                        </button>
+
+                        <button type="button" ng-show="Editetime=='1'"
+                                class="btn btn-sm save-btn" ng-click="AfterUpdateSite()">
+                            Update
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <!-- CARD 5 : Employee Compliance Docs -->
+
+        <div id="empCompDocs" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Employee Management</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#addDocumentempModal" ng-show="loginType==5">
+                    <i class="bi bi-plus me-1"></i> Add Document
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Document</div>
+                        </div>
+                        <div class="kpi-value">{{EmpDocumentList.length ||0}}</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Contractor</div>
+                        </div>
+                        <div class="kpi-value">{{EVendorList.length || 0}}</div>
+                    </div>
+
+                    <!-- Expired -->
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown" ng-init="BindVendorListList()">
+
+                            <select class="btn btn-sm export-btn dropdown-toggle"
+                                    ng-model="SelectedVendorId"
+                                    ng-change="BindEmpDocumentList()"
+                                    ng-options="x.PartyId as x.PartyName for x in EVendorList">
+
+                                <option value="">Select</option>
+                            </select>
+                        </div>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn" ng-click="SaveVendorDocumentMapping()">
+                            Save
+                        </button>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" ng-model="empSiteSearch" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="" ng-click="PrintemployeedocList()">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 rounded-3" ng-init="BindEmpDocumentList()">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>✔ Check All<input type="checkbox" ng-model="checkAll" ng-change="toggleAll()" /></th>
+                                    <th>S.No</th>
+                                    <th>Document Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in EmpDocumentList | filter:empSiteSearch">
+
+
+                                    <td>
+                                        <input type="checkbox" ng-model="x.IsCheck" />
+                                    </td>
+                                    <td>{{$index+1}}</td>
+                                    <td>{{x.DocumentName}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+
+            </div>
+        </div>
+
+        <div class="modal fade supplierAdminModal"
+             id="addDocumentempModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-x modal-dialog-centered">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Document</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-12">
+                                <div class="col-lg-12 col-md-4 col-sm-6">
+                                    <label class="form-label">Document Name </label>
+                                    <input id="txtDocumentName" type="text" class="form-control form-control-sm" ng-model="DocumentName">
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn" ng-click="Saveempdoc()">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+
+
+        @*//---------------------Log report*@
+        <div id="activityReport" class="card section-card d-none">
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="admin-dd">
+                            <label class="admin-dd-label">Activity Date</label>
+                            <input id="txtStartDate"
+                                   type="date"
+                                   ng-model="StartDate"
+                                   ng-change="BindActivity()"
+                                   class="form-control admin-dd-select" />
+
+                        </div>
+                    </div>
+
+                    <!-- RIGHT : Search + Export -->
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-md-end">
+
+                        <!-- Search -->
+                        <div class="search-container">
+                            <div class="input-group input-group-sm">
+                                <input type="text"
+                                       class="form-control form-control-sm" ng-model="SearchActivity"
+                                       placeholder="Search..." />
+                                <button class="btn btn-sm btn-outline-primary" type="button">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Export -->
+                        <button type="button" class="btn btn-sm export-btn" ng-click="printActivityReport()">
+                            <i class="bi bi-download me-1"></i> Print
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="activityReportTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>User Name</th>
+                                    <th>UserType</th>
+                                    <th>Created On</th>
+                                    <th>Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in LogActivity | filter:SearchActivity">
+                                    @*<td>{{x.RowId}}</td>*@
+                                    <td>{{$index + 1}}</td>
+                                    <td>{{x.UserName}}</td>
+
+                                    <td>{{x.UserType}}</td>
+                                    <td>{{x.CreatedOn}}</td>
+                                    <td>{{x.Activity}}</td>
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                </div>
+
+            </div>
+        </div>
+        @*-------------End report*@
+
+
+        <div class="modal fade supplierAdminModal" id="newtransModal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content employee-modal">
+                    <!-- Header -->
+                    <div class="modal-header employee-modal-header">
+                        <h6 class="modal-title">Bus Route</h6>
+                        <button type="button" class="btn-close btn-close-white" ng-click="opensomething()" data-bs-dismiss="modal"></button>
+                    </div>
+                    <!-- Body -->
+                    <div class="modal-body employee-modal-body">
+                        <form>
+                            <!-- Employee Details  -->
+                            <h6 class="section-title">Route Details</h6>
+                            <div class="row g-3">
+                                <div class="col-lg-3 col-md-6" ng-if="RouteID">
+                                    <label class="form-label">Route ID</label>
+                                    <input class="form-control form-control-sm"
+                                           id="txtEmployeeCode"
+                                           ng-model="RouteID"
+                                           disabled>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Route Name</label>
+                                    <input class="form-control form-control-sm validateA" id="txtRouteName" ng-model="RouteName">
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Company Name</label>
+                                    <input class="form-control form-control-sm" id="txtCompanyName" ng-model="CompanyName">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Location / Plant Name   <span class="text-danger">*</span></label>
+                                    <input class="form-control form-control-sm validateA" id="txtLocation" ng-model="Location">
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Route Start Location <span class="text-danger">*</span></label>
+                                    <input class="form-control form-control-sm validateA" id="txtRouteStartLocation" ng-model="RouteStartLocation">
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Route End Location</label>
+                                    <input class="form-control form-control-sm validateA" id="txtRouteEndLocation" ng-model="RouteEndLocation">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select form-select-sm validateA"
+                                            ng-model="Status">
+                                        <option value="">Select</option>
+                                        <option value="Deactive">Deactive</option>
+                                        <option value="Active">Active</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Contact  -->
+                            <hr>
+                            <h6 class="section-title">Bus Details</h6>
+                            <div class="row g-3">
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Bus Number</label>
+                                    <input class="form-control form-control-sm" id="txtBusNumber" ng-model="BusNumber">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Bus Registration Number</label>
+                                    <input class="form-control form-control-sm" id="txtRCNO" ng-model="RCNO">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Seating Capacity<span class="text-danger">*</span></label>
+                                    <input class="form-control form-control-sm validateA" id="txtSeatingCapacity" ng-model="SeatingCapacity" onkeyup="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Bus Type</label>
+                                    <select class="form-select form-select-sm validateA" ng-model="BusType">
+                                        <option value="">Select</option>
+                                        <option value="AC">AC</option>
+                                        <option value="Non-AC">Non-AC</option>
+                                        <option value="Mini">Mini</option>
+                                        <option value="Shuttle">Shuttle</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6 class="section-title">Driver Details</h6>
+                            <div class="row g-3">
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label"> Driver Name</label>
+                                    <input class="form-control form-control-sm" id="txtDriverName" ng-model="DriverName">
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Driver Contact Number </label>
+                                    <input class="form-control form-control-sm" id="txtDriverContactNumber" onkeyup="$(this).val($(this).val().replace(/[^\d]/ig, ''))" ng-model="DriverContactNumber" onblur="validatePhoneNo('#txtDriverContactNumber')" numeric-only dynamic-length maxlength="10" minlength="10">
+                                </div>
+                                <div class="col-lg-3 col-md-6"><label class="form-label">Address</label><input class="form-control form-control-sm" id="txtDriverAddress" ng-model="DriverAddress"></div>
+
+                                <div class="col-lg-3 col-md-6"><label class="form-label"> Driver License Number </label><input class="form-control form-control-sm" id="txtLicenseNumber" ng-model="LicenseNumber"></div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">License Copy</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+                                            <input type="file" class="upload-input form-control-sm "
+                                                   accept=".pdf"
+                                                   id="LicenseCopy" onchange="angular.element(this).scope().showFileName(this, 'LicenseCopy')" ng-model="LicenseCopy">
+                                            <span class="file-name">
+                                                {{ LicenseCopyName}}
+                                            </span>
+                                        </div>
+                                        <div class="upload-actions" ng-if="LicenseCopy">
+                                            <i class="bi bi-eye upload-icon"
+                                               title="View"
+                                               ng-click="ViewFileC(LicenseCopy)"></i>
+                                            <i class="bi bi-download upload-icon"
+                                               title="Download"
+                                               ng-click="DownloadFileC(LicenseCopy,'Driver_LicenseCopy')"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Driver Aadhar Card Copy</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+                                            <input type="file" class="upload-input form-control-sm "
+                                                   accept=".pdf,.jpg,.jpeg,.png"
+                                                   id="AadharCardCopy" onchange="angular.element(this).scope().showFileName(this, 'AadharCardCopy')" ng-model="AadharCardCopy">
+                                            <span class="file-name">
+                                                {{ AadharCardCopyName}}
+                                            </span>
+
+
+
+                                        </div>
+                                        <div class="upload-actions" ng-if="AadharCardCopy">
+                                            <i class="bi bi-eye upload-icon"
+                                               title="View"
+                                               ng-click="ViewFileC(AadharCardCopy)"></i>
+                                            <i class="bi bi-download upload-icon"
+                                               title="Download"
+                                               ng-click="DownloadFileC(AadharCardCopy,'AadharCardCopy')"></i>
+                                        </div>
+                                    </div>
+                                </div>  <hr>
+                                <div class="col-lg-3 col-md-6"><label class="form-label">Conductor Name</label><input class="form-control form-control-sm" id="txtConductorName" ng-model="ConductorName"></div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Conductor Contact Number </label><input class="form-control form-control-sm" id="txtConductorContact" onkeyup="$(this).val($(this).val().replace(/[^\d]/ig, ''))"
+                                                                                                      ng-model="ConductorContact" numeric-only dynamic-length maxlength="10" minlength="10">
+                                </div>
+
+                                <div class="col-lg-3 col-md-6"><label class="form-label">Address</label><input class="form-control form-control-sm" id="txtConductorAddress" ng-model="ConductorAddress"></div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Conductor Aadhaar Card</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+                                            <input type="file" class="upload-input form-control-sm " id="ConductorAadhaarCard" onchange="angular.element(this).scope().showFileName(this, 'ConductorAadhaarCard')" ng-model="ConductorAadhaarCard">
+                                            <span class="file-name"> {{ ConductorAadhaarCardName}} </span>
+                                        </div>
+
+                                        <div class="upload-actions" ng-if="ConductorAadhaarCard">
+                                            <i class="bi bi-eye upload-icon"
+                                               title="View"
+                                               ng-click="ViewFileC(ConductorAadhaarCard)"></i>
+                                            <i class="bi bi-download upload-icon"
+                                               title="Download"
+                                               ng-click="DownloadFileC(ConductorAadhaarCard,'ConductorAadhaarCard')"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                            </div>
+
+                            <!-- Nominee  -->
+                            <hr>
+
+                            <h6 class="section-title">Upload Documents</h6>
+                            <div class="row g-3">
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label"> Bus RC (Registration Certificate)</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+                                            <input type="file" class="upload-input form-control-sm " accept=".pdf" id="BusRC" onchange="angular.element(this).scope().showFileName(this, 'BusRC')" ng-model="BusRC">
+                                            <span class="file-name">
+                                                {{ BusRCName }}
+                                            </span>
+
+
+
+                                        </div>
+                                        <div class="upload-actions" ng-if="BusRC">
+                                            <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(BusRC)"></i>
+                                            <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(BusRC,'Bus_RC')"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Educational Certificate -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label"> Pollution Certificate (PUC)</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+                                            <input type="file" class="upload-input form-control-sm " accept=".pdf" id="PollutionCertificate" ng-model="PollutionCertificate" onchange="angular.element(this).scope().showFileName(this, 'PollutionCertificate')">
+                                            <span class="file-name">{{ PollutionCertificateName}} </span>
+                                        </div>
+                                        <div class="upload-actions" ng-if="PollutionCertificate">
+                                            <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(PollutionCertificate)"></i>
+                                            <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(PollutionCertificate,'Pollution_Certificate')"></i>
+                                        </div>
+
+
+
+                                    </div>
+                                </div>
+                                <!-- Experience Certificate -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">Fitness Certificate</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+
+                                            <input type="file" class="upload-input form-control-sm " accept=".pdf" id="FitnessCertificate" onchange="angular.element(this).scope().showFileName(this, 'FitnessCertificate')" ng-model="FitnessCertificate">
+                                            <span class="file-name">
+                                                {{ FitnessCertificateName}}
+                                            </span>
+                                        </div>
+                                        <div class="upload-actions" ng-if="FitnessCertificate">
+                                            <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(FitnessCertificate)"></i>
+                                            <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(FitnessCertificate,'Fitness_Certificate')"></i>
+                                        </div>
+                                    </div>
+
+
+
+                                </div>
+
+                                <!-- Relieving Letter -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="form-label">   Insurance Copy</label>
+                                    <div class="upload-field">
+                                        <div class="upload-input-wrap">
+                                            <input type="file" class="upload-input form-control-sm " accept=".pdf" id="InsuranceCopy" onchange="angular.element(this).scope().showFileName(this, 'InsuranceCopy')" ng-model="InsuranceCopy">
+                                            <span class="file-name">
+                                                {{ InsuranceCopyName }}
+                                            </span>
+                                        </div>
+                                        <div class="upload-actions" ng-if="InsuranceCopy">
+                                            <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(InsuranceCopy)"></i>
+                                            <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(InsuranceCopy,'InsuranceCopy')"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
+                            </div>
+
+
+                        </form>
+                    </div>
+                    <!-- Footer -->
+                    <div class="modal-footer employee-modal-footer">
+                        <button class="btn cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-sm add-btn"
+                                ng-click="SaveRouteMaster();ManageLog('Submit Route')">
+                            Submit
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="Transportmapping" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Transport Management</h4>
+                <button class="btn btn-sm add-btn" id="btnNewEmployee" type="button" data-bs-toggle="modal" data-bs-target="#newtransModal" ng-click="ResetForm();ManageLog('click on New Employee button')">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Add BusRoute</span>
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Bus Route</div>
+                        </div>
+                        <div class="kpi-value">{{TransportList.length ||0}}</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Contractor</div>
+                        </div>
+                        <div class="kpi-value">{{EVendorList.length || 0}}</div>
+                    </div>
+
+                    <!-- Expired -->
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown" ng-init="BindVendorListList()">
+
+                            <select class="btn btn-save export-btn dropdown-toggle" ng-model="SelectedVendorId" ng-change="GetTransport()">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in EVendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                            </select>
+
+
+                        </div>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn" ng-click="SaveVendorTransportMapping()">
+                            Save
+                        </button>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" ng-model="empSiteSearch" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="TExportToCSV();ManageLog('Transport Print')">
+                                            CSV
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="TExportToPDF(); $event.preventDefault(); ManageLog('Export Transport PDF')">
+                                            PDF
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="TExportToPrint(); $event.preventDefault(); ManageLog('Export Transport Print')">
+                                            Print
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 rounded-3">
+                    <div class="table-responsive">
+                        <table id="example" class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" ng-model="SelectAll" ng-click="TrtansporttoggleAll()" /></th>
+                                    <th>Sr.No</th>
+                                    <th>Route ID</th>
+                                    <th>Route Name</th>
+                                    <th>Start Location</th>
+                                    <th>End Location</th>
+                                    <th>Bus Number</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                <tr ng-repeat="x in TransportList | filter: SearchEmp | filter: { RouteName: SelectedPartyName }">
+                                    <td>
+                                        <input type="checkbox" ng-model="x.IsSelected" />
+                                    </td>
+                                    <td>{{$index + 1}}</td>
+                                    <td>{{ x.RouteID }}</td>
+                                    <td>{{ x.RouteName }}</td>
+                                    <td>{{ x.RouteStartLocation }}</td>
+                                    <td>{{ x.RouteEndLocation }}</td>
+                                    <td>{{ x.BusNumber }}</td>
+                                    <td>{{ x.Status }}</td>
+
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#newtransModal" ng-click="setTransportData(x.Id)">
+                                                    View More
+                                                </a>
+                                            </li>
+
+
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+

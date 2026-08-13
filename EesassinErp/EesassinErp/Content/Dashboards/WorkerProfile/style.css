@@ -1,0 +1,1831 @@
+﻿.workerProfile {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+.workerProfile .employeeProfileSidebar {
+    background: var(--card-bg);
+    border-radius: 28px;
+    padding: 24px;
+    height: 100%;
+    position: sticky;
+    top: 0;
+}
+
+/* SEGMENT TOGGLE */
+
+.workerProfile .employeeSegment-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card-bg);
+    border-radius: 999px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 24px;
+    width: fit-content;
+    max-width: 100%;
+    scrollbar-width: none;
+}
+
+    .workerProfile .employeeSegment-wrap::-webkit-scrollbar {
+        display: none;
+    }
+
+/* BUTTONS */
+
+.workerProfile .employeeSegment-btn {
+    border: 0;
+    background: transparent;
+    color: #555;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+
+    /* HOVER */
+
+    .workerProfile .employeeSegment-btn:hover {
+        color: var(--primary);
+    }
+
+    /* ACTIVE */
+
+    .workerProfile .employeeSegment-btn.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    /* CLICK EFFECT */
+
+    .workerProfile .employeeSegment-btn:active {
+        transform: scale(0.97);
+    }
+
+
+.workerProfile .employeeProfileTop {
+    position: relative;
+    text-align: center;
+}
+
+.workerProfile .employeeProfileMoreBtn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+}
+
+.workerProfile .employeeProfileImageWrap {
+    margin-bottom: 14px;
+}
+
+.workerProfile .employeeProfileImage {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.workerProfile .employeeProfileName {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 26px;
+}
+
+.workerProfile .employeeProfileInfo {
+    margin-bottom: 2.5rem !important;
+}
+
+
+.workerProfile .employeeProfileInfoItem,
+.workerProfile .employeeProfileContactItem {
+    font-size: 15px;
+    color: #666;
+    margin-bottom: 14px;
+    line-height: 1;
+}
+
+    .workerProfile .employeeProfileInfoItem span,
+    .workerProfile .employeeProfileContactItem span {
+        color: #444;
+        font-weight: 500;
+    }
+
+.workerProfile .employeeProfileDivider {
+    margin: 16px 0;
+    border-top: 1px solid #E5E5E5;
+    text-align: center;
+    position: relative;
+}
+
+.workerProfile .employeeProfileBadge {
+    position: relative;
+    top: -13px;
+    background: var(--primary);
+    color: #fff;
+    padding: 6px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.workerProfile .employeeProfileQrSection {
+    margin-top: 28px;
+    text-align: center;
+}
+
+.workerProfile .employeeProfileQr {
+    width: 140px;
+    margin-bottom: 20px;
+}
+
+.workerProfile .employeeProfileQrActions {
+    display: flex;
+    gap: 12px;
+}
+
+.workerProfile .employeeProfileOutlineBtn {
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: #fff;
+    border-radius: 999px;
+    font-size: 14px;
+    height: 35px;
+    padding: 0 18px;
+    font-weight: 500;
+}
+
+.workerProfile .employeeProfileOutlineBtn:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.workerProfile .employeeProfilePrimaryBtn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 999px;
+    border: 0;
+    font-size: 14px;
+    height: 35px;
+    padding: 0 18px;
+    font-weight: 500;
+}
+
+.workerProfile .employeeProfilePrimaryBtn:hover {
+    background: var(--primary-dark);
+    color: #fff;
+}
+
+
+.workerProfile .employeeProfileContentWrap {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.workerProfile .employeeViewPanel {
+    display: none;
+}
+
+    .workerProfile .employeeViewPanel.active {
+        display: block;
+    }
+
+.workerProfile .employeeViewCard {
+    background: var(--card-bg);
+    border-radius: 28px;
+    padding: 28px;
+}
+
+.workerProfile .employeeViewLabel {
+    font-size: 14px;
+    color: #8B8B8B;
+    margin-bottom: 4px;
+}
+
+.workerProfile .employeeViewValue {
+    font-size: 16px;
+    font-weight: 500;
+    color: #444;
+}
+
+.workerProfile .employeeTransferHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+    .workerProfile .employeeTransferHeader h5 {
+        font-size: 20px;
+        font-weight: 500;
+        margin-bottom: 0;
+        color: var(--primary);
+    }
+
+.workerProfile .employeeTransferTable {
+    margin-bottom: 0;
+    overflow: hidden;
+    border-radius: 18px;
+}
+
+    .workerProfile .employeeTransferTable thead th {
+        background: var(--primary);
+        color: #fff;
+        border: 0;
+        font-weight: 500;
+        padding: 8px 20px;
+    }
+
+    .workerProfile .employeeTransferTable tbody td {
+        padding: 10px 20px;
+        border-color: #F1F1F1;
+        color: #555;
+        background: #fff;
+    }
+
+    .workerProfile .employeeTransferTable thead th:first-child {
+        border-top-left-radius: 14px;
+    }
+
+    .workerProfile .employeeTransferTable thead th:last-child {
+        border-top-right-radius: 14px;
+    }
+
+@media(max-width:1199px) {
+
+    .workerProfile .employeeProfileSidebar {
+        position: relative;
+    }
+}
+
+@media(max-width:767px) {
+
+    .workerProfile .employeeProfileBody {
+        padding: 14px;
+    }
+
+    .workerProfile .employeeViewCard,
+    .workerProfile .employeeProfileSidebar {
+        border-radius: 20px;
+        padding: 20px;
+    }
+
+    .workerProfile .employeeTransferHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .workerProfile .employeeProfileQrActions {
+        flex-direction: column;
+    }
+}
+
+/* ================= Document Tab inside view profile Modal ================= */
+
+
+.workerProfile .employeeDocumentViewCard {
+    border: 1px solid #EFEFEF;
+    border-radius: 22px;
+    padding: 18px;
+    background: var(--card-bg);
+    height: 100%;
+    transition: 0.25s ease;
+}
+
+    .workerProfile .employeeDocumentViewCard:hover {
+        border-color: var(--border);
+        transform: translateY(-2px);
+    }
+
+.workerProfile .employeeDocumentViewTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.workerProfile .employeeDocumentFileName {
+    font-size: 14px;
+    color: #444;
+    font-weight: 500;
+    margin-top: 4px;
+    word-break: break-word;
+}
+
+.workerProfile .employeeDocumentIcon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 14px;
+    background: #D5E3FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .workerProfile .employeeDocumentIcon i {
+        font-size: 22px;
+        color: var(--primary);
+    }
+
+    .workerProfile .employeeDocumentIcon.image {
+        background: #D5E3FF;
+    }
+
+        .workerProfile .employeeDocumentIcon.image i {
+            font-size: 22px;
+            color: var(--primary);
+        }
+
+.workerProfile .employeeDocumentActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workerProfile .employeeDocumentViewBtn,
+.workerProfile .employeeDocumentDownloadBtn {
+    flex: 1;
+    height: 32px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.workerProfile .employeeDocumentViewBtn {
+    border: 1px solid var(--primary);
+    background: #fff;
+    color: var(--primary);
+}
+
+    .workerProfile .employeeDocumentViewBtn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.workerProfile .employeeDocumentDownloadBtn {
+    border: 0;
+    background: var(--primary);
+    color: #fff;
+}
+
+.workerProfile .employeeDocumentDownloadBtn:hover {
+    border: 0;
+    background: var(--primary-dark);
+    color: #fff;
+}
+
+@media(max-width:767px) {
+
+    .workerProfile .employeeDocumentActions {
+        flex-direction: column;
+    }
+
+    .workerProfile .employeeDocumentViewBtn,
+    .workerProfile .employeeDocumentDownloadBtn {
+        width: 100%;
+    }
+}
+
+/*=======================================
+    Share profile Modal 
+=======================================*/
+.workerProfile .employeeSharePopup {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+    .workerProfile .employeeSharePopup.active {
+        display: flex;
+    }
+
+.workerProfile .employeeSharePopupOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.18);
+    backdrop-filter: blur(5px);
+}
+
+.workerProfile .employeeSharePopupCard {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    border-radius: 28px;
+    overflow: hidden;
+    background: var(--card-bg);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.18);
+    animation: employeeSharePopupIn 0.22s ease;
+}
+
+@keyframes employeeSharePopupIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.workerProfile .employeeShareModalDialog {
+    max-width: 520px;
+}
+
+.workerProfile#employeeShareProfileModal {
+    z-index: 1065;
+}
+
+.workerProfile .employeeShareModalContent {
+    border: 0;
+    border-radius: 28px;
+    overflow: hidden;
+    background: var(--card-bg);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.12);
+}
+
+.workerProfile .employeeShareHeader {
+    padding: 22px 24px;
+    border-bottom: 1px solid #F1F1F1;
+    display: flex;
+    color: #fff;
+    background: var(--primary);
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .workerProfile .employeeShareHeader h4 {
+        font-size: 22px;
+        font-weight: 500;
+        margin-bottom: 0;
+        color: #fff;
+    }
+
+.workerProfile .employeeShareBody {
+    padding: 28px 24px;
+}
+
+.workerProfile .employeeShareOptions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    margin-bottom: 34px;
+}
+
+.workerProfile .employeeShareOptionBtn {
+    border: 0;
+    background: transparent;
+    text-align: center;
+    transition: 0.25s ease;
+}
+
+    .workerProfile .employeeShareOptionBtn:hover {
+        transform: translateY(-3px);
+    }
+
+    .workerProfile .employeeShareOptionBtn span {
+        display: block;
+        margin-top: 12px;
+        font-size: 15px;
+        font-weight: 500;
+        color: #444;
+    }
+
+.workerProfile .employeeShareOptionIcon {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+}
+
+    .workerProfile .employeeShareOptionIcon i {
+        font-size: 34px;
+        color: #fff;
+    }
+
+    .workerProfile .employeeShareOptionIcon.whatsapp {
+        background: #25D366;
+    }
+
+    .workerProfile .employeeShareOptionIcon.mail {
+        background: var(--primary);
+    }
+
+.workerProfile .employeeShareLinkWrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #E8E8E8;
+    border-radius: 18px;
+    padding: 10px;
+    background: #FAFAFA;
+}
+
+.workerProfile .employeeShareInput {
+    border: 0;
+    background: transparent;
+    box-shadow: none !important;
+    font-size: 14px;
+    color: #555;
+    padding-left: 4px;
+}
+
+.workerProfile .employeeShareCopyBtn {
+    min-width: 90px;
+    height: 44px;
+    border-radius: 12px;
+    border: 0;
+    background: var(--primary);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+@media(max-width:767px) {
+
+    .workerProfile .employeeShareOptions {
+        gap: 18px;
+    }
+
+    .workerProfile .employeeShareOptionIcon {
+        width: 64px;
+        height: 64px;
+    }
+
+        .workerProfile .employeeShareOptionIcon i {
+            font-size: 28px;
+        }
+
+    .workerProfile .employeeShareLinkWrap {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .workerProfile .employeeShareCopyBtn {
+        width: 100%;
+    }
+}
+
+/*---Nominee Tab---*/
+.employeeNomineeCard + .employeeNomineeCard {
+    margin-top: 20px;
+}
+
+.employeeNomineeHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+    .employeeNomineeHeader h6 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .employeeNomineeHeader .form-check {
+        margin-bottom: 0;
+    }
+
+    .employeeNomineeHeader .form-check-label {
+        font-size: 13px;
+    }
+
+
+/* ============== EDIT CONTRACTOR PROFILE MODAL============== */
+
+.workerProfile .workerProfileModalContent {
+    overflow: hidden;
+    background: var(--card-bg);
+}
+
+/* HEADER */
+
+.workerProfile .workerProfileModalHeader {
+    padding: 12px 26px;
+    border-bottom: 1px solid #F3E4DD;
+    display: flex;
+    align-items: center;
+    background: var(--primary);
+    color: #fff;
+    justify-content: space-between;
+}
+
+.workerProfile .workerProfileModalTitleWrapper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.workerProfile .workerProfileModalIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: #FFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.3rem;
+}
+
+.workerProfile .workerProfileModalTitle {
+    font-size: 1.4rem;
+    font-weight: 500;
+}
+
+.workerProfile .workerProfileModalSubTitle {
+    font-size: 0.9rem;
+    /* margin-top: 2px;*/
+}
+
+.workerProfile .workerProfileModalClose {
+    box-shadow: none !important;
+    opacity: 0.7;
+}
+
+/* BODY */
+
+.workerProfile .workerProfileModalBody {
+    padding: 28px 26px;
+    overflow-y: auto;
+}
+
+
+/* STEP TRACKER */
+.workerProfileModalBody .stepper-modern {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+    /* LINE */
+    .workerProfileModalBody .stepper-modern::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #e5e7eb;
+        transform: translateY(-50%);
+        z-index: 0;
+    }
+
+/* STEP ITEM */
+.workerProfileModalBody .step-item {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    flex: 1;
+}
+
+    /* DOT */
+    .workerProfileModalBody .step-item::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        background: #d1d5db;
+        border-radius: 50%;
+        display: block;
+        margin: 0 auto 6px;
+        transition: all 0.2s ease;
+    }
+
+    /* ACTIVE */
+    .workerProfileModalBody .step-item.active {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+        .workerProfileModalBody .step-item.active::before {
+            background: var(--primary);
+            transform: scale(1.4);
+        }
+
+    /* COMPLETED */
+    .workerProfileModalBody .step-item.completed::before {
+        background: #22c55e;
+    }
+
+/* CARD */
+.workerProfileModalBody .entity-card {
+    border-radius: 14px;
+    background: var(--card-bg);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    border: none;
+}
+
+.workerProfileModalBody .form-label {
+    font-size: 12px;
+}
+
+.workerProfileModalBody .form-control, .form-select {
+    font-size: 13px;
+    height: 36px;
+}
+
+.workerProfileModalBody .entity-footer {
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+}
+
+.workerProfileModalBody .form-control:focus,
+.workerProfileModalBody .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.05rem rgba(228, 93, 39, 0.25);
+    outline: none;
+}
+
+.workerProfileModalBody .form-select {
+    height: 36px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    transition: all 0.15s ease;
+}
+
+    /* Hover feel */
+    .workerProfileModalBody .form-select:hover {
+        border-color: var(--primary);
+    }
+
+/* Arrow color tweak (modern browsers) */
+.workerProfileModalBody .form-select {
+    background-color: #fff;
+}
+
+.workerProfileModalBody .multi-select-dropdown {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    animation: fadeIn 0.15s ease;
+}
+
+    /* Hover item */
+    .workerProfileModalBody .multi-select-dropdown label:hover {
+        background: #FFF1EB !important;
+    }
+
+    /* Checkbox spacing */
+    .workerProfileModalBody .multi-select-dropdown input {
+        margin-right: 6px;
+    }
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* GRID */
+.workerProfileModalBody .form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width:1200px) {
+    .workerProfileModalBody .form-grid {
+        grid-template-columns: repeat(3,1fr);
+    }
+}
+
+@media (max-width:992px) {
+    .workerProfileModalBody .form-grid {
+        grid-template-columns: repeat(2,1fr);
+    }
+}
+
+@media (max-width:576px) {
+    .workerProfileModalBody .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* BUTTON */
+.workerProfileModalBody .save-btn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 14px;
+    border: none;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    /* Hover */
+    .workerProfileModalBody .save-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+    /* Click (press effect) */
+    .workerProfileModalBody .save-btn:active {
+        transform: scale(0.96);
+        background: var(--primary-dark);
+    }
+
+        /* Remove ugly default focus */
+        .workerProfileModalBody .save-btn:focus,
+        .workerProfileModalBody .save-btn:active:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+/* MULTI SELECT */
+.workerProfileModalBody .multi-select {
+    position: relative;
+}
+
+.workerProfileModalBody .multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+    .workerProfileModalBody .multi-select-dropdown label {
+        display: block;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+        .workerProfileModalBody .multi-select-dropdown label:hover {
+            background: #f5f5f5;
+        }
+
+.workerProfileModalBody .save-btn,
+.workerProfileModalBody .save-btn:focus,
+.workerProfileModalBody .save-btn:active,
+.workerProfileModalBody .save-btn:visited {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+    /* Hover (keep same feel) */
+    .workerProfileModalBody .save-btn:hover {
+        background: var(--primary-dark) !important;
+        color: #fff !important;
+    }
+
+    /* Prevent bootstrap active flash */
+    .workerProfileModalBody .save-btn:active:focus,
+    .workerProfileModalBody .save-btn:active:hover {
+        background: var(--primary-dark) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+
+/* Remove default click highlight (mobile too) */
+.workerProfileModalBody .save-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.workerProfileModalBody .view-btn {
+    background: transparent;
+    color: var(--primary) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: all 0.15s ease;
+}
+
+    /* Hover */
+    .workerProfileModalBody .view-btn:hover {
+        background: var(--primary);
+        color: #fff !important;
+    }
+
+    /* Click (press effect) */
+    .workerProfileModalBody .view-btn:active {
+        transform: scale(0.96);
+        background: var(--primary) !important;
+        color: #fff !important;
+    }
+
+
+/* LEGAL BOX */
+.workerProfileModalBody .legal-box {
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+    /* Scrollbar (optional modern feel) */
+    .workerProfileModalBody .legal-box::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .workerProfileModalBody .legal-box::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+    }
+
+/* AGREEMENT AREA */
+.workerProfileModalBody .legal-agree {
+    padding: 10px 12px;
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+    background: #FFF7F3;
+}
+
+    /* Checkbox spacing */
+    .workerProfileModalBody .legal-agree input {
+        margin-right: 6px;
+    }
+
+.workerProfileModalBody .declaration-list {
+    /* max-height: 300px;*/
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.workerProfileModalBody .decl-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid #eee;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.workerProfileModalBody .status {
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+    .workerProfileModalBody .status.pending {
+        color: #f59e0b;
+    }
+
+    .workerProfileModalBody .status.done {
+        color: #22c55e;
+    }
+
+
+/*======================================================
+JOB HISTORY
+======================================================*/
+
+.jobHistoryList {
+    margin-top: 30px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 24px;
+}
+
+.jobHistoryHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+    .jobHistoryHeader h5 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+.jobHistoryCount {
+    font-size: 13px;
+    color: #6b7280;
+    background: #eef2ff;
+    padding: 6px 12px;
+    border-radius: 30px;
+}
+
+.jobHistoryItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 14px;
+    transition: .25s;
+}
+
+    .jobHistoryItem:hover {
+        border-color: var(--primary);
+        box-shadow: 0 8px 24px rgba(0,0,0,.05);
+    }
+
+.jobHistoryTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+    .jobHistoryTitle i {
+        font-size: 18px;
+    }
+
+.jobHistorySubtitle {
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.jobHistoryActions {
+    display: flex;
+    gap: 10px;
+}
+
+.jobHistoryIcon {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--primary);
+    transition: .25s;
+}
+
+    .jobHistoryIcon:hover {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+    }
+
+    .jobHistoryIcon.delete:hover {
+        background: #dc3545;
+        border-color: #dc3545;
+    }
+
+@media (max-width:768px) {
+
+    .jobHistoryItem {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .jobHistoryActions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .jobHistoryHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+
+/*=====================================
+    TEMP GATE PASS MODAL
+=====================================*/
+
+.temporaryGatePass {
+    font-family: "Inter", sans-serif;
+    background: #fff;
+    color: #222;
+    display: flex;
+    justify-content: center;
+    padding: 30px 0;
+}
+
+
+
+.temporaryGatePassModal .temporaryGatePassDialog {
+    max-width: 1400px;
+    width: 95vw;
+}
+
+.temporaryGatePassModal .modal-content {
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.temporaryGatePassModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background: var(--primary);
+    color: #fff;
+}
+
+.temporaryGatePassModal .modal-body {
+    background: #eef2f7;
+    padding: 24px;
+    overflow: auto;
+}
+
+.temporaryGatePassModal .temporaryGatePass {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+}
+
+.temporaryGatePassModal .gatepass-page {
+    margin: 0 auto;
+    box-shadow: 0 10px 35px rgba(0,0,0,.15);
+}
+
+.gatepassPrintBtn {
+    background: #022B5E;
+    border: 1px solid #fff;
+    border-radius: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+}
+
+    .gatepassPrintBtn:hover {
+        background: #fff;
+        color: var(--primary);
+        border: 1px solid #fff;
+    }
+
+/*==============================
+            A4 PAGE
+        ==============================*/
+.temporaryGatePass .gatepass-page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    padding: 18mm 15mm 16mm;
+    margin: auto;
+    box-sizing: border-box;
+    box-shadow: 0 8px 35px rgba(0, 0, 0, .12);
+    border-radius: 6px;
+}
+
+@page {
+    size: A4;
+    margin: 0;
+}
+
+@media print {
+    body {
+        margin: 0;
+        background: #fff;
+    }
+
+    .temporaryGatePass {
+        padding: 0;
+    }
+
+        .temporaryGatePass .gatepass-page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0;
+            padding: 18mm 15mm 16mm;
+            box-shadow: none;
+        }
+}
+
+/*==============================
+            HEADER
+        ==============================*/
+
+.temporaryGatePass .page-title {
+    text-align: center;
+    color: #022B5E;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+}
+
+.temporaryGatePass .title-divider {
+    border-top: 2px solid #39465d;
+    margin-bottom: 28px;
+}
+
+/*==============================
+            COMMON
+        ==============================*/
+
+.temporaryGatePass p {
+    margin: 0;
+    line-height: 1.7;
+    font-size: 15px;
+}
+
+.temporaryGatePass .bold {
+    font-weight: 700;
+}
+
+.temporaryGatePass .italic {
+    font-style: italic;
+}
+
+.temporaryGatePass .mt-10 {
+    margin-top: 10px;
+}
+
+.temporaryGatePass .mt-18 {
+    margin-top: 18px;
+}
+
+.temporaryGatePass .mt-25 {
+    margin-top: 25px;
+}
+
+.temporaryGatePass .mt-35 {
+    margin-top: 35px;
+}
+
+.temporaryGatePass .underline {
+    display: inline-block;
+    border-bottom: 1px solid #333;
+    min-width: 130px;
+    text-align: center;
+    font-style: italic;
+    padding: 0 6px 2px;
+    line-height: 1.2;
+}
+
+.temporaryGatePass .underline-sm {
+    min-width: 45px;
+}
+
+.temporaryGatePass .underline-md {
+    min-width: 95px;
+}
+
+.temporaryGatePass .underline-lg {
+    min-width: 210px;
+}
+
+.temporaryGatePass .underline-xl {
+    min-width: 420px;
+}
+
+/*==============================
+            TO SECTION
+        ==============================*/
+
+.temporaryGatePass .to-section p {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.65;
+}
+
+/*==============================
+            SUBJECT & REF
+        ==============================*/
+
+.temporaryGatePass .subject-row,
+.temporaryGatePass .reference-row {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    font-size: 15px;
+}
+
+    .temporaryGatePass .subject-row .label,
+    .temporaryGatePass .reference-row .label {
+        font-weight: 700;
+        white-space: nowrap;
+        margin-right: 8px;
+    }
+
+    .temporaryGatePass .reference-row .value {
+        flex: 1;
+    }
+
+/*==============================
+            LETTER BODY
+        ==============================*/
+
+.temporaryGatePass .letter-body {
+    margin-top: 30px;
+}
+
+    .temporaryGatePass .letter-body p {
+        font-size: 15px;
+        text-align: justify;
+    }
+
+.temporaryGatePass .inline-date {
+    display: inline-block;
+    min-width: 110px;
+    border-bottom: 1px solid #333;
+    text-align: center;
+    font-weight: 700;
+    padding-bottom: 2px;
+}
+
+.temporaryGatePass .inline-days {
+    display: inline-block;
+    min-width: 30px;
+    border-bottom: 1px solid #333;
+    text-align: center;
+    font-weight: 700;
+}
+
+/*==============================
+            TABLE
+        ==============================*/
+
+.temporaryGatePass .worker-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 18px;
+}
+
+    .temporaryGatePass .worker-table th,
+    .temporaryGatePass .worker-table td {
+        border: 1px solid #222;
+        padding: 7px 8px;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .temporaryGatePass .worker-table th {
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .temporaryGatePass .worker-table td {
+        height: 34px;
+    }
+
+        .temporaryGatePass .worker-table td:first-child,
+        .temporaryGatePass .worker-table td:nth-child(3) {
+            text-align: center;
+        }
+
+/*==================================
+        PLACE & DATE
+    ==================================*/
+
+.temporaryGatePass .place-date-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 42px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+/*==================================
+        SIGNATURES
+    ==================================*/
+
+.temporaryGatePass .signature-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 42px;
+    row-gap: 70px;
+    margin-top: 75px;
+}
+
+.temporaryGatePass .signature-box {
+    text-align: center;
+}
+
+.temporaryGatePass .signature-line {
+    border-top: 1px solid #333;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.temporaryGatePass .signature-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.temporaryGatePass .signature-note {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+@media print {
+
+    body * {
+        visibility: hidden !important;
+    }
+
+    #temporaryGatePassPrintArea,
+    #temporaryGatePassPrintArea * {
+        visibility: visible !important;
+    }
+
+    #temporaryGatePassPrintArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        padding: 18mm 15mm 16mm;
+        box-shadow: none !important;
+        background: #fff;
+    }
+
+    .modal-header,
+    .modal-footer {
+        display: none !important;
+    }
+
+    .temporaryGatePass {
+        padding: 0 !important;
+        background: #fff !important;
+    }
+}
+
+
+/*=========================================================
+    PERMANENT GATE PASS MODAL
+=========================================================*/
+
+.permanentGatePassModal .permanentGatePassDialog {
+    width: 95vw;
+    max-width: 1400px;
+}
+
+.permanentGatePassModal .modal-content {
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.permanentGatePassModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--primary);
+    color: #fff;
+}
+
+.permanentGatePassModal .modal-body {
+    background: #eef2f7;
+    padding: 40px;
+    overflow: auto;
+}
+
+/*=========================================================
+    PRINT AREA
+=========================================================*/
+
+#permanentGatePassPrintArea {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 50px;
+}
+
+/*======================================================
+    A4 PAPER
+======================================================*/
+
+.permanentGatePassA4 {
+    width: 210mm;
+    min-height: 297mm;
+    margin: auto;
+    background: #fff;
+    padding: 20mm 18mm;
+    box-shadow: 0 8px 35px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 35mm;
+}
+
+/*======================================================
+    CARD
+======================================================*/
+
+.permanentGatePass {
+    width: 150mm;
+    height: 90mm;
+    background: #fff;
+    border: 2px solid #cfd6df;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,.12);
+}
+
+    /*=========================================================
+    HEADER
+=========================================================*/
+
+    .permanentGatePass .cardHeader {
+        background: #022B5E;
+        color: #fff;
+        text-align: center;
+        padding: 16px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    /*=========================================================
+    BODY
+=========================================================*/
+
+    .permanentGatePass .cardBody {
+        padding: 18px;
+    }
+
+    .permanentGatePass .backBody {
+        padding: 18px;
+    }
+
+    /*=========================================================
+    PHOTO
+=========================================================*/
+
+    .permanentGatePass .workerPhoto {
+        width: 115px;
+        height: 135px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 4px solid #eef2f7;
+        box-shadow: 0 5px 15px rgba(0,0,0,.12);
+    }
+
+    /*=========================================================
+    INFO
+=========================================================*/
+
+    .permanentGatePass .infoBlock {
+        margin-bottom: 6px;
+    }
+
+    .permanentGatePass .infoLabel {
+        font-size: 11px;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    .permanentGatePass .infoValue {
+        font-size: 15px;
+        font-weight: 700;
+        color: #222;
+        line-height: 1.35;
+    }
+
+    .permanentGatePass .bloodGroup {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 48px;
+        height: 32px;
+        border-radius: 50px;
+        background: #022B5E;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    /*=========================================================
+    BACK CARD
+=========================================================*/
+
+    .permanentGatePass .renewSection {
+        margin-top: 40px;
+    }
+
+    .permanentGatePass .renewItem {
+        display: flex;
+        align-items: center;
+    }
+
+    .permanentGatePass .renewLabel {
+        font-size: 12px;
+        font-weight: 600;
+        color: #444;
+        white-space: nowrap;
+        margin-right: 10px;
+    }
+
+    .permanentGatePass .renewLine {
+        flex: 1;
+        border-bottom: 1px solid #222;
+        min-width: 120px;
+    }
+
+    .permanentGatePass .signLine {
+        min-width: 90px;
+    }
+
+    /*=========================================================
+    FOOTER
+=========================================================*/
+
+    .permanentGatePass .backFooter {
+        margin-top: 12px;
+        border-top: 1px solid #d7dce2;
+        padding-top: 15px;
+    }
+
+    .permanentGatePass .disclaimer {
+        font-size: 10px;
+        color: #555;
+        line-height: 1.1;
+        text-align: justify;
+    }
+
+    .permanentGatePass .helplineTitle {
+        font-size: 12px;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .permanentGatePass .helplineNumber {
+        color: #022B5E;
+        font-size: 18px;
+        font-weight: 700;
+        margin-top: 4px;
+    }
+
+/*=========================================================
+    PRINT BUTTON
+=========================================================*/
+
+.permanentPrintBtn {
+    background: #022B5E;
+    border: 1px solid #fff;
+    border-radius: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+}
+
+    .permanentPrintBtn:hover {
+        background: #fff;
+        color: var(--primary);
+        border: 1px solid #fff;
+    }
+
+/*=========================================================
+    RESPONSIVE
+=========================================================*/
+
+@media(max-width:992px) {
+
+    .permanentGatePassModal .modal-body {
+        padding: 20px;
+    }
+
+    .permanentGatePassA4 {
+        width: 100%;
+        min-height: auto;
+        padding: 30px;
+    }
+
+    .permanentGatePass {
+        width: 100%;
+    }
+}
+
+@media (max-width:768px) {
+
+    .permanentGatePass {
+        border-radius: 10px;
+    }
+
+        .permanentGatePass .workerPhoto {
+            margin-bottom: 20px;
+        }
+
+        .permanentGatePass .cardBody,
+        .permanentGatePass .backBody {
+            padding: 15px;
+        }
+
+        .permanentGatePass .helplineNumber {
+            font-size: 16px;
+        }
+}
+
+/*=========================================================
+    PRINT
+=========================================================*/
+
+@media print {
+
+    body * {
+        visibility: hidden !important;
+    }
+
+    #permanentGatePassPrintArea,
+    #permanentGatePassPrintArea * {
+        visibility: visible !important;
+    }
+
+    #permanentGatePassPrintArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 210mm;
+        background: #fff;
+    }
+
+    .permanentGatePassA4 {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0;
+        padding: 20mm 18mm;
+        box-shadow: none;
+        gap: 35mm;
+    }
+
+    .permanentGatePass {
+        width: 150mm;
+        min-height: 90mm;
+        box-shadow: none;
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+
+    .modal-header {
+        display: none !important;
+    }
+}

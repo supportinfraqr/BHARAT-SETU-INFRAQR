@@ -1,0 +1,276 @@
+﻿.memberDirectory {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 90vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.add-btn, .save-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .save-btn:hover,
+    .add-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.cancel-btn {
+    border-radius: 999px;
+    color: var(--primary);
+    background: transparent;
+    border: 1px solid var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .cancel-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+/* ===== Fix button click blink ===== */
+
+.memberDirectory .add-btn {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    /* prevent white flash on click */
+    .memberDirectory .add-btn:active,
+    .memberDirectory .add-btn:focus,
+    .memberDirectory .add-btn:focus-visible {
+        background: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+/* remove mobile tap highlight */
+.memberDirectory .add-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Section cards */
+.memberDirectory .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .memberDirectory .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* min-height: 320px;*/
+    }
+
+    .memberDirectory .section-card h4 {
+        color: var(--primary);
+    }
+
+
+
+
+/* Table wrapper and hide scrollbar visually */
+.memberDirectory .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .memberDirectory .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.memberDirectory .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.memberDirectory .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.memberDirectory .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* action menu */
+
+.memberDirectory .action-menu .btn {
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .memberDirectory .action-menu .btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.memberDirectory .table-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .memberDirectory .table-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* statuses */
+.memberDirectory .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.memberDirectory .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.memberDirectory .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.memberDirectory .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+
+/* filter button */
+.memberDirectory .filter-btn,
+.memberDirectory .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .memberDirectory .filter-btn.active,
+    .memberDirectory .filter-btn:hover,
+    .memberDirectory .filter-btn.active,
+    .memberDirectory .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.memberDirectory .table-toolbar .form-control-sm {
+    height: 34px;
+    border-radius: 999px 0 0 999px;
+    border-right: none;
+    border-color: var(--primary);
+}
+
+/* Search button */
+.memberDirectory .input-group .btn {
+    /* border-radius: 0 999px 999px 0;
+    border-left: none;*/
+}
+
+/* Export button (rounded) */
+.memberDirectory .export-btn, .search-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .memberDirectory .export-btn:hover,
+    .memberDirectory .search-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+/* ================= Add Member Modal ================= */
+
+.memberDirectory .supplierAdminModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.memberDirectory .supplierAdminModal .modal-title {
+    font-weight: 400;
+}
+
+.memberDirectory .supplierAdminModal .modal-body {
+    background: var(--card-bg);
+}
+
+.memberDirectory .supplierAdminModal .form-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #444;
+}
+
+    .memberDirectory .supplierAdminModal .form-label span {
+        color: #E45D27;
+    }
+
+.memberDirectory .supplierAdminModal .form-control-sm,
+.memberDirectory .supplierAdminModal .form-select-sm {
+    font-size: 0.78rem;
+    border-radius: 6px;
+}
+
+.memberDirectory .supplierAdminModal .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}

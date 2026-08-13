@@ -1,0 +1,244 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Grievances Details";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/WorkerGrievancesSupport/WorkerGrievanceDetails/style.css" rel="stylesheet" />
+
+
+<div class="workerGrievancesDetails px-4 py-4">
+
+    <h2 class="workerGrievancesDetailsPageTitle">
+        Inadequate Safety Equipment
+    </h2>
+
+    <div class="workerGrievancesDetailsLayout">
+
+        <!-- LEFT SIDE -->
+        <div class="workerGrievancesDetailsLeft">
+
+            <!-- Worker Details -->
+            <div class="workerGrievancesDetailsCard">
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    WORKER & PROJECT DETAILS
+                </h6>
+
+                <div class="grievancesWorkerGrid">
+
+                    <div class="grievancesWorkerItem">
+                        <span>Name</span>
+                        <strong>Rajesh Kumar</strong>
+                    </div>
+
+                    <div class="grievancesWorkerItem">
+                        <span>Site Location</span>
+                        <strong>Construction Site A</strong>
+                    </div>
+
+                    <div class="grievancesWorkerItem">
+                        <span>Contractor</span>
+                        <strong>TechCorp Solutions</strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="workerGrievancesDetailsCard">
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    PROBLEM DESCRIPTION
+                </h6>
+
+                <p class="grievancesProblemText">
+                    Workers on the 14th floor of Block C are reporting severe shortages of safety helmets and high-altitude harnesses. Multiple harnesses currently in use show visible fraying and signs of material fatigue, posing a critical fall risk. Despite multiple verbal requests to the site foreman, no new equipment has been dispatched. This is a direct violation of the Safety Compliance protocol established in the Q1 review.
+                </p>
+            </div>
+
+            <!-- Evidence -->
+            <div class="workerGrievancesDetailsCard">
+
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    EVIDENCE & ATTACHMENTS
+                </h6>
+
+                <div class="grievancesAudioPlayer">
+
+                    <button class="grievancesAudioPlayBtn">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+
+                    <div class="grievancesAudioContent">
+
+                        <div class="grievancesAudioName">
+                            Voice_Recording_Kumar.mp3
+                        </div>
+
+                        <div class="grievancesAudioProgress">
+                            <div class="grievancesAudioProgressFill"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="grievancesAudioTime">
+                        0:45 / 2:14
+                    </div>
+
+                    <button class="grievancesAudioVolumeBtn">
+                        <i class="bi bi-volume-up"></i>
+                    </button>
+
+                </div>
+
+                <div class="grievancesAttachmentsGrid">
+
+                    <div class="grievancesAttachmentCard">
+                        <img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800"
+                             alt="">
+                    </div>
+
+                    <div class="grievancesAttachmentCard">
+                        <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=800"
+                             alt="">
+                    </div>
+
+                    <div class="grievancesAttachmentMore">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>+2 More</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Add Action Button -->
+            @*<div class="grievancesActionBtnWrapper">
+
+                <button type="button"
+                        class="grievancesAddActionBtn"
+                        id="grievancesAddActionBtn">
+                    <i class="bi bi-plus"></i>
+                    Add Action
+                </button>
+
+            </div>*@
+
+            <!-- Action Card -->
+            <div class="workerGrievancesDetailsCard grievancesActionCard ">
+
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    ACTIONS TAKEN
+                </h6>
+
+                <textarea class="grievancesActionTextarea"
+                          placeholder=""></textarea>
+
+                <div class="grievancesActionFooter d-flex">
+
+                    <button class="grievancesSubmitBtn">
+                        Mark as Resolved
+                    </button>
+
+                    <button class="grievancesSubmitBtn">
+                        Request Re-opening
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="workerGrievancesDetailsRight">
+
+            <!-- Trail -->
+            <div class="workerGrievancesDetailsCard grievancesStickyCard">
+
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    GRIEVANCE TRAIL
+                </h6>
+
+                <div class="grievancesTrailBody">
+
+                    <div class="grievancesTimeline">
+
+                        <div class="grievancesTimelineItem completed">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>Grievance Raised</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    May 18, 2024 • 10:30 AM
+                                </span>
+
+                                <div class="grievancesBadge">
+                                    AUTO-LOGGED
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="grievancesTimelineItem completed">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>Assigned to Safety Officer</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    May 19, 2024 • 02:15 PM
+                                </span>
+
+                                <p class="grievancesAssignedTo">
+                                    Assigned to: Vivek Sharma
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="grievancesTimelineItem active">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>In Progress</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    Current Status
+                                </span>
+
+                                @*<div class="grievancesNextActionBox">
+
+                                        <small>NEXT ACTION</small>
+
+                                        <p>
+                                            Procurement approval pending from Finance.
+                                        </p>
+
+                                    </div>*@
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+        </div>
+
+    </div>
+
+</div>

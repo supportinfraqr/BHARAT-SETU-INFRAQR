@@ -1,0 +1,276 @@
+﻿.committeeMembers {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 90vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.add-btn, .save-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .save-btn:hover,
+    .add-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.cancel-btn {
+    border-radius: 999px;
+    color: var(--primary);
+    background: transparent;
+    border: 1px solid var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .cancel-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+/* ===== Fix button click blink ===== */
+
+.committeeMembers .add-btn {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    /* prevent white flash on click */
+    .committeeMembers .add-btn:active,
+    .committeeMembers .add-btn:focus,
+    .committeeMembers .add-btn:focus-visible {
+        background: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+/* remove mobile tap highlight */
+.committeeMembers .add-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Section cards */
+.committeeMembers .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .committeeMembers .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* min-height: 320px;*/
+    }
+
+    .committeeMembers .section-card h4 {
+        color: var(--primary);
+    }
+
+
+
+
+/* Table wrapper and hide scrollbar visually */
+.committeeMembers .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .committeeMembers .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.committeeMembers .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.committeeMembers .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.committeeMembers .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* action menu */
+
+.committeeMembers .action-menu .btn {
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .committeeMembers .action-menu .btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.committeeMembers .table-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .committeeMembers .table-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* statuses */
+.committeeMembers .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.committeeMembers .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.committeeMembers .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.committeeMembers .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+
+/* filter button */
+.committeeMembers .filter-btn,
+.committeeMembers .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .committeeMembers .filter-btn.active,
+    .committeeMembers .filter-btn:hover,
+    .committeeMembers .filter-btn.active,
+    .committeeMembers .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.committeeMembers .table-toolbar .form-control-sm {
+    height: 34px;
+    border-radius: 999px 0 0 999px;
+    border-right: none;
+    border-color: var(--primary);
+}
+
+/* Search button */
+.committeeMembers .input-group .btn {
+    /* border-radius: 0 999px 999px 0;
+    border-left: none;*/
+}
+
+/* Export button (rounded) */
+.committeeMembers .export-btn, .search-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .committeeMembers .export-btn:hover,
+    .committeeMembers .search-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+/* ================= Add Member Modal ================= */
+
+.committeeMembers .supplierAdminModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.committeeMembers .supplierAdminModal .modal-title {
+    font-weight: 400;
+}
+
+.committeeMembers .supplierAdminModal .modal-body {
+    background: var(--card-bg);
+}
+
+.committeeMembers .supplierAdminModal .form-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #444;
+}
+
+    .committeeMembers .supplierAdminModal .form-label span {
+        color: #E45D27;
+    }
+
+.committeeMembers .supplierAdminModal .form-control-sm,
+.committeeMembers .supplierAdminModal .form-select-sm {
+    font-size: 0.78rem;
+    border-radius: 6px;
+}
+
+.committeeMembers .supplierAdminModal .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}

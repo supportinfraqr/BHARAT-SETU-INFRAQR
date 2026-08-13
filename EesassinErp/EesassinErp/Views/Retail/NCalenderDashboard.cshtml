@@ -1,0 +1,596 @@
+﻿<!DOCTYPE html>
+<html  id="main" ng-app="myApp" ng-controller="myController">
+<head>
+    <meta charset="utf-8" />
+    <link href="../Calnewdes/style1.css" rel="stylesheet" />
+
+    <script src="../Calnewdes/script.js"></script>
+    <!-- FontAwesome for icons -->
+    <link href="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js?Ver=@ViewBag.Version")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/moment.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js?Ver=@ViewBag.Version")"></script>
+
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="~/scripts/RetailJsLib/ComplianceDashboardController.js?Ver=@ViewBag.Version"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+     
+    <style>
+        .overlap-group {
+            margin-left: 17% !important;
+        }
+        .event-dot {
+            width: 4px;
+            height: 4px;
+            background-color: red;
+            border-radius: 50%;
+            margin-top: 4px;
+        }
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0rem !important;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .frame-30 {
+            position: absolute;
+            height: 47%;
+            top: 51% !important;
+            background-color: #fdf2e0;
+            border-radius: 11px 11px 11px 0px !important;
+            overflow: hidden;
+            margin-bottom: 40px;
+            width: 96%;
+            left: 2%;
+        }
+    </style>
+
+    <script>
+        function getFormattedDateTime() {
+            const now = new Date();
+
+            const months = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ];
+
+            const month = months[now.getMonth()];
+            const day = now.getDate().toString().padStart(2, '0');
+            const year = now.getFullYear();
+
+            let hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12; // convert to 12-hour format
+
+            return `${month} ${day}, ${year} ${hours}:${minutes}:${seconds} ${ampm}`;
+        }
+
+        function startClock() {
+            setInterval(function () {
+                $('#output').text(getFormattedDateTime());
+            }, 1000); // update every second
+        }
+
+        // Start the timer when page loads
+        $(document).ready(function () {
+            startClock();
+        });
+    </script>
+
+    <!-- Output placeholder -->
+
+    <script>
+        let events = {};
+        let currentDate = new Date();
+
+        $(document).ready(function () {
+            bindEvent();
+
+
+              
+            let newMonth; // global or outer-scope variable
+
+            $('#prevMonth').on('click', function () {
+                debugger;
+                currentDate.setMonth(currentDate.getMonth() - 1);
+
+                var newMonth = currentDate.getMonth() +1; // JS months are 0-based
+                var newYear = currentDate.getFullYear(); 
+                renderCalendar(); 
+                var scope = angular.element(document.getElementById('main')).scope(); // Replace 'main' with your Angular app's root element ID
+                scope.$apply(function () {
+                    scope.LoadData(newMonth, newYear); // pass both month and year
+                });
+            });
+
+
+            $('#nextMonth').on('click', function () {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                var newMonth = currentDate.getMonth() + 1; // JS months are 0-based
+                var newYear = currentDate.getFullYear();
+                renderCalendar();
+                var scope = angular.element(document.getElementById('main')).scope(); // Replace 'main' with your Angular app's root element ID
+                scope.$apply(function () {
+                    scope.LoadData(newMonth, newYear); // pass both month and year
+                });
+            });
+
+          
+        });
+
+        function bindEvent() {
+            let queryString = window.location.href.split('?')[1] || '';
+            let decoded = decodeURIComponent(queryString);
+            let type = decoded.split('|')[0];
+            debugger;
+            const today = new Date();
+            const collectionobj = {
+                Action: 13,
+                UserId: LoginId, // Make sure LoginId is available globally
+                Industry: type,               
+                currentMonth : today.getMonth() + 1,
+                currentYear : today.getFullYear()
+            };
+
+            $.ajax({
+                url: "../Retail/SearchClientDashboard",
+                type: "POST",
+                data: JSON.stringify({ obj: collectionobj }),
+                contentType: "application/json",
+                success: function (response) {
+                    try {
+                        if (typeof response === 'string') {
+                            response = JSON.parse(response);
+                        }
+
+                        if (response && response.Result) {
+                            events = {};
+
+                            response.Result.forEach(event => {
+                                const eventDate = event.date;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
+                                    events[eventDate] = true;
+                                }
+                            });
+                          
+                            renderCalendar();
+                        }
+                    } catch (e) {
+                        console.error("Error parsing or processing response:", e);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error:", status, error);
+                }
+            });
+        }
+
+        function renderCalendar() {
+            debugger;
+
+            const calendarGrid = document.getElementById('calendar-grid');
+            const calendarMonth = document.getElementById('calendarMonth');
+            calendarGrid.innerHTML = '';
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+
+            const startDay = firstDay.getDay();
+            const dayOffset = (startDay === 0) ? 6 : startDay - 1;
+
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            calendarMonth.textContent = `${monthNames[month]} ${year}`;
+
+            // Add empty cells before the first day
+            for (let i = 0; i < dayOffset; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.classList.add('calendar-cell', 'empty-cell');
+                calendarGrid.appendChild(emptyCell);
+            }
+
+            // Add actual day cells
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div');
+                cell.classList.add('calendar-cell');
+
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                cell.textContent = day;
+                $(cell).data("date", dateStr);
+
+                if (events && events[dateStr]) {
+                    const dot = document.createElement('div');
+                    dot.classList.add('event-dot');
+                    cell.appendChild(dot);
+                }
+               
+                // Click event for selecting date
+                cell.addEventListener('click', function () {
+                    const selectedDate = $(this).data("date");
+
+                    document.querySelectorAll('.calendar-cell').forEach(c => {
+                        c.classList.remove('selected-cell');
+                    });
+
+                    this.classList.add('selected-cell');
+
+                    const scope = angular.element($("#calendar-grid")).scope();
+                    if (scope && scope.$$phase !== '$apply' && scope.$$phase !== '$digest') {
+                        scope.$apply(function () {
+                            scope.BindCalenderOnclickdetail(selectedDate); scope.BindCalender();
+                        });
+                    } else if (scope) {
+                        scope.BindCalenderOnclickdetail(selectedDate); scope.BindCalender();
+                    }
+                });
+
+                calendarGrid.appendChild(cell);
+            }
+        }
+
+    </script>
+
+
+</head>
+
+
+
+<body>
+   <!-- HTML START -->
+
+
+<div class="frame">
+    <div class="frame-2">
+        <a href="../Retail/ComplianceDashboard?Compliance Dashboard" id="back-btn" class="back-btn">
+            <i class="fa fa-arrow-left"></i>
+        </a>
+
+        <p class="products-management">Compliance Data State Wise [{{type}}]</p>
+
+        <div class="overlap-group">
+            <div class="september" id="output"></div>
+        </div>
+
+        <!-- Refresh button comes last now -->
+        <div class="refresh-wrapper" ng-click="Refresh()">
+            <div class="text-wrapper">View All</div>
+            <div class="arrows-rotate-wrapper">
+                <div class="arrows-rotate" ng-class="{'rotate-animation': isRotating}">🔄</div>
+            </div>
+        </div>
+        
+    </div>
+
+    <div class="frame-4">
+        <div class="options-buttons">
+            <div class="div-wrapper-2">
+                <div class="normal">
+                    <div class="txt-wrapper">
+                        <div class="txt">
+                            <div class="txt-2" ng-click="exportTableToCSV('CalendarDashboard.csv')" onmouseover="this.style.color='blue'" onmouseout="this.style.color='#ff5f06'"> Export CSV </div>
+                            <div class="circle-plus"><i class="fas fa-file-export"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-outline-icon">
+            <div class="div-wrapper-2">
+                <div class="txt-wrapper">
+                    <div class="txt">
+                        <div class="txt-3" ng-click="exportTableToPDF('CalendarDashboard.pdf')" onmouseover="this.style.color='blue'" onmouseout="this.style.color='#ff5f06'">Export Pdf</div>
+                        <div class="circle-plus"><i class="fas fa-file-export"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="searchbox">
+            <div class="overlap">
+                <img class="search"  />
+                <input type="text" class="search-input" id="searchInput" placeholder="Search here..." ng-model="searchText" />
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+    <div class="frame-5">
+        <div class="overlap-2">
+            <div class="products-counts">
+                <div class="products">Compliance:</div>
+                <div class="all">
+				 <div class="text-wrapper-3">All</div>
+                    <div class="text-wrapper-2">({{totalCount}})</div>
+                   
+                </div>
+				
+				
+                <div class="text-wrapper-4">|</div>
+                <div class="published">
+				       <div class="text-wrapper-5">Complied</div>
+                    <div class="element-2">({{ compliedCount}})</div>
+             
+                </div>
+				
+				
+				
+                <div class="text-wrapper-6">|</div>
+                <div class="drafts">Delay Complied</div>
+                <div class="element">({{ delayCompliedCount}})</div>
+				
+				 <div class="text-wrapper-7">|</div>
+        <div class="overlap-3">
+            <div class="trash">Pending</div>
+            <div class="element-3">({{pendingCount}})</div>
+        </div>
+				
+            </div>
+        </div>
+       
+    </div>
+
+
+
+
+
+
+    <div class="overlap-wrapper">
+        <div class="overlap-4">
+            <div class="filters">
+                <div class="overlap-5">
+                    <div class="filters-container" >
+                        <select id="selectAct" class="dropdown" ng-model="ActId">
+                            <option value="">Select Act</option>
+                            <option ng-repeat="x in ActList" value="{{x.ActId}}">{{x.Act}}</option>
+                        </select>
+
+
+
+                        <select id="selectCategory" class="dropdown" ng-model="Category">
+                            <option value="">Select Category</option>
+                            <option ng-repeat="x in CategoryList" value="{{x.selectedCategory}}">{{x.selectedCategory}}</option>
+                        </select>
+                        <select id="selectCompliance" class="dropdown" ng-model="Compliance">
+                            <option value="">Select Compliance</option>
+                            <option ng-repeat="x in ComplianceList" value="{{x.ComplianceName}}">{{x.ComplianceName}}</option>
+                        </select>
+                        @*<select id="selectSubCategory" class="dropdown" ng-model="SubCategory">
+            <option value="">Select Sub Category</option>
+            <option ng-repeat="x in selectedSubcategoryList" value="{{x.selectedSubcategory}}">{{x.selectedSubcategory}}</option>
+        </select>*@
+
+                        <select id="selectStatus" class="dropdown" ng-model="Status">
+                            <option value="">Select Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="DelayComplied">Delay Complied</option>
+                            <option value="Complied">Complied</option>
+                        </select>
+
+                        <div class="buttons-container">
+                            <button class="button apply-btn" ng-click="BindCalenderdetail()">Apply</button>
+                            <button class="button clear-btn" ng-click="clearFilters()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+	
+	
+	
+	
+	
+	
+	
+
+    <div class="frame-6">
+        <div class="frame-wrapper">
+            <div class="overlap-group-wrapper">
+                <table id="myTable">
+                    <thead>
+                        <tr>
+                            <th>Comp.Name</th>
+                            <th>Act</th>
+                            <th>DueDate</th>
+                            <th>Category</th>
+                            @*<th>SubCategory</th>*@
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody >
+                        <tr ng-repeat="compliance in calenderdetail | filter:searchText">
+                            <td>{{compliance.ComplianceName}}</td>
+                            <td>{{compliance.Act}}</td>
+                            <td>{{compliance.DueDate}}</td>
+                            <td>{{compliance.selectedCategory}}</td>
+                            @*<td>{{compliance.selectedSubcategory}}</td>*@
+                            <td>
+                                <span style=" font-size: 12px;" class="badge" ng-class="compliance.CStatus === 'Complied' ? 'bg-success' : (compliance.CStatus === 'Pending' ? 'bg-warning text-dark' : 'bg-danger')">
+                                    {{compliance.CStatus}}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="overlap-19">
+            <div class="overlap-20">
+                <div class="statistic-2">Compliance Status</div>
+                <div class="progress-bar">
+                    <div>
+                        <div class="bar-label">
+                            <span>Complied</span>
+                            <span class="complied-percent">12%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="complied-bar"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="bar-label">
+                            <span>Delay Complied</span>
+                            <span class="delay-percent">0%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="delay-bar"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="bar-label">
+                            <span>Pending</span>
+                            <span class="pending-percent">0%</span>
+                        </div>
+                        <div class="bar-track">
+                            <div class="pending-bar"></div>
+                        </div>
+                    </div>
+					
+					<div class="calendar" > 
+    <div class="div" ng-init="LoadData('',''); $scope.bindevent();">
+
+        <!-- Footer Count -->
+        <div class="footer-count">
+            Complied: <span class="complied-count">0</span> 
+            Delay Complied: <span class="delay-count">0</span> 
+            Pending: <span class="pending-count">0</span>
+        </div>
+    </div>
+</div>
+					 </div>
+                    </div>
+					 </div>
+                    </div>
+					
+<!-- HTML END -->
+
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+<!-- Sidebar Calendar Section -->
+<div class="sidebar">
+   
+    <div class="compliance-calendar">📅 Compliance Calendar</div>
+
+
+ <div class="frame-36">
+        <div class="overlap-26">
+            <div class="frame-37">
+                <div class="today" id="today-date"></div>
+                <div id="month" class="month"></div>
+                <div class="year" id="year"></div>
+            </div>
+
+            <div class="frame-38">
+                <div class="month-nav">
+                    <button id="prevMonth">&#8249;</button>
+                    <div id="calendarMonth"></div>
+                    <button id="nextMonth">&#8250;</button>
+                </div>
+
+                <div class="weekdays">
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                    <div>Sun</div>
+                </div>
+
+                <div id="calendar-grid" class="calendar-grid">
+			
+
+  
+            </div>
+			
+			
+			
+			
+        </div>
+    </div>
+	
+	
+	
+
+    <div class="frame-30">
+        <div class="due-date-box" style="height: 360px; overflow-y: auto;">
+            <div class="compliance-due-dates" >Compliance Due Dates</div>
+            <br />
+            <table class="table table-sm table-bordered" >
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Total Docs</th>
+                        <th>Submitted</th>
+                    </tr>
+                </thead>
+                <tbody >
+                    <tr ng-repeat="x in CalenderList" ng-click="getdetail(x.State)">
+                        <td><div class="compliance-status-icon"></div>{{x.StateName}}</td>
+                        <td>{{x.TotalDocuments}}</td>
+                        <td>{{x.TotalClientDocuments}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+     
+    </div>
+
+   
+</div>
+
+        </div>
+		
+		
+		
+		
+		
+    </div>
+</body>
+
+
+
+</html>
+
+
+ 

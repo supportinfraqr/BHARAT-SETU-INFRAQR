@@ -1,0 +1,1052 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Application History";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+
+<script src="~/scripts/RetailJsLib/RozgarController.js"></script>
+
+<style>
+        .workerAppHistory {
+            font-family: "Inter", sans-serif;
+            --primary: #022B5E;
+            --primary-dark: #033d84;
+            --bg: #FFFFFF;
+            --card-bg: #F9F9F9;
+            --border: #D9D9D9;
+            --text: #1F2937;
+            --muted: #6B7280;
+            --radius: 20px;
+            background: var(--bg);
+            min-height: 100vh;
+            color: var(--text);
+        }
+
+        /* ======================================
+       HEADER
+    ====================================== */
+
+        .workerAppHistoryPageHeader {
+            margin-bottom: 24px;
+        }
+
+            .workerAppHistoryPageHeader h2 {
+                font-size: 26px;
+                font-weight: 500;
+                color: var(--primary);
+                margin-bottom: 1px;
+            }
+
+            .workerAppHistoryPageHeader p {
+                margin: 0;
+                font-size: 16px;
+                line-height: 1;
+                color: #6B7280;
+            }
+
+        /* ======================================
+       TOOLBAR
+    ====================================== */
+
+        .workerAppHistoryToolbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .workerAppHistorySearch {
+            position: relative;
+            flex: 1;
+        }
+
+            .workerAppHistorySearch i {
+                position: absolute;
+                left: 18px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #666;
+            }
+
+            .workerAppHistorySearch input {
+                width: 100%;
+                height: 50px;
+                border-radius: 14px;
+                border: 1px solid var(--border);
+                padding-left: 48px;
+                background: #fff;
+                outline: none;
+            }
+
+        .workerAppHistoryFilters {
+            display: flex;
+            gap: 12px;
+        }
+
+            .workerAppHistoryFilters .form-select {
+                min-width: 220px;
+                border-radius: 14px;
+                border: 1px solid var(--border);
+            }
+
+        .workerAppHistoryClearBtn {
+            border: 1px solid var(--primary);
+            background: #fff;
+            color: var(--primary);
+            border-radius: 14px;
+            padding: 0 18px;
+            text-wrap: nowrap;
+            transition: .25s ease;
+        }
+
+            .workerAppHistoryClearBtn:hover {
+                background: var(--primary);
+                color: #fff;
+            }
+
+        /* ======================================
+       STATS
+    ====================================== */
+
+        .workerAppHistoryStats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .workerAppHistoryStatCard {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border-left: 5px solid #022B5E;
+            transition: 0.2s ease;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+            .workerAppHistoryStatCard span {
+                font-size: 14px;
+                color: #333;
+                margin-bottom: 6px;
+                font-weight: 500;
+            }
+
+            .workerAppHistoryStatCard h3 {
+                font-size: 26px;
+                line-height: 1;
+                font-weight: 500;
+                color: #000;
+            }
+
+        /* ======================================
+       APPLICATION LIST
+    ====================================== */
+
+        .workerAppHistoryList {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .workerAppHistoryCard {
+            background: var(--card-bg);
+            /*border: 1px solid var(--border);*/
+            border-radius: 22px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .workerAppHistoryLeft {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            min-width: 0;
+        }
+
+        .workerAppHistoryLogo {
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+            .workerAppHistoryLogo img,
+            .workerAppHistoryLogoFallback {
+                width: 100%;
+                height: 100%;
+                border-radius: 16px;
+            }
+
+            .workerAppHistoryLogo img {
+                object-fit: cover;
+                border: 1px solid #ECECEC;
+            }
+
+        .workerAppHistoryLogoFallback {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: #022B5E20;
+        }
+
+            .workerAppHistoryLogoFallback i {
+                font-size: 24px;
+                color: var(--primary);
+            }
+
+        .workerAppHistoryInfo {
+            min-width: 0;
+        }
+
+        .workerAppHistoryTitleRow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+
+            .workerAppHistoryTitleRow h4 {
+                margin: 0;
+                font-size: 20px;
+            }
+
+        .workerAppHistoryInfo p {
+            font-size: 14px;
+            margin: 0 0 1px;
+            color: #555;
+        }
+
+        .workerAppHistoryDate {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        /* ======================================
+       STATUS
+    ====================================== */
+
+        .workerAppHistoryStatus {
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .workerAppHistoryStatus--hired {
+            background: #DCFCE7;
+            color: #166534;
+        }
+
+        .workerAppHistoryStatus--reviewing {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+
+        .workerAppHistoryStatus--interview {
+            background: #F3E8FF;
+            color: #7C3AED;
+        }
+
+        .workerAppHistoryStatus--action {
+            background: #FEE2E2;
+            color: #B91C1C;
+        }
+
+        .workerAppHistoryStatus--applied {
+            background: #F3F4F6;
+            color: #374151;
+        }
+
+        /* ======================================
+       BUTTON
+    ====================================== */
+
+        .workerAppHistoryViewBtn {
+            padding: 6px 16px;
+            border-radius: 14px;
+            border: 1px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            font-weight: 500;
+            transition: .25s ease;
+        }
+
+            .workerAppHistoryViewBtn:hover {
+                background: var(--primary);
+                color: #fff;
+            }
+
+        /* ======================================
+       RESPONSIVE
+    ====================================== */
+
+        @@media (max-width: 991px) {
+
+            .workerAppHistoryStats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .workerAppHistoryToolbar {
+                flex-direction: column;
+            }
+
+            .workerAppHistoryFilters {
+                width: 100%;
+            }
+
+                .workerAppHistoryFilters .form-select {
+                    flex: 1;
+                }
+
+            .workerAppHistoryCard {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .workerAppHistoryViewBtn {
+                width: 100%;
+            }
+        }
+
+        @@media (max-width: 767px) {
+
+            .workerAppHistoryStats {
+                grid-template-columns: 1fr;
+            }
+
+            .workerAppHistoryFilters {
+                flex-direction: column;
+            }
+
+            .workerAppHistoryTitleRow h4 {
+                font-size: 18px;
+            }
+
+            .workerAppHistoryPageHeader h2 {
+                font-size: 28px;
+            }
+        }
+
+
+
+        /*------View More Modal-----*/
+.workerRozgarViewMoreModal .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.workerRozgarViewMoreModal .modal-header {
+    /*padding: 18px 24px;*/
+    background: var(--primary);
+    color: #fff;
+}
+
+.workerRozgarViewMoreModal .modal-title {
+    font-weight: 500;
+}
+
+.workerRozgarViewMoreModal .modal-body {
+    /*max-height: 80vh;*/
+    overflow-y: auto;
+    padding: 24px;
+    background: #fff;
+}
+
+/* ===================================
+   MODAL GRID
+=================================== */
+
+.workerRozgarJobModalWrapper {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+}
+
+/* ===================================
+   COMMON CARD
+=================================== */
+
+.workerRozgarModalCard,
+.workerRozgarEmployerCard,
+.workerRozgarModalTopCard,
+.workerRozgarSimilarRoles {
+    background: var(--card-bg);
+    border: 1px solid #E5E7EB;
+    border-radius: 20px;
+    padding: 14px;
+}
+
+    .workerRozgarModalCard h4,
+    .workerRozgarEmployerCard h4,
+    .workerRozgarSimilarRoles h4 {
+        font-size: 20px;
+        margin-bottom: 18px;
+        font-weight: 500;
+    }
+
+/* ===================================
+   TOP CARD
+=================================== */
+
+.workerRozgarModalTopCard {
+    grid-column: span 2;
+}
+
+.workerRozgarModalTopContent {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.workerRozgarModalJobIcon {
+    width: 54px;
+    height: 54px;
+    border: 1px solid #D8D8D8;
+    border-radius: 12px;
+    display: flex;
+    background: #022B5E20;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 22px;
+}
+
+.workerRozgarModalJobInfo {
+    flex: 1;
+}
+
+    .workerRozgarModalJobInfo h2 {
+        font-size: 26px;
+        margin-bottom: 4px;
+    }
+
+.workerRozgarModalCompany {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    color: #666;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.workerRozgarModalPosted {
+    color: #777;
+    font-size: 14px;
+}
+
+.workerRozgarModalActions {
+    display: flex;
+    flex:0.2;
+    gap: 10px;
+}
+
+.workerRozgarModalStats {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #ECECEC;
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 20px;
+}
+
+    .workerRozgarModalStats label {
+        display: block;
+        text-transform: uppercase;
+        font-size: 12px;
+        color: #9CA3AF;
+        margin-bottom: 4px;
+    }
+
+    .workerRozgarModalStats span {
+        display: block;
+        font-weight: 500;
+        font-size: 18px;
+    }
+
+    .workerRozgarModalStats small {
+        display: block;
+        color: #6B7280;
+        font-size: 0.75rem;
+    }
+
+.workerRozgarUrgentTag {
+    display: inline-block !important;
+    background: #FFB4B44D;
+    color: #AC2F01 !important;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+
+/* ===================================
+   EMPLOYER
+=================================== */
+    .workerRozgarEmployerInfo{
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.workerRozgarEmployerIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #022B5E20;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.workerRozgarEmployerDesc {
+    color: #555;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ===================================
+   JOB DESCRIPTION
+=================================== */
+
+ .workerRozgarJobDesc p{
+     font-size : 14px
+ }
+
+/* ===================================
+   SKILLS
+=================================== */
+
+.workerRozgarSkillTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+    .workerRozgarSkillTags span {
+        background: #F3F4F6;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-size: 12px;
+    }
+
+/* ===================================
+   SIMILAR ROLES
+=================================== */
+
+.workerRozgarSimilarCard {
+    background: #FAFAFA;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+    .workerRozgarSimilarCard + .workerRozgarSimilarCard {
+        margin-top: 12px;
+    }
+
+.workerRozgarSimilarCard h5{
+    font-size : 16px;
+}
+
+.workerRozgarSimilarCard p {
+        font-size: 14px;
+}
+.workerRozgarSimilarCard span {
+        font-size: 14px;
+}
+
+
+/* ===================================
+   PROJECT
+=================================== */
+
+.workerRozgarProjectItem {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+    .workerRozgarProjectItem i {
+        color: var(--primary);
+        font-size: 18px;
+    }
+
+    .workerRozgarProjectItem strong {
+        display: block;
+        font-size:16px;
+        font-weight :500;
+    }
+
+    .workerRozgarProjectItem span {
+        display: block;
+        color: #666;
+        font-size : 14px;
+    }
+
+/* ===================================
+   BENEFITS
+=================================== */
+
+.workerRozgarBenefitItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #FFF;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+    .workerRozgarBenefitItem i {
+        color: var(--primary);
+    }
+
+/* ===================================
+   RESPONSIVE
+=================================== */
+
+@@media (max-width: 1199px) {
+
+    .workerRozgarJobModalWrapper {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .workerRozgarModalTopCard {
+        grid-column: span 2;
+    }
+}
+
+@@media (max-width: 767px) {
+
+    .workerRozgarJobModalWrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .workerRozgarModalTopCard {
+        grid-column: auto;
+    }
+
+    .workerRozgarModalStats {
+        grid-template-columns: repeat(2,1fr);
+    }
+
+    .workerRozgarModalTopContent {
+        flex-direction: column;
+    }
+
+    .workerRozgarModalActions {
+        width: 100%;
+    }
+
+        .workerRozgarModalActions button {
+            flex: 1;
+        }
+}
+
+.workerRozgarApplyBtn{
+    flex: 1;
+    height: 32px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: .25s ease;
+}
+
+.workerRozgarApplyBtn {
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+    .workerRozgarApplyBtn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+</style>
+
+<div class="workerAppHistory px-4 py-4" ng-init="GetWorkerApplyPost()">
+
+    <!-- HEADER -->
+
+    <div class="workerAppHistoryPageHeader">
+
+        <h2>My Application History</h2>
+
+        <p>
+            Track your professional journey and hiring status.
+        </p>
+
+    </div>
+
+    <!-- SEARCH & FILTERS -->
+
+    <div class="workerAppHistoryToolbar">
+        <div class="workerAppHistorySearch">
+            <i class="bi bi-search"></i>
+            <input type="text" ng-model="UniversalSearch" placeholder="Search applications">
+
+        </div>
+
+        <div class="workerAppHistoryFilters">
+
+            @*<select class="form-select">
+
+                    <option selected>All Status</option>
+                    <option>Applied</option>
+                    <option>Reviewing</option>
+                    <option>Interview Scheduled</option>
+                    <option>Shortlisted</option>
+                    <option>Hired</option>
+                    <option>Rejected</option>
+                    <option>Action Required</option>
+
+                </select>
+
+                <button class="workerAppHistoryClearBtn">
+                    Clear Filters
+                </button>*@
+
+        </div>
+
+    </div>
+
+    <!-- STATS -->
+
+    <div class="workerAppHistoryStats" hidden>
+
+        <div class="workerAppHistoryStatCard">
+
+            <span>Applied</span>
+
+            <h3>12</h3>
+
+        </div>
+
+        <div class="workerAppHistoryStatCard">
+
+            <span>Reviewing</span>
+
+            <h3>05</h3>
+
+        </div>
+
+        <div class="workerAppHistoryStatCard">
+
+            <span>Interviews</span>
+
+            <h3>02</h3>
+
+        </div>
+
+        <div class="workerAppHistoryStatCard">
+
+            <span>Offers</span>
+
+            <h3>01</h3>
+
+        </div>
+
+    </div>
+
+    <!-- APPLICATION LIST -->
+
+    <div class="workerAppHistoryList">
+
+        <!-- CARD 1 -->
+
+        <div class="workerAppHistoryCard" ng-repeat="a in ApplyForms | filter:UniversalSearch">
+
+            <div class="workerAppHistoryLeft">
+
+                <div class="workerAppHistoryLogo">
+
+                    <img src="https://via.placeholder.com/80"
+                         alt="Company Logo"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+
+                    <div class="workerAppHistoryLogoFallback">
+                        <i class="bi bi-building"></i>
+                    </div>
+
+                </div>
+
+                <div class="workerAppHistoryInfo">
+                    <div class="workerAppHistoryTitleRow">
+                        <h4>{{a.JobTitle}}</h4>
+                        <span class="workerAppHistoryStatus workerAppHistoryStatus--hired">
+                            {{a.Status}}
+                        </span>
+
+                    </div>
+
+                    <p>
+                        {{a.PartyName}} • {{a.CurrentLocation}}, {{a.State}}
+                    </p>
+
+                    <span class="workerAppHistoryDate">
+
+                        <i class="bi bi-clock"></i>
+                        {{a.Posteddt}}
+                    </span>
+
+                </div>
+
+            </div>
+
+            @*<button class="workerAppHistoryViewBtn">
+                    View Details
+                </button>*@
+        <button class="workerAppHistoryViewBtn" data-bs-toggle="modal" data-bs-target="#workerRozgarViewMoreModal" ng-click="Searchbyjobno(a.jobno)">
+            View Details
+        </button>
+
+        </div>
+    </div>
+    <!-- View More Modal-->
+    <div class="modal fade workerRozgarViewMoreModal"
+         id="workerRozgarViewMoreModal"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-fullscreen">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Job Details
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="workerRozgarJobModalWrapper">
+
+                        <!-- TOP SECTION -->
+
+                        <div class="workerRozgarModalTopCard">
+
+                            <div class="d-flex justify-content-between">
+                                <div class="workerRozgarModalTopContent">
+
+                                    <div class="workerRozgarModalJobIcon">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+
+                                    <div class="workerRozgarModalJobInfo">
+
+                                        <h2>{{JobDetail.JobTitle}}</h2>
+
+                                        <div class="workerRozgarModalCompany">
+                                            <span>{{JobDetail.PartyName}}</span>
+                                            <span>
+                                                <i class="bi bi-geo-alt"></i>
+                                                {{JobDetail.Location}}
+                                            </span>
+                                        </div>
+
+                                        <div class="workerRozgarModalPosted">
+                                            <i class="bi bi-clock"></i>
+                                            {{JobDetail.Posteddt}}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="workerRozgarModalActions">
+
+                                    <button class="workerRozgarApplyBtn" ng-disabled="true">
+                                        Applied
+                                    </button>
+
+                                    @*<button class="workerRozgarSaveBtn">
+                                            <i class="bi bi-bookmark"></i>
+                                        </button>*@
+
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarModalStats">
+
+                                <div>
+                                    <label>Salary</label>
+                                    <span>₹ {{JobDetail.MinSallery}} - {{JobDetail.MaxSallery}}/Annum</span>
+                                    @*<small>per month</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Experience</label>
+                                    <span>{{JobDetail.Experience}}</span>
+                                    @*<small>Senior Level</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Job Type</label>
+                                    <span>Full-time</span>
+                                    @*<small class="workerRozgarUrgentTag">Urgent</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Project</label>
+                                    <span>12 Months</span>
+                                    @*<small>Extendable</small>*@
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- EMPLOYER -->
+
+                        <div class="workerRozgarEmployerCard" hidden>
+
+                            <h4>About Employer</h4>
+
+                            <div class="workerRozgarEmployerInfo">
+
+                                <div class="workerRozgarEmployerIcon">
+                                    <i class="bi bi-tools"></i>
+                                </div>
+
+                                <div>
+                                    <h5 style="font-size: 18px; margin-bottom: 0;">L&T Construction</h5>
+                                    <p style="font-size: 14px; margin-bottom: 0;">Infrastructure & Engineering</p>
+                                </div>
+
+                            </div>
+
+                            <p class="workerRozgarEmployerDesc">
+                                Larsen & Toubro is an Indian multinational conglomerate engaged in EPC projects,
+                                hi-tech manufacturing and services. It operates in over 50 countries worldwide.
+                            </p>
+
+                        </div>
+
+                        <!-- JOB DESCRIPTION -->
+
+                        <div class="workerRozgarModalCard workerRozgarJobDesc">
+
+                            <h4>Job Description</h4>
+
+                            <p>
+                                {{JobDetail.Description}}
+                            </p>
+                        </div>
+
+                        <!-- SKILLS -->
+
+                        <div class="workerRozgarModalCard">
+
+                            <h4>Technical Skills</h4>
+
+                            <div class="workerRozgarSkillTags">
+                                {{JobDetail.RequiredSkills}}
+
+                            </div>
+
+                        </div>
+
+                        <!-- SIMILAR ROLES -->
+
+                        <div class="workerRozgarSimilarRoles" hidden>
+
+                            <h4>Similar Roles</h4>
+
+                            <div class="workerRozgarSimilarCard">
+                                <h5>{{JobDetail.JobTitle}}</h5>
+                                <p>• {{JobDetail.Location}}</p>
+                                <span>₹ {{JobDetail.MinSallery}} - {{JobDetail.MaxSallery}}/Annum</span>
+                            </div>
+
+                            @*<div class="workerRozgarSimilarCard">
+                                    <h5>Senior Mechanical Fitter</h5>
+                                    <p>Shapoorji Pallonji • Greater Noida</p>
+                                    <span>₹32k - 40k</span>
+                                </div>*@
+
+                        </div>
+
+                        <!-- PROJECT DETAILS -->
+
+                        <div class="workerRozgarModalCard">
+
+                            <h4>Project Details</h4>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-calendar-check"></i>
+                                <div>
+                                    <strong>Duration</strong>
+                                    <span>12 Months (Fixed-term Contract)</span>
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-clock"></i>
+                                <div>
+                                    <strong>Shift Timing</strong>
+                                    <span>9:00 AM – 6:00 PM (Mon - Sat)</span>
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-building"></i>
+                                <div>
+                                    <strong>Site Type</strong>
+                                    <span>Commercial High-Rise Construction</span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- BENEFITS -->
+
+                        <div class="workerRozgarModalCard workerRozgarBenefitsCard">
+
+                            <h4>Benefits</h4>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-shield-check"></i>
+                                Comprehensive Health Insurance
+                            </div>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-house"></i>
+                                On-site Bachelor Accommodation
+                            </div>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-cash-coin"></i>
+                                Overtime Pay & Performance Bonus
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>

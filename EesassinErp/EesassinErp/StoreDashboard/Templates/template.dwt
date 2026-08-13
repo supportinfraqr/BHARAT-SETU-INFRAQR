@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- TemplateBeginEditable name="doctitle" -->
+    <title>Basic Education Department, Government of Uttar Pradesh</title>
+    <!-- TemplateEndEditable -->
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="../favicon.png" />
+    <link href="../css/bootstrap.css" rel='stylesheet' />
+    <link href="../css/all.css" rel="stylesheet" />
+    <link href="../css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+    <link href="../css/datepicker.min.css" rel='stylesheet' />
+    <link href="../css/custom_theme.css" rel='stylesheet' />
+    <link href="../css/colorTheme/default.css" rel='stylesheet' /> 
+    <link href="../css/draggle.css" rel="stylesheet"/>  
+    <link href="../css/jquery.dropdown.css" rel="stylesheet" />
+    <link href="../css/responsive.css" rel='stylesheet' /> 
+    <link href="../css/jquery-ui.css" rel="stylesheet" />
+    <link href="../css/datepicker.css" rel="stylesheet" /> 
+    <link href="../css/sweetalert2.css" rel="stylesheet" />
+    <!-- TemplateBeginEditable name="head" -->
+    <!-- TemplateEndEditable -->
+  </head>
+  <body class="dashbg">
+    <div class="contentwraper menumarginleft">
+      <header class="header menuheader-width">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col col-md-12">
+                        <div class="row">
+                            <div class="col">
+                                <h4 class="moudlename">
+                                    <div class="list-control">
+                                        <a class="sidemenutoggle">
+                                            <span class="icons icon-menu"></span>
+                                        </a>
+                                        <div class="menusidebar menusidebar-width">
+                                            <div class="profiletitle">
+                                                <img src="../images/dash-logo.png" alt="" class="dash-logo" />
+                                                <span class="logotxt">Basic Education Department, Government of Uttar Pradesh</span>
+                                            </div>
+                                            <div class="menuscrollwrap">
+                                                <div class="nano-content">
+                                                    <ul class="navsidebar">
+                                                        <li class="nav-item">
+                                                            <a href="../dashboard.html">
+                                                                <span class="icons icon-speedometer"></span> Dashboard
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="../GeneralInformation.html" class="done">
+                                                                <span class="icons icon-target"></span> General Information</a>
+                                                        </li>
+                                                         <li class="nav-item">
+                                                            <a href="../PrincipalDetails.html"  class="done">
+                                                                <span class="icons icon-target"></span> Principal’s Details</a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="../BuildingDetails.html">
+                                                                <span class="icons icon-target"></span> Building Details
+                                                            </a>
+                                                        </li>                                                        
+                                                        <li class="nav-item">
+                                                            <a href="../FacilitiesforStudents.html">
+                                                                <span class="icons icon-target"></span> Facilities for Students
+                                                            </a>
+                                                        </li>
+                                                        <!--<li class="nav-item">
+                                                            <a href="../OtherDetails.html">
+                                                                <span class="icons icon-target"></span> Other Details
+                                                            </a>
+                                                        </li>-->
+                                                        <li class="nav-item">
+                                                            <a href="../StudentProfile.html">
+                                                                <span class="icons icon-target"></span> Student’s Profile
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="../TeacherStaffMemberProfile.html">
+                                                                <span class="icons icon-target"></span> Teacher/Staff Member Profile
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                    <div class="progress" data-percentage="40">
+                                                        <span class="progress-left">
+                                                            <span class="progress-bar"></span>
+                                                        </span>
+                                                        <span class="progress-right">
+                                                            <span class="progress-bar"></span>
+                                                        </span>
+                                                        <div class="progress-value">
+                                                            <div class="text-center">
+                                                                40%                                                               
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span class="profiletxt">Profile Completed</span>
+                                                </div>
+                                            </div>
+                                            <div class="logoutbutton">
+                                                <a href="../index.html">
+                                                    <span class="fas fa-sign-out-alt"></span>
+                                                    <!-- &nbsp;&nbsp;Invite teammates -->
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                              Online System for Monitoring of D.El.Ed Course Status in DIETs and Private Colleges/Institutes of UP
+                            <span class="department-logo">D.I.E.T. AGRA [010001]</span>
+                                </h4>
+                            </div>
+                            <div class="col-md-auto">
+                                <a href="#" class="profileicon">
+                                    <img src="../images/profile2.jpg" />
+                                </a>
+                                <div class="sidebar">
+                                    <div class="profiletitle">
+                                        Principal’s Name <span class="text-uppercase">Principal</span> <span> Last Login : 16/08/2022 at 05:30 PM </span>
+                                    </div>
+                                    <div class="scrollwrap">
+                                        <div class="nano-content">
+                                            <ul class="navsidebar">
+                                                <li class="nav-item">
+                                                    <a href="#">
+                                                        <span class="icons icon-user"></span> Profile
+                                                    </a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a href="#">
+                                                        <span class="icons icon-settings"></span> Change Password
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="logoutbutton">
+                                        <a href="../index.html">
+                                            <span class="fas fa-power-off"></span>&nbsp;&nbsp;Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+      <!-- TemplateBeginEditable name="Content Area" -->Content Area<!-- TemplateEndEditable -->
+      <footer>
+        <div class="row">
+          <div class="col-md-10">
+            <ul class="foot-list">
+              <li>
+                 &copy; Copyright Basic Education Department, Government of Uttar Pradesh
+              </li>
+            </ul>
+          </div>          
+          <div class="col-md-2">
+            <ul class="foot-list">
+              <li>
+                Powered by <a href="http://otpl.co.in/" target="_blank">OmniNet</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="H1">Invite people to IT</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="mb-3">
+                <label for="recipient-name" class="col-form-label">Email addresses</label>
+                <textarea class="form-control" id="Textarea1"></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="message-text" class="col-form-label">Add to projects</label>
+                  <div class="dropdown-mul-1">
+                    <select style="display: none" name="" id="" multiple placeholder="Start typing to add projects"></select>
+                  </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">            
+            <button type="button" class="btn btn-primary">Send</button>
+          </div>
+        </div>
+      </div>
+	</div>
+    
+    <script type="text/javascript" src="../js/mock.js"></script>
+    <script type="text/javascript" src="../js/jquery-min.js"></script>
+    <script type="text/javascript" src="../js/bootstrap.js"></script>
+    <script type="text/javascript" src="../js/jquery.nanoscroller.min.js"></script>
+    <script type="text/javascript" src="../js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="../js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="../js/datepicker.js"></script>
+    <script type="text/javascript" src="../js/datepicker.en.js"></script>
+    <script type="text/javascript" src="../js/builder.js"></script>
+    <script type="text/javascript" src="../js/beautifyhtml.js"></script>
+    <script type="text/javascript" src="../js/dragble.js"></script>
+    <script type="text/javascript" src="../js/jquery.dropdown.js"></script>
+    <script type="text/javascript" src="../js/sweetalert2.js"></script>
+    <script type="text/javascript" src="../js/theme-script.js"></script>
+    <script type="text/javascript" src="../js/jquery-ui.js"></script>
+    <script type="text/javascript" src="../js/datepicker.js"></script>
+    <script type="text/javascript" src="../js/chart.js"></script>
+    <script>
+          var Random = Mock.Random;
+          var json1 = Mock.mock({
+              "data|10-50": [{
+                  name: function () {
+                      return Random.name(true)
+                  },
+                  "id|+1": 1,
+                  "disabled|1-2": true,
+                  groupName: 'Group Name',
+                  "groupId|1-4": 1,
+                  "selected": false
+              }]
+          });
+
+          $('.dropdown-mul-1').dropdown({
+              data: json1.data,
+              limitCount: 40,
+              multipleMode: 'label',
+              choice: function () {
+                  // console.log(arguments,this);
+              }
+          });
+    </script>
+    <!-- TemplateBeginEditable name="for-javascript" -->for-javascript<!-- TemplateEndEditable -->
+  </body>
+</html>

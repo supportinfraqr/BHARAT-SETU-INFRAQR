@@ -1,0 +1,268 @@
+﻿
+<div id="printDiv" ng-init="GetReportHeaderUsingCategory('General Report');">
+    <table class="bill-box bill-box2 page-ba">
+        <tbody>
+            <tr ng-repeat="id in InvoicesData">
+                <td>
+                    <div class="bill-box-top">
+                        <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+                        <div style="width: 100%;  ">
+                            <div class="invoice-t">
+                                <div>
+                                    Stock Allotment Date. <span ng-bind="id.SAllotmentDate"></span>
+                                </div>
+                            </div>
+                            <div class="invoice-t invoice text-center">
+                                <span ng-bind="id.I_Title"></span><br />
+                                <span class="small-t">({{id.SubTitle}} Customer Copy)</span>
+                            </div>
+                            <div class="invoice-t text-right">Stock Allotment No. <span ng-bind="id.StockAllotNo"></span> </div>
+
+                        </div>
+
+
+
+
+                        <div class="details-receiver">
+                            <div class="col-sm-2">
+                                Details of Branch 
+                            </div>
+                            <div class="col-sm-2">
+                               
+                            </div>
+                        </div>
+
+                        <div class="transportation2">
+                            <div class="col-sm-2">
+                                <table>
+                                    <tr>
+                                        <td style="width: 97px;">Tranfer From</td>
+                                        <td ng-bind="id.TranferFrom"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Branch From</td>
+                                        <td ng-bind="id.FarmerName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Allotment Date</td>
+                                        <td ng-bind="id.SAllotmentDate"></td>
+                                    </tr>
+                                  
+                                </table>
+
+
+                            </div>
+                            <div class="col-sm-2" style="float:right; border-right:none;">
+
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bill-box-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:47px">Sr. No.</th>
+                                    <th>Goods Type</th>
+                                    <th>Unit</th>
+                                    <th>No. Of Bags</th>
+                                    <th style="white-space: nowrap;">Qty <br /> (In Bags)</th>
+                                    <th style="white-space: nowrap;">Toal Qty <br /> (In Kg)</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">Rate <br /> (Per Kg)</th>
+                                    <th style="width:100px;vertical-align:middle; text-align:center;" ng-if="IsShow">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="DD in DetailData">
+                                    <td style="width:40px" ng-if="DD.SNO!=99">{{DD.SNO}}</td>
+
+                                    <td style="width:40px" ng-if="DD.SNO==99"></td>
+                                    <td>{{DD.SupplierType}}</td>
+                                    <td>{{DD.Unit}}</td>
+                                    <td style="text-align:right;">{{DD.QtyInBag}}</td>
+                                    <td style="text-align:right;">{{DD.QtyPerBag}}</td>
+                                    <td style="text-align:right;">{{DD.TotalQuantity}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Rate)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Amount)}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bill-box-top">
+                        <div class="invoice-value">
+                            <span>Invoice Value (In Words)</span> <span ng-bind="InWords"></span>
+                        </div>
+
+                        <div class="terms-conditions">
+
+                            <table class="TC-table">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:60%;vertical-align:bottom;">
+
+                                            <div class="terms-left">
+                                                <span>Narration</span>
+                                                {{Remark}}
+                                            </div>
+                                            <div class="terms-left">
+                                                <span>{{Term}}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="terms-right">
+                                                <div class="for-company">
+                                                    For {{BranchName}}
+                                                </div>
+                                                <div class="authorised">
+                                                    Authorised Signatory
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="bill-box bill-box2 page-ba" ng-if="PrintingCount==2">
+        <tbody>
+            <tr ng-repeat="id in InvoicesData">
+                <td>
+                    <div class="bill-box-top">
+                        <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+                        <div style="width: 100%;  ">
+                            <div class="invoice-t">
+                                <div>
+                                    Stock Allotment Date. <span ng-bind="id.SAllotmentDate"></span>
+                                </div>
+                            </div>
+                            <div class="invoice-t invoice text-center">
+                                <span ng-bind="id.I_Title"></span><br />
+                                <span class="small-t">({{id.SubTitle}} Customer Copy)</span>
+                            </div>
+                            <div class="invoice-t text-right">Stock Allotment No. <span ng-bind="id.StockAllotNo"></span> </div>
+
+                        </div>
+                        <div class="details-receiver">
+                            <div class="col-sm-2">
+                                Details of Branch
+                            </div>
+                            <div class="col-sm-2">
+
+                            </div>
+                        </div>
+
+                        <div class="transportation2">
+                            <div class="col-sm-2">
+                                <table>
+                                    <tr>
+                                        <td style="width: 97px;">Tranfer From</td>
+                                        <td ng-bind="id.TranferFrom"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Branch From</td>
+                                        <td ng-bind="id.FarmerName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Allotment Date</td>
+                                        <td ng-bind="id.SAllotmentDate"></td>
+                                    </tr>
+
+                                </table>
+
+
+                            </div>
+                            <div class="col-sm-2" style="float:right; border-right:none;">
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bill-box-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:47px">Sr. No.</th>
+                                    <th>Goods Type</th>
+                                    <th>Unit</th>
+                                    <th>No. Of Bags</th>
+                                    <th style="white-space: nowrap;">Qty <br /> (In Bags)</th>
+                                    <th style="white-space: nowrap;">Toal Qty <br /> (In Kg)</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">Rate <br /> (Per Kg)</th>
+                                    <th style="width:100px;vertical-align:middle; text-align:center;" ng-if="IsShow">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="DD in DetailData">
+                                    <td style="width:40px" ng-if="DD.SNO!=99">{{DD.SNO}}</td>
+
+                                    <td style="width:40px" ng-if="DD.SNO==99"></td>
+                                    <td>{{DD.SupplierType}}</td>
+                                    <td>{{DD.Unit}}</td>
+                                    <td style="text-align:right;">{{DD.QtyInBag}}</td>
+                                    <td style="text-align:right;">{{DD.QtyPerBag}}</td>
+                                    <td style="text-align:right;">{{DD.TotalQuantity}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Rate)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Amount)}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bill-box-top">
+                        <div class="invoice-value">
+                            <span>Invoice Value (In Words)</span> <span ng-bind="InWords"></span>
+                        </div>
+
+                        <div class="terms-conditions">
+
+                            <table class="TC-table">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:60%;vertical-align:bottom;">
+
+                                            <div class="terms-left">
+                                                <span>Narration</span>
+                                                {{Remark}}
+                                            </div>
+                                            <div class="terms-left">
+                                                <span>{{Term}}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="terms-right">
+                                                <div class="for-company">
+                                                    For {{BranchName}}
+                                                </div>
+                                                <div class="authorised">
+                                                    Authorised Signatory
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+
+
+
+
+

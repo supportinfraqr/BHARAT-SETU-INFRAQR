@@ -1,0 +1,75 @@
+﻿
+@{
+    ViewBag.Title = "Invoice Deactivation";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<style>
+    .btn-sm {
+        padding: 2px 10px !important;
+        font-size: 12px !important;
+    }
+
+    .justify-content-end {
+        justify-content: end;
+    }
+</style>
+<script src="~/scripts/myjslib/InvoiceDeleteController.js"></script> 
+<div class="container-fluid">
+    <div class="page-title-box">
+        <h4>Invoice Deactivation</h4>
+    </div>
+    @*<select   autocomplete='address-level2' class="select2 form-control " ng-change="BindINBACTCH(x.BatchNo)">
+        <option value="">Select Batch</option>
+        <option ng-repeat="xx in BindDraftInvoiceDetail" value="{{xx.BatchNo}}">{{xx.BatchNo}}</option>
+    </select>*@
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+        
+                <table class="table table-sm" ng-init="BindDraftInvoiceDetail()">
+                    <thead>
+                        <tr>
+                            <th>SNo</th>
+                            <th>Batch No</th>
+                            <th>Invoice No</th>
+                            <th>Invoice Date</th>
+                            <th>Client</th>
+                            <th>Site</th>
+                            <th>Location</th>
+                            <th>Manpower Count</th>
+                            <th>Invoice Type</th>
+                            <th>Taxable Value</th>
+                            <th>CGST</th>
+                            <th>SGST</th>
+                            <th>IGST</th>
+                            <th>Gross Amount</th>
+                            <th class="text-right">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr ng-repeat="x in DraftInvoiceDetail">
+                            <td>{{x.SNO}}</td>
+                            <td>{{x.BatchNo}}</td> 
+                            <td>{{x.InvoiceNo}}</td> 
+                            <td>{{x.InvoiceDate}}</td> 
+                            <td>{{x.PartyName}}</td>
+                            <td>{{x.SiteName}}</td>
+                            <td>{{x.Location}}</td>
+                            <td>{{x.ManpowerCount}}</td>
+                            <td>{{x.InvoiceType}}</td>
+                            <td>{{x.TaxableValue}}</td>
+                            <td>{{x.CGST}}</td>
+                            <td>{{x.SGST}}</td>
+                            <td>{{x.IGST}}</td>
+                            <td>{{x.GrossAmount}}</td>  
+                            <td><input type="button" value="Delete" ng-click="DeleteRecord(x.Id,x.InvoiceNo,x.BatchNo)" /></td>  
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,571 @@
+﻿
+@{
+	ViewBag.Title = "DashBoard";
+	ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+	Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<style>
+	.c3-arc-Completed-Documents {
+		fill: #6dbaf0 !important;
+	}
+
+	.c3-arc.target-Pending-Documentes {
+		fill: #ffa197 !important;
+	}
+
+	.c3-arc.c3-target-Sent-Documents {
+		fill: #46c9b7 !important;
+	}
+	.review-item-rating i:before{
+	color: #f8b32d;
+	}
+	.drop-box{
+	width: 92%;
+    position: absolute;
+    background-color: #ffffff;
+    z-index: 99;
+    top: 34px;
+	border: 1px solid #ccc;
+	max-height: 0px;
+	max-height: 150px;
+    overflow: auto;
+	}
+	#popupdivID{
+	    width: 100%;
+    position: relative;
+	}
+	.fa-clock{
+	color: #ccc;
+    margin-right: 10px;
+	}
+</style>
+                <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">            
+<script>
+    $(".button").click(function (e) {
+        $(".dropdown").show();
+        e.stopPropagation();
+    });
+
+    $(".dropdown").click(function (e) {
+        e.stopPropagation();
+    });
+
+    $(document).click(function () {
+        $(".dropdown").hide();
+    });
+</script>
+<script src="~/scripts/myjslib/VendorInvoiceController.js"></script>
+<link href="~/Content/css/vendor/bootstrap.min.css" rel="stylesheet" />
+<link href="~/Content/css/vendor/main-vendor.css" rel="stylesheet" />
+<link href="~/Content/css/vendor/font-awesome.min.css" rel="stylesheet" />
+<link href="~/Content/css/vendor/morrisjs/morris.css" rel="stylesheet" />
+<link href="~/Content/css/vendor/animate.css" rel="stylesheet" />
+<div class="dashboard-content">
+	<div class="container-fluid">
+		<div class="page-title-box">
+			<h4 id="venDash"></h4>
+		</div>
+		<div class="row">
+			<div class="col-lg-8 col-md-8 col-sm-12 col-xs-12 stretch-card pr-0">
+				<div class="card w-100">
+					<div class="card-body">
+						<div class="portlet-title">
+							<div class="row">
+								<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+									<div class="heading-font">
+										<strong id="invoiceComp"></strong>
+									</div>
+								</div>
+								<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+									<div class="pull-right">
+										<ul id="myTabedu1" class="tab-review-design">
+											<li style="display:none" class="active"><a href="#monthly" id="monthlyText"></a></li>
+											<li style="display:none"  ><a href="#quaterly" id="quaterlyText"></a></li>
+											<li  class="active" ><a href="#yearly" id="yearlyText"></a></li>
+										</ul>
+
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<ul class="list-inline cus-product-sl-rp">
+							<li>
+								<h5><i class="fa fa-circle" style="color: var(--chart-color1);"></i><span id="invoiceNI"></span></h5>
+							</li>
+							<li>
+								<h5><i class="fa fa-circle" style="color: var(--chart-color2);"></i><span id="invoicePI"></span></h5>
+							</li>
+							<li>
+								<h5><i class="fa fa-circle" style="color: var(--chart-color3);"></i><span id="invoiceCI"></span></h5>
+							</li>
+						</ul>
+						<div id="extra-area-chart" style="height: 226px;"></div>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<div class="single-review-st-item res-mg-t-30 table-mg-t-pro-n">
+							<div class="single-review-st-text">
+								<img      ng-src={{Photo}} src="~/Content/img/vendor/profile.jpg" />
+								<div class="review-ctn-hf w100">
+									<div ng-init="Bindrating()">
+                                        <span style="display:none" id="profileName"></span>
+										<span class="profile-heading" >{{Name}}</span>
+										<span class="pull-right">
+                                            <a href="../DocumentMaster/OneTimeDocument"><i class="fa fa-pencil profile-icon-size"></i></a></span>
+									</div>
+									<div class="review-item-rating" ng-if="rating==1"> 
+										<i class="fa fa-star profile-icon-size" ></i>
+									 
+									</div>
+                                    <div class="review-item-rating" ng-if="rating==2">
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        
+                                    </div>
+                                    <div class="review-item-rating" ng-if="rating==3">
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                 
+                                    </div>
+                                    <div class="review-item-rating" ng-if="rating==4">
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                              
+                                    </div>
+                                    <div class="review-item-rating" ng-if="rating==5">
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                        <i class="fa fa-star profile-icon-size"></i>
+                                    </div>
+                                  
+									<a href="{{certificate}}" target="_blank" id="certDown" class="link">Certificate Downlaod</a>
+								</div>
+
+							</div>
+						</div>
+						<div class="row mb-3">
+							<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 border-right">
+								<div id="g1" class="gauge"></div>
+								<p class="profile-chart-name " id="profileCp"></p>
+							</div>
+							<!-- <hr class="name-of-your-vertical-line"/> -->
+							<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+								<div id="g10" class="gauge"></div>
+								<p class="profile-chart-name" id="profileDc"></p>
+							</div>
+						</div>
+						@*<button type="button"></button>*@
+                        <a  class="btn w100 profile-chart-name pro-btton-color" id="profileCp1" href="../DocumentMaster/OneTimeDocument"></a>
+					</div>
+				</div>
+			</div>
+            <div class="col-lg-12 col-md-3 col-sm-6 col-xs-12 stretch-card mb-10" ng-init="BindClient();BindAuditor();">
+
+                <select ng-model="AuditorId" ng-change="BindGraphBehaveCA()" class="form-control h-100 ng-pristine ng-valid ng-empty ng-touched mr-10">
+                    <option value="" style="font-size: 12px;">All Auditor</option>
+                    <option ng-repeat="xx in AuditorList" value="{{xx.PartyId}}">{{xx.PartyName}}</option>
+                </select>
+                <select  class="form-control h-100 ng-pristine ng-valid ng-empty ng-touched" ng-change="BindGraphBehaveCA()" ng-model="VendorId">
+                    <option value="" style="font-size: 12px;">All Client</option>
+                    <option ng-repeat="x in ClientList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                </select>
+
+            </div> 
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card" ng-init="BindInvoiceStatus()">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g3" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">New Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{AllDraftCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{AllDraftAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g4" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">Pending Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{AllPendingCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{AllPendingAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g6" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">Validate Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{ValidCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i>{{ValidAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g5" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">Complete Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{AllCompleteCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{AllCompleteAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12" ng-init="CHKPermissionForInvoice()">
+				<div class="text-center mb-3" style="WIDTH: 20%; MARGIN-LEFT: 39%;">
+                    
+                    <a id="ISVENOPEN" class="btn pro-btton-color" href="../VenInvoice/VendorIn">Raise Invoice</a> 
+                  <br/>  <a id="ISWVENOPEN" class="btn pro-btton-color" href="../VenInvoice/WithoutInvoice">Raise Document</a> 
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-12 col-xs-12 stretch-card pr-0">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Documents</h4>
+						<div class="chart5"></div>
+						<aside class="lightbox">
+							<input type="checkbox" class="state" id="lightbox-1" />
+							<div class="content">
+								<div class="header">
+									<label class="button" for="lightbox-1">&times;</label>
+								</div>
+								<div class="main">
+									<div id="printableArea">
+										<div class="chart4"></div>
+									</div>
+								</div>
+								<div class="footer">
+									<button class="button" onclick="printChart('printableArea')" type="button">Print This Chart</button>
+								</div>
+							</div>
+							<label class="backdrop" for="lightbox-1"></label>
+						</aside>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-5 col-md-5 col-sm-12 col-xs-12 stretch-card pr-0">
+				<div class="card w-100">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+								<h4 class="card-title">Auditor Compliance <small>{{Session}}</small></h4>
+							</div>
+							<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+								<div class="pull-right">
+									<ul id="myTabedu2" class="tab-review-design">
+										<li style="display:none" class="active"><a href="#monthly1">Mothly</a></li>
+										<li style="display:none"><a href="#quaterly1">Quaterly</a></li>
+										<li  class="active" ><a href="#yearly1">Yearly</a></li>
+									</ul>
+								</div>
+							</div>
+						</div>
+						<div id="designerChart" style="max-height: 300px; position: relative;"></div>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Documents</h4>
+						<form>
+							<div class="col-lg-12">
+							
+                                <input id="txtInvoice" class="form-control mb-3 py-0 px-2 validate" placeholder="Enter Invoice No" ng-model="InvoiceNo" ng-click="SearchInvoice()" ng-keyup="SearchInvoice()" />
+								 
+								 <div class="drop-box">
+									 <div  class="dropdown" ng-repeat="xx in ListOfInvoice" >
+									  <div class="mb-3 py-0 px-2" ng-click="SetTextbox(xx.VendorInvNum,xx.ClientId)"><i class='fa fa-clock'></i> {{xx.Name}} </div>                                    
+									 </div>
+								 </div>
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 p-0" style="height: 180px; margin-top:45px;">
+									<h4 class="check-Box-He">Report Type</h4>
+									<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6 p-1">
+										<label class="checontainer">
+											Closed Report
+											<input type="checkbox" checked="checked">
+											<span class="checkmark"></span>
+										</label>
+									</div>
+
+									<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6 p-1">
+										<label class="checontainer">
+											New Report
+											<input type="checkbox">
+											<span class="checkmark"></span>
+										</label>
+									</div>
+
+									<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6 p-1">
+										<label class="checontainer">
+											Open Report
+											<input type="checkbox">
+											<span class="checkmark"></span>
+										</label>
+									</div>
+
+									<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6 p-1">
+										<label class="checontainer">
+											All
+											<input type="checkbox">
+											<span class="checkmark"></span>
+										</label>
+									</div>
+								</div>
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									<div class="box-show">
+										@*<button type="button" class="btn w100 profile-chart-name pro-btton-color btn1" style="margin-top: 15px;">Submit</button>*@
+                                        <a class="btn w100 pro-btton-color" ng-click="checkandgetreport()">Compliance Report</a>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Work in Progress</h4>
+						<div class="table-responsive fixed-height-table" ng-init="BindDashBoardInvoice()">
+							<table class="table mb-0">
+								<thead>
+									<tr>
+										<th>#</th>
+										<th>Invoice no./Unique no.</th>
+										<th>Vendor Name</th>
+										<th>Status</th>
+										<th>Compliance Score</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr ng-repeat="x in DashBoardInvoice">
+										<td>{{x.SNO}}</td>
+										<td>{{x.VendorInvNum}}</td>
+										<td>{{x.VendorName}}</td>
+										<td><label class="badge badge-warning">{{x.Status}}</label></td>
+                                        <td>{{ x.Status !== 'Pending' ? x.totalComplianceScore : '' }}</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<!--<div class="custom-pagination">
+					<ul class="pagination">
+						<li class="page-item"><a class="page-link" href="#">Previous</a></li>
+						<li class="page-item"><a class="page-link" href="#">1</a></li>
+						<li class="page-item"><a class="page-link" href="#">2</a></li>
+						<li class="page-item"><a class="page-link" href="#">3</a></li>
+						<li class="page-item"><a class="page-link" href="#">Next</a></li>
+					</ul>
+				</div>-->
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body" ng-init="HighlightsExpire()">
+						<h4 class="card-title">Highlights</h4> 
+						<div class="table-responsive fixed-height-table">
+							<table class="table mb-0">
+								<thead>
+									<tr>
+										<th>S.No</th>
+										<th>Document Name</th> 
+                                        <th>Description</th>
+										<th>Valid From </th>
+										<th>Valid To</th>
+                                        <th>Status</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr ng-repeat="x in ListOnetimeDocument">
+										<td>{{x.SNO}}</td>
+										<td>{{x.DocumentName}}</td>
+										<td>{{x.Description}}</td>
+                                        <td>{{x.VaildFrom}}</td>
+                                        <td>{{x.VaildTo}}</td>
+                                        <td style="background-color:{{x.Color}}">{{x.Status}}</td>
+									</tr> 
+								</tbody>
+							</table>
+						</div>
+						<!--<div class="custom-pagination">
+					<ul class="pagination">
+						<li class="page-item"><a class="page-link" href="#">Previous</a></li>
+						<li class="page-item"><a class="page-link" href="#">1</a></li>
+						<li class="page-item"><a class="page-link" href="#">2</a></li>
+						<li class="page-item"><a class="page-link" href="#">3</a></li>
+						<li class="page-item"><a class="page-link" href="#">Next</a></li>
+					</ul>
+				</div>-->
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ================================= 4 ============================== -->
+		<!-- <div class="row">
+		<div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+			<div class="row">
+				<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+					<div class="heading-font" >
+						<strong >Document</strong>
+					</div>
+				</div>
+			</div>
+			<div id="pichart"></div>
+		</div>
+		<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+			<div class="chart_comp_bg box-show">
+				<div class="portlet-title">
+					<div class="row">
+						<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+							<div class="heading-font" >
+								<strong id="invoiceComp"></strong>
+							</div>
+						</div>
+						<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+							<div class="pull-right">
+								<ul id="myTabedu1" class="tab-review-design">
+									<li class="active"><a href="#monthly" id="monthlyText"></a></li>
+									<li><a href="#quaterly" id="quaterlyText"></a></li>
+									<li><a href="#yearly" id="yearlyText"></a></li>
+								</ul>
+
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="myTabContent" class="tab-content custom-product-edit">
+					<div class="product-tab-list tab-pane fade active in" id="monthly">
+						monthly
+					</div>
+					<div class="product-tab-list tab-pane fade" id="quaterly">
+						<div class="row">
+							quaterly
+						</div>
+					</div>
+					<div class="product-tab-list tab-pane fade" id="yearly">
+						<div class="row">
+							Yearly
+						</div>
+					</div>
+				</div>
+				<ul class="list-inline cus-product-sl-rp">
+					<li>
+						<h5><i class="fa fa-circle" style="color: var(--chart-color1);"></i><span id="invoiceNI"></span></h5>
+					</li>
+					<li>
+						<h5><i class="fa fa-circle" style="color: var(--chart-color2);"></i><span id="invoicePI"></span></h5>
+					</li>
+					<li>
+						<h5><i class="fa fa-circle" style="color: var(--chart-color3);"></i><span id="invoiceCI"></span></h5>
+					</li>
+				</ul>
+				<div id="extra-area-chart" style="height: 295px;"></div>
+			</div>
+		</div>
+		<div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+			<div class="chart_comp_bg box-show">
+				<div class="portlet-title">
+					<div class="row">
+						<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+							<div class="heading-font" >
+								<strong id="invoiceComp"></strong>
+							</div>
+						</div>
+						<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+							<div class="pull-right">
+								<ul id="myTabedu1" class="tab-review-design">
+									<li class="active"><a href="#monthly" id="monthlyText"></a></li>
+									<li><a href="#quaterly" id="quaterlyText"></a></li>
+									<li><a href="#yearly" id="yearlyText"></a></li>
+								</ul>
+
+							</div>
+						</div>
+					</div>
+				</div>
+				<div id="myTabContent" class="tab-content custom-product-edit">
+					<div class="product-tab-list tab-pane fade active in" id="monthly">
+						monthly
+					</div>
+					<div class="product-tab-list tab-pane fade" id="quaterly">
+						<div class="row">
+							quaterly
+						</div>
+					</div>
+					<div class="product-tab-list tab-pane fade" id="yearly">
+						<div class="row">
+							Yearly
+						</div>
+					</div>
+				</div>
+				<ul class="list-inline cus-product-sl-rp">
+					<li>
+						<h5><i class="fa fa-circle" style="color: var(--chart-color1);"></i><span id="invoiceNI"></span></h5>
+					</li>
+					<li>
+						<h5><i class="fa fa-circle" style="color: var(--chart-color2);"></i><span id="invoicePI"></span></h5>
+					</li>
+					<li>
+						<h5><i class="fa fa-circle" style="color: var(--chart-color3);"></i><span id="invoiceCI"></span></h5>
+					</li>
+				</ul>
+				<div id="extra-area-chart" style="height: 295px;"></div>
+			</div>
+		</div>
+	</div> -->
+	</div>
+</div>
+<script src="~/Content/vendorJS/vendor/jquery-1.12.4.min.js"></script>
+<script src="~/Content/vendorJS/jquery.meanmenu.js"></script>
+<script src="~/Content/vendorJS/bootstrap.min.js"></script>
+<!-- Optional JavaScript; choose one of the two! -->
+<!-- Option 1: Bootstrap Bundle with Popper -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script> -->
+<!-- Option 2: Separate Popper and Bootstrap JS -->
+<!--  c3chart
+	   ============================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
+<script src="~/Content/vendorJS/raphael-2.1.4.min.js"></script>
+<script src="~/Content/vendorJS/justgage.js"></script>
+<script src="~/Content/vendorJS/morrisjs/raphael-min.js"></script>
+<script src="~/Content/vendorJS/morrisjs/morris.js"></script>
+<script src="~/Content/vendorJS/tab.js"></script>
+<script src="~/Content/vendorJS/main.js"></script>
+

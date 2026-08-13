@@ -1,0 +1,336 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="shortcut icon" href="favicon.png" />
+<link href="../licenseStatusDasboard/css/bootstrap.css" rel='stylesheet' />
+<link href="../licenseStatusDasboard/css/all.css" rel="stylesheet" />
+<link href="../licenseStatusDasboard/css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+<link href="../licenseStatusDasboard/css/datepicker.min.css" rel='stylesheet' />
+<link href="../licenseStatusDasboard/css/custom_theme.css" rel='stylesheet' />
+<link href="../licenseStatusDasboard/css/colorTheme/default.css" rel='stylesheet' />
+<link href="../licenseStatusDasboard/css/draggle.css" rel="stylesheet" />
+<link href="../licenseStatusDasboard/css/responsive.css" rel='stylesheet' />
+<link href="../licenseStatusDasboard/css/datepicker.css" rel="stylesheet" />
+<link href="../licenseStatusDasboard/css/sweetalert2.css" rel="stylesheet" />
+
+<script src="~/scripts/RetailJsLib/LSDController.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+    .pagebody span {
+        border: 1px solid #ccc;
+        border-radius: 1px;
+        cursor: pointer
+    }
+</style>
+<style>
+    .curved-div {
+        border-radius: 5px; /* Creates rounded corners */
+        background-color: white !important
+    }
+
+    .margin3 {
+        margin-top: 3px !important;
+    }
+
+    .bg-light1 {
+        background-color: #ef392c !important;
+    }
+
+    badge {
+        display: inline-block;
+        padding: 0.35em 0.65em;
+        font-size: 0.75em;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+    }
+
+    .badge1 {
+        display: inline-block;
+        padding: 0.35em 0.65em;
+        font-size: 0.75em;
+        font-weight: 700;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        setTimeout(function () { 
+      
+        }, 500);  
+    });
+</script>
+<script>
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+
+        // Select the div to export
+        const element = document.getElementById('exportdiv');
+
+        // Use html2canvas to render the div into a canvas
+        html2canvas(element, {
+            scale: 3,                  // Higher scale for better resolution
+            useCORS: true,             // Ensure cross-origin resources are loaded
+            scrollX: 0,                // Prevent scrolling artifacts
+            scrollY: 0
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+
+            // Adjust PDF size dynamically based on the canvas dimensions
+            const pdfWidth = canvas.width / 2;  // Divide by scale to maintain original size
+            const pdfHeight = canvas.height / 2;
+
+            // Create a new jsPDF instance
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            // Add image to PDF, applying margins (e.g., 10px)
+            const margin = 10;
+            pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - 2 * margin, pdfHeight - 2 * margin);
+
+            // Save the PDF
+            pdf.save('LicenceStatusDashboard.pdf');
+        }).catch(error => {
+            console.error('Error exporting to PDF:', error);
+        });
+    }
+
+
+
+</script>
+<!-- InstanceBeginEditable name="Content Area" -->
+
+<div  class="pagecontentbody">
+    <div>
+        <a onclick="exportToPDF();angular.element(document).scope().ManageLog('Download Pdf Licence Status Dashboard')" title="download Report" data-toggle="modal" data-target="#editAct" class="btn btn-warning btn-xs banner_btn1 btn-custom-download download-doc-link">Download <i class="fa fa-cloud-download hidden-xs hidden-sm hidden-md"></i></a>
+    </div>
+    <div id="exportdiv">
+        <div style="text-align: center;font-size: large;" class="col-md-12 rbox bo curved-div"><strong class="pagehed ng-binding">Licence Status Dashboard</strong></div>
+
+        <div id="downloaddiv2" class="pagebody" style="padding:5px">
+            <div class="col-md-12">
+                <div class="row">
+                    <div class="col-md-3 px-1" ng-init="FilterGraph()">
+                        <div class="rbox box curved-div" id="style-7">
+                            <div style="margin-left: 3px;" class="bhed" ng-init="GetRegion()"><b>Region</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 45px">
+                                <div class="col-3 mnh px-1 " ng-repeat="x in RegionList"><span class="badge bg-danger cldiv" ng-click="SetRegion(x.RegionId)">{{x.Name}}</span></div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="grbox box curved-div margin3" ng-init="GetDocumentStatus()">
+                            <div class="bhed"><b>Status</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 65px">
+                                <div class="col-6 mnh px-1" ng-repeat="x in DocumentListSatus"><span class="badge bg-lsuccess Status" ng-click="SetDocStatus(x.Status)">{{x.DocumentStatusList}}</span></div>
+
+                            </div>
+                        </div>
+                        <div class="grbox box curved-div margin3" ng-init="BindLicenceStatus()">
+                            <div class="bhed"><b>Licence Status</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 85px">
+                                <div class="col-6 mnh px-1"><span class="badge bg-lsuccess1 LicenceStatus" ng-click="SetLicenceStatus('Applied')">Applied</span></div>
+                                <div class="col-6 mnh px-1"><span class="badge bg-lsuccess1 LicenceStatus" ng-click="SetLicenceStatus('Not Applied')">Not Applied</span></div>
+                                <div class="col-6 mnh px-1"><span class="badge bg-lsuccess1 LicenceStatus" ng-click="SetLicenceStatus('Issued')">Issued</span></div>
+                            </div>
+                        </div>
+                        <div class="grbox box curved-div margin3">
+                            <div class="bhed"><b>Expiry status</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 85px">
+                                <div class="col-6 mnh px-1"><span class="badge bg-warning Expirystatus" ng-click="SetExpiryStatus('Expiring Soon')">Expiring Soon</span></div>
+                                <div class="col-6 mnh px-1"><span class="badge bg-warning Expirystatus" ng-click="SetExpiryStatus('Expired')">Expired</span></div>
+                            </div>
+                        </div>
+                        <div class="grbox box curved-div margin3" ng-init="BindLicenceType()">
+                            <div class="bhed"><b>Fresh/Renewal</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 25px">
+                                <div class="col-4 mnh px-1" ng-repeat="x in LicenseTypeList"><span class="badge bg-lsuccess1 Fresh" ng-click="SetLicenceType(x.LStatus)">{{x.LicenseType}}</span></div>
+                            </div>
+                        </div>
+                        <div ng-if="LSD_Flag==1" class="grbox box curved-div margin3" ng-init="BindClientList()">
+                            <div class="bhed"><b>Client Name</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 45px">
+                                <div class="col-6 mnh px-1" ng-repeat="x in ClientList"><span class="badge bg-warning Client" ng-click="SetClient(x.MapId)">{{x.PartyName}}</span></div>
+
+                            </div>
+                        </div>
+                        <div ng-if="LSD_Flag==1" class="grbox box curved-div margin3">
+                            <div class="bhed"><b>Invoice Status</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 45px" ng-init="BindInvoiceStatus()">
+                                <div class="col-12 mnh px-1" ng-repeat="x in InvoiceStatusList"><span class="badge bg-lsuccess1 InvoiceStatus" ng-click="SetInvoiceStatus(x.invoiceStatus)">{{x.invoiceStatus}}</span></div>
+
+                            </div>
+                        </div>
+                        <div ng-if="LSD_Flag==1" class="grbox box curved-div margin3" ng-init="GetPaymentStatus()">
+                            <div class="bhed"><b>Payment Status</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 45px">
+                                <div class="col-12 mnh px-1" ng-repeat="x in PaymentList"><span class="badge bg-lsuccess PaymentStatus" ng-click="SetPaymentStatus(x.Payment)">{{x.PaymentStatus}}</span></div>
+
+                            </div>
+                        </div>
+
+                        <div class="grbox box curved-div margin3" ng-init="BindStore()">
+                            <div class="bhed"><b>Outlet Name</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 170px">
+                                <div class="col-6 mnh px-1" ng-repeat="x in StoreLList"><span class="badge bg-organf Outlet" ng-click="SetStore(x.Id)">{{x.StoreName}}</span></div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 px-1">
+                        <div class="dbox curved-div">
+                            <div id="main" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="grbox box curved-div" ng-init="BindState()">
+                            <div class="bhed"><b>State</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 100%">
+                                <div class="col-4 mnh px-1" ng-repeat="x in StateList"><span class="badge bg-organf State" ng-click="SetState(x.STATE_ID)">{{x.STATE_NAME}}</span></div>
+
+                            </div>
+                        </div>
+
+                        <div ng-init="BindLicence()">
+                            <div class="grbox box curved-div margin3">
+                                <div class="bhed"><b>Type of Licence</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 100%">
+                                    <div class="col-3 mnh px-1" ng-repeat="x in LicenceList"><span class="badge bg-warning TLicence" ng-click="SetLicense(x.LicenseId)">{{x.LicenseName}}</span></div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 px-1">
+                        <div class="grbox box curved-div" ng-init="BindAddress()">
+                            <div class="bhed"><b>Address of the store</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 500px">
+                                <div class="col-12 mnh px-1" ng-repeat="x in AddressList"><span class="badge bg-warning Address" ng-click="SetAddress(x.CompleteAddress)">{{x.CompleteAddress}}</span></div>
+                            </div>
+                        </div>
+                        <div class="grbox box curved-div margin3">
+                            <div class="bhed"><b>Filter</b></div>
+                            <div class="row m-0 bscroll" style="max-height: 85px">
+                                <div ng-if="dvRegion==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Region</span></div>
+                                <div ng-if="dvStatus==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Status</span></div>
+                                <div ng-if="dvLicenceStatus==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Licence Status</span></div>
+                                <div ng-if="dvExpiryStatus==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Expiry Status</span></div>
+                                <div ng-if="dvFreshRenewal==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Fresh/Renewal</span></div>
+                                <div ng-if="dvClient==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Client Name</span></div>
+                                <div ng-if="dvInvoice==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Invoice Status</span></div>
+                                <div ng-if="dvPayment==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Payment Status</span></div>
+                                <div ng-if="dvOutlet==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Outlet Name</span></div>
+                                <div ng-if="dvLicenceType==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Type of Licence</span></div>
+                                <div ng-if="dvState==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">State</span></div>
+                                <div ng-if="dvAddress==1" class="col-6 mnh px-1"><span class="badge bg-light text-dark">Address</span></div>
+
+                            </div>
+                        </div>
+                        <div class="col-8 mnh px-1 margin3">
+                            <span class="badge1 bg-organf" ng-click="Reset();ManageLog('Click on Reset in Licence Dashboard')">Reset </span>
+                            <a href="../RetailSection/LicenceStatusDashboardReport"><span class="badge1 bg-organf " ng-click="ManageLog('Click on Export Report in Licence Dashboard')">Export Report</span> </a>
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<label id="licenceName"></label>
+<label id="number"></label>
+<script type="text/javascript" src="../licenseStatusDasboard/js/jquery-min.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/bootstrap.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/jquery.nanoscroller.min.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/dataTables.bootstrap5.min.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/datepicker.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/datepicker.en.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/builder.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/beautifyhtml.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/dragble.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/sweetalert2.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/theme-script.js"></script>
+<script type="text/javascript" src="../licenseStatusDasboard/js/datepicker.js"></script>
+
+<!-- InstanceBeginEditable name="for-javascript" -->
+<script type="text/javascript" src="../licenseStatusDasboard/js/echarts.min.js"></script>
+
+<script src="~/scripts/RetailJsLib/LCDashboard.js"></script>
+@*<script>
+
+        var chartDom = document.getElementById('main');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        option = {
+            title: {
+                text: 'Number of Licenses',
+                x: 'center'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                axisTick: {
+                    alignWithLabel: true
+                },
+                axisLabel: {
+                    rotate: 60
+                },
+                data: ['Advertisement/Signage License', 'BOCW', 'Central CLRA', 'Central FSSAI']
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [
+                {
+                    name: 'Value',
+                    type: 'bar',
+                    stack: 'Total',
+                    label: {
+                        show: true,
+                        position: 'top'
+                    },
+                    data: [1,2,3,4]
+                }
+            ]
+        };
+
+        option && myChart.setOption(option);
+
+
+    </script>*@
+<!-- InstanceEndEditable -->

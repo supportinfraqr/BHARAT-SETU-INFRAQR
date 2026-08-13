@@ -1,0 +1,1181 @@
+﻿* {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+}
+
+/* =================== REPORT PAGE 1: COMPLIANCE OVERVIEW ===================*/
+.container-report1 {
+    font-family: "Inter", sans-serif;
+    background-color: #FFF1EB;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+    /* Header & Footer */
+     .report-header,
+     .report-footer {
+        background-color: #FFF1EB;
+        color: #fff;
+        padding: 10px 24px;
+    }
+
+         .report-header .download-btn {
+            border-radius: 999px;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border: 1px solid var(--primary);
+            background: #fff;
+            color: var(--primary);
+        }
+
+             .report-header .download-btn:hover {
+                background: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
+            }
+
+    /* Body */
+.container-report1 .report-body {
+    flex: 1;
+    padding: 32px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+    /* Overview Box */
+    .container-report1 .overview-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* Summary Cards */
+.container-report1 .summary-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    transition: 0.2s ease;
+    align-items: center;
+    justify-content: space-between;
+}
+    .container-report1 .summary-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+    .container-report1 .summary-card h4 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-top: 4px;
+        color: #E45D27;
+    }
+
+    .container-report1 .summary-card p {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #555;
+    }
+
+    /*.container-report1 .summary-card.total {
+        background-color: #E45D27;
+    }
+
+    .container-report1 .summary-card.submitted {
+        background-color: #22B573;
+    }
+
+    .container-report1 .summary-card.pending {
+        background-color: #F5B23D;
+    }
+
+    .container-report1 .summary-card {
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+*/
+
+    /* Table Styling */
+    .container-report1 table {
+        width: 100%;
+        border-collapse: collapse !important;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+        /* Header */
+        .container-report1 table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #F37437;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+            padding: 8px 10px;
+        }
+
+        /* Body Cells */
+        .container-report1 table tbody td {
+            background-color: var(--card-bg);
+            font-size: 0.78rem;
+            vertical-align: middle;
+            text-align: center;
+            padding: 8px 10px;
+            white-space: nowrap;
+        }
+
+        .container-report1 table tbody tr:hover td {
+            background-color: #FFE8D9;
+        }
+
+.container-report1 .small-table tbody td .store-code-link,
+.container-report1 .small-table tbody td .event-link {
+    text-decoration: none;
+}
+
+    /* Responsive Fix */
+    .container-report1 .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+/* Remove unwanted scrollbar on full page */
+html, body {
+    overflow-x: hidden;
+}
+
+/* Table Selects*/
+.container-report1 .form-select, .form-control {
+    font-size: .78rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #dcdcdc;
+    outline: none;
+    width: 120px;
+}
+
+/* 2nd and 3rd Col wrap*/
+/* Keep headers unchanged (no wrapping) */
+.container-report1 .small-table thead th:nth-child(2),
+.container-report1 .small-table thead th:nth-child(3) {
+    white-space: nowrap; /* important: headers must stay single-line */
+}
+
+/* Allow body cells to wrap and limit their width */
+.container-report1 .small-table tbody td:nth-child(2),
+.container-report1 .small-table tbody td:nth-child(3) {
+    white-space: normal !important;
+    min-width: 260px; /* change this value to taste */
+    overflow-wrap: anywhere; /* better wrap for long words/links */
+    word-break: break-word; /* fallback for older browsers */
+    text-align: left; /* keep multi-line content readable */
+    vertical-align: middle;
+    padding-right: 12px; /* small breathing room for wrapped lines */
+}
+
+    /* Ensure any anchor/link inside the compliance column wraps nicely */
+    .container-report1 .small-table tbody td:nth-child(3) .store-code-link {
+        display: inline-block; /* lets the link wrap within its cell */
+        max-width: 100%;
+        text-decoration: none;
+        color: inherit;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+/*shorter width for Act Name if you want them different sizes */
+.container-report1 .small-table tbody td:nth-child(2) {
+    min-width: 150px; /* tweak separately if desired */
+}
+
+
+
+
+/* filter button */
+.container-report1 .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .container-report1 .filter-btn.active,
+    .container-report1 .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.container-report1 .table-toolbar .form-control-sm {
+    height: 30px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.container-report1 .export-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .container-report1 .export-btn:hover {
+        background: var(--primary-dark);
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .container-report1 .export-btn:focus,
+    .container-report1 .export-btn:active {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+
+
+/* =================== Labour Report changes =================== */
+
+
+.container-report1 table tbody tr th {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+
+
+
+
+
+/*=================<!-- REPORT PAGE 3: Labour Compliance -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report3 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+/* Header */
+.container-report3 .report-header3 {
+    background-color: #E45D27;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 10px 10px 0 0;
+}
+
+/* Body */
+.container-report3 .report-body3 {
+    background-color: #FDF2E0;
+    padding: 32px;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Title Box */
+.container-report3 .report-title-box {
+    border: 1.8px solid #E45D27;
+    background: #fff;
+    border-radius: 8px;
+}
+
+    /* SMALL CARDS */
+    .container-report3 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+   
+
+/* TABLE STYLES */
+.container-report3 table {
+    border: 1.5px solid #E45D27;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 14px;
+    background: #fff;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .container-report3 table thead tr th {
+        background-color: #E45D27 !important; /* Force header bg */
+        color: #fff !important;
+        font-weight: 600;
+        text-align: center;
+        border: 1px solid #E45D27 !important;
+    }
+
+    .container-report3 table tbody tr th {
+        background-color: #FFF2EA !important;
+        font-weight: 600;
+    }
+
+    .container-report3 table th,
+    .container-report3 table td {
+        border: 1px solid #E45D27;
+        vertical-align: middle;
+        padding: 8px;
+    }
+
+    /* BADGE STYLING */
+    .container-report3 .badge {
+        border-radius: 10px;
+        padding: 6px 12px;
+    }
+
+
+/* Footer */
+.container-report3 .report-footer {
+    background-color: #E45D27;
+    color: #fff;
+    border-radius: 0 0 10px 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report3 {
+        padding: 20px;
+    }
+
+        .container-report3 table {
+            font-size: 13px;
+        }
+
+        .container-report3 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+
+/*=================<!-- REPORT PAGE 4: Factory Compliance -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report4 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report4 .report-header4 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report4 .report-body4 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report4 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report4 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report4 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report4 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report4 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report4 table th,
+        .container-report4 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+    /* BADGE STYLING */
+    .container-report4 .badge {
+        border-radius: 10px;
+        padding: 6px 12px;
+    }
+
+
+    /* Footer */
+    .container-report4 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report4 {
+        padding: 20px;
+    }
+
+        .container-report4 table {
+            font-size: 13px;
+        }
+
+        .container-report4 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 5: Establishment Compliance -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report5 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report5 .report-header5 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report5 .report-body5 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report5 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report5 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report5 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report5 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report5 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report5 table th,
+        .container-report5 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+    /* BADGE STYLING */
+    .container-report5 .badge {
+        border-radius: 10px;
+        padding: 6px 12px;
+    }
+
+
+    /* Footer */
+    .container-report5 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report5 {
+        padding: 20px;
+    }
+
+        .container-report5 table {
+            font-size: 13px;
+        }
+
+        .container-report5 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 6: Finance Compliance -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report6 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report6 .report-header6 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report6 .report-body6 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report6 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report6 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report6 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report6 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report6 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report6 table th,
+        .container-report6 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+    /* BADGE STYLING */
+    .container-report6 .badge {
+        border-radius: 10px;
+        padding: 6px 12px;
+    }
+
+
+    /* Footer */
+    .container-report6 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report6 {
+        padding: 20px;
+    }
+
+        .container-report6 table {
+            font-size: 13px;
+        }
+
+        .container-report6 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 7: License Report -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report7 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report7 .report-header7 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report7 .report-body7 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report7 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report7 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report7 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report7 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report7 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report7 table th,
+        .container-report7 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+   
+
+
+    /* Footer */
+    .container-report7 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report7 {
+        padding: 20px;
+    }
+
+        .container-report7 table {
+            font-size: 13px;
+        }
+
+        .container-report7 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 8: Location Report -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report8 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report8 .report-header8 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report8 .report-body8 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report8 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report8 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report8 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report8 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report8 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report8 table th,
+        .container-report8 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+
+
+
+    /* Footer */
+    .container-report8 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report8 {
+        padding: 20px;
+    }
+
+        .container-report8 table {
+            font-size: 13px;
+        }
+
+        .container-report8 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 9: Notice & Inspection -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report9 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report9 .report-header9 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report9 .report-body9 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report9 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report9 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report9 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report9 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report9 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report9 table th,
+        .container-report9 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+
+
+
+    /* Footer */
+    .container-report9 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report9 {
+        padding: 20px;
+    }
+
+        .container-report9 table {
+            font-size: 13px;
+        }
+
+        .container-report9 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 10: Litigation -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report10 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report10 .report-header10 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report10 .report-body10 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report10 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+    /* SMALL CARDS */
+    .container-report10 .small-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+
+
+    /* TABLE STYLES */
+    .container-report10 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report10 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report10 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report10 table th,
+        .container-report10 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+
+
+
+    /* Footer */
+    .container-report10 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report10 {
+        padding: 20px;
+    }
+
+        .container-report10 table {
+            font-size: 13px;
+        }
+
+        .container-report10 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}
+
+
+
+
+
+/*=================<!-- REPORT PAGE 11: Compliance Report -->=================*/
+
+/* PAGE BACKGROUND */
+.container-report11 {
+    background-color: #FDF2E0;
+    min-height: 850px;
+    font-family: 'Poppins', sans-serif;
+}
+
+    /* HEADER */
+
+    .container-report11 .report-header11 {
+        background-color: #E45D27;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 10px 10px 0 0;
+    }
+
+    /* Body */
+    .container-report11 .report-body11 {
+        background-color: #FDF2E0;
+        padding: 32px;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Title Box */
+    .container-report11 .report-title-box {
+        border: 1.8px solid #E45D27;
+        background: #fff;
+        border-radius: 8px;
+    }
+
+
+    /* TABLE STYLES */
+    .container-report11 table {
+        border: 1.5px solid #E45D27;
+        border-radius: 8px;
+        overflow: hidden;
+        font-size: 14px;
+        background: #fff;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .container-report11 table thead tr th {
+            background-color: #E45D27 !important; /* Force header bg */
+            color: #fff !important;
+            font-weight: 600;
+            text-align: center;
+            border: 1px solid #E45D27 !important;
+        }
+
+        .container-report11 table tbody tr th {
+            background-color: #FFF2EA !important;
+            font-weight: 600;
+        }
+
+        .container-report11 table th,
+        .container-report11 table td {
+            border: 1px solid #E45D27;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+
+
+
+    /* Footer */
+    .container-report11 .report-footer {
+        background-color: #E45D27;
+        color: #fff;
+        border-radius: 0 0 10px 10px;
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container-report11 {
+        padding: 20px;
+    }
+
+        .container-report11 table {
+            font-size: 13px;
+        }
+
+        .container-report11 .report-header {
+            text-align: center;
+            justify-content: center !important;
+        }
+}

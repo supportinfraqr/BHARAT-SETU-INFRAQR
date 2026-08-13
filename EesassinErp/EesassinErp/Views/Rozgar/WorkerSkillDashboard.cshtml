@@ -1,0 +1,390 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Skill Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+<link href="~/Content/Dashboards/SkillPages/WorkerSkillDashboard/style.css" rel="stylesheet" />
+
+<div class="workerSkillDash px-4 py-4">
+    <!-- ======================================================
+        HEADER
+    ====================================================== -->
+
+    <div class="workerSkillHeader">
+
+        <div class="workerSkillTitleArea">
+            <h2 class="workerSkillTitle">Worker Skill Dashboard</h2>
+            <p class="workerSkillSubtitle">
+                Learn new skills through training modules.
+            </p>
+        </div>
+
+        <div class="workerSkillActions">
+
+            <!-- Search -->
+
+            <div class="workerSkillSearch">
+
+                <i class="fas fa-search"></i>
+
+                <input type="text"
+                       class="form-control"
+                       placeholder="Search Modules..." />
+
+            </div>
+
+            <!-- Filter -->
+
+            <div class="dropdown">
+
+                <button class="btn workerSkillFilterBtn dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown">
+
+                    <i class="fas fa-filter me-2"></i>
+                    Filter
+
+                </button>
+
+                <ul class="dropdown-menu workerSkillDropdown">
+
+                    <li>
+                        <a class="dropdown-item active" href="#">
+                            All Modules
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#">
+                            Live Modules
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item" href="#">
+                            Disabled Modules
+                        </a>
+                    </li>
+
+                </ul>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+        MODULE GRID
+    ====================================================== -->
+
+    <div class="workerSkillGrid">
+
+
+        <!-- CARD 1 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=1" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+                <div class="workerSkillProgress">
+
+                    45%
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Basic Safety Training
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Rahul Sharma</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 2 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=2" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Welding Fundamentals
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Neha Kapoor</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 3 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=3" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Electrical Maintenance
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Amit Verma</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 4 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=4" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Plumbing Essentials
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Rohit Singh</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 5 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=5" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+                <div class="workerSkillProgress">
+
+                    70%
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Masonry Basics
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Deepak Yadav</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 6 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=6" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Construction Equipment Handling
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Vikram Joshi</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 7 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=7" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Painting & Finishing
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Sonal Gupta</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CARD 8 -->
+
+        <div class="workerSkillCard">
+
+            <div class="workerSkillThumb">
+
+                <img src="https://picsum.photos/600/340?random=8" alt="">
+
+                <div class="workerSkillPlay">
+
+                    <i class="fas fa-play"></i>
+
+                </div>
+
+            </div>
+
+            <div class="workerSkillBody">
+
+                <h5 class="workerSkillModuleTitle">
+                    Industrial Housekeeping
+                </h5>
+
+                <p class="workerSkillTrainer">
+
+                    Trainer :
+                    <span>Pooja Mehta</span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ======================================================
+        LOAD MORE
+    ====================================================== -->
+
+    <div class="workerSkillLoadMore">
+
+        <button class="btn workerSkillLoadBtn">
+
+            Load More
+
+            <i class="fas fa-arrow-right ms-2"></i>
+
+        </button>
+
+    </div>
+
+</div>

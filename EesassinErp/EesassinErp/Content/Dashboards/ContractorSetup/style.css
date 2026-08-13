@@ -1,0 +1,770 @@
+﻿.contractorSetup {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #fff;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.add-btn, .save-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .save-btn:hover,
+    .add-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.cancel-btn {
+    border-radius: 999px;
+    color: var(--primary);
+    background: transparent;
+    border: 1px solid var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .cancel-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+
+
+/* ===== Fix Add Party button click blink ===== */
+
+.contractorSetup .add-btn {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    /* prevent white flash on click */
+    .contractorSetup .add-btn:active,
+    .contractorSetup .add-btn:focus,
+    .contractorSetup .add-btn:focus-visible {
+        background: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+/* remove mobile tap highlight */
+.contractorSetup .add-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Toggle pill - single capsule container */
+.contractorSetup .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .contractorSetup .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 4px 8px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+        /* active pill */
+        .contractorSetup .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* ensure focus ring for accessibility (subtle) */
+        .contractorSetup .toggle-pill .btn-pill:focus {
+            outline: none;
+        }
+
+/* Section cards */
+.contractorSetup .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .contractorSetup .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* min-height: 320px;*/
+    }
+
+    .contractorSetup .section-card h4 {
+        color: var(--primary);
+    }
+
+
+/* KPI CARDS */
+.contractorSetup .kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+.contractorSetup .kpi-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #022B5E;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .contractorSetup .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.contractorSetup .kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.contractorSetup .kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #022B5E;
+}
+
+/* Table wrapper and hide scrollbar visually */
+.contractorSetup .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .contractorSetup .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.contractorSetup .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F8F9FD;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.contractorSetup .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.contractorSetup .small-table tbody tr:hover td {
+    background-color: #F8f9fc;
+}
+
+/* action menu */
+
+.contractorSetup .action-menu .btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .contractorSetup .action-menu .btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.contractorSetup .table-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .contractorSetup .table-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* statuses */
+.contractorSetup .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.contractorSetup .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.contractorSetup .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.contractorSetup .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+
+/* filter button */
+.contractorSetup .filter-btn,
+.contractorSetup .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .contractorSetup .filter-btn.active,
+    .contractorSetup .filter-btn:hover,
+    .contractorSetup .filter-btn.active,
+    .contractorSetup .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.contractorSetup .table-toolbar .form-control-sm {
+    height: 34px;
+    border-radius: 999px 0 0 999px;
+    border-right: none;
+    border-color: var(--primary);
+}
+
+/* Search button */
+.contractorSetup .input-group .btn {
+    /* border-radius: 0 999px 999px 0;
+    border-left: none;*/
+}
+
+/* Export button (rounded) */
+.contractorSetup .export-btn, .search-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .contractorSetup .export-btn:hover,
+    .contractorSetup .search-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+/* ================= Add Modal ================= */
+
+.contractorSetup .contractorSetupModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.contractorSetup .contractorSetupModal .modal-title {
+    font-weight: 400;
+}
+
+.contractorSetup .contractorSetupModal .modal-body {
+    background: var(--card-bg);
+}
+
+.form-label, .employeeManual-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #444;
+}
+
+ .form-label span {
+        color: #022B5E;
+    }
+ .form-control,
+ .form-control-sm,
+ .form-select-sm {
+    /*font-size: 0.78rem;*/
+    border-radius: 6px;
+}
+
+ .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}
+
+
+
+
+.contractorSetup .admin-dd-select {
+    border-radius: 10px;
+    border: 1px solid var(--primary);
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background-color: #fff;
+    box-shadow: none;
+}
+
+.contractorSetup .admin-dd-label {
+    font-size: 0.75rem;
+}
+
+
+
+/*=======Add client Modal==========*/
+.contractorSetup .contractorSetupModalV2 {
+    border: 0;
+    border-radius: 14px;
+    background: #F6EBE6;
+    overflow: hidden;
+}
+
+
+/* HEADER */
+
+.contractorSetup .contractorSetupModalV2-header {
+    background: var(--primary);
+    border: 0;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.contractorSetup .contractorSetupModalV2-titleWrap {
+    display: flex;
+    flex-direction: column;
+}
+
+.contractorSetup .contractorSetupModalV2-title {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.contractorSetup .contractorSetupModalV2-subtitle {
+    color: rgba(255,255,255,0.75);
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+
+/* BODY */
+
+.contractorSetup .contractorSetupModalV2-body {
+    background: var(--card-bg);
+    padding: 22px 24px 28px;
+    overflow-x: hidden;
+}
+
+
+/* TOP TABS*/
+
+.contractorSetup .contractorSetupModalV2-topTabs {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    border-bottom: 1px solid #CFC8C5;
+    padding: 0 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+}
+
+    .contractorSetup .contractorSetupModalV2-topTabs::-webkit-scrollbar {
+        height: 4px;
+    }
+
+.contractorSetup .contractorSetupModalV2-topTabBtn {
+    position: relative;
+    border: 0;
+    background: transparent;
+    color: #555;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 0 10px 6px;
+    transition: 0.25s ease;
+    flex-shrink: 0;
+}
+
+    .contractorSetup .contractorSetupModalV2-topTabBtn:hover {
+        color: #E85D1F;
+    }
+
+    .contractorSetup .contractorSetupModalV2-topTabBtn.active {
+        color: #C84B12;
+        font-weight: 600;
+    }
+
+        .contractorSetup .contractorSetupModalV2-topTabBtn.active::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -1px;
+            width: 100%;
+            height: 3px;
+            background: #E85D1F;
+            border-radius: 10px;
+        }
+
+
+/* CONTENT AREA */
+
+.contractorSetup .contractorSetupModalV2-contentWrapper {
+    padding-top: 28px;
+}
+
+.contractorSetup .contractorSetupModalV2-section {
+    min-height: 45vh;
+}
+
+
+/*CLOSE BUTTON*/
+
+.contractorSetup .contractorSetupModalV2 .btn-close {
+    box-shadow: none !important;
+    opacity: 1;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 991px) {
+
+    .contractorSetup .contractorSetupModalV2-header {
+        padding: 12px 16px;
+    }
+
+    .contractorSetup .contractorSetupModalV2-body {
+        padding: 18px 16px 24px;
+    }
+
+    .contractorSetup .contractorSetupModalV2-topTabs {
+        gap: 18px;
+    }
+
+    .contractorSetup .contractorSetupModalV2-topTabBtn {
+        font-size: 15px;
+        padding-bottom: 14px;
+    }
+}
+
+
+/*Bulk Upload inside add client*/
+.contractorSetup .contractorSetupBulkUpload-wrapper {
+    width: 100%;
+}
+
+
+/* TOP BAR */
+
+.contractorSetup .contractorSetupBulkUpload-topBar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+}
+
+.contractorSetup .contractorSetupBulkUpload-templateBtn {
+    height: 35px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--primary);
+    color: #fff;
+    padding: 0 22px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: 0.25s ease;
+}
+
+.contractorSetup .contractorSetupBulkUpload-templateBtn:hover {
+    background: var(--primary-dark);
+}
+
+
+/* DROPZONE */
+
+.contractorSetup .contractorSetupBulkUpload-dropzone {
+    min-height: 340px;
+    border: 2px dashed #BEB8B5;
+    border-radius: 28px;
+    background: transparent;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* ICON */
+
+.contractorSetup .contractorSetupBulkUpload-iconWrap {
+    margin-bottom: 16px;
+}
+
+.contractorSetup .contractorSetupBulkUpload-iconWrap i {
+    font-size: 72px;
+    color: #B9B9B9;
+}
+
+
+/* TEXT */
+
+.contractorSetup .contractorSetupBulkUpload-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1F1F1F;
+    margin-bottom: 4px;
+}
+
+.contractorSetup .contractorSetupBulkUpload-subtitle {
+    font-size: 14px;
+    color: #A1A1A1;
+    margin-bottom: 30px !important;
+    text-align: center;
+}
+
+
+/* BUTTON */
+
+.contractorSetup .contractorSetupBulkUpload-uploadBtn {
+    height: 35px;
+    border-radius: 18px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    border: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.25s ease;
+    padding: 0 22px;
+}
+
+    .contractorSetup .contractorSetupBulkUpload-uploadBtn:hover {
+        background: var(--primary-dark);
+    }
+
+
+/* RESPONSIVE */
+
+@media (max-width: 991px) {
+
+    .contractorSetup .contractorSetupBulkUpload-topBar {
+        justify-content: stretch;
+    }
+
+    .contractorSetup .contractorSetupBulkUpload-templateBtn {
+        width: 100%;
+        height: 56px;
+        font-size: 15px;
+    }
+
+    .contractorSetup .contractorSetupBulkUpload-dropzone {
+        min-height: 420px;
+        padding: 40px 20px;
+    }
+
+    .contractorSetup .contractorSetupBulkUpload-iconWrap i {
+        font-size: 56px;
+    }
+
+    .contractorSetup .contractorSetupBulkUpload-title {
+        font-size: 20px;
+    }
+
+    .contractorSetup .contractorSetupBulkUpload-subtitle {
+        font-size: 15px;
+        margin-bottom: 32px;
+    }
+
+    .contractorSetup .contractorSetupBulkUpload-uploadBtn {
+        width: 100%;
+        min-width: unset;
+        height: 58px;
+        font-size: 17px;
+    }
+}
+
+
+
+/*========Add site modal ========*/
+/* SEGMENT TOGGLE */
+
+.contractorSetup .siteSegment-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8f9fe;
+    border-radius: 999px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 24px;
+    width: fit-content;
+    max-width: 100%;
+    scrollbar-width: none;
+}
+
+    .contractorSetup .siteSegment-wrap::-webkit-scrollbar {
+        display: none;
+    }
+
+/* BUTTONS */
+
+.contractorSetup .siteSegment-btn {
+    border: 0;
+    background: transparent;
+    color: #555;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+
+    /* HOVER */
+
+    .contractorSetup .siteSegment-btn:hover {
+        color: var(--primary);
+    }
+
+    /* ACTIVE */
+
+    .contractorSetup .siteSegment-btn.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    /* CLICK EFFECT */
+
+    .contractorSetup .siteSegment-btn:active {
+        transform: scale(0.97);
+    }
+
+
+/* PANELS */
+
+.contractorSetup .employeeManualPanel-wrap {
+    position: relative;
+}
+
+.contractorSetup .employeeManualPanel {
+    display: none;
+    animation: employeePanelFade 0.28s ease;
+}
+
+    .contractorSetup .employeeManualPanel.active {
+        display: block;
+    }
+
+@keyframes employeePanelFade {
+
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* CARD */
+
+.contractorSetup .employeeManualPanel {
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+}
+
+
+/* HEADER */
+
+.contractorSetup .employeeManualPanel-header {
+    margin-bottom: 28px;
+}
+
+    .contractorSetup .employeeManualPanel-header h4 {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+
+    .contractorSetup .employeeManualPanel-header p {
+        margin: 0;
+        color: #888;
+    }
+

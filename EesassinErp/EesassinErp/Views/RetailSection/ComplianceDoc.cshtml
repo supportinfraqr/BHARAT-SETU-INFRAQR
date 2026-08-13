@@ -1,0 +1,310 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+
+
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+
+<script src="~/scripts/table2excel.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-beta.1/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#myDropdown').select2({
+            placeholder: "Select an option",
+            allowClear: true
+        });
+        $('#myDropdown').on('change', function () {
+            angular.element(this).triggerHandler('change');
+        });
+    });
+</script>
+<style>
+    /* width */
+    ::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    /* Track */
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    /* Handle */
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+    }
+
+        /* Handle on hover */
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    .form-select { 
+        line-height: 1.0 !important;
+      
+    }
+     
+</style>
+<style>
+
+    .dropdown-checkbox {
+        width: 200px;
+    }
+
+    .dropdown-menu {
+        position: relative;
+        width: 10%;
+        height: 248px;
+        font-size: smaller;
+        padding: 0;
+        overflow-y: scroll;
+        overflow-x: hidden;
+    }
+</style>
+<style>
+    .select2-selection__choice {
+        float: none !important;
+        display: inline-block !important;
+    }
+</style>
+<div class="pagecontentbody"> @*ng-init="BindExecuter()">*@
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+
+                    <strong class="text-success">Login As : {{IsExecuter}}</strong><br />
+                    <strong class="text-warning">Store Code : {{StoreCode}}</strong> &nbsp; <strong class="text-success">Last Update : {{LastUpdate}}</strong>
+                </div>
+                <div class="col-sm-3 text-end">
+                    <a class="btn btn-warning" ng-click="downloadAll();ManageLog('Download All in CompliaceDoc')"><span class="fas fa-download"></span>&nbsp;&nbsp;Download All</a>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-2">
+                    <div class="form-group" ng-init="AllState()">
+                        <label>State</label>
+
+                        <select id="ddlState" class="form-control form-select validate" ng-model="StateId" ng-change="BindStore()">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Store Code</label>
+
+                        <select id="myDropdown" class="form-control form-select validate" ng-change="BindAct(StoreId);SetStoreCode(StoreId)" ng-model="StoreId">
+                            <option value="">Select</option>
+                            <option ng-repeat="xx in StoreList" value="{{xx.StoreId}}"> {{xx.StoreCode}} </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Act</label>
+                        <label class="control-label"><input style="margin-left:10px" type="checkbox" id="allselectclient" ng-model="isChecked" ng-change="toggleSelectAll()" ng-checked="isChecked" />All</label>
+                        <button class="form-control form-select validate" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Select Act
+                        </button>
+                        <div class="dropdown-menu">
+                            <div ng-repeat="option in ActList" style="margin-left: 10px;">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="{{option.Act}}" ng-click="toggleSelection(option)" ng-checked="selectedOptions.indexOf(option) > -1">
+                                    <label class="form-check-label" for="{{option.Act}}">{{ option.Act }}</label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div class="col-md-2">
+                    <div class="form-group" ng-init="BindFinacialYear()">
+                        <label>Financial Year</label>
+                        <select class="form-control form-select validate" ng-model="FY">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in finacialyearList" value="{{x.FinancialName}}">{{x.FinancialName}}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" ng-init="BindMonth()">
+                        <label>Month</label>
+                        <select class="form-control form-select validate" ng-model="CMonth">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">{{x.MonthName}}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2" ng-init="BindOnlad()">
+                    <div class="form-group d-grid" ng-click="SearchRecord();ManageLog('Find compliance doc')">
+                        <label>&nbsp;</label>
+                        <a class="btn btn-warning" href="#">{{ButtonName}}</a>
+                    </div>
+                </div>
+                <div class="col-md-2" ng-if="openbutton==true">
+                    <div class="form-group d-grid" ng-show="forexecuter" ng-click="OpenPanel();ManageLog('Bulk Upload compliance doc')">
+                        <label>&nbsp;</label>
+                        <a class="btn btn-warning" href="#">Bulk Upload</a>
+
+                    </div>
+                </div>
+                <div class="col-md-4">
+
+                    <div id="IsOpenAct" style="display:none">Selected Act:</div>
+                    <ul>
+                        <li ng-repeat="option in selectedOptions">{{ option.Act }}</li>
+                    </ul>
+
+                </div>
+            </div>
+
+            <div class="col-md-12" ng-show="OpenBulkpannel">
+                <fieldset style="border:1px solid #999; border-radius:8px; box-shadow:0 0 8px #999;padding:6px;">
+                    <label class="btn btn-warning" style="float:right" ng-click="closePanel();ManageLog('Close compliance doc')">Close</label>
+
+                    <label class="btn btn-warning" style="float:left" ng-click="Redirecttoreport();ManageLog('Bulk file History compliance doc')">Bulk file History</label>
+                    <br />
+                    <legend style="text-align: left;">Bulk Upload (Step by Step)</legend>
+                    @*<label>&nbsp;Direction : </label><label>Click on Download Excel button</label>*@
+                    <a class="btn btn-warning" id="downloadLink" ng-click="ExistsFile();ManageLog('Download Excel compliance')">Download Excel</a><br />
+                    <label> Follow Some Step given below </label><br />
+                    <label>Step 1: Please save Download file,  Add filepath in excel, file save as "EXCEL 97-2003 WORKBOOK"</label><br />
+                    <label>Step 2: excel Sheet has name "Sheet1".</label>
+                    <br /><label>Step 3:  Upload All files. confirm your excel and files are in same folder.</label>
+                    <input type="file" id="file" name="file" multiple onchange="angular.element(document).scope().DisplayExcel(),angular.element(document).scope().setFile(this)" class="btn btn-warning" />
+                    <input type="button" ng-click="clicktoupload();ManageLog('Upload compliance doc')" value="Upload" class="btn btn-warning" />
+                    <div id="progress-bar"></div>
+                </fieldset>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <strong class="text-warning">Frequency</strong>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" ng-click="Filter('Monthly')">
+                        <a href="#" class="text-success"><b>Monthly</b></a>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" ng-click="Filter('Half Yearly')">
+                        <a href="#" class="text-success"><b>Half Yearly</b> </a>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" ng-click="Filter('Annually')">
+                        <a href="#" class="text-success"><b>Annually</b></a>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" ng-click="Filter('All')">
+                        <a href="#" class="text-success"><b>All</b></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-responsive nosearch" style="max-height: 310px;">
+                                <table id="example" class="display nowrap table table-bordred table-hover tableFixHead unittbl">
+                                    <thead>
+                                        <tr >
+                                            <th class="text-center">S.No.</th>
+                                            <th class="text-center">Default</th>
+                                            <th class="text-center">Act</th>
+                                            <th class="text-center">Document</th>
+                                            <th class="text-center">Form No</th>
+                                            <th class="text-center">Criticality</th>
+                                            <th class="text-center">Type</th>
+                                            <th class="text-center">Frequency</th>
+                                            <th class="text-center">Action</th>
+                                            <th class="text-center">Note</th>
+                                            <th class="text-center">Status</th>
+                                        </tr>
+                                        <tr ng-if="RetailDocumentList.length==0">
+                                            <td colspan="10" style="text-align: center;">No Record Found</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in RetailDocumentList">
+                                            <td class="text-center">{{x.SrNo}}</td>
+                                            <td class="text-center">
+            <input class="custchk" Id="checkbox{{$index}}" type="checkbox" ng-disabled="x.Status==0?true:false" checked />
+        </td>
+
+                                            <td class="text-center">{{x.ActId}}</td>
+                                            <td class="text-center">{{x.DocumentName}}</td>
+                                            <td class="text-center">{{x.FormNo}}</td>
+                                            <td class="text-center">{{x.Criticality}}</td>
+                                            <td class="text-center">{{x.DocumentType}}</td>
+                                            <td class="text-center">{{x.Frequency}}</td>
+
+                                            <td class="text-center">
+                                                <div id="{{'P'+$index}}"></div>
+                                                <input type="file" ng-if="x.Status==0 && IsExecuter=='Executer'" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().show(this,'aws')">
+                                                <a class="btn btn-warning" ng-if="x.Status==0 && IsExecuter=='Executer'" ng-click="ValidateFileDoc($index,x.FormatType,x.Id);ManageLog('Save compliance doc')">Save</a>
+                                                <a ng-if="x.Status==1"   href="#" ng-click="viewcsvFile(x.DocumentPath);ManageLog('View compliance doc : '+ x.DocumentName)" class="vdoc">View Doc</a>
+                                                <a ng-if="x.Status==1" href="{{x.DocumentPath}}" ng-click="ManageLog('Download compliance doc')" download><i class="fa fa-download"></i></a>
+                                            </td>
+                                            <td class="text-center">{{x.Note}}</td>
+                                            <td class="text-center"><p ng-if="x.Status==0">Pending</p><p ng-if="x.Status==1">Submitted</p></td>
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+                                <table id="example1" style="display:none">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">S.No.</th>
+                                            <th class="text-center">Act</th>
+                                            <th class="text-center">Document No</th>
+                                            <th class="text-center">Document</th>
+                                            <th class="text-center">Type</th>
+                                            <th class="text-center">Frequency</th>
+                                            <th class="text-center">FilePath</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in RetailDocumentList">
+                                            <td class="text-center">{{x.SrNo}}</td>
+                                            <td class="text-center">{{x.ActId}}</td>
+                                            <td class="text-center">{{x.DocId}}</td>
+                                            <td class="text  -center">{{x.DocumentName}}</td>
+                                            <td class="text-center">{{x.DocumentType}}</td>
+                                            <td class="text-center">{{x.Frequency}}</td>
+                                            <td class="text-center"></td>
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+                                <div style="display:none" class="input-box" id="wrapper">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/scripts/RetailJsLib/ComplianceDocController.js?Ver=@ViewBag.Version"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>

@@ -1,0 +1,330 @@
+﻿
+@{
+	ViewBag.Title = "Coummunication DashBoard";
+	Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+<link href="~/Content/css/webwhatsapp/web-css.css" rel="stylesheet" />
+@*<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">*@
+
+@*<script src="http://91.234.35.26/iwiki-admin/v1.0.0/admin/js/jquery.nicescroll.min.js"></script>*@
+<style>
+    .chat-flex {
+        display: flex;
+        width: 100%;
+    }
+
+    /* Left section */
+    .left-panel {
+        flex: 0 0 30%;
+        max-width: 30%;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    /* Right section */
+    .right-panel {
+        flex: 1 1 70%;
+        max-width: 70%;
+        transition: all 0.3s ease;
+    }
+
+    /* When collapsed */
+    .left-panel.collapsed {
+        flex-basis: 0 !important;
+        max-width: 0 !important;
+        width: 0 !important;
+        overflow: hidden;
+    }
+
+    /* Expand right panel */
+    .right-panel.expanded {
+        flex-basis: 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .collapse-toggle {
+        position: absolute;
+        left: 5px;
+        top: 10px;
+        background: #fd670b;
+        color: #fff;
+        padding: 5px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        z-index: 99999;
+    }
+
+    .left-panel.collapsed + .collapse-toggle i {
+        transform: rotate(180deg);
+    }
+
+
+</style>
+<script>
+    function toggleLeftPanel() {
+        const left = document.querySelector('.left-panel');
+        const right = document.querySelector('.right-panel');
+
+        left.classList.toggle('collapsed');
+        right.classList.toggle('expanded');
+    }
+</script>
+<script src="~/scripts/myjslib/VendorCommunicationController.js"></script>
+<div class="container-fluid">
+	<div class="chat">
+        <div class="chat-wrapper">
+            <div class="collapse-toggle" onclick="toggleLeftPanel()">
+                <i class="fa fa-chevron-left"></i>
+            </div>
+            <div class="row chat-flex" style="margin-top: 1.5%;">
+
+                <div class=" stretch-card left-panel">
+                    <div class="card w-100 left-card">
+                        <div class="card-body p-2">
+                            <div class="chatbox" ng-init="BindCommunication()">
+                                <select class="mb-3" ng-model="Controlbyuser" ng-change="BindControl()">
+                                    <option value="">Select</option>
+                                    <option value="0">Pending</option>
+                                    <option value="Draft">Draft</option>
+                                    <option value="1">Complete</option>
+                                </select>
+                                <input class="chatbox" ng-model="SearchCom" style="height: 37px;width: 66%;" ng-keyup="BindControl()" placeholder="Search" />
+                                <div class="chat-list-wrapper">
+                                    <ul class="chat-list">
+                                        <li class="new" ng-repeat="x in InvoiceList " ng-click="SetValues(x.ConversationId)">
+                                            <div class="body">
+                                                <div class="header">
+                                                    <span class="username">{{x.HeaderInvoice}} {{x.InvoiceNo}}</span>
+                                                    <small class="timestamp text-muted">
+                                                        <i class="fa fa-clock-o"></i>Last Update : {{x.UpdatedON}}
+                                                    </small>
+                                                </div>
+                                                <p>{{x.Name}}</p>
+                                                <p>Assign Date: {{x.CreatedOn}}</p>
+
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class=" stretch-card right-panel" ng-if="Controlbyuser==1">
+                    <div class="card w-100 complete-card" ng-show="ComFreeze">
+                        <div class="card-body p-2">
+                            <h6><strong>{{HeaderInvoice}}</strong> {{InvoiceNo}}</h6>
+                            <p><strong>{{WhichDate}}</strong> {{IDATE}}; <strong>Client Name:</strong> {{ClientName}}; <strong>Location:</strong> {{Location}}</p>
+                            <input id="download_all1" type='button' ng-click="downloadAll()" value="Download All Doc" />
+                            la
+                            <div class="invoice-table w-100">
+                                <!--<h6 class="text-left"> Invoice No. {{InvoiceNo}}</h6>-->
+                                <div class="doc-head">Documents</div>
+                                <div class="table-responsive fixed-height-table">
+                                    <table class="documents">
+                                        <thead>
+                                            <tr>
+                                                <th>S.No.</th>
+                                                <th>Default</th>
+                                                <th>Document Name</th>
+                                                <th>Type</th>
+                                                <th>Frequency</th>
+                                                <th>Mandatory Flag</th>
+                                                <th>Required Format</th>
+                                                <th>Note</th>
+                                                <th>View</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody ng-repeat="xx in InDocList">
+                                            <tr>
+                                                <td>{{xx.SRNO}} </td>
+                                                <td>
+                                                    <input type="checkbox" ng-checked="{{xx.IsDefault}}" />
+                                                </td>
+                                                <td><div style="width:200px !important">{{xx.DocumentName}}</div></td>
+                                                <td>{{xx.DocumentType}} </td>
+                                                <td>{{xx.Frequency}} </td>
+                                                <td>{{xx.Mandatory}}</td>
+                                                <td>{{xx.FormatType}}</td>
+                                                <td><div style="width:200px !important">{{xx.Note}}</div></td>
+                                                <td>
+                                                    <input type="file" ng-if="xx.Status==2" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InvoiceDetail[$index].fileupload">
+                                                    <input type="file" ng-if="xx.Status==3" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InvoiceDetail[$index].fileupload">
+                                                    <div ng-if="xx.Status==1">Approved</div>
+                                                    <div ng-if="xx.Status==0">Pending </div>
+                                                </td>
+                                                <td>
+                                                    <div><a target="_blank" ng-show="xx.IsUpload==1" href="{{xx.DocumentFile}}">View Doc</a></div>
+                                                    @*<div class="button" ng-click="ValidateFileDoc(xx.ConversationId,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index)">Upload</div>*@
+                                                    <div ng-if="xx.Status==2" class="btn btn-sm btn-primary" ng-click="ValidateFileDoc(xx.RegInvoiceNo,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index,xx.ConversationId)">Re-Upload</div>
+                                                    <div ng-if="xx.Status==3" class="btn btn-sm btn-primary" ng-click="ValidateFileDoc(xx.RegInvoiceNo,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index,xx.ConversationId)">New Req To Upload</div>
+                                                    <div ng-if="xx.Status==1">Approved</div>
+                                                    <div ng-if="xx.Status==0">Pending </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="compose-box" style="display:none">
+                                <textarea id="btn-input" class="form-control input-sm mb-2" ng-model="VendorMessage" placeholder="Type your message here..."></textarea>
+                                <div ng-click="SendMessage()"></div>
+                                <div class="btn btn-green btn-sm pull-right" ng-click="SendMessage()">Send</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class=" stretch-card right-panel" ng-if="Controlbyuser==0">
+                    <div class="card w-100 pending-card" ng-show="ComFreeze">
+                        <div class="card-body p-2">
+                            <h6><strong>{{HeaderInvoice}}</strong> {{InvoiceNo}}</h6>
+                            <p><strong>Pending:</strong> {{Pendding}}; <strong>Submit:</strong> {{Submit}}, <strong>Reject:</strong> {{Reject}}; <strong>New Req:</strong> {{NewReq}}; <strong>TotalDoc:</strong> {{TotalDoc}}</p>
+                            <p><strong>{{WhichDate}}</strong> {{IDATE}}; <strong>Client Name:</strong> {{ClientName}}; <strong>Location:</strong> {{Location}}</p>
+                            <input id="download_all2" type='button' ng-click="downloadAll()" value="Download All Doc" />
+                            la
+                            <div class="invoice-table w-100">
+                                <!--<h6 class="text-left"> Invoice No. {{InvoiceNo}}</h6>-->
+                                <div class="doc-head">Documents </div>
+                                <div class="table-responsive fixed-height-table">
+                                    <table class="documents">
+                                        <thead>
+                                            <tr>
+                                                <th>SNO</th>
+                                                <th>Default</th>
+                                                <th>DocumentName</th>
+                                                <th>Type</th>
+                                                <th>Frequency</th>
+                                                <th>Mandatory Flag</th>
+                                                <th>Required Format</th>
+                                                <th>Note</th>
+                                                <th>View</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody ng-repeat="xx in InDocList">
+                                            <tr>
+                                                <td>{{xx.SRNO}} </td>
+                                                <td>
+                                                    <input type="checkbox" ng-checked="{{xx.IsDefault}}" />
+                                                </td>
+                                                <td><div style="width:200px !important">{{xx.DocumentName}}</div></td>
+                                                <td>{{xx.DocumentType}} </td>
+                                                <td>{{xx.Frequency}} </td>
+                                                <td>{{xx.Mandatory}}</td>
+                                                <td>{{xx.FormatType}}</td>
+                                                <td><div style="width:200px !important">{{xx.Note}}</div></td>
+                                                <td>
+                                                    <input type="file" ng-if="xx.Status==2" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InvoiceDetail[$index].fileupload">
+                                                    <input type="file" ng-if="xx.Status==3" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InvoiceDetail[$index].fileupload">
+                                                    <div ng-if="xx.Status==1">Approved</div>
+                                                    <div ng-if="xx.Status==0">Pending </div>
+                                                </td>
+                                                <td>
+                                                    <div><a target="_blank" ng-show="xx.IsUpload==1" href="{{xx.DocumentFile}}">View Doc</a></div>
+
+                                                    @*<div class="button" ng-click="ValidateFileDoc(xx.ConversationId,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index)">Upload</div>*@
+                                                    <div ng-if="xx.Status==2" class="btn btn-sm btn-primary" ng-click="ValidateFileDoc(xx.RegInvoiceNo,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index,xx.ConversationId)">Re-Upload</div>
+                                                    <div ng-if="xx.Status==3" class="btn btn-sm btn-primary" ng-click="ValidateFileDoc(xx.RegInvoiceNo,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index,xx.ConversationId)">New Req To Upload</div>
+                                                    <div ng-if="xx.Status==1">Approved</div>
+                                                    <div ng-if="xx.Status==0">Pending </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-7">
+                                    <div class="message-list-wrapper">
+                                        <ul class="message-list">
+                                            <li class="text-center" style="display:none">
+                                                <a class="btn btn-default">Load More Messages</a>
+                                            </li>
+                                            <li class="{{AddClass}}" ng-repeat="xx in InList">
+                                                <h6>   {{xx.Conversation}}</h6>
+                                                <small class="timestamp">
+                                                    <i class="fa fa-clock-o"></i>{{xx.UpdatedON}}
+                                                </small>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="compose-box">
+                                        <textarea id="btn-input" class="form-control input-sm mb-2" ng-model="VendorMessage" placeholder="Type your message here..."></textarea>
+                                        <div ng-click="SendMessage()"></div>
+                                        <div class="btn btn-green btn-sm pull-right" ng-click="SendMessage()">Send</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                    <div class=" stretch-card right-panel" ng-if="Controlbyuser=='Draft'">
+                    <div class="card w-100 draft-card" ng-show="ComFreeze">
+                        <div class="card-body p-2">
+                            <h6><strong>{{HeaderInvoice}}</strong> {{InvoiceNo}}</h6>
+                            <p><strong>{{WhichDate}}</strong> {{IDATE}}; <strong>Client Name:</strong> {{ClientName}}; <strong>Location:</strong> {{Location}}</p>
+
+                            <p class="lbldayleft" ng-show="{{HeaderInvoice}}=='Unique No :'">{{DayLeft}}</p>
+                            <input id="download_all3" type='button' ng-click="downloadAll()" value="Download All Doc" />
+                            <div class="invoice-table w-100">
+                                <div class="my-1">
+                                    <div class="btn btn-green btn-sm" ng-click="ChkDefaultFile()">Send To Auditor</div>
+                                </div>
+                                <div class="doc-head">Documents </div>
+                                <div class="table-responsive fixed-height-table">
+                                    <table class="documents">
+                                        <thead>
+                                            <tr>
+                                                <th>SNO</th>
+                                                <th>Default</th>
+                                                <th>DocumentName</th>
+                                                <th>Type</th>
+                                                <th>Frequency</th>
+                                                <th>Mandatory Flag</th>
+                                                <th>Required Format</th>
+                                                <th>Note</th>
+                                                <th>View</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody ng-repeat="xx in InDocList">
+                                            <tr>
+                                                <td>{{xx.SRNO}} </td>
+                                                <td>
+                                                    <input type="checkbox" ng-checked="{{xx.IsDefault}}" ng-show="{{xx.IsDefault}}" onclick="return false" />
+                                                </td>
+                                                <td><div style="width:200px !important">{{xx.DocumentName}}</div></td>
+                                                <td>{{xx.DocumentType}} </td>
+                                                <td>{{xx.Frequency}} </td>
+                                                <td>{{xx.Mandatory}}</td>
+
+                                                <td>{{xx.FormatType}}</td>
+                                                <td><div style="width:200px !important">{{xx.Note}}</div></td>
+
+                                                <td>
+                                                    <input type="file" ng-disabled="{{TimeLeftMsg}}" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InvoiceDetail[$index].fileupload">
+                                                </td>
+                                                <td>
+                                                    <div><a target="_blank" ng-show="xx.IsUpload==1" href="{{xx.DocumentFile}}">View Doc</a></div>
+                                                    <div ng-hide="{{TimeLeftMsg}}" class="btn btn-sm btn-primary" ng-click="ValidateFileDoc(xx.RegInvoiceNo,xx.SRNO,xx.DocumentName,xx.DocumentId,xx.FormatType,$index,xx.ConversationId)">Upload</div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+</div>

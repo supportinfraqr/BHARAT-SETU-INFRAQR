@@ -1,0 +1,1010 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Job History";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/RozgarController.js"></script>
+<link href="~/Content/Dashboards/Rozgar/ContractorRozgar/JobHistory/style.css" rel="stylesheet" />
+<style>
+
+    /*here is new css class*/
+    .inactive {
+        color: #EA580C;
+        background: #fbd8d8;
+    }
+    .new1 {
+        color: #1d783c;
+        background: #dcfce7;
+    }
+    /*------View More Modal-----*/
+    .workerRozgarViewMoreModal .modal-content {
+        border: none;
+        border-radius: 24px;
+        overflow: hidden;
+    }
+
+    .workerRozgarViewMoreModal .modal-header {
+        /*padding: 18px 24px;*/
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .workerRozgarViewMoreModal .modal-title {
+        font-weight: 500;
+    }
+
+    .workerRozgarViewMoreModal .modal-body {
+        /*max-height: 80vh;*/
+        overflow-y: auto;
+        padding: 24px;
+        background: #fff;
+    }
+
+    /* ===================================
+   MODAL GRID
+=================================== */
+
+    .workerRozgarJobModalWrapper {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* ===================================
+   COMMON CARD
+=================================== */
+
+    .workerRozgarModalCard,
+    .workerRozgarEmployerCard,
+    .workerRozgarModalTopCard,
+    .workerRozgarSimilarRoles {
+        background: var(--card-bg);
+        border: 1px solid #E5E7EB;
+        border-radius: 20px;
+        padding: 14px;
+    }
+
+        .workerRozgarModalCard h4,
+        .workerRozgarEmployerCard h4,
+        .workerRozgarSimilarRoles h4 {
+            font-size: 20px;
+            margin-bottom: 18px;
+            font-weight: 500;
+        }
+
+    /* ===================================
+   TOP CARD
+=================================== */
+
+    .workerRozgarModalTopCard {
+        grid-column: span 2;
+    }
+
+    .workerRozgarModalTopContent {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .workerRozgarModalJobIcon {
+        width: 54px;
+        height: 54px;
+        border: 1px solid #D8D8D8;
+        border-radius: 12px;
+        display: flex;
+        background: #022B5E20;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        font-size: 22px;
+    }
+
+    .workerRozgarModalJobInfo {
+        flex: 1;
+    }
+
+        .workerRozgarModalJobInfo h2 {
+            font-size: 26px;
+            margin-bottom: 4px;
+        }
+
+    .workerRozgarModalCompany {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        color: #666;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .workerRozgarModalPosted {
+        color: #777;
+        font-size: 14px;
+    }
+
+    .workerRozgarModalActions {
+        display: flex;
+        flex: 0.2;
+        gap: 10px;
+    }
+
+    .workerRozgarModalStats {
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid #ECECEC;
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 20px;
+    }
+
+        .workerRozgarModalStats label {
+            display: block;
+            text-transform: uppercase;
+            font-size: 12px;
+            color: #9CA3AF;
+            margin-bottom: 4px;
+        }
+
+        .workerRozgarModalStats span {
+            display: block;
+            font-weight: 500;
+            font-size: 18px;
+        }
+
+        .workerRozgarModalStats small {
+            display: block;
+            color: #6B7280;
+            font-size: 0.75rem;
+        }
+
+    .workerRozgarUrgentTag {
+        display: inline-block !important;
+        background: #FFB4B44D;
+        color: #AC2F01 !important;
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
+
+
+    /* ===================================
+   EMPLOYER
+=================================== */
+    .workerRozgarEmployerInfo {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .workerRozgarEmployerIcon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #022B5E20;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .workerRozgarEmployerDesc {
+        color: #555;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    /* ===================================
+   JOB DESCRIPTION
+=================================== */
+
+    .workerRozgarJobDesc p {
+        font-size: 14px
+    }
+
+    /* ===================================
+   SKILLS
+=================================== */
+
+    .workerRozgarSkillTags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+        .workerRozgarSkillTags span {
+            background: #F3F4F6;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+        }
+
+    /* ===================================
+   SIMILAR ROLES
+=================================== */
+
+    .workerRozgarSimilarCard {
+        background: #FAFAFA;
+        border-radius: 12px;
+        padding: 12px;
+    }
+
+        .workerRozgarSimilarCard + .workerRozgarSimilarCard {
+            margin-top: 12px;
+        }
+
+        .workerRozgarSimilarCard h5 {
+            font-size: 16px;
+        }
+
+        .workerRozgarSimilarCard p {
+            font-size: 14px;
+        }
+
+        .workerRozgarSimilarCard span {
+            font-size: 14px;
+        }
+
+
+    /* ===================================
+   PROJECT
+=================================== */
+
+    .workerRozgarProjectItem {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+        .workerRozgarProjectItem i {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .workerRozgarProjectItem strong {
+            display: block;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .workerRozgarProjectItem span {
+            display: block;
+            color: #666;
+            font-size: 14px;
+        }
+
+    /* ===================================
+   BENEFITS
+=================================== */
+
+    .workerRozgarBenefitItem {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #FFF;
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+    }
+
+        .workerRozgarBenefitItem i {
+            color: var(--primary);
+        }
+
+    /* ===================================
+   RESPONSIVE
+=================================== */
+
+    @@media (max-width: 1199px) {
+
+        .workerRozgarJobModalWrapper {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .workerRozgarModalTopCard {
+            grid-column: span 2;
+        }
+    }
+
+    @@media (max-width: 767px) {
+
+        .workerRozgarJobModalWrapper {
+            grid-template-columns: 1fr;
+        }
+
+        .workerRozgarModalTopCard {
+            grid-column: auto;
+        }
+
+        .workerRozgarModalStats {
+            grid-template-columns: repeat(2,1fr);
+        }
+
+        .workerRozgarModalTopContent {
+            flex-direction: column;
+        }
+
+        .workerRozgarModalActions {
+            width: 100%;
+        }
+
+            .workerRozgarModalActions button {
+                flex: 1;
+            }
+    }
+
+    .workerRozgarApplyBtn {
+        flex: 1;
+        height: 32px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: .25s ease;
+    }
+
+    .workerRozgarApplyBtn {
+        border: none;
+        background: var(--primary);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+        .workerRozgarApplyBtn:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+</style>
+<div class="jobHistoryPage px-4 py-4">
+    <div class="jobHistoryPageHero">
+        <div>
+            <h1 class="jobHistoryPageHeroTitle">
+                Job History & Analytics
+            </h1>
+        </div>
+
+        <div>
+            <a href="../Rozgar/PostNewJob" class="jobHistoryPageHeroButton" style="text-decoration:none;">
+                <i class="bi bi-plus-lg"></i>
+                <span>Post a New Job</span>
+            </a>
+        </div>
+
+    </div>
+
+    <div class="jobHistoryPageStats">
+        <div class="jobHistoryPageStatCard">
+            <div class="jobHistoryPageStatLabel">Total Job Posted</div>
+            <div class="jobHistoryPageStatValue">{{TotalPost || '0'}}</div>
+        </div>
+
+        <div class="jobHistoryPageStatCard">
+            <div class="jobHistoryPageStatLabel">Total Applications</div>
+            <div class="jobHistoryPageStatValue">{{Totalapplication || '0'}}</div>
+        </div>
+
+        <div class="jobHistoryPageStatCard">
+            <div class="jobHistoryPageStatLabel">Total Hires</div>
+            <div class="jobHistoryPageStatValue">{{TotalHires || '0'}}</div>
+        </div>
+
+    </div>
+
+    <!-- ===================================================
+        FILTERS + TABLE
+    =================================================== -->
+
+    <div class="jobHistoryPageContent">
+
+        <!-- Toolbar -->
+
+        <div class="jobHistoryPageToolbar">
+
+            <div class="jobHistoryPageSearch">
+
+                <i class="bi bi-search"></i>
+
+                <input type="text" ng-model="Search"
+                       placeholder="Search by job title..." />
+
+            </div>
+
+            <div class="jobHistoryPageToolbarActions">
+
+                <button class="jobHistoryPageFilterBtn" hidden>
+
+                    <i class="bi bi-calendar3"></i>
+
+                    <span>Last 30 Days</span>
+
+                </button>
+
+                <button class="jobHistoryPageFilterIcon" hidden>
+
+                    <i class="bi bi-funnel"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Table -->
+
+        <div class="jobHistoryTableWrapper">
+
+            <div class="jobHistoryTable">
+
+                <!-- Header -->
+
+                <div class="jobHistoryTableHeader" ng-init="BindJobHistory()">
+
+                    <div>Job Title</div>
+                    <div>Date Posted</div>
+                    <div>Status</div>
+                    <div hidden>Views</div>
+                    <div>Applicants</div>
+                    <div>Hires</div>
+                    <div>Actions</div>
+                </div>
+
+                <!-- Row 1 -->
+
+                <div class="jobHistoryTableRow" ng-repeat="s in JobHistory | filter:Search">
+                    <div class="jobHistoryJobTitle">
+                        {{s.JobTitle}}
+                    </div>
+                    <div>{{s.PostedDT}}</div>
+
+                    <div>
+                        <span class="jobHistoryStatus"
+                              ng-class="{'active': s.Status == 'Active','inactive': s.Status != 'Active'}">
+                            {{s.Status}}
+                        </span>
+                    </div>
+                    <div>
+                        <a href="javascript:void(0)"
+                           data-bs-toggle="modal"
+                           data-bs-target="#jobApplicantsModal"
+                           class="jobHistoryApplicantsLink"
+                           ng-click="s.Applicants > 0 && GetApplicantDetail(s.JobNo, s.JobTitle, s.PostedDT, s.Status)">
+                            {{s.Applicants}}
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+
+                    </div>
+
+                    <div>{{s.Hires}}</div>
+
+                    <div>
+
+                        <button class="jobHistoryViewBtn" ng-click="closepost(s.JobNo,4)">
+                            @*<i class="bi bi-eye"></i>*@
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+
+        <div class="jobHistoryPageBottom">
+
+            <div class="jobHistoryResultCount">
+                Showing {{record}} out of {{TotalPost}} jobs
+            </div>
+
+            <nav>
+                <ul class="pagination jobHistoryPagePagination mb-0">
+                    <li class="page-item active">
+                        <a class="page-link" href="#">
+                            View All
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+        </div>
+
+    </div>
+
+
+    <!-- Modal for applicants and view button -->
+    <div class="modal fade jobApplicantsModal"
+         id="jobApplicantsModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-fullscreen modal-dialog-centered modal-dialog-scrollable">
+
+            <div class="modal-content">
+
+                <!-- Header -->
+
+                <div class="modal-header border-0">
+
+                    <div>
+
+                        <h3 class="jobApplicantsModalTitle">
+                            {{title}}
+                        </h3>
+
+                        <div class="jobApplicantsModalMeta">
+
+                            <span>
+                                <i class="bi bi-calendar-event"></i>
+                                {{postdays}}
+                            </span>
+
+                            <span class="jobApplicantsStatus">
+                                {{poststatus}}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- Stats -->
+
+                    <div class="jobApplicantsStats">
+
+                        <div class="jobApplicantsStatCard">
+
+                            <div class="jobApplicantsStatLabel">
+                                Total Applicants
+                            </div>
+
+                            <div class="jobApplicantsStatValue">
+                                {{TotalApplication || '0'}}
+                            </div>
+
+                        </div>
+
+                        <div class="jobApplicantsStatCard">
+
+                            <div class="jobApplicantsStatLabel">
+                                Hired
+                            </div>
+
+                            <div class="jobApplicantsStatValue">
+                                {{TotalHires || '0'}}
+                            </div>
+
+                        </div>
+
+                        <div class="jobApplicantsStatCard">
+
+                            <div class="jobApplicantsStatLabel">
+                                Under Review
+                            </div>
+
+                            <div class="jobApplicantsStatValue">
+                                {{UnderProcess || '0'}}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Toolbar -->
+
+                    <div class="jobApplicantsToolbar">
+
+                        <div class="jobApplicantsSearch">
+
+                            <i class="bi bi-search"></i>
+
+                            <input type="text" ng-model="mSearch"
+                                   placeholder="Search by name, experience, or location..." />
+
+                        </div>
+
+                        <div class="jobApplicantsToolbarRight" hidden>
+
+                            <button class="jobApplicantsFilterBtn">
+
+                                <i class="bi bi-funnel"></i>
+
+                                Filter
+
+                            </button>
+
+                            <button class="jobApplicantsExportBtn">
+
+                                Export List
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Table -->
+
+                    <div class="jobApplicantsTableWrapper">
+
+                        <table class="table align-middle mb-0 jobApplicantsTable" ng-init="GetApplicantDetail()">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>Candidate Name</th>
+                                    <th>Experience</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                <tr ng-repeat="ap in ApplicantDetail | filter:mSearch">
+
+                                    <td>
+
+                                        <div class="jobApplicantsCandidate">
+
+                                            @*<img src="https://i.pravatar.cc/60?img=11" alt="">*@
+
+                                            <div>
+
+                                                <div class="jobApplicantsCandidateName">
+                                                    {{ap.Fullname}}
+                                                </div>
+
+                                                <div class="jobApplicantsCandidateMeta">
+                                                    {{ap.Appdt}}
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    <td> {{ap.Experience}}</td>
+
+                                    <td> {{ap.CurrentLocation}}</td>
+
+                                    <td>
+                                        <span class="jobHistoryStatus"
+                                              ng-class="{'active': ap.Status == 'Active','inactive': ap.Status != 'Active'}">
+                                              {{ap.Status}}
+                                        </span>
+                                    </td>
+
+                                    <td>
+
+                                        <div class="jobApplicantsActions">
+
+                                            <button class="acceptBtn" ng-click="UpdatePostFlag(ap.id,ap.jobno,1)" hidden>
+                                                <i class="bi bi-check-circle"></i>
+                                            </button>
+
+                                            <button class="holdBtn" ng-click="UpdatePostFlag(ap.id,ap.jobno,3)">
+                                                <i class="bi bi-pause-circle"></i>
+                                            </button>
+
+                                            <button class="rejectBtn" ng-click="closejobpost(ap.id,ap.jobno,4)">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+
+                                            <button class="viewBtn" data-bs-toggle="modal" data-bs-target="#workerRozgarViewMoreModal" ng-click="Searchbyjobno(ap.jobno)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                                <tr ng-if="ApplicantDetail.length == 0">
+                                    <td colspan="5" class="text-center">
+                                        Record Not Found
+                                    </td>
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    <!-- Footer -->
+
+                    <div class="jobApplicantsFooter">
+
+                        <div>
+                            @*Showing 1 to 10 of 32 Applicants*@
+                        </div>
+
+                        <nav>
+                            <ul class="pagination jobApplicantsPagination mb-0" hidden>
+
+                                <li class="page-item">
+                                    <a class="page-link" href="#">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+
+                                <li class="page-item active">
+                                    <a class="page-link" href="#">1</a>
+                                </li>
+
+                                <li class="page-item">
+                                    <a class="page-link" href="#">2</a>
+                                </li>
+
+                                <li class="page-item">
+                                    <a class="page-link" href="#">3</a>
+                                </li>
+
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">...</a>
+                                </li>
+
+                            </ul>
+                        </nav>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- View More Modal-->
+    <div class="modal fade workerRozgarViewMoreModal"
+         id="workerRozgarViewMoreModal"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-fullscreen">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Job Details
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="workerRozgarJobModalWrapper">
+
+                        <!-- TOP SECTION -->
+
+                        <div class="workerRozgarModalTopCard">
+
+                            <div class="d-flex justify-content-between">
+                                <div class="workerRozgarModalTopContent">
+
+                                    <div class="workerRozgarModalJobIcon">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+
+                                    <div class="workerRozgarModalJobInfo">
+
+                                        <h2>{{JobDetail.JobTitle}}</h2>
+
+                                        <div class="workerRozgarModalCompany">
+                                            <span>{{JobDetail.PartyName}}</span>
+                                            <span>
+                                                <i class="bi bi-geo-alt"></i>
+                                                {{JobDetail.Location}}
+                                            </span>
+                                        </div>
+
+                                        <div class="workerRozgarModalPosted">
+                                            <i class="bi bi-clock"></i>
+                                            {{JobDetail.Posteddt}}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="workerRozgarModalActions">
+
+                                    <button class="workerRozgarApplyBtn" ng-disabled="true" >
+                                        Applied
+                                    </button>
+
+                                    @*<button class="workerRozgarSaveBtn">
+                                            <i class="bi bi-bookmark"></i>
+                                        </button>*@
+
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarModalStats">
+
+                                <div>
+                                    <label>Salary</label>
+                                    <span>₹ {{JobDetail.MinSallery}} - {{JobDetail.MaxSallery}}/Annum</span>
+                                    @*<small>per month</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Experience</label>
+                                    <span>{{JobDetail.Experience}}</span>
+                                    @*<small>Senior Level</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Job Type</label>
+                                    <span>Full-time</span>
+                                    @*<small class="workerRozgarUrgentTag">Urgent</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Project</label>
+                                    <span>12 Months</span>
+                                    @*<small>Extendable</small>*@
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- EMPLOYER -->
+
+                        <div class="workerRozgarEmployerCard" hidden>
+
+                            <h4>About Employer</h4>
+
+                            <div class="workerRozgarEmployerInfo">
+
+                                <div class="workerRozgarEmployerIcon">
+                                    <i class="bi bi-tools"></i>
+                                </div>
+
+                                <div>
+                                    <h5 style="font-size: 18px; margin-bottom: 0;">{{PricipleEmployer.partyname}}</h5>
+                                    <p style="font-size: 14px; margin-bottom: 0;">{{PricipleEmployer.Industry}}</p>
+                                </div>
+
+                            </div>
+
+                            <p class="workerRozgarEmployerDesc">
+                                {{PricipleEmployer.Address}}
+                            </p>
+
+                        </div>
+
+                        <!-- JOB DESCRIPTION -->
+
+                        <div class="workerRozgarModalCard workerRozgarJobDesc">
+
+                            <h4>Job Description</h4>
+
+                            <p>
+                                {{JobDetail.Description}}
+                            </p>
+                        </div>
+
+                        <!-- SKILLS -->
+
+                        <div class="workerRozgarModalCard">
+
+                            <h4>Technical Skills</h4>
+
+                            <div class="workerRozgarSkillTags">
+                                {{JobDetail.RequiredSkills}}
+
+                            </div>
+
+                        </div>
+
+                        <!-- SIMILAR ROLES -->
+
+                        <div class="workerRozgarSimilarRoles" hidden>
+
+                            <h4>Similar Roles</h4>
+
+                            <div class="workerRozgarSimilarCard">
+                                <h5>{{JobDetail.JobTitle}}</h5>
+                                <p>• {{JobDetail.Location}}</p>
+                                <span>₹ {{JobDetail.MinSallery}} - {{JobDetail.MaxSallery}}/Annum</span>
+                            </div>
+
+                            @*<div class="workerRozgarSimilarCard">
+                                    <h5>Senior Mechanical Fitter</h5>
+                                    <p>Shapoorji Pallonji • Greater Noida</p>
+                                    <span>₹32k - 40k</span>
+                                </div>*@
+
+                        </div>
+
+                        <!-- PROJECT DETAILS -->
+
+                        <div class="workerRozgarModalCard">
+
+                            <h4>Project Details</h4>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-calendar-check"></i>
+                                <div>
+                                    <strong>Duration</strong>
+                                    <span>12 Months (Fixed-term Contract)</span>
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-clock"></i>
+                                <div>
+                                    <strong>Shift Timing</strong>
+                                    <span>9:00 AM – 6:00 PM (Mon - Sat)</span>
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-building"></i>
+                                <div>
+                                    <strong>Site Type</strong>
+                                    <span>Commercial High-Rise Construction</span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- BENEFITS -->
+
+                        <div class="workerRozgarModalCard workerRozgarBenefitsCard">
+
+                            <h4>Benefits</h4>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-shield-check"></i>
+                                Comprehensive Health Insurance
+                            </div>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-house"></i>
+                                On-site Bachelor Accommodation
+                            </div>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-cash-coin"></i>
+                                Overtime Pay & Performance Bonus
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>

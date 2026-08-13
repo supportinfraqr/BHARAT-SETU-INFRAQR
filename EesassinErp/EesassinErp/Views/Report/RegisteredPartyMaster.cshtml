@@ -1,0 +1,119 @@
+﻿@{
+    ViewBag.Title = "Registered Party Report";
+    ViewBag.TitleList = "Registered Party Report";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+ 
+<script src="~/Scripts/myjslib/PartyReportController.js?Ver=@ViewBag.Version"></script>
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Mapping Report</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12 ">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Master</span></a></li>
+                <li><a href="#"><span>Report</span></a></li>
+                <li class="active"><span>Mapping Report</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="section-toggle">
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Client</label>
+                                                <div class="input-box">
+                                                    <select id="ddlClientId" autocomplete='address-level2' class="select2 form-control" 
+                                                            ng-init="BindClient()" ng-change="BindClientSite()" ng-model="ClientId">
+                                                        <option value="">Select Site</option>
+                                                        <option ng-repeat="x in  AllPartyCList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Client Site</label>
+                                                <div class="input-box">
+                                                    <select id="ddlClientSite" autocomplete='address-level2' class="select2 form-control" ng-change="BindClientSite()"  ng-model="ClientSiteId">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in  AllPartySiteCList" value="{{x.SiteId}}">{{x.SiteName}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Vendor</label>
+                                                <div class="input-box">
+                                                    <select id="ddlVendor" autocomplete='address-level2' class="select2 form-control" ng-init="BindVendor()" ng-disabled="isvendirhide" ng-model="VendorId">
+                                                        <option value="">Select Vendor</option>
+                                                        <option ng-repeat="x in AllPartySiteVList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                                    </select> 
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15"  ng-init="Setuser()">
+                                                <label class="control-label">Auditor</label>
+                                                <div class="input-box">
+                                                    <select id="ddlAuditor" autocomplete='address-level2' class="select2 form-control" ng-change="SaveAfterValidate();" ng-disabled="isauditorhide" ng-init="BindAuditor()" ng-model="AuditorId">
+                                                        <option value="">Select Auditor</option>
+                                                        <option ng-repeat="x in AllPartySiteAList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                @Html.Partial("ActionSearch")
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding report-box">
+                                    <div class="arrow-container animated fadeInDown filter-toggle " ng-click="FilterToggle()">
+                                        <div class="arrow-2">
+                                            <i class="fa fa-angle-down"></i>
+                                        </div>
+                                        <div class="arrow-1 animated hinge infinite zoomIn"></div>
+                                    </div>
+                                    @Html.Partial("GeneralReportGrid")
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>

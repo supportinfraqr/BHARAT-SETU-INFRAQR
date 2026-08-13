@@ -1,0 +1,605 @@
+﻿.workerGrievancesDetails {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #fff;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ==========================================
+   PAGE TITLE
+========================================== */
+
+.workerGrievancesDetailsPageTitle {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 1.75rem;
+    line-height: 1;
+    color: #111827;
+}
+
+/* ==========================================
+   LAYOUT
+========================================== */
+
+.workerGrievancesDetailsLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) 380px;
+    gap: 10px;
+    align-items: start;
+}
+
+.workerGrievancesDetailsLeft,
+.workerGrievancesDetailsRight {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ==========================================
+   CARDS
+========================================== */
+
+.workerGrievancesDetailsCard {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+.workerGrievancesDetailsCardTitle {
+    color: var(--primary);
+    font-size: .95rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+/* ==========================================
+   WORKER DETAILS
+========================================== */
+
+.grievancesWorkerGrid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 1rem;
+    background: #F6F9FC;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.grievancesWorkerItem {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+}
+
+    .grievancesWorkerItem span {
+        font-size: 0.8rem;
+        color: #64748B;
+        font-weight: 500;
+    }
+
+    .grievancesWorkerItem strong {
+        font-size: 1rem;
+        color: #1F2937;
+        font-weight: 500;
+    }
+
+/* ==========================================
+   DESCRIPTION
+========================================== */
+
+.grievancesProblemText {
+    margin: 0;
+    /*line-height: 1.9;*/
+    color: #374151;
+    font-size: .95rem;
+}
+
+/* ==========================================
+   AUDIO PLAYER
+========================================== */
+
+.grievancesAudioPlayer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #F6F9FC;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.grievancesAudioPlayBtn,
+.grievancesAudioVolumeBtn {
+    border: none;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: white;
+    background: var(--primary);
+}
+
+.grievancesAudioPlayBtn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    font-size: 1.25rem;
+}
+
+.grievancesAudioVolumeBtn {
+    background: transparent;
+    color: var(--primary);
+    font-size: 1.3rem;
+}
+
+.grievancesAudioContent {
+    flex: 1;
+}
+
+.grievancesAudioName {
+    font-weight: 500;
+    margin-bottom: .75rem;
+    color: #1F2937;
+}
+
+.grievancesAudioProgress {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #D8E0EA;
+}
+
+.grievancesAudioProgressFill {
+    width: 35%;
+    height: 100%;
+    background: var(--primary);
+}
+
+.grievancesAudioTime {
+    white-space: nowrap;
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: #374151;
+}
+
+/* ==========================================
+   ATTACHMENTS
+========================================== */
+
+.grievancesAttachmentsGrid {
+    margin-top: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(3, 190px);
+    gap: 1rem;
+}
+
+.grievancesAttachmentCard,
+.grievancesAttachmentMore {
+    height: 120px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+    .grievancesAttachmentCard img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.grievancesAttachmentMore {
+    border: 1px solid var(--border);
+    background: #F8F9Fd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    cursor: pointer;
+}
+
+    .grievancesAttachmentMore i {
+        color: var(--primary);
+        font-size: 1.5rem;
+    }
+
+    .grievancesAttachmentMore span {
+        font-weight: 500;
+        color: #374151;
+    }
+
+/* ==========================================
+   ACTION BUTTON
+========================================== */
+
+.grievancesActionBtnWrapper {
+    display: flex;
+}
+
+.grievancesAddActionBtn {
+    border: none;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    padding: .25rem 0.8rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    transition: .25s;
+}
+
+    .grievancesAddActionBtn:hover {
+        background: var(--primary-dark);
+    }
+
+/* ==========================================
+   ACTION CARD
+========================================== */
+
+.grievancesActionTextarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    border: 1px solid #E6EAF0;
+    border-radius: 12px;
+    padding: 1rem;
+    outline: none;
+    background: #FAFBFC;
+}
+
+    .grievancesActionTextarea:focus {
+        border-color: var(--primary);
+    }
+
+.grievancesActionFooter {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    gap: 5px;
+}
+
+.grievancesSubmitBtn {
+    border: none;
+    background: var(--primary);
+    color: white;
+    border-radius: 14px;
+    padding: .25rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+    .grievancesSubmitBtn:hover {
+        background: var(--primary-dark);
+    }
+
+/* ==========================================
+   RIGHT SIDE
+========================================== */
+
+.workerGrievancesDetailsRight {
+    position: sticky;
+    top: 20px;
+}
+
+/* ==========================================
+   TRAIL
+========================================== */
+
+.grievancesTrailBody {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: .25rem;
+}
+
+.grievancesTimeline {
+    position: relative;
+}
+
+.grievancesTimelineItem {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 2rem;
+}
+
+    .grievancesTimelineItem::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 18px;
+        width: 2px;
+        height: calc(100% - 2px);
+        background: #D8E0EA;
+    }
+
+    .grievancesTimelineItem:last-child::after {
+        display: none;
+    }
+
+.grievancesTimelineDot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.completed .grievancesTimelineDot {
+    background: #16A34A;
+}
+
+.active .grievancesTimelineDot {
+    background: var(--primary);
+}
+
+.grievancesTimelineContent h5 {
+    margin: 0 0 .25rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.grievancesTimelineDate {
+    display: block;
+    color: var(--primary);
+    font-size: .85rem;
+    margin-bottom: .2rem;
+}
+
+.grievancesAssignedTo {
+    display: block;
+    font-size: .85rem;
+    font-style: italic;
+    margin-bottom: .2rem !important;
+}
+
+.grievancesBadge {
+    display: inline-block;
+    background: #E8F7ED;
+    color: #15803D;
+    padding: .2rem .4rem;
+    border-radius: 6px;
+    font-size: .7rem;
+    font-weight: 500;
+}
+
+.grievancesNextActionBox {
+    margin-top: .75rem;
+    background: #F8FAFC;
+    border: 1px solid #E4D3CA;
+    border-radius: 10px;
+    padding: .75rem;
+}
+
+    .grievancesNextActionBox small {
+        display: block;
+        color: var(--primary);
+        font-weight: 700;
+        margin-bottom: .35rem;
+    }
+
+    .grievancesNextActionBox p {
+        margin: 0;
+    }
+
+/* ==========================================
+   DISCUSSION
+========================================== */
+
+.grievancesDiscussionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.grievancesPrivateBadge {
+    background: #16A34A;
+    color: white;
+    font-size: .6rem;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+.grievancesDiscussionBody {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: .35rem;
+    margin-bottom: 1rem;
+}
+
+.grievancesMessageWrapper {
+    margin-bottom: 1rem;
+}
+
+.grievancesMessageSender {
+    font-size: .7rem;
+    color: #6B7280;
+    margin-bottom: .2rem;
+}
+
+.grievancesReceivedMessage,
+.grievancesSentMessage {
+    max-width: 85%;
+    padding: .4rem 0.8rem;
+    border-radius: 14px;
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.grievancesReceivedMessage {
+    background: #F4F4F5;
+}
+
+.grievancesSentWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.grievancesSentMessage {
+    background: var(--primary);
+    color: white;
+}
+
+.grievancesMessageTime {
+    margin-top: .2rem;
+    font-size: .7rem;
+    color: #9CA3AF;
+}
+
+.grievancesDiscussionFooter {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    border-top: 1px solid #E5E7EB;
+    padding-top: 1rem;
+}
+
+.grievancesCommentInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: #F4F6FB;
+    border-radius: 999px;
+    padding: 0.6rem .8rem;
+    font-size: 0.95rem;
+}
+
+.grievancesAttachBtn,
+.grievancesSendBtn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.grievancesAttachBtn {
+    background: #F4F6FB;
+    color: #6B7280;
+}
+
+.grievancesSendBtn {
+    background: var(--primary);
+    color: white;
+}
+
+/* ==========================================
+   SCROLLBAR
+========================================== */
+
+.grievancesTrailBody::-webkit-scrollbar,
+.grievancesDiscussionBody::-webkit-scrollbar {
+    width: 6px;
+}
+
+.grievancesTrailBody::-webkit-scrollbar-thumb,
+.grievancesDiscussionBody::-webkit-scrollbar-thumb {
+    background: #D5D9E0;
+    border-radius: 999px;
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media (max-width: 1399px) {
+
+    .workerGrievancesDetailsLayout {
+        grid-template-columns: minmax(0, 1.7fr) 350px;
+    }
+}
+
+@media (max-width: 1199px) {
+
+    .workerGrievancesDetailsLayout {
+        grid-template-columns: 1fr;
+    }
+
+    .workerGrievancesDetailsRight {
+        position: static;
+    }
+
+    .grievancesTrailBody {
+        max-height: 280px;
+    }
+
+    .grievancesDiscussionBody {
+        max-height: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .grievancesWorkerGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .grievancesAttachmentsGrid {
+        grid-template-columns: repeat(2,1fr);
+    }
+
+    .grievancesAttachmentCard,
+    .grievancesAttachmentMore {
+        width: 100%;
+    }
+
+    .grievancesAudioPlayer {
+        flex-wrap: wrap;
+    }
+
+    .grievancesAudioContent {
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+
+    .workerGrievancesDetails {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .workerGrievancesDetailsPageTitle {
+        font-size: 1.5rem;
+    }
+
+    .grievancesAttachmentsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .grievancesDiscussionFooter {
+        gap: .5rem;
+    }
+
+    .grievancesCommentInput {
+        min-width: 0;
+    }
+
+    .grievancesReceivedMessage,
+    .grievancesSentMessage {
+        max-width: 100%;
+    }
+}

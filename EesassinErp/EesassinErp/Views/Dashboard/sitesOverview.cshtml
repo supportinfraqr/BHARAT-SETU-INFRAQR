@@ -1,0 +1,1377 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Sites Overview";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Dashboards/SitesOverview/style.css" rel="stylesheet" />
+<script src="~/Dashboards/SitesOverview/script.js"></script>
+
+<div class="sitesOverview px-4 py-3">
+
+    <!-- PAGE HEADER -->
+    <div class="sitesOverviewHeader">
+
+        <div>
+            <h2 class="sitesOverviewTitle">Sites Overview</h2>
+            <p class="sitesOverviewSubTitle">
+                All construction sites and projects
+            </p>
+        </div>
+
+        <!-- VIEW TOGGLE -->
+        <div class="viewToggleWrapper">
+
+            <button class="viewToggleBtn active" data-view="grid">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+            </button>
+
+            <button class="viewToggleBtn" data-view="table">
+                <i class="bi bi-list-ul"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- GRID VIEW -->
+    <div class="sitesGridView activeView">
+
+        <div class="sitesGrid">
+
+            @for (int i = 0; i < 12; i++)
+            {
+                <div class="siteOverviewCard">
+
+                    <!-- HEADER -->
+                    <div class="siteOverviewCardHeader">
+
+                        <div class="siteOverviewIcon">
+                            <i class="bi bi-buildings"></i>
+                        </div>
+
+                        <div class="flex-grow-1">
+                            <h4>Construction Site A</h4>
+
+                            <p>
+                                <i class="bi bi-geo-alt"></i>
+                                Mumbai, Maharashtra
+                            </p>
+                        </div>
+
+                        <span class="siteOverviewStatus">
+                            Active
+                        </span>
+
+                    </div>
+
+                    <!-- STATS -->
+                    <div class="siteOverviewStats">
+
+                        <div class="siteOverviewStat">
+                            <span>Contractors</span>
+                            <strong>3</strong>
+                        </div>
+
+                        <div class="siteOverviewStat">
+                            <span>Workers</span>
+                            <strong>45</strong>
+                        </div>
+
+                    </div>
+
+                    <!-- PROGRESS -->
+                    <div class="siteOverviewProgressWrap">
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Completion</span>
+                            <strong>68%</strong>
+                        </div>
+
+                        <div class="progress siteOverviewProgress">
+                            <div class="progress-bar" style="width:68%"></div>
+                        </div>
+
+                    </div>
+
+                    <!-- BUTTON -->
+                    <button class="siteOverviewViewBtn">
+                        <i class="bi bi-eye"></i>
+                        View
+                    </button>
+
+                </div>
+            }
+
+        </div>
+
+    </div>
+
+    <!-- TABLE VIEW -->
+    <div class="sitesTableView">
+
+        <div class="sitesTableCard">
+
+            <div class="table-responsive">
+
+                <table class="table sitesOverviewTable align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Site Name</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Contractors</th>
+                            <th>Workers</th>
+                            <th>Completion</th>
+                            <th>Timeline</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @for (int i = 0; i < 9; i++)
+                        {
+                            <tr>
+
+                                <!-- SITE -->
+                                <td>
+                                    <div class="tableSiteNameWrap">
+
+                                        <div class="tableSiteIcon">
+                                            <i class="bi bi-buildings"></i>
+                                        </div>
+
+                                        <strong>Construction Site A</strong>
+
+                                    </div>
+                                </td>
+
+                                <!-- LOCATION -->
+                                <td>
+                                    <div class="tableLocation">
+                                        <i class="bi bi-geo-alt"></i>
+                                        Mumbai, Maharashtra
+                                    </div>
+                                </td>
+
+                                <!-- STATUS -->
+                                <td>
+                                    <span class="tableStatusBadge">
+                                        Active
+                                    </span>
+                                </td>
+
+                                <!-- CONTRACTORS -->
+                                <td class="fw-semibold text-center">
+                                    3
+                                </td>
+
+                                <!-- WORKERS -->
+                                <td class="fw-semibold text-center">
+                                    45
+                                </td>
+
+                                <!-- PROGRESS -->
+                                <td>
+
+                                    <div class="tableProgressWrap">
+
+                                        <div class="progress tableProgressBar">
+                                            <div class="progress-bar"
+                                                 style="width:68%">
+                                            </div>
+                                        </div>
+
+                                        <strong>68%</strong>
+
+                                    </div>
+
+                                </td>
+
+                                <!-- TIMELINE -->
+                                <td>
+                                    Dec 30, 2024 - Jan 15, 2024
+                                </td>
+
+                                <!-- ACTION -->
+                                <td>
+
+                                    <div class="tableActionWrap">
+
+                                        <button class="tableActionBtn">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+
+                                        <button class="tableActionBtn">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!--  Add Site Modal -->
+    <div class="modal fade contractorSetupModal"
+         id="addSiteModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Site</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+                    <!-- SEGMENT TOGGLE -->
+                    <div class="siteSegment-wrap">
+
+                        <button class="siteSegment-btn active"
+                                data-index="0"
+                                data-tab="basicTab">
+
+                            Basic Info
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="1"
+                                data-tab="addressTab">
+
+                            Address Details
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="2"
+                                data-tab="operationalTab">
+
+                            Operational Details
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="3"
+                                data-tab="complianceTab">
+
+                            Compliance Client
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="4"
+                                data-tab="contactTab">
+
+                            Contact Details
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="5"
+                                data-tab="attendanceTab">
+
+                            Attendance Access
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="6"
+                                data-tab="billingTab">
+
+                            Billing Contractor
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="7"
+                                data-tab="otherTab">
+
+                            Other Facilities
+
+                        </button>
+
+                    </div>
+
+
+                    <div class="employeeManualPanel-wrap">
+
+                        <!-- BASIC DETAILS -->
+                        <div class="employeeManualPanel active"
+                             id="basicTab">
+
+                            <div class="row g-4">
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site ID
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site Name
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Assign Color
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site Type
+                                        <span>*</span>
+                                    </label>
+
+                                    <select class="form-select employeeManual-input validate"
+                                            ng-model="SiteId">
+
+                                        <option value="">Select</option>
+
+                                        <option ng-repeat="x in SiteList"
+                                                value="{{x.SiteId}}">
+                                            {{x.SiteName}}
+                                        </option>
+
+                                    </select>
+                                </div>
+
+                                <!-- Designation -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site Short Name
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+                                </div>
+
+
+                                <!-- Department -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Operational Status
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           id="txtEmployeeDepartment"
+                                           ng-model="EmployeeDepartment">
+                                </div>
+
+
+                                <!-- Father / Husband Name -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Industry Type
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+                                </div>
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Address TAB -->
+                        <div class="employeeManualPanel"
+                             id="addressTab">
+
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <!-- Present Address -->
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        Address Line 1
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        Address Line 2
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        Landmark
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        City
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        Pincode
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        District
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        State
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           id="txtState">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Country
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Longitude
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           id="txtPIN">
+
+                                </div>
+
+                                <div class="col-lg-6">
+
+                                    <label class="employeeManual-label">
+                                        Latitude
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Geofencing Status
+                                    </label>
+
+                                    <select class="form-select employeeManual-input"
+                                            ng-model="MinimumWageCategory">
+
+                                        <option value="">Select</option>
+
+
+                                    </select>
+
+                                </div>
+
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Operational Details TAB -->
+                        <div class="employeeManualPanel"
+                             id="operationalTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Site Start Date
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Site End Date
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Shift Type
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Operational Hours
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Weekly Off days
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Total Worker Capacity
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Current Worker Strength
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           numeric-only>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Active Contractors
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Compliance Client TAB -->
+                        <div class="employeeManualPanel"
+                             id="complianceTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Required
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Type
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Form
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Labour License Number
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Validity From
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Validity To
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Contact Details TAB -->
+                        <div class="employeeManualPanel"
+                             id="contactTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Plant HR Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Health & Safety Officer Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Medical Officer Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <h4>Plant Head Details</h4>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Attendance Access TAB -->
+                        <div class="employeeManualPanel"
+                             id="attendanceTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Biometric Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        GPS Tracking Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        QR Attendance Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Gate Pass Required
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Face Recognition Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Visitor Management Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Billing Contractor TAB -->
+                        <div class="employeeManualPanel"
+                             id="billingTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Number
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO(Qty)
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Value
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Validity Date From
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Validity Date To
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Invoice Submission Date
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Payment Terms
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Attach Copy
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Other Facilities TAB -->
+                        <div class="employeeManualPanel"
+                             id="otherTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Drinking Water
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Washroom Facilities
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Rest Shelter
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Canteen Facility
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        First Aid Kit
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Invoice Submission Date
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Payment Terms
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Attach Copy
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-sm cancel-btn"
+                            data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+
+                    <button type="button" ng-hide="Editetime=='1'"
+                            class="btn btn-sm save-btn" ng-click="AfterSave()">
+                        Save
+                    </button>
+
+                    <button type="button" ng-show="Editetime=='1'"
+                            class="btn btn-sm save-btn" ng-click="AfterUpdateSite()">
+                        Update
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>

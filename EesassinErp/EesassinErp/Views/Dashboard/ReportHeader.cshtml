@@ -1,0 +1,87 @@
+﻿@{
+    ViewBag.Title = "ReportHeader Master";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/ckeditor/ckeditor.js"></script>
+<script src="~/Content/ckfinder/ckfinder.js"></script>
+<script src="~/Scripts/myjslib/ReportHeaderMasterController.js"></script>
+@*<h2>Board Master</h2>*@
+<input type="hidden" ng-model="hfId" id="Id" name="Id" value="" />
+
+
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">ReportHeader Master</h5>
+        </div>
+        <!-- Breadcrumb -->
+          <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Administrator</span></a></li>
+                <li class="active"><span>ReportHeader Master</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-md-6 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Report Category<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlReportCategory" ng-model="ReportCategoryName"   class="select2 form-control validate">
+
+                                                    <option value="">Select</option>
+                                                    <option value="General Report">General Report</option> 
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                     
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Any Detail<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextArea("txtHeaderTemplate", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "HeaderTemplate", @name = "txtHeaderTemplate", @id = "txtHeaderTemplate", @rows = "10", @cols = "80" })
+                                                <script>$(document).ready(function () {CKEDITOR.replace('txtHeaderTemplate');});</script>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div> 
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+                                        </form>
+                               </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>

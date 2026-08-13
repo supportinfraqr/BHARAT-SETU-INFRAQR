@@ -1,0 +1,717 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Principle Employer Gate Pass";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/GatePass/PrincipleEmployerGatePass/style.css" rel="stylesheet" />
+<script src="~/scripts/bharat/ContractorGatePassController.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    /*=========================================
+        Permanent / Temporary Tabs
+    =========================================*/
+
+    const tabs = document.querySelectorAll(".principleEmployerGatePass .gpTypeTabs .nav-link");
+
+    tabs.forEach(tab => {
+
+        tab.addEventListener("click", function () {
+
+            tabs.forEach(t => t.classList.remove("active"));
+
+            this.classList.add("active");
+
+        });
+
+    });
+
+    /*=========================================
+        Select All (Main Table)
+    =========================================*/
+
+    const mainTable = document.querySelector(".principleEmployerGatePass .gpTable");
+
+    if (mainTable) {
+
+        const headerCheckbox = mainTable.querySelector("thead .form-check-input");
+
+        const rowCheckboxes = mainTable.querySelectorAll("tbody .form-check-input");
+
+        headerCheckbox.addEventListener("change", function () {
+
+            rowCheckboxes.forEach(cb => {
+
+                cb.checked = this.checked;
+
+            });
+
+        });
+
+    }
+
+    /*=========================================
+        Select All (Worker Modal Table)
+    =========================================*/
+
+    const workerTable = document.querySelector(".principleEmployerGatePass .workerTable");
+
+    if (workerTable) {
+
+        const headerCheckbox = workerTable.querySelector("thead .form-check-input");
+
+        const rowCheckboxes = workerTable.querySelectorAll("tbody .form-check-input");
+
+        headerCheckbox.addEventListener("change", function () {
+
+            rowCheckboxes.forEach(cb => {
+
+                cb.checked = this.checked;
+
+            });
+
+        });
+
+    }
+
+});
+
+</script>
+
+<div class="principleEmployerGatePass px-4 py-3">
+
+    <!-- ===========================================
+        Header
+    =========================================== -->
+    <div class="pegp-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+
+        <h2 class="page-title mb-0">
+            Gate Pass Approval Requests
+        </h2>
+
+        @*<ul class="nav nav-tabs gpTypeTabs border-0">
+            <li class="nav-item">
+                <button class="nav-link active">
+                    Permanent
+                </button>
+            </li>
+
+            <li class="nav-item">
+                <button class="nav-link">
+                    Temporary
+                </button>
+            </li>
+        </ul>*@
+
+    </div>
+
+    <!-- ===========================================
+        Summary Cards
+    =========================================== -->
+
+    <div class="row g-4 mb-4">
+
+        <!-- Pending -->
+
+        <div class="col-xl-4 col-md-6">
+
+            <div class="gpSummaryCard pendingCard">
+
+                <div class="cardContent">
+
+                    <div>
+
+                        <p class="cardLabel">
+                            Total Pending
+                        </p>
+
+                        <h2 class="cardValue">
+                            {{DTiles.WorkerPending}}
+                        </h2>
+
+                    </div>
+
+                    <div class="summaryIcon pending">
+
+                        <i class="bi bi-clipboard-check"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Approved -->
+
+        <div class="col-xl-4 col-md-6">
+
+            <div class="gpSummaryCard approvedCard">
+
+                <div class="cardContent">
+
+                    <div>
+
+                        <p class="cardLabel">
+                            Approved Today
+                        </p>
+
+                        <h2 class="cardValue text-success">
+                            {{DTiles.TodayApproved}}
+                        </h2>
+
+                    </div>
+
+                    <div class="summaryIcon approved">
+
+                        <i class="bi bi-check-circle-fill"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Rejected -->
+
+        <div class="col-xl-4 col-md-12" ng-init="Bindtiles()">
+
+            <div class="gpSummaryCard rejectedCard">
+
+                <div class="cardContent">
+
+                    <div>
+
+                        <p class="cardLabel">
+                            Rejected
+                        </p>
+
+                        <h2 class="cardValue text-danger">
+                            {{DTiles.Rejected}}
+                        </h2>
+
+                    </div>
+
+                    <div class="summaryIcon rejected">
+
+                        <i class="bi bi-x-circle-fill"></i>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================================
+        Table Card
+    =========================================== -->
+
+    <div class="gpTableCard">
+
+        <!-- Toolbar -->
+
+        @*<div class="gpTableToolbar" >
+
+            <div class="d-flex align-items-center gap-2">
+
+                <select class="form-select statusFilter">
+
+                    <option>
+                        Status : Pending
+                    </option>
+
+                    <option>
+                        Approved
+                    </option>
+
+                    <option>
+                        Rejected
+                    </option>
+
+                </select> 
+
+            </div>
+
+            <div class="toolbarButtons">
+
+                <button class="btn rejectBtn">
+
+                    <i class="bi bi-x-lg me-2"></i>
+
+                    Reject Selected
+
+                </button>
+
+                <button class="btn approveBtn">
+
+                    <i class="bi bi-check2 me-2"></i>
+
+                    Approve Selected
+
+                </button>
+
+            </div>
+
+        </div>*@
+
+        <!-- Responsive Table -->
+
+        <div class="table-responsive" ng-init="BindClientWorker()">
+
+            <table class="table align-middle gpTable" >
+
+                <thead>
+
+                    <tr>
+
+                        
+
+                        <th>
+                            Contractor Name
+                        </th>
+
+                        <th>
+                            Total Worker Count
+                        </th>
+
+                        <th>
+                            Pending Worker Count
+                        </th>
+
+                        <th>
+                            Date Requested
+                        </th>
+                        
+                       
+
+                        <th class="text-center">
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    <!-- Row -->
+
+                    <tr ng-repeat="x in EmpWorkerList">
+                        
+
+                        <td>
+
+                            <strong>
+                                {{x.PartyName}}
+                            </strong>
+
+                        </td>
+
+                        <td>
+
+                            <span class="workerCountTag">
+                                {{x.TotalUser}}
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            <span class="workerCountTag">
+                                {{x.WorkerPending}}
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            {{x.CreatedOn}}
+
+                        </td>
+
+                        
+                        <td class="text-center">
+
+                            <button class="iconBtn" ng-click="Getallgatepassbyparty(x)"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#workerListModal">
+
+                                <i class="bi bi-eye"></i>
+
+                            </button>
+
+                        </td>
+
+                    </tr>
+
+                    <tr ng-if="!EmpWorkerList || EmpWorkerList.length == 0">
+                        <th colspan="5" class="text-center text-muted py-3" style="color: #27515e !important;">
+                            Gate Pass Not Generated
+                        </th>
+                    </tr>
+                    
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- Footer -->
+
+        @*<div class="gpTableFooter">
+
+            <div>
+
+                Showing
+                1-10
+                of
+                42
+                requests
+
+            </div>
+
+            <nav>
+
+                <ul class="pagination mb-0">
+
+                    <li class="page-item">
+
+                        <a class="page-link" href="#">
+
+                            <i class="bi bi-chevron-left"></i>
+
+                        </a>
+
+                    </li>
+
+                    <li class="page-item active">
+
+                        <a class="page-link" href="#">
+
+                            1
+
+                        </a>
+
+                    </li>
+
+                    <li class="page-item">
+
+                        <a class="page-link" href="#">
+
+                            2
+
+                        </a>
+
+                    </li>
+
+                    <li class="page-item">
+
+                        <a class="page-link" href="#">
+
+                            3
+
+                        </a>
+
+                    </li>
+
+                    <li class="page-item">
+
+                        <a class="page-link" href="#">
+
+                            <i class="bi bi-chevron-right"></i>
+
+                        </a>
+
+                    </li>
+
+                </ul>
+
+            </nav>
+
+        </div>*@
+
+    </div>
+
+
+    <!-- =====================================================
+        Worker List Modal
+    ====================================================== -->
+
+    <div class="modal fade"
+         id="workerListModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-fullscreen">
+
+            <div class="modal-content workerListModal">
+
+                <!-- Header -->
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Worker List
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <!-- Body -->
+
+                <div class="modal-body">
+
+                    <!-- Toolbar -->
+
+                    <div class="workerToolbar">
+
+                        <div></div>
+
+                        <div class="toolbarRight">
+
+                            <button class="btn rejectBtn" ng-click="RejectSection()">
+
+                                <i class="bi bi-x-lg me-2"></i>
+
+                                Reject Selected
+
+                            </button>
+
+                            <button class="btn approveBtn" ng-click="ApprovalSection()">
+
+                                <i class="bi bi-check2 me-2"></i>
+
+                                Approve Selected
+
+                            </button>
+
+                            <select class="form-select siteFilter"
+                                    ng-model="SelectedSite"
+                                    ng-change="FilterWorker()">
+
+                                <option value="">All Sites</option>
+
+                                <option ng-repeat="x in WorkerList1 | unique:'SiteName'"
+                                        value="{{x.SiteName}}">
+                                    {{x.SiteName}}
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Table -->
+
+                    <div class="table-responsive rounded-3">
+
+                        <table class="table workerTable align-middle">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th width="40">
+                                        <input type="checkbox"
+                                               class="form-check-input"
+                                               ng-model="selectAll"
+                                               ng-change="toggleAll()" />
+
+                                    </th>
+
+                                    <th>Worker Details</th>
+
+                                   
+
+                                    <th>Site</th>
+
+                                    <th>Medical</th>
+
+                                    <th>Safety Kit</th>
+
+                                    <th>Safety Training</th>
+
+                                    <th>Site Induction</th>
+
+                                    <th>Aadhaar</th>
+
+                                    <th>Bank Account</th>
+
+                                    <th>UAN</th>
+
+                                    <th>PF</th>
+
+                                    <th class="text-center">
+                                        Actions
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                <!-- ========= Row ========= -->
+
+                                <tr ng-repeat="x in WorkerList | filter:SiteFilter">
+
+                                    <td>
+                                        <input type="checkbox"
+                                               class="form-check-input"
+                                               ng-model="x.Selected"
+                                               ng-change="updateSelection()" />
+                                    </td>
+
+                                    <td>
+
+                                        <div class="workerInfo">
+
+                                            <div class="workerName">
+
+                                                {{x.EmployeeName}}
+
+                                            </div>
+                                            <div class="workerName">
+
+                                                {{x.GatePassType}}
+
+                                            </div>
+
+                                            <div class="workerId">
+
+                                                {{x.EmployeeCode}}
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    <td>  {{x.SiteName}}</td>
+
+
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.MedicalStatus == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.MedicalStatus == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.MedicalStatus}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.PPE == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.PPE == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.PPE}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.SafetyTrainingStatus == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.SafetyTrainingStatus == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.SafetyTrainingStatus}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.SiteInduction == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.SiteInduction == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.SiteInduction}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.AadharVerify == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.AadharVerify == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.AadharVerify}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.BankVerify == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.BankVerify == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.BankVerify}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.UANVerify == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.UANVerify == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.UANVerify}}</small>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="verifyStatus"
+                                             ng-class="x.PFVerify == 'Done' ? 'done' : 'pending'">
+                                            <i class="bi"
+                                               ng-class="x.PFVerify == 'Done' ? 'bi-check-circle-fill' : 'bi-dash-circle-fill'"></i>
+                                            <small>{{x.PFVerify}}</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+
+                                        <button class="tableActionBtn approve"   
+                                               ng-click="IndiviualApprove(x.EmployeeId,'1','2')" >
+
+                                            <i class="bi bi-check2-square"></i>
+
+                                        </button>
+
+                                        <button class="tableActionBtn reject" 
+                                                ng-click="IndiviualRefect(x.EmployeeId,'2','2')" >
+
+                                            <i class="bi bi-ban"></i>
+
+                                        </button>
+
+                                    </td>
+
+                                </tr>
+
+
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

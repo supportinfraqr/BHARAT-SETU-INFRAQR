@@ -1,0 +1,217 @@
+﻿<!DOCTYPE html>
+<html ng-app="myApp" ng-controller="myController">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="~/MainDashboard/css/style.css" rel="stylesheet" />
+    <link href="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css" rel="stylesheet" />
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/moment.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js")"></script>
+
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    <script src="~/scripts/managebyuser.js"></script>
+    <script src="~/scripts/RetailJsLib/MainDashboardController.js"></script>
+
+    <style>
+        .sweet-msg-box .sa-button-container button.btn-lg {
+            padding: 8px 24px !important;
+        }
+    </style>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* padding: 15px 20px; */
+            background-color: rgb(255, 255, 255);
+            border: 1px solid #f2f3f4;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 4px;
+        }
+
+            .header p {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 600;
+                color: #333; /* Slightly darker text color for better readability */
+            }
+
+            .header button {
+                padding: 10px 20px;
+                font-size: 16px;
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+                .header button:hover {
+                    background-color: #0056b3;
+                }
+    </style>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .overview {
+            padding: 20px;
+        }
+
+            .overview h2 {
+                margin: 0;
+                font-size: 34px;
+                font-weight: bold;
+            }
+
+        /* Flexbox container for Overview and search */
+        .overview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .overview .search-container {
+            flex-grow: 1; /* Make the search input take remaining space */
+            text-align: right;
+        }
+
+            .overview .search-container input {
+                padding: 8px 15px;
+                font-size: 16px;
+                width: 250px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        .go-dashboard button {
+            padding: 8px 15px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+            .go-dashboard button:hover {
+                background-color: #0056b3;
+            }
+    </style>
+
+</head>
+<body>
+    <div class="header">
+        <p style=" text-align: left;">Login As : {{UserName}}</p>
+        <button ng-click="Logout()">Logout</button>
+    </div>
+
+    <div class="stats" ng-init="BindTiles()" ng-cloak>
+        <div class="stat-card">
+            <h2>{{TotalOrganization}}</h2>
+            <p>
+                <img src="~/MainDashboard/img/Group.png" alt="Organization Icon" style="width:40px; height:40px; margin-bottom:10px;">
+                Total Organization
+            </p>
+        </div>
+        <div class="stat-card">
+            <h2>{{TotalActiveOrganization}}</h2>
+            <p><img src="~/MainDashboard/img/Group1.png" alt="Organization Icon" style="width:40px; height:40px; margin-bottom:10px;"> Active Organization</p>
+        </div>
+        <div class="stat-card">
+            <h2>{{TotalLocation}}</h2>
+            <p><img src="~/MainDashboard/img/Group3.png" alt="Organization Icon" style="width:40px; height:40px; margin-bottom:10px;"> Total Location</p>
+        </div>
+        <div class="stat-card">
+            <h2>{{TotalUser}}</h2>
+            <p><img src="~/MainDashboard/img/Group2.png" alt="Organization Icon" style="width:40px; height:40px; margin-bottom:10px;">Total System Users</p>
+        </div>
+    </div>
+     
+       
+        <div class="overview" ng-init="BindOverview()">
+            <div class="overview-header">
+                <h2>Overview</h2>
+                <div class="search-container">
+                    <input type="text" ng-model="searchText" placeholder="Search here anything">
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Company Name</th>
+                            <th >User</th>
+                            <th  ng-show="ISSubsidiary" >Company Type</th>
+                            <th>Location Count</th>
+                            <th>Last Access</th>
+                            <th>Status</th>
+                            <th>Go To Dashboard</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="x in OverviewList | filter:searchText">
+                            <td>{{x.Name}}</td>
+                            <td>{{x.SubsidiaryUser}}</td>
+                            <td  ng-show="ISSubsidiary">{{x.UserType}}</td>
+                            <td>{{x.LocationCount}}</td>
+                            <td>{{x.LastLogin}}</td>
+                            <td class="status">{{x.Status}}</td>
+                            <td class="go-dashboard">
+                                <button id="btnclick" ng-click="redirect(x.LoginId)">&#8594;</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div> 
+
+
+
+
+<script src="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.js"></script>
+</body>
+</html>

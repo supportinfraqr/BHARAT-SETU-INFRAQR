@@ -1,0 +1,263 @@
+﻿var myLoginApp = angular.module('myLoginApp', []);
+
+myLoginApp.service("myLoginService", function ($http) {
+
+    this.methode = function (methodType, virtualUrl, dataList) {
+
+        var response = $http({
+            method: methodType,
+            url: virtualUrl,
+            data: dataList,
+            contentType: 'application/json; charset=utf-8',
+            datatype: 'json'
+        });
+
+        return response;
+    };
+});
+myLoginApp.controller('myLoginController', function ($scope, $element, $filter, $sce, $timeout, myLoginService) {
+
+    $('#txtUserName').focus();
+
+    $scope.flag = false;
+    $scope.optionValue = 0;
+
+    $scope.PassWordEnterKey = function (event) {
+        if (typeof (event.keyCode) === 'undefined') return;
+        var keyCode = event.keyCode;
+        if (keyCode == 13) {
+            $scope.Login();
+        }
+    };
+
+    $scope.GetCaptchaImage = function () {
+        debugger;
+        $scope.refresh = 'fa fa-spinner fa-spin'
+        var getData = myLoginService.methode('GET', "../Login/CaptchaImage", '{}');
+        getData.then(function (response) {
+            $timeout(function () {
+                $scope.CaptchaSrc = response.data;
+                $scope.refresh = 'fa fa-refresh'
+                $
+            }, 200);
+        });
+    }
+    $scope.CheckCaptchaSum = function () {
+        debugger;
+        var getData = myLoginService.methode('POST', "../Login/GetUserId", '{sum:' + JSON.stringify($scope.Captcha) + '}');
+        getData.then(function (response) {
+            console.log(response.data);
+        });
+    }
+
+    $scope.LoadFocus = function () {
+        $scope.Usernam = "";
+        $scope.Password = "";
+        $("#txtUserName").focus();
+    }
+
+    $scope.CUVAILD = function () {
+        var collectionobj = {};
+        collectionobj.Username = $scope.Username;
+        collectionobj.Action = "15";
+        var getDetails = myLoginService.methode('POST', '../Login/GetModulePermission', '{obj:' + JSON.stringify(collectionobj) + '}');
+        getDetails.then(function (response) {
+            if (response.data.Result[0].LoginType == '3' || response.data.Result[0].LoginType == '4') {
+                $scope.IsModuleOpen = true;
+            }
+            else {
+                $scope.IsModuleOpen = false;
+            }
+
+        });
+    }
+
+    $scope.BindModule = function () {
+        var collectionobj = {};
+        collectionobj.Action = "16";
+        var getDetails = myLoginService.methode('POST', '../Login/GetModulePermission', '{obj:' + JSON.stringify(collectionobj) + '}');
+        getDetails.then(function (response) {
+            $scope.ModuleList = response.data.Result;
+
+        });
+    }
+    $scope.RedirectToModule = function () {
+        var collectionobj = {};
+        collectionobj.Action = "14";
+        collectionobj.LoginId = $scope.ModuleId;
+        collectionobj.Username = $scope.Username;
+        var getDetails = myLoginService.methode('POST', '../Login/GetModulePermission', '{obj:' + JSON.stringify(collectionobj) + '}');
+        getDetails.then(function (response) {
+            if (response.data.Result[0].userid == '1')
+            {
+                $("#lblmsg").text("You have logged in successfully.");
+                $("#msgbox").attr("class", "box-v-g");
+                $scope.Captcha = "";
+                $scope.GetCaptchaImage();
+                if ($scope.ModuleId == '2') {
+                    window.location.href = '../RetailSection/Dashboard'
+
+                }
+                else {
+                    window.location.href = '../Dashboard/Dashboard';
+                }
+            }
+            else {
+                $("#lblmsg").text("You have logged in successfully.");
+                $("#msgbox").attr("class", "box-v-g");
+                $('#btnLogin').html('Login');
+                $('#btnLogin').prop('disabled', false);
+                $scope.Captcha = "";
+                $scope.GetCaptchaImage();
+                window.location.href = '../Dashboard/Dashboard';
+            }
+
+        });
+    }
+    $scope.ModuleId = '2';
+    $scope.Login = function () {
+        if (isValidate()) {
+            $('#btnLogin').html('<i class="fa fa-spinner fa-spin"></i>&nbsp; Please wait')
+            $('#btnLogin').prop('disabled', true);
+            debugger;
+            var collectionobj = {};
+            collectionobj.Username = $scope.Username;
+            collectionobj.Password = $scope.Password;
+            collectionobj.Captcha = $scope.Captcha
+            collectionobj.Action = "1";
+            var getDetails = myLoginService.methode('POST', '../Login/GetUserId', '{obj:' + JSON.stringify(collectionobj) + '}');
+            getDetails.then(function (response) {
+                debugger;
+                if (response.data.length > 0) {
+                    if (response.data == '89') {
+                        $("#lblmsg").text("Invalid Captcha!");
+                        $("#msgbox").attr("class", "box-v-r");
+                        $('#btnLogin').html('Login');
+                        $('#btnLogin').prop('disabled', false);
+                        $scope.Captcha = "";
+                        $("#msgbox").fadeIn().delay(3000).fadeOut();
+                        $scope.GetCaptchaImage();
+                    }
+                    else {
+                        sessionStorage.setItem('LoginId', response.data[0].LoginId);
+                        sessionStorage.setItem('LastLogin', response.data[0].LastLogin);
+                        sessionStorage.setItem('CurrLogin', response.data[0].CurrentLogin);
+                        sessionStorage.setItem('loginType', response.data[0].LoginType);
+                        sessionStorage.setItem('BranchCode', response.data[0].BranchCode);
+                        sessionStorage.setItem('Name', response.data[0].Name);
+                        sessionStorage.setItem('BranchName', response.data[0].BranchName);
+                        sessionStorage.setItem('ContactNo', response.data[0].ContactNo);
+                        sessionStorage.setItem('Desig', response.data[0].Desig);
+                        sessionStorage.setItem('CreatedOn', response.data[0].CreatedOn);
+                        sessionStorage.setItem('BranchAddress', response.data[0].BranchAddress);
+                        sessionStorage.setItem('MapId', response.data[0].MapId);
+                        sessionStorage.setItem('MapUser', response.data[0].MapUser);
+                        sessionStorage.setItem('Photo', response.data[0].Photo);
+
+                        if (response.data[0].LoginId == "-1" || response.data[0].LoginId == null || response.data[0].LoginId == "") {
+                            $("#lblmsg").text("Invalid Credentials!");
+                            $("#msgbox").attr("class", "box-v-r");
+                            $('#btnLogin').html('Login');
+                            $('#btnLogin').prop('disabled', false);
+                            $scope.Captcha = "";
+                            $scope.GetCaptchaImage();
+                        }
+                        else {
+                            if (response.data[0].LoginType == 1 || response.data[0].LoginType == 2 || response.data[0].LoginType == 3 || response.data[0].LoginType == 4) {
+                                if ($scope.ModuleId == '1' || $scope.ModuleId == '2') {
+                                    $scope.RedirectToModule();
+                                }
+                                else {
+                                    $("#lblmsg").text("You have logged in successfully.");
+                                    $("#msgbox").attr("class", "box-v-g");
+                                    $scope.Captcha = "";
+                                    $scope.GetCaptchaImage();
+                                    window.location.href = '../Dashboard/Dashboard';
+                                }
+
+                            }
+
+                        }
+                    }
+                }
+                $("#msgbox").fadeIn().delay(3000).fadeOut();
+            });
+        }
+    };
+
+
+    //$scope.ControlSelect = function ()
+    //{
+    //    if ($scope.ModuleId == 1) {
+    //        $("#lblmsg").text("You have logged in successfully.");
+    //        $("#msgbox").attr("class", "box-v-g");
+    //        $scope.Captcha = "";
+    //        $scope.GetCaptchaImage();
+    //        window.location.href = '../Dashboard/Dashboard';
+    //    } else {
+    //        $("#lblmsg").text("You have logged in successfully.");
+    //        $("#msgbox").attr("class", "box-v-g");
+    //        $scope.Captcha = "";
+    //        $scope.GetCaptchaImage();
+    //        window.location.href = '../Dashboard/Dashboard';
+    //    }
+    //}
+
+    $scope.FindWindow = function () {
+        debugger;
+        var inputs = $(".input-effect input");
+        $.each(inputs, function (i, input) {
+            if ($(this).hasClass("has-content") && $(this).val().length <= 0) {
+                $(this).removeClass("has-content");
+            } else {
+                $(this).addClass("has-content");
+            }
+        })
+    };
+
+    $scope.hascontent = function (id) {
+        if ($(id).hasClass("has-content") && $(id).val().length <= 0) {
+            $(id).removeClass("has-content");
+        } else {
+            $(id).addClass("has-content");
+        }
+    }
+
+    $scope.RecoverPassword = function () {
+        if (isValidate()) {
+            $('#btnSubmit').html('<i class="fa fa-spinner fa-spin"></i>&nbsp; Please wait')
+            $('#btnSubmit').prop('disabled', true);
+
+            var getDetails = myLoginService.methode('POST', '../Login/RecoverPassword', '{username:' + JSON.stringify($scope.Username) + ',mobileno:' + JSON.stringify($scope.MobileNo) + ',schoolcode:' + JSON.stringify($scope.SchoolCode) + '}');
+
+            getDetails.then(function (response) {
+                var data = response.data.replace(/"/g, "");
+                var splitdata = data.split('$');
+                if (splitdata[0] == '1') {
+                    if (splitdata[1] == 'Email') {
+                        $("#lblmsg").text("Password has been sent to your registered email.");
+                    }
+                    else if (splitdata[1] == 'Mobile') {
+                        $("#lblmsg").text("Password has been sent to your registered mobile no.");
+                    }
+
+                    $("#msgbox").attr("class", "box-v-g");
+                    $('#btnSubmit').html('Submit');
+                    $('#btnSubmit').prop('disabled', false);
+
+                    $scope.Username = "";
+                    $scope.MobileNo = "";
+                }
+                else {
+                    $("#lblmsg").html(splitdata[0]);
+                    $("#msgbox").attr("class", "box-v-r");
+                    $('#btnSubmit').html('Submit');
+                    $('#btnSubmit').prop('disabled', false);
+                }
+            });
+
+            $("#msgbox").fadeIn().delay(6000).fadeOut(function () { $("#lblmsg").html(''); });
+        }
+    };
+});
+

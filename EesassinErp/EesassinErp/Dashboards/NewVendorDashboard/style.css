@@ -1,0 +1,636 @@
+﻿.vendorDashboard {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 100vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+#container1 .filter-btn {
+    border-radius: 999px;
+    border: 1px solid #E45D27;
+    color: #E45D27;
+    background: transparent;
+    padding: 4px 14px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.2s ease-in-out;
+}
+
+    #container1 .filter-btn:hover {
+        background-color: #E45D27;
+        color: #fff;
+    }
+
+
+/* ================= Container 1 ================= */
+.vendorDashboard #container1 {
+    --card-radius: 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+    /* Dropdown */
+    .vendorDashboard #container1 .dropdown-menu {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        min-width:auto;
+    }
+
+    /* Cards */
+    .vendorDashboard #container1 .vendor-c1-card {
+        border-radius: var(--card-radius);
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        height: 100%;
+    }
+
+    .vendorDashboard #container1 .vendor-c1-card-left h6 {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color:#fff;
+    }
+
+    .vendorDashboard #container1 .vendor-c1-card-left p {
+        font-size: 0.85rem;
+        margin: 0;
+        color: #fff;
+    }
+
+    /* Ring */
+    .vendorDashboard #container1 .vendor-c1-ring {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .vendorDashboard #container1 .vendor-c1-ring::before {
+            content: "";
+            position: absolute;
+            inset: 6px;
+            background: transparent;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .vendorDashboard #container1 .vendor-c1-ring span {
+            position: relative;
+            font-size: 0.8rem;
+            font-weight: 400;
+            z-index: 2;
+            color:#fff;
+        }
+
+/* ================= Container 2 ================= */
+/*  Chart Fix  */
+.vendorDashboard #container2 {
+    display: flex;
+    flex-direction: column;
+}
+
+    .vendorDashboard #container2 canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* Ensure chart parent has height */
+    .vendorDashboard #container2 .flex-grow-1 {
+        position: relative;
+        min-height: 220px;
+    }
+#container2 .chart-wrapper {
+    position: relative;
+    height: 100%;
+}
+
+/* ================= Container 3 ================= */
+
+/* Limit total height of table section */
+.vendorDashboard #container3 {
+    max-height: 360px;
+    overflow: hidden;
+}
+.vendorDashboard #container3 .custom-card {
+    background-color: #FEF3EC;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+    .vendorDashboard #container3 .card{
+        background-color: transparent;
+        border:none;
+    }
+
+    /* Table wrapper and hide scrollbar visually */
+    .vendorDashboard #container3 .container3-table-wrapper {
+        max-height: 240px;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scroll-behavior: smooth;
+    }
+
+    .vendorDashboard #container3 .container3-table-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+.vendorDashboard #container3 .container3-table-wrapper {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* table header sticky */
+    .vendorDashboard #container3 .container3-table-wrapper thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: #F37437;
+        color: #fff;
+        font-weight: 500;
+        font-size: 0.70rem;
+        text-align: left;
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+/* table body */
+    .vendorDashboard #container3 .container3-table-wrapper tbody td {
+        background-color: var(--card-bg);
+        font-size: 0.70rem;
+        vertical-align: middle;
+        text-align: left;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+/* hover */
+    .vendorDashboard #container3 .container3-table-wrapper tbody tr:hover td {
+        background-color: #FFE8D9;
+    }
+
+    .vendorDashboard #container3 .container3-table-wrapper tbody td .store-code-link {
+        text-decoration: none;
+    }
+
+/* action menu */
+    /* View (Eye) Button  */
+    .vendorDashboard #container3 .action-menu {
+        width: 48px;
+        text-align: center;
+        background-color: var(--card-bg);
+    }
+
+    .vendorDashboard #container3 .view-btn,
+    .vendorDashboard #container4 .view-btn {
+        color: var(--primary);
+        padding: 0;
+        font-size: 0.9rem;
+        background: transparent;
+        border: none;
+        line-height: 1;
+    }
+
+        .vendorDashboard #container3 .view-btn:hover,
+        .vendorDashboard #container4 .view-btn:hover {
+            color: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+    /*.vendorDashboard #container3 .action-menu {
+        position: relative;
+        width: 48px;
+        text-align: right;
+        background-color: var(--card-bg);
+    }
+
+        .vendorDashboard #container3 .action-menu .btn {
+            color: var(--primary);
+            padding: 0;
+            font-size: 0.68rem;
+        }
+
+.vendorDashboard #container3 .action-menu .dropdown-menu {
+    min-width: 120px;
+    font-size: 0.70rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}*/
+
+
+/* ================= Container 5 ================= */
+.vendorDashboard #container5 .custom-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Fix flex scroll issues */
+.vendorDashboard .min-height-0 {
+    min-height: 0;
+}
+
+
+/* ================= Container 4 ================= */
+.vendorDashboard #container4 {
+    background-color: var(--card-bg);
+    max-height: 680px;
+    overflow: hidden;
+}
+
+/* Recent Activities list */
+.vendorDashboard .vendor-c4-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+/* Recent Activities scroll */
+.vendorDashboard .vendor-c4-recent .vendor-c4-list {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+/* Action Required scroll */
+.vendorDashboard .vendor-c4-action .overflow-auto {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.vendorDashboard .vendor-c4-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.75rem;
+}
+
+    .vendorDashboard .vendor-c4-item p {
+        font-weight: 500;
+    }
+
+    .vendorDashboard .vendor-c4-item small {
+        color: #777;
+    }
+
+    /* status dot */
+    .vendorDashboard .vendor-c4-item .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-top: 4px;
+    }
+
+/* Action Required table */
+.vendorDashboard .vendor-c4-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+    text-align:left;
+    vertical-align:middle;
+}
+
+.vendorDashboard .vendor-c4-table tbody td {
+    background-color: #fff;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    text-align: left;
+    vertical-align: middle;
+}
+
+/* Scroll polish */
+.vendorDashboard #container4 .overflow-auto {
+    scrollbar-width: none;
+}
+
+    .vendorDashboard #container4 .overflow-auto::-webkit-scrollbar {
+        display: none;
+    }
+
+
+/* ================= QUERY SECTION ================= */
+.vendorDashboard #vendorQuerySection .custom-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+
+/* VENDOR ↔ AUDITOR QUERY – THEME  */
+#vendorQuerySection {
+    --query-bg: var(--card-bg);
+}
+
+    /* Card */
+    #vendorQuerySection .custom-card {
+        background: transparent;
+        border: none;
+    }
+
+
+    /* TABLE  */
+
+    #vendorQuerySection thead th {
+        background: var(--primary);
+        color: #fff;
+        font-weight: 500;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+    #vendorQuerySection tbody td {
+        background: var(--query-bg);
+        padding: 8px 10px;
+        font-size: 0.75rem;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    #vendorQuerySection tbody tr:hover td {
+        background: #FFE8D9;
+    }
+
+    /* Active Row */
+    #vendorQuerySection .query-row.active td {
+        background: #FFE2D1;
+    }
+
+    /* BUTTONS  */
+    #vendorQuerySection .btn {
+        font-size: 0.75rem;
+    }
+
+    /* View button */
+    #vendorQuerySection .btn-view {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        padding: 4px 10px;
+    }
+
+        #vendorQuerySection .btn-view:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Upload button */
+    #vendorQuerySection .btn-upload {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+    }
+
+        #vendorQuerySection .btn-upload:hover {
+            background: var(--primary);
+            color: #fff;
+            border-style: solid;
+        }
+
+    /* QUERY THREAD  */
+    #vendorQuerySection .query-thread {
+        background: #FFF1EB;
+        border-radius: 10px;
+    }
+
+    /* Messages */
+    #vendorQuerySection .query-message {
+        background: var(--query-bg);
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-size: 0.78rem;
+    }
+
+        /* Vendor */
+        #vendorQuerySection .query-message.vendor {
+            background: #FFE8D9;
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Auditor */
+        #vendorQuerySection .query-message.auditor {
+            background: #eaf2ff;
+            border-left: 4px solid #4d8ef7;
+        }
+
+        /* Message header */
+        #vendorQuerySection .query-message strong {
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        #vendorQuerySection .query-message small {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        /* Attachments */
+        #vendorQuerySection .query-message a {
+            font-size: 0.72rem;
+            text-decoration: none;
+        }
+
+    /*  TEXTAREA */
+    #vendorQuerySection textarea.form-control {
+        font-size: 0.78rem;
+        border-radius: 8px;
+        resize: none;
+    }
+
+    #vendorQuerySection textarea:focus {
+        border-color: var(--primary);
+        box-shadow: none;
+    }
+
+    /* BADGES  */
+    #vendorQuerySection .badge {
+        font-size: 0.7rem;
+        padding: 5px 10px;
+        border-radius: 999px;
+    }
+    #vendorQuerySection .status-active {
+        background: #dff6e9;
+        color: #197a3a;
+    }
+
+    #vendorQuerySection .status-upcoming {
+        background: #ffeedf;
+        color: #d06a1e;
+    }
+
+/* ================= QUERY MODAL ================= */
+#raiseQueryModal .modal-content {
+    background: var(--card-bg);
+    border-radius: 14px;
+    border: none;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+}
+
+/* Header */
+#raiseQueryModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+    border-bottom: none;
+    padding: 12px 16px;
+}
+
+#raiseQueryModal .modal-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* Close button */
+#raiseQueryModal .btn-close {
+    filter: invert(1);
+    opacity: 0.9;
+}
+
+/* Body */
+#raiseQueryModal .modal-body {
+    padding: 16px;
+}
+
+/* Labels */
+#raiseQueryModal .form-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+/* Inputs */
+#raiseQueryModal .form-control,
+#raiseQueryModal .form-select {
+    font-size: 0.78rem;
+    height: 34px;
+    border-radius: 8px;
+}
+
+#raiseQueryModal textarea.form-control {
+    height: auto;
+    resize: none;
+}
+
+#raiseQueryModal .form-control:focus,
+#raiseQueryModal .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: none;
+}
+
+/* FOOTER  */
+#raiseQueryModal .modal-footer {
+    border-top: none;
+    padding: 12px 16px;
+    background: transparent;
+}
+
+/* Cancel */
+#raiseQueryModal .btn-cancel {
+    border-radius: 999px;
+    font-size: 0.75rem;
+    padding: 5px 14px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+}
+
+    #raiseQueryModal .btn-cancel:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* Submit */
+#raiseQueryModal .btn-submit {
+    border-radius: 999px;
+    font-size: 0.75rem;
+    padding: 5px 18px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    #raiseQueryModal .btn-submit:hover {
+        background: var(--primary-dark);
+    }
+
+/*  ATTACHMENT  */
+#raiseQueryModal .btn-upload {
+    border-radius: 999px;
+    border: 1px dashed var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.75rem;
+    padding: 5px 14px;
+}
+
+    #raiseQueryModal .btn-upload:hover {
+        background: var(--primary);
+        color: #fff;
+        border-style: solid;
+    }
+
+/*  INFO NOTE  */
+#raiseQueryModal .query-note {
+    font-size: 0.7rem;
+    background: #FFF1EB;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #555;
+}
+
+
+/* Buttons*/
+.vendorDashboard .cv-btn-outline {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    padding: 4px 6px;
+    font-size: 0.8rem;
+}
+
+    .vendorDashboard .cv-btn-outline:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.vendorDashboard .cv-btn-primary {
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+}
+
+    .vendorDashboard .cv-btn-primary:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }

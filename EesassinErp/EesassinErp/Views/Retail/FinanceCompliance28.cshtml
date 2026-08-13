@@ -1,0 +1,713 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Finance Compliance";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/FinacialStatutoryController.js?Ver=@ViewBag.Version"></script>
+<link href="~/Masters/FinanceCompliance/style.css" rel="stylesheet" />
+<script src="~/Masters/FinanceCompliance/script.js"></script>
+<script>
+    app.directive('fileModel', function () {
+        return {
+            restrict: 'A',
+            scope: {
+                fileModel: '=',
+                rowContext: '='
+            },
+            link: function (scope, element) {
+                element.on('change', function () {
+                    const files = element[0].files;
+                    scope.$apply(function () {
+                        if (!files || files.length === 0) {
+                            scope.fileModel = null;
+                            return;
+                        }
+                        scope.fileModel = files[0];
+
+                        console.log("Row from directive:", scope.rowContext);
+
+                        if (scope.$parent.fileSelected) {
+                            scope.$parent.fileSelected(files, scope.rowContext);
+                        }
+                    });
+                    element.val(null);
+                });
+                scope.$on('$destroy', function () {
+                    element.off('change');
+                });
+            }
+        };
+    });
+</script>
+<style>
+    .table-container {
+        max-height: 450px; /* Height yaha se control karo */
+        overflow-y: auto; /* Vertical scroll */
+        overflow-x: auto; /* Horizontal scroll ON */
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .custom-table {
+        width: max-content;
+        min-width: 100%;
+    }
+
+
+    /*=========Changes==========*/
+    /* scroll wrapper */
+    .labourCompPage .toggle-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+        /* hide scrollbar (optional) */
+        .labourCompPage .toggle-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+
+    /* main capsule */
+    .labourCompPage .toggle-pill {
+        display: inline-flex;
+        min-width: max-content; /* important */
+        border-radius: 999px;
+        background: rgba(0,0,0,0.03);
+        padding: 4px;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .labourCompPage .table-container {
+        max-height: 65vh;
+        overflow: auto;
+        border-radius: 12px;
+        scroll-behavior: smooth;
+    }
+
+    /* Sticky columns - body cells */
+    .labourCompPage .custom-table tbody td:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background: var(--card-bg);
+        min-width: 35px;
+    }
+
+    .labourCompPage .custom-table tbody td:nth-child(2) {
+        position: sticky;
+        left: 35px;
+        z-index: 4;
+        background: var(--card-bg);
+        width: 195px;
+        min-width: 195px;
+        max-width: 195px;
+    }
+
+    .labourCompPage .custom-table tbody td:nth-child(3) {
+        position: sticky;
+        left: 230px; /* 35 + 195 */
+        z-index: 3;
+        background: var(--card-bg);
+        min-width: 160px;
+        max-width: 200px;
+    }
+
+    .labourCompPage .custom-table thead th:nth-child(1) {
+        left: 0;
+        z-index: 10;
+    }
+
+    .labourCompPage .custom-table thead th:nth-child(2) {
+        left: 35px;
+        z-index: 9;
+        width: 195px;
+        min-width: 195px;
+        max-width: 195px;
+    }
+
+    .labourCompPage .custom-table thead th:nth-child(3) {
+        left: 230px;
+        z-index: 8;
+    }
+
+
+    .labourCompPage .custom-table thead th {
+        position: sticky;
+        top: 0;
+        /*z-index: 6;*/
+        background: #F37437;
+        color: #fff;
+    }
+
+    .labourCompPage .custom-table {
+        table-layout: auto;
+    }
+
+    /*.labourCompPage .custom-table td,
+    .labourCompPage .custom-table th {
+        max-width: 160px;
+    }*/
+
+    /*Fix table issues here*/
+    .labourCompPage .small-table td,
+    .labourCompPage .small-table th {
+        vertical-align: middle;
+        line-height: 1.4;
+    }
+
+    .labourCompPage .small-table .form-select,
+    .labourCompPage .small-table .form-control {
+        height: 30px;
+        min-height: 30px;
+        line-height: 1.2;
+    }
+
+    .labourCompPage .small-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .labourCompPage .custom-table td:nth-child(2),
+    .labourCompPage .custom-table td:nth-child(3) {
+        white-space: normal !important;
+        max-width: 250px;
+        word-break: break-word;
+    }
+
+    .labourCompPage .custom-table td:nth-child(3),
+    .labourCompPage .custom-table th:nth-child(3) {
+        white-space: normal !important;
+        word-break: break-word;
+    }
+
+
+    /* Disable horizontal sticky columns on tablets and below */
+    @@media (max-width: 991px) {
+
+        .labourCompPage .custom-table td:nth-child(1),
+        .labourCompPage .custom-table td:nth-child(2),
+        .labourCompPage .custom-table td:nth-child(3),
+        .labourCompPage .custom-table th:nth-child(1),
+        .labourCompPage .custom-table th:nth-child(2),
+        .labourCompPage .custom-table th:nth-child(3) {
+            left: auto !important;
+        }
+    }
+
+
+    .labourCompPage {
+        overflow-x: hidden;
+    }
+
+    /*Moddal responsiveness Optimization*/
+    @@media (max-width: 768px) {
+        .labourCompPage .modal-dialog {
+            margin: 0.5rem;
+        }
+
+        .labourCompPage .modal-xl,
+        .labourCompPage .modal-lg {
+            max-width: 100%;
+        }
+    }
+
+    .lb-kpi-value {
+        color: #E45D27 !important;
+        font-weight: 700 !important;
+    }
+</style>
+<div class="financeCompPage px-4 py-2">
+    <h4 class="mb-4 " style="color: var(--primary)">Finance Compliance </h4>
+    <!-- ================= KPI Bar ================= -->
+    <div class="container-fluid my-4 ">
+        <div class="row g-3 justify-content-center">
+            <!-- Complied -->
+            <div class="col-md-2">
+                <div class="fn-kpi-card d-flex">
+                    <div class="fn-kpi-title">Complied</div>
+                    <div class="lb-kpi-value">{{TotalComplied}}</div>
+                </div>
+            </div>
+            <!-- Non-Complied -->
+            <div class="col-md-2">
+                <div class="fn-kpi-card d-flex">
+                    <div class="fn-kpi-title">Non-Complied / Pending</div>
+                    <div class="lb-kpi-value">{{TotalNonComplied}}</div>
+                </div>
+            </div>
+
+            <!-- Delayed -->
+            <div class="col-md-2">
+                <div class="fn-kpi-card d-flex">
+                    <div class="fn-kpi-title">Delayed</div>
+                    <div class="lb-kpi-value">{{TotalDelayComplied}}</div>
+                </div>
+            </div>
+
+            <!-- Pending -->
+            <div class="col-md-2">
+                <div class="fn-kpi-card d-flex">
+                    <div class="fn-kpi-title">Non-Applicable</div>
+                    <div class="lb-kpi-value">{{TotalNonApplicable}}</div>
+                </div>
+            </div>
+
+            <!-- Verified -->
+            <div class="col-md-2">
+                <div class="fn-kpi-card d-flex">
+                    <div class="fn-kpi-title">Verified</div>
+                    <div class="lb-kpi-value">{{TotalVerified}}</div>
+                </div>
+            </div>
+            <!-- Verified -->
+            <div class="col-md-2">
+                <div class="fn-kpi-card d-flex">
+                    <div class="fn-kpi-title">Remarks</div>
+                    <div class="lb-kpi-value">{{TotalClarification}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3" style="display:none;">
+        <div class="toggle-pill" role="tablist" aria-label="All, Act1 or Act2">
+            <button type="button" class="btn btn-pill active" data-target="#allCard" aria-pressed="true">All</button>
+            <button type="button" class="btn btn-pill" data-target="#act1Card" aria-pressed="false">Act1</button>
+            <button type="button" class="btn btn-pill" data-target="#act2Card" aria-pressed="false">Act2</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- ALL CARD (default visible) -->
+        <div id="allCard" class="card section-card active">
+            <h5 class="mb-4 " style="color: var(--primary);display:none;">All card </h5>
+            <div class="card-body p-3 h-100 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="col-12 col-lg-8 d-flex flex-wrap gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                                {{SelectedAct || 'Act'}}
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="Act in ActList">
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="getAct(Act)">
+                                        {{Act}}
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                                {{SelectedState || 'State'}}
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="state in StateList">
+                                    <a class="dropdown-item"
+                                       href=""
+                                       ng-click="getstate(state)">
+                                        {{state}}
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                                {{SelectedStatus || 'Status'}}
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="status in StatusList">
+                                    <a class="dropdown-item"
+                                       href="javascript:void(0)"
+                                       ng-click="getstatus(status)">
+                                        {{status}}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="month in MonthList">
+                                    <a class="dropdown-item"
+                                       href="javascript:void(0)"
+                                       ng-click="getmonth(month)">
+                                        {{month}}
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                                {{SelectedMonth ? SelectedMonth : 'Month'}}
+                            </button>
+
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                                {{SelectedYear || 'Year'}}
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="year in YearList">
+                                    <a class="dropdown-item"
+                                       ng-click="getyear(year)">
+                                        {{year}}
+                                    </a>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <button class="btn btn-sm filter-btn active" ng-click="ApplyFilters()" style="display:none;">Go</button>
+                        <button class="btn btn-sm filter-btn active" ng-click="reset()">Reset</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="fnSearch" type="text" class="form-control form-control-sm" ng-model="Search" placeholder="Search..." />
+                                <button class="btn btn-sm" id="fnSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" ng-click="NewExportTableToCSV()">CSV</a></li>
+                                    <li><a class="dropdown-item" ng-click="NEwPrintTable()">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3" ng-init="BindSearch()">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table custom-table" id="lbTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Act Name</th>
+                                    <th>Compliance Name</th>
+                                    <th ng-hide="true">Registration No.</th>
+                                    <th> Risk  </th>
+                                    <th> Frequency  </th>
+                                    <th>Month</th>
+                                    <th>State Name</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actual Submission Date</th>
+                                    <th>Delay Days</th>
+                                    <th class="no-print">Upload File</th>
+                                    <th>Upload Date</th>
+                                    <th class="no-print">Remark </th>
+                                    <th class="no-print">Verification Status</th>
+                                    <th class="no-print">Download</th>
+                                    <th class="no-print">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                <tr ng-repeat="row in complianceRows |  filter:globalSearch">
+                                    <td>{{$index + 1}}</td>
+                                    <td>{{row.Act}}</td>
+                                    <td>
+                                        <a href="javascript:void(0)"
+                                           class="store-code-link text-success"
+                                           ng-click="BindCompliance(row.Id); openComplianceModal()">
+                                            {{row.ComplianceName}}
+                                        </a>
+                                    </td>
+                                    <td ng-hide="true">{{row.RegistrationNumber}}</td>
+                                    <td>{{row.Risk}}</td>
+                                    <td>
+                                        <a href="#"
+                                           ng-if="row.Frequency == 'Event'"
+                                           class="event-link text-success"
+                                           ng-click="openEventModal(row);">
+                                            {{row.Frequency}}
+                                        </a>
+
+                                        <span ng-if="row.Frequency != 'Event'">
+                                            {{row.Frequency}}
+                                        </span>
+                                    </td>
+                                    <td> {{row.Month}}</td>
+                                    <td>{{row.STATE_NM}}</td>
+                                    <td>{{ row.DueDate | date:'dd-MM-yyyy' }}</td>
+
+                                    <td>
+                                        <label class="btn btn-sm btn-upload px-3" style="white-space:nowrap; cursor:pointer;">
+                                            Choose File
+                                            <input type="file" hidden>
+                                        </label>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2" style="min-width:150px;">
+                                            <input type="text" class="form-control form-control-sm">
+                                            <i class="bi bi-eye-fill" style="color:#E45D27" role="button" data-bs-toggle="modal" data-bs-target="#remarkModal"></i>
+                                        </div>
+                                    </td>
+                                    <td>Yes/no</td>
+                                    <!--View column-->
+                                    <td>
+                                        <button class="btn btn-sm btn-view">View</button>
+                                    </td>
+                                    <!--Actyion column-->
+                                    <td>
+                                        <button class="btn btn-sm btn-submit px-3">Submit</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="lmPaginationWrap">
+            <div class="d-flex align-items-center gap-2">
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div id="lmPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                <button class="btn btn-sm filter-btn active" id="viewAllRows" type="button" ng-click="Getalldata()">View All Rows</button>
+            </div>
+        </div>
+        <!-- ================= Compliance Details Modal ================= -->
+        <div class="modal fade" id="complianceDetailsModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 14px; background: #FEF3EC; overflow: hidden; ">
+
+                    <!-- Header -->
+                    <div class="compDetail-header d-flex align-items-center">
+                        <button type="button" class="btn compDetail-back-btn" data-bs-dismiss="modal">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+
+                        <h5 class="modal-title text-center flex-grow-1" style="color:#fff">Compliance Details</h5>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body" style="background: #FEF3EC; font-size: 0.9rem;">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Rule:</strong>
+                                <div class="text-secondary">{{Rule}}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Section:</strong>
+                                <div class="text-secondary">{{Section}}</div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Form No:</strong>
+                                <div class="text-secondary">{{FormNo}}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Risk:</strong>
+                                <div class="fw-bold text-danger">{{Risk}}</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <strong>Attachment:</strong>
+
+                        <div class="text-secondary mb-3">
+
+                            <!-- If attachment exists -->
+                            <a href="javascript:void(0)"
+                               ng-if="Attachment"
+                               ng-click="DownloadAttachment(Attachment)"
+                               class="text-decoration-none d-inline-flex align-items-center gap-2">
+
+                                <i class="bi bi-download text-primary" style="font-size:16px;"></i>
+                                <span class="text-primary">Attachment</span>
+                            </a>
+                            <span ng-if="!Attachment" class="text-muted">
+                                <i class="bi bi-paperclip"></i> No Attachment
+                            </span>
+
+                        </div>
+                        <hr class="my-3">
+
+                        <strong>Description:</strong>
+                        <div id="cd_description" class="text-secondary" style="line-height:1.5;">
+                            To report the financial performance of overseas Joint Ventures (JV) or Wholly Owned Subsidiaries...
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Event Modal ================= -->
+        <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 14px; background: #FEF3EC; overflow: hidden; ">
+
+                    <!-- Header -->
+                    <div class="event-header d-flex align-items-center">
+                        <button type="button" class="btn event-back-btn" data-bs-dismiss="modal" ng-click="closeEventModal()">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                        <h5 class="modal-title text-center flex-grow-1">Compliance Event</h5>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body" style="background: #FEF3EC; font-size: 0.9rem;">
+                        <!-- Table wrapper -->
+                        <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0 small-table" id="fnTable">
+                                    <thead>
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Act Name</th>
+                                            <th>Compliance Name</th>
+                                            <th>Risk</th>
+                                            <th>Frequency</th>
+                                            <th>Month</th>
+                                            <th>State</th>
+                                            <th>Due Date</th>
+                                            <th>Status</th>
+                                            <th>Actual Submission Date</th>
+                                            <th>Delay Days</th>
+                                            <th>Upload File</th>
+                                            <th>Upload Date</th>
+                                            <th>Remark</th>
+                                            <th>Verification Status</th>
+                                            <th>View</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="fnTableBody">
+                                        <tr>
+                                            <td>1</td>
+                                            <td>Goods & Services Act, 2017</td>
+                                            <td><a href="#" class="store-code-link text-success">GSTR-1 (Outward Supply)</a></td>
+                                            <td><a href="#" class="event-link text-success">Event</a></td>
+                                            <td>Central</td>
+                                            <td>dec 11</td>
+                                            <!--Status column-->
+                                            <td>
+                                                <select class="form-select form-select-sm">
+                                                    <option value="">Select</option>
+                                                    <option>Complied</option>
+                                                    <option>Non-Complied</option>
+                                                    <option>Delayed</option>
+                                                    <option>Non-Applicable</option>
+                                                </select>
+                                            </td>
+
+                                            <td>
+                                                <input type="date" class="form-control form-control-sm">
+                                            </td>
+                                            <td>23</td>
+                                            <!--Upload File column-->
+                                            <td>
+                                                <label class="btn btn-sm btn-upload px-3" style="white-space:nowrap; cursor:pointer;">
+                                                    Choose File
+                                                    <input type="file" hidden>
+                                                </label>
+                                            </td>
+                                            <td>dec 11</td>
+                                            <!--Remark column-->
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2" style="min-width:150px;">
+                                                    <input type="text" class="form-control form-control-sm">
+                                                    <i class="bi bi-eye-fill" style="color:#E45D27" role="button" data-bs-toggle="modal" data-bs-target="#remarkModal"></i>
+                                                </div>
+                                            </td>
+                                            <td>Yes/no</td>
+                                            <!--View column-->
+                                            <td>
+                                                <button class="btn btn-sm btn-view">View</button>
+                                            </td>
+
+                                            <!-- Action -->
+                                            <td class="no-print">
+                                                <input class="btn btn-sm btn-submit px-3"
+                                                       type="button"
+                                                       value="Submit"
+                                                       ng-hide="event.IsVerified==='Verified'"
+                                                       ng-click="AddEventNewverifyRecord(event)" />
+                                            </td>
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer d-flex justify-content-end">
+                        <button type="button" class="btn btn-sm eventSubmitBtn" ng-click="addEventRow()">Add Event</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Remark Modal ================= -->
+        <div class="modal fade" id="remarkModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+                    <div style="background:#E45D27; padding:14px 20px;">
+                        <h5 class="text-white m-0">Remark</h5>
+                    </div>
+                    <div class="modal-body" style="background:#FFF1EB;">
+                        <div ng-bind-html="selectedRemark"></div>
+                    </div>
+                    <div class="modal-footer" style="background:#FFF1EB;">
+                        <button type="button" class="btn px-4" style="border-radius: 999px; color: #fff; background: var(--primary); padding: 6px 14px; font-weight: 400; font-size: 0.85rem;" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ================= Remark Modal for event ================= -->
+        <div class="modal fade" id="remarkModal1" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+                    <div style="background:#E45D27; padding:14px 20px;">
+                        <h5 class="text-white m-0">Remark</h5>
+                    </div>
+                    <div class="modal-body" style="background:#FFF1EB;">
+                        <div ng-bind-html="selectedRemark1"></div>
+                    </div>
+                    <div class="modal-footer" style="background:#FFF1EB;">
+                        <button type="button" class="btn px-4" style="border-radius: 999px; color: #fff; background: var(--primary); padding: 6px 14px; font-weight: 400; font-size: 0.85rem;" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 1 -->
+        <div id="act1" class="card section-card d-none">
+            <h5 class="mb-4" style="color: var(--primary)">card 1 </h5>
+        </div>
+        <!-- CARD 2 -->
+        <div id="act2" class="card section-card d-none">
+            <h5 class="mb-4" style="color: var(--primary)">card 2 </h5>
+        </div>
+    </div>
+
+</div>

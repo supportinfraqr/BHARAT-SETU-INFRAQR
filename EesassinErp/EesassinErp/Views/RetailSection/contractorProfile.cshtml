@@ -1,0 +1,2450 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Contractor Profile";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<script src="~/Content/Dashboards/ContractorProfile/script.js"></script>
+<link href="~/Content/Dashboards/ContractorProfile/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/ContractorDashboardController.js"></script>
+
+<style>
+    .done {
+        color: green;
+    }
+</style>
+
+<div class="contractorProfile px-4 py-2" ng-init="getContractorDetail()">
+    <!-- Top Bar -->
+    <div class="d-flex align-items-center justify-content-between mb-3 contractorProfileTopBar">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h4 class="mb-0 contractorProfileHeading">
+                Contractor’s Profile
+            </h4>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-edit" id="btneditProfile" type="button" data-bs-toggle="modal" data-bs-target="#editContractorProfileModal" ng-click="BindRegistration()">
+                <i class="bi bi-pencil-square"></i>
+                <span>Edit Profile</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- EDIT CONTRACTOR PROFILE MODAL -->
+    <div class="modal fade contractorProfileModal"
+         id="editContractorProfileModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-fullscreen contractorProfileFullscreenModal">
+
+            <div class="modal-content contractorProfileModalContent">
+
+                <!-- HEADER -->
+                <div class="modal-header contractorProfileModalHeader">
+                    <div class="contractorProfileModalTitleWrapper">
+                        <div class="contractorProfileModalIcon">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div>
+                            <div class="contractorProfileModalTitle">
+                                Edit Contractor Profile
+                            </div>
+                            <div class="contractorProfileModalSubTitle">
+                                Update contractor information and company details
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button"
+                            class="btn-close btn-close-white contractorProfileModalClose"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+
+                </div>
+
+                <!-- BODY -->
+                <div class="modal-body contractorProfileModalBody">
+
+                    <!-- STEPPER -->
+                    <div class="stepper-modern my-3">
+                        <div class="step-item active">Basic</div>
+                        <div class="step-item">Registration</div>
+                        <div class="step-item">Financial</div>
+                        <div class="step-item">Service</div>
+                        <div class="step-item">Documents</div>
+                        <div class="step-item">Declarations</div>
+                        <div class="step-item">Undertaking</div>
+                    </div>
+
+                    <!-- STEP 1 -->
+                    <div class="form-step" data-step="1">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Basic Company Details</h5>
+
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">Name of the Agency</label>
+                                    <input type="text" class="form-control" ng-model="AgencyName">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Registered Office Address</label>
+                                    <input type="text" class="form-control" ng-model="RegisteredAddress">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Corporate Office Address</label>
+                                    <input type="text" class="form-control" ng-model="CorporateAddress">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Contact Person Name</label>
+                                    <input type="text" class="form-control" ng-model="ContactPerson">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Designation</label>
+                                    <input type="text" class="form-control" ng-model="Designation">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Mobile Number</label>
+                                    <input type="text" class="form-control" ng-model="Mobile"  ng-disabled="true" maxlength="10" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Email ID</label>
+                                    <input type="email" id="txtEmail" class="form-control" ng-disabled="true" ng-model="Email" onblur="validateEmail('#txtEmail')">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Website</label>
+                                    <input type="text" class="form-control" ng-model="Website">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Year of Establishment</label>
+                                    <input type="text" maxlength="4" class="form-control" ng-model="YearEstablishment" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                </div>
+
+                                <div class="multi-select" style="position:relative; width:300px;">
+
+                                    <label class="form-label">Type of Organization</label>
+
+                                    <input type="text"
+                                           readonly id="multiDisplay"
+                                           class="form-control multi-input"
+                                           data-target="industriesDropdown1"
+                                           placeholder="Select"
+                                           style="width:100%; padding:6px; cursor:pointer;" ng-model="Organization" />
+
+                                    <div id="industriesDropdown1"
+                                         class="multi-select-dropdown"
+                                         style="display:none; position:absolute; background:#fff; border:1px solid #ccc; width:100%; max-height:150px; overflow:auto; z-index:999; padding:5px;">
+
+                                        <label><input type="checkbox" value="Proprietorship"> Proprietorship</label>
+                                        <label><input type="checkbox" value="Partnership"> Partnership</label>
+                                        <label><input type="checkbox" value="LLP"> LLP</label>
+                                        <label><input type="checkbox" value="Pvt Ltd"> Pvt Ltd</label>
+                                        <label><input type="checkbox" value="Public Ltd"> Public Ltd</label>
+
+                                    </div>
+                                </div>
+                                <div ng-init="AllCountry()">
+                                    <label class="form-label">Country </label>
+                                    <select id="ddlCountry" class="select2 form-control" ng-model="Country">
+                                        <option value="">Select Country</option>
+                                        <option ng-repeat="x in AllCountryList" value="{{x.CountryId}}">
+                                            {{x.CountryName}}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div ng-init="AllCity()">
+                                    <label class="form-label">State </label>
+                                    <select class="form-select form-select-sm validate"
+                                            ng-model="State">
+                                        <option value="">Select State</option>
+                                        <option ng-repeat="x in AllCityList | unique:'STATE_NAME'"
+                                                value="{{x.STATE_NAME}}">
+                                            {{x.STATE_NAME}}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">City </label>
+                                    <select class="form-select form-select-sm validate"
+                                            ng-model="City">
+                                        <option value="">Select City</option>
+                                        <option ng-repeat="x in AllCityList | filter:{STATE_NAME: State}"
+                                                value="{{x.CITY_NAME}}">
+                                            {{x.CITY_NAME}}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Pincode </label>
+                                    <input type="text" class="form-control form-control-sm validate" id="txtPincode" ng-model="Pincode" numeric-only dynamic-length maxlength="6" minlength="6">
+                                </div>
+                                <div ng-init="AllIndustry()">
+                                    <label class="form-label">Industry </label>
+                                    <select class="form-select form-select-sm validate"
+                                            ng-model="Industry">
+                                        <option value="">Select Industry</option>
+                                        <option ng-repeat="x in IndustryList" value="{{x.Id}}">{{x.Industry}}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">LIN Number</label>
+                                    <input class="form-control form-control-sm validate" id="LIN" ng-model="LIN">
+                                </div>
+
+
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn d-none">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn next-btn" ng-click="SaveStep1()">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 2 -->
+                    <div class="form-step" data-step="2" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Business Registration Details</h5>
+
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">PAN</label>
+                                    <input type="text" class="form-control" id="pan" maxlength="10" ng-model="PanNo">
+                                    <small class="text-muted validation-msg" id="panMsg"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">TAN</label>
+                                    <input type="text" class="form-control" id="tan" maxlength="10" ng-model="TAN">
+                                    <small class="text-muted validation-msg" id="tanMsg"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">GSTIN</label>
+                                    <input type="text" class="form-control" id="gst" maxlength="15" ng-model="GSTIN">
+                                    <small class="text-muted validation-msg" id="gstMsg"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">CIN / LLPIN</label>
+                                    <input type="text" class="form-control" id="cin" ng-model="CIN">
+                                    <small class="text-muted validation-msg" id="cinMsg"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Shop & Establishment Registration</label>
+                                    <input type="text" class="form-control" ng-model="SHOPREGI">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">MSME (Udyam) Registration</label>
+                                    <input type="text" class="form-control" ng-model="MSME">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">EPF Registration No.</label>
+                                    <input type="text" class="form-control" ng-model="EPFREGNO">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">ESIC Registration No.</label>
+                                    <input type="text" class="form-control" ng-model="ESICREGNO">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Professional Tax Registration</label>
+                                    <input type="text" class="form-control" ng-model="ProfessionalREGNO">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Labour Welfare Fund Registration</label>
+                                    <input type="text" class="form-control" ng-model="LabourREGNO">
+                                </div>
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn next-btn" ng-click="SaveStep2()">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 -->
+                    <div class="form-step" data-step="3" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Financial Details</h5>
+
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">Bank Name</label>
+                                    <input type="text" class="form-control" ng-model="BankName">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Account Number</label>
+                                    <input type="text" class="form-control" id="accountNo" ng-model="AccountNumber" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                    <small id="accMsg" class="text-muted"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">IFSC Code</label>
+                                    <input type="text" class="form-control" id="ifsc" maxlength="11" ng-model="IFSCCode">
+                                    <small id="ifscMsg" class="text-muted"></small>
+                                </div>
+
+                                <!-- Cancelled Cheque -->
+                                <div>
+                                    <label class="form-label d-block">Cancelled Cheque</label>
+
+                                    <div class="d-flex gap-3 mt-1">
+                                        <select ng-model="CancelledCheque" class="form-select">
+                                            <option value="">Select</option>
+                                            <option value="No">No</option>
+                                            <option value="Yes">Yes</option>
+                                        </select>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn next-btn" ng-click="SaveStep4()">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 4 -->
+                    <div class="form-step" data-step="4" style="display: none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Service Profile</h5>
+
+                            <div class="form-grid mt-3">
+
+
+
+                                <div class="multi-select" style="position:relative; width:300px;">
+
+                                    <label>Type of Contractor</label>
+
+                                    <input type="text"
+                                           id="ServicesOffered"
+                                           readonly class="form-control"
+                                           placeholder="Select"
+                                           style="width:100%; padding:6px; cursor:pointer;" />
+
+                                    <div id="serviceDropdown" class="multi-select-dropdown"
+                                         style="display:none; position:absolute; background:#fff; border:1px solid #ccc; width:100%; max-height:150px; overflow:auto; z-index:999;">
+
+                                        <label><input type="checkbox" value="Manpower Supply"> Manpower Supply</label><br>
+                                        <label><input type="checkbox" value="Facility Management"> Facility Management</label><br>
+                                        <label><input type="checkbox" value="Security Services"> Security Services</label><br>
+                                        <label><input type="checkbox" value="Housekeeping"> Housekeeping</label><br>
+                                        <label><input type="checkbox" value="IT Services"> IT Services</label><br>
+                                        <label><input type="checkbox" value="Consulting"> Consulting</label><br>
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="multi-select" style="position:relative; width:300px;">
+
+                                    <label class="form-label">Labour Supply Contractors</label>
+
+                                    <input type="text"
+                                           readonly id="IndustriesServed"
+                                           class="form-control multi-input"
+                                           data-target="industriesDropdown"
+                                           placeholder="Select"
+                                           style="width:100%; padding:6px; cursor:pointer;" />
+
+                                    <div id="industriesDropdown"
+                                         class="multi-select-dropdown"
+                                         style="display:none; position:absolute; background:#fff; border:1px solid #ccc; width:100%; max-height:150px; overflow:auto; z-index:999; padding:5px;">
+
+                                        <label><input type="checkbox" value="Manufacturing"> Manufacturing</label><br>
+                                        <label><input type="checkbox" value="IT"> IT</label><br>
+                                        <label><input type="checkbox" value="Healthcare"> Healthcare</label><br>
+                                        <label><input type="checkbox" value="Retail"> Retail</label><br>
+                                        <label><input type="checkbox" value="Banking"> Banking</label><br>
+                                        <label><input type="checkbox" value="Logistics"> Logistics</label><br>
+
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+                                    <button class="btn save-btn next-btn" ng-click="SaveStep5()">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 5 -->
+                    <div class="form-step" data-step="5" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Documents Checklist</h5>
+                            <div class="form-grid mt-2">
+
+                                <!-- ITEM -->
+                                <div class="doc-item">
+                                    <label>PAN Card</label>
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File4"
+                                           on-change="saveFile('File4',11)" />
+                                    <a ng-if="File4"
+                                       href="javascript:void(0)"
+                                       class="icon-link me-2"
+                                       ng-click="ViewFileC(File4,'PAN Card')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File4"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File4,'PAN Card')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>GST Certificate</label>
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File5"
+                                           on-change="saveFile('File5',12)" />  <a ng-if="File5"
+                                                                                   href="javascript:void(0)"
+                                                                                   class="icon-link me-2"
+                                                                                   ng-click="ViewFileC(File5,'GST Certificate')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File5"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File5,'Upload Copy 2')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>Incorporation Certificate</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File6"
+                                           on-change="saveFile('File6',13)" />  <a ng-if="File6"
+                                                                                   href="javascript:void(0)"
+                                                                                   class="icon-link me-2"
+                                                                                   ng-click="ViewFileC(File6,'Incorporation Certificate')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File6"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File6,'Incorporation Certificate')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>ESIC Registration Certificate</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File7"
+                                           on-change="saveFile('File7',14)" />  <a ng-if="File7"
+                                                                                   href="javascript:void(0)"
+                                                                                   class="icon-link me-2"
+                                                                                   ng-click="ViewFileC(File7,'EPF & ESIC Certificates')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File7"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File7,'EPF & ESIC Certificates')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>Labour License</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File8"
+                                           on-change="saveFile('File8',15)" />  <a ng-if="File8"
+                                                                                   href="javascript:void(0)"
+                                                                                   class="icon-link me-2"
+                                                                                   ng-click="ViewFileC(File8,'Labour License')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File8"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File8,'Labour License')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>Cancelled Cheque</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File9"
+                                           on-change="saveFile('File9',16)" />  <a ng-if="File9"
+                                                                                   href="javascript:void(0)"
+                                                                                   class="icon-link me-2"
+                                                                                   ng-click="ViewFileC(File9,'Cancelled Cheque')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File9"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File9,'Cancelled Cheque')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>MSME(Udhyam) Registration</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File22"
+                                           on-change="saveFile('File22',37)" />  <a ng-if="file22"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(file22,'MSME(Udhyam) Registration')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="file22"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(file22,'MSME(Udhyam) Registration')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>Security License</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File23"
+                                           on-change="saveFile('File23',38)" />  <a ng-if="file23"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(file23,'Security License')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="file23"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(file23,'Security License')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>PF Registration Certification</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File16"
+                                           on-change="saveFile('File16',23)" />  <a ng-if="File16"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(File16,'PF Registration Certification')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File16"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File16,'PF Registration Certification')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>Shop & Establishment Registration</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File24"
+                                           on-change="saveFile('File24',39)" />  <a ng-if="file24"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(file24,'Establishment Registration')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="file24"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(file24,'Establishment Registration')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div class="doc-item">
+                                    <label>Insurance Policy</label>
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File19"
+                                           on-change="saveFile('File19',26)" />  <a ng-if="File19"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(File19,'Financial Statements 2')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File19"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File19,'Financial Statements 2')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-4">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn next-btn">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 6 -->
+                    <div class="form-step" data-step="6" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Declarations</h5>
+
+                            <div class="declaration-list">
+
+                                <div class="decl-item" data-id="indemnity">
+                                    <div>
+                                        Indemnity Clause
+                                        <div class="status"
+                                             ng-class="Dec1==1 ? 'done' : 'pending'">
+                                            {{ Dec1==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec1==1" ng-click="openDeclaration('Indemnity Clause')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="confidentiality">
+                                    <div>
+                                        Confidentiality Agreement
+                                        <div class="status"
+                                             ng-class="Dec2==1 ? 'done' : 'pending'">
+                                            {{ Dec2==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec2==1" ng-click="openDeclaration('Confidentiality Agreement')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="conduct">
+                                    <div>
+                                        Code of Conduct
+                                        <div class="status"
+                                             ng-class="Dec3==1 ? 'done' : 'pending'">
+                                            {{ Dec3==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec3==1" ng-click="openDeclaration('Code of Conduct')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="aml">
+                                    <div>
+                                        AML Declaration
+                                        <div class="status"
+                                             ng-class="Dec4==1 ? 'done' : 'pending'">
+                                            {{ Dec4==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec4==1" ng-click="openDeclaration('AML Declaration')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="abc">
+                                    <div>
+                                        Anti-Bribery
+                                        <div class="status"
+                                             ng-class="Dec5==1 ? 'done' : 'pending'">
+                                            {{ Dec5==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec5==1" ng-click="openDeclaration('Anti-Bribery')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="dpdp">
+                                    <div>
+                                        DPDP Declaration
+                                        <div class="status"
+                                             ng-class="Dec6==1 ? 'done' : 'pending'">
+                                            {{ Dec6==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec6==1" ng-click="openDeclaration('DPDP Declaration')">View & Accept</button>
+                                </div>
+
+                            </div>
+
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+                                    <button class="btn save-btn" id="declNext" ng-click="validateDeclarations()">Next</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 7 -->
+                    <div class="form-step" data-step="7" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">General Undertaking</h5>
+
+                            <div class="mt-3" style="font-size:13px; line-height:1.6; color:#444;">
+
+                                <p>I/We hereby declare that:</p>
+
+                                <ul>
+                                    <li>All information provided is true and correct</li>
+                                    <li>We comply with all applicable Indian labour laws</li>
+                                    <li>We accept all terms, policies, and declarations mentioned above</li>
+                                </ul>
+
+                            </div>
+
+                            <!-- SIGNATURE SECTION -->
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">Authorized Signatory Name</label>
+                                    <input type="text" class="form-control" ng-model="SignatoryName">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Designation</label>
+                                    <input type="text" class="form-control" ng-model="SignatoryDesignation">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Signature (Upload)</label>
+
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File20"
+                                           on-change="saveFile('File20',35)" />  <a ng-if="File20"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(File20,'Signature')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File20"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File20,'Signature')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Company Seal (Upload)</label>
+
+
+                                    <input type="file"
+                                           class="form-control mt-1"
+                                           file-model="File21"
+                                           on-change="saveFile('File21',36)" />  <a ng-if="File21"
+                                                                                    href="javascript:void(0)"
+                                                                                    class="icon-link me-2"
+                                                                                    ng-click="ViewFileC(File21,'Company Seal ')">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a ng-if="File21"
+                                       href="javascript:void(0)"
+                                       ng-click="DownloadFileC(File21,'Company Seal')">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="txtGeneralDate" ng-model="GeneralDate">
+                                </div>
+
+                            </div>
+
+                            <!-- FINAL ACTION -->
+                            <div class="entity-footer d-flex justify-content-between mt-4">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+                                    @*<button class="btn save-btn">Save Draft</button>*@
+                                    <button class="btn save-btn next-btn" ng-click="FinalSave()">Submit</button>
+                                    @*<button class="btn save-btn" id="finalSubmit">Submit</button>*@
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!--Modal for Declaration-->
+                    <div class="modal fade" id="declModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+
+                                <div class="modal-header">
+                                    <h6 class="modal-title" id="declTitle"></h6>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="legal-box" id="declContent"></div>
+
+                                    <div class="legal-agree mt-3">
+                                        <label>
+                                            <input type="checkbox" id="declAgree">
+                                            I agree
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button class="btn save-btn" id="confirmDecl" ng-click="confirmDeclaration()">Confirm</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Main Layout -->
+    <div class="row g-3 contractorProfileMainWrapper">
+        <!-- LEFT SIDEBAR -->
+        <div class="col-xl-3 col-lg-4">
+            <div class="contractorProfileSidebar">
+                <!-- Top Company Card -->
+                <div class="contractorProfileCompanyCard">
+                    <div class="d-flex align-items-start gap-3">
+                        <!-- Logo -->
+                        <div class="contractorProfileLogo">
+                        </div>
+                        <!-- Company Info -->
+                        <div class="flex-grow-1">
+                            <div class="contractorProfileCompanyName">
+                                {{ContractorProfile.PartyName || '-'}}
+                            </div>
+                            <div class="contractorProfileCompanyCode">
+                                {{ContractorProfile.PartyCode || '-'}}
+                            </div>
+
+                            <div class="contractorProfileRatingWrapper">
+
+                                <div class="contractorProfileVerified">
+                                    <i class="bi bi-patch-check-fill"></i>
+                                </div>
+
+                                <div class="contractorProfileStars">
+                                    <i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star-fill"></i>
+                                </div>
+
+                                <div class="contractorProfileRatingText">
+                                    4.3
+                                </div>
+
+                                <div class="contractorProfileReviewCount">
+                                    (83)
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="contractorProfileDivider"></div>
+
+                    <!-- Contact Info -->
+                    <div class="contractorProfileContactList">
+
+                        <div class="contractorProfileContactItem">
+                            <i class="bi bi-envelope"></i>
+                            <span>{{ContractorProfile.EmailId || '-'}}</span>
+                        </div>
+
+                        <div class="contractorProfileContactItem">
+                            <i class="bi bi-telephone"></i>
+                            <span>{{ContractorProfile.ContactNo || '-'}}</span>
+                        </div>
+
+                        <div class="contractorProfileContactItem">
+                            <i class="bi bi-geo-alt"></i>
+                            <span>{{ContractorProfile.Address || '-'}}</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Sidebar Menu -->
+                <div class="contractorProfileMenuWrapper">
+
+                    <button class="contractorProfileMenuBtn active"
+                            type="button"
+                            data-target="contractorBasicTab">
+
+                        <span>Basic</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="contractorProfileMenuBtn"
+                            type="button"
+                            data-target="contractorRegistrationTab">
+
+                        <span>Registration</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="contractorProfileMenuBtn"
+                            type="button"
+                            data-target="contractorFinancialTab">
+
+                        <span>Financial</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="contractorProfileMenuBtn"
+                            type="button"
+                            data-target="contractorServiceTab">
+
+                        <span>Service</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="contractorProfileMenuBtn"
+                            type="button"
+                            data-target="contractorDocumentsTab">
+
+                        <span>Documents</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="contractorProfileMenuBtn"
+                            type="button"
+                            data-target="contractorDeclarationTab">
+
+                        <span>Declaration</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="contractorProfileMenuBtn"
+                            type="button"
+                            data-target="contractorUndertakingTab">
+
+                        <span>Undertaking</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT CONTENT -->
+        <div class="col-xl-9 col-lg-8">
+
+            <div class="contractorProfileContentCard">
+
+                <!-- BASIC TAB -->
+                <div class="contractorProfileTab active"
+                     id="contractorBasicTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        Basic Company Details
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Name of the Agency
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.PartyName || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Registered Office Address
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.RegisteredAddress || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Corporate Office Address
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.CorporateAddress || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Contact Person Name
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.ContactPerson || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Designation
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Designation || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Mobile Number
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Mobile || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Email ID
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Email || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Website
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Website || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Year of Establishment
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.YearEstablishment || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Type of Organization
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Organization || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Country
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.CountryName || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                State
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.State || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                City
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.City || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Pincode
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Pincode || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Industry
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Industry || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                LIN No
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.LIN || '-'}}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- REGISTRATION TAB -->
+                <div class="contractorProfileTab"
+                     id="contractorRegistrationTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        Registration Details
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                PAN
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.PanNo || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                TAN
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Tan || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                GSTN
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.GSTIN || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                CIN/LLPIN
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.CIN || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Shop & Establishment Registration
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.SHOPREGI || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                MSME(Udyam) Registration
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.MSME || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                EPF Registration No.
+                            </div>
+
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.EPFREGNO || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                ESIC Registration No.
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.ESICREGNO || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Professional Tax Registration
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.ProfessionalREGNO || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Labour Welfare Fund Registration
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.LabourREGNO || '-'}}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FINANCIAL TAB -->
+                <div class="contractorProfileTab"
+                     id="contractorFinancialTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        Financial Details
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Bank Name
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.BankName || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Account Number
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.AccountNumber || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                IFSC Code
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.IFSCCode || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Cancelled Cheque
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.CancelledCheque || '-'}}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- SERVICE TAB -->
+                <div class="contractorProfileTab"
+                     id="contractorServiceTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        Service Profile
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Type of Contractor
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.Typeofcontractor || '-' }}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="contractorProfileLabel">
+                                Labour Supply Contractors
+                            </div>
+
+                            <div class="contractorProfileValue">
+                                {{ContractorProfile.industries || '-' }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- DOCUMENTS TAB -->
+                <div class="contractorProfileTab"
+                     id="contractorDocumentsTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        Documents
+                    </div>
+
+                    <div class="row g-4">
+
+                        <!-- PAN CARD -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            PAN Card
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            PAN Card.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File4,'PAN Card')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File4,'PAN Card')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- GST Certificate -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            GST Certificate
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            certificate.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File5,'GST Certificate')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File5,'GST Certificate')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Incorporation Certificate -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            Incorporation Certificate
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            Incorporation Certificate.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File6,'Incorporation Certificate')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File6,'Incorporation Certificate')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ESIC Registration Certificate -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            ESIC Registration Certificate
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            ESIC Registration Certificate.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File7,'ESIC Registration Certificate')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File7,'ESIC Registration Certificate')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Labour License -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            Labour License
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            Labour License.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File8,'Labour License')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File8,'ESIC Registration Certificate')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Cancelled Cheque -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            Cancelled Cheque
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            Cancelled Cheque.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File9,'Cancelled Cheque')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File9,'Cancelled Cheque')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- MSME(Udyam) Registration -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            MSME(Udyam) Registration
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            MSME(Udyam) Registration.pdf
+                                        </div>
+                                    </div>
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.file22,' MSME(Udyam) Registration')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.file22,' MSME(Udyam) Registration')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Security License -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            Security License
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            Security License.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.file23,'Security License'">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.file23,'Security License')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- PF Registration Certification -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            PF Registration Certification
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            PF Registration Certification.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File16,'PF Registration Certification')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File16,'PF Registration Certification')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Shop & Establishment Registration -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            Shop & Establishment Registration
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            Establishment Registration.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.file24,'Establishment Registration')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.file24,'Establishment Registration')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Insurance Policy -->
+                        <div class="col-md-4">
+
+                            <div class="contractorDocumentViewCard">
+
+                                <div class="contractorDocumentViewTop">
+
+                                    <div>
+                                        <div class="contractorViewLabel">
+                                            Insurance Policy
+                                        </div>
+
+                                        <div class="contractorDocumentFileName">
+                                            Insurance Policy.pdf
+                                        </div>
+                                    </div>
+
+                                    <div class="contractorDocumentIcon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+
+                                </div>
+
+                                <div class="contractorDocumentActions">
+
+                                    <button class="btn contractorDocumentViewBtn" ng-click="ViewFileC(ContractorProfile.File19,'Insurance Policy')">
+                                        <i class="bi bi-eye me-2"></i>
+                                        View
+                                    </button>
+
+                                    <button class="btn contractorDocumentDownloadBtn" ng-click="DownloadFileC(ContractorProfile.File19,'Insurance Policy')">
+                                        <i class="bi bi-download me-2"></i>
+                                        Download
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- DECLARATION TAB -->
+                <div class="contractorProfileTab"
+                     id="contractorDeclarationTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        Declarations
+                    </div>
+
+                    <div class="contractorProfileDeclarationWrapper">
+
+                        <!-- ITEM -->
+                        <div class="contractorProfileDeclarationRow">
+
+                            <div class="contractorProfileDeclarationName">
+                                Indemnity Clause
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': ContractorProfile.IndemnityClause == 1,
+                                        'text-danger': ContractorProfile.IndemnityClause != 1}">
+                                {{ ContractorProfile.IndemnityClause == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                        </div>
+                        <!-- ITEM -->
+                        <div class="contractorProfileDeclarationRow">
+
+                            <div class="contractorProfileDeclarationName">
+                                Confidentiality Agreement
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': ContractorProfile.ConfidentialityAgreement == 1,
+                                        'text-danger': ContractorProfile.ConfidentialityAgreement != 1}">
+                                {{ ContractorProfile.ConfidentialityAgreement == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                            @*<button type="button" class="contractorProfileViewBtn">
+                                    View
+                                </button>*@
+
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="contractorProfileDeclarationRow">
+                            <div class="contractorProfileDeclarationName">
+                                Code of Conduct
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': ContractorProfile.CodeofConduct == 1,
+                                        'text-danger': ContractorProfile.CodeofConduct != 1}">
+                                {{ ContractorProfile.CodeofConduct == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                            @*<button type="button" class="contractorProfileViewBtn">
+                                    View
+                                </button>*@
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="contractorProfileDeclarationRow">
+
+                            <div class="contractorProfileDeclarationName">
+                                AML Declaration
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': ContractorProfile.AMLDeclaration == 1,
+                                        'text-danger': ContractorProfile.AMLDeclaration != 1}">
+                                {{ ContractorProfile.AMLDeclaration == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                            @*<button type="button" class="contractorProfileViewBtn">View </button>*@
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="contractorProfileDeclarationRow">
+
+                            <div class="contractorProfileDeclarationName">
+                                Anti- Bribery
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': ContractorProfile.AntiBribery == 1,
+                                        'text-danger': ContractorProfile.AntiBribery != 1}">
+                                {{ ContractorProfile.AntiBribery == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                            @*<button type="button"
+                                        class="contractorProfileViewBtn">
+
+                                    View
+
+                                </button>*@
+
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="contractorProfileDeclarationRow">
+
+                            <div class="contractorProfileDeclarationName">
+                                DPDP Declaration
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': ContractorProfile.DPDPDeclaration == 1,
+                                        'text-danger': ContractorProfile.DPDPDeclaration != 1}">
+                                {{ ContractorProfile.DPDPDeclaration == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                            @*<button type="button"
+                                        class="contractorProfileViewBtn">
+
+                                    View
+
+                                </button>*@
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- UNDERTAKING TAB -->
+                <div class="contractorProfileTab"
+                     id="contractorUndertakingTab">
+
+                    <div class="contractorProfileSectionTitle">
+                        General Undertaking
+                    </div>
+
+                    <div class="contractorProfileUndertakingCard">
+
+                        <!-- UNDERTAKING TEXT -->
+                        <div class="contractorProfileUndertakingText">
+
+                            <div class="contractorProfileUndertakingHeading">
+                                I/We hereby declare that:
+                            </div>
+
+                            <ul class="contractorProfileUndertakingList">
+
+                                <li>
+                                    All information provided is true and correct
+                                </li>
+
+                                <li>
+                                    We comply with all applicable Indian labour laws
+                                </li>
+
+                                <li>
+                                    We accept all terms, policies, and declarations mentioned above
+                                </li>
+
+                            </ul>
+
+                        </div>
+
+                        <!-- DETAILS -->
+                        <div class="row g-4 mt-1">
+
+                            <!-- SIGNATORY NAME -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+
+                                <div class="contractorProfileLabel">
+                                    Authorized Signatory Name
+                                </div>
+
+                                <div class="contractorProfileReadValue">
+                                    {{ContractorProfile.SignatoryName}}
+                                </div>
+
+                            </div>
+
+                            <!-- DESIGNATION -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+
+                                <div class="contractorProfileLabel">
+                                    Director
+
+                                </div>
+
+                                <div class="contractorProfileReadValue">
+                                    {{ContractorProfile.SignatoryDesignation}}
+                                </div>
+
+                            </div>
+
+                            <!-- SIGNATURE -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+
+                                <div class="contractorProfileLabel">
+                                    Signature
+                                </div>
+
+                                <div class="contractorProfileDocumentValue">
+                                    @*<i class="bi bi-file-earmark-text"></i>*@
+                                    <span ng-if="ContractorProfile.File20 && ContractorProfile.File20 !== 'No file uploaded.'"
+                                          class="d-inline-flex align-items-center gap-3">
+                                        <a ng-href="#" ng-click="ViewFileC(ContractorProfile.File20,'Signature')"
+                                           class="text-decoration-none">
+                                            <i class="bi bi-eye-fill text-danger" style="font-size:18px;"></i>
+                                        </a>
+                                        <a href=""
+                                           ng-click="DownloadFileC(ContractorProfile.File20,'Signature')"
+                                           class="text-decoration-none">
+                                            <i class="bi bi-download text-danger" style="font-size:18px;"></i>
+                                        </a>
+                                    </span>
+                                    <span ng-if="!ContractorProfile.File20 || ContractorProfile.File20 === 'No file uploaded.'"
+                                          class="text-muted">
+                                        <i class="bi bi-paperclip"></i> No Attachment
+                                    </span>
+                                </div>
+
+                            </div>
+
+                            <!-- COMPANY SEAL -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+                                <div class="contractorProfileLabel">
+                                    Company Seal
+                                </div>
+                                <div class="contractorProfileDocumentValue">
+                                    @*<i class="bi bi-file-earmark-text"></i>*@
+                                    <span ng-if="ContractorProfile.File21 && ContractorProfile.File21 !== 'No file uploaded.'"
+                                          class="d-inline-flex align-items-center gap-3">
+                                        <a ng-href="#" ng-click="ViewFileC(ContractorProfile.File21,'Company Seal')"
+                                           class="text-decoration-none">
+                                            <i class="bi bi-eye-fill text-danger" style="font-size:18px;"></i>
+                                        </a>
+                                        <a href=""
+                                           ng-click="DownloadFileC(ContractorProfile.File21,'Company Seal')"
+                                           class="text-decoration-none">
+                                            <i class="bi bi-download text-danger" style="font-size:18px;"></i>
+                                        </a>
+                                    </span>
+                                    <span ng-if="!ContractorProfile.File21 || ContractorProfile.File21 === 'No file uploaded.'"
+                                          class="text-muted">
+                                        <i class="bi bi-paperclip"></i> No Attachment
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- DATE -->
+                            <div class="col-xl-3 col-lg-6 col-md-6">
+
+                                <div class="contractorProfileLabel">
+                                    Date
+                                </div>
+
+                                <div class="contractorProfileReadValue">
+                                    {{ ContractorProfile.GeneralDate | date:'dd-MM-yyyy' }}
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 7;
+
+    /* STEP SWITCH */
+    const stepIndicators = document.querySelectorAll(".step-item");
+
+    function showStep(step) {
+
+        document.querySelectorAll(".form-step").forEach(s => s.style.display = "none");
+        document.querySelector(`[data-step="${step}"]`).style.display = "block";
+
+        stepIndicators.forEach((el, index) => {
+            el.classList.remove("active", "completed");
+
+            if (index + 1 < step) {
+                el.classList.add("completed");
+            }
+            else if (index + 1 === step) {
+                el.classList.add("active");
+            }
+        });
+
+        document.querySelector(".prev-btn").classList.toggle("d-none", step === 1);
+    }
+
+    document.addEventListener("click", function (e) {
+
+        if (e.target.classList.contains("next-btn")) {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                showStep(currentStep);
+            }
+        }
+
+        if (e.target.classList.contains("prev-btn")) {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+    });
+
+    /* MULTI SELECT */
+    const display = document.getElementById("multiDisplay");
+    const dropdown = document.getElementById("multiDropdown");
+
+    display.addEventListener("click", () => {
+        dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+
+    dropdown.addEventListener("change", () => {
+        const checks = dropdown.querySelectorAll("input[type=checkbox]");
+        const selected = [];
+
+        checks.forEach(c => {
+            if (c.checked && c.value !== "all") {
+                selected.push(c.value);
+            }
+        });
+
+        display.value = selected.join(", ");
+    });
+
+    /* CLOSE ON OUTSIDE CLICK */
+    document.addEventListener("click", function (e) {
+        if (!e.target.closest(".multi-select")) {
+            dropdown.style.display = "none";
+        }
+    });
+
+    showStep(currentStep);
+</script>
+<script>
+
+    /* PAN VALIDATION */
+    document.getElementById("pan").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+        const msg = document.getElementById("panMsg");
+
+        if (val.length === 10) {
+            msg.innerText = regex.test(val) ? "Valid PAN " : "Invalid PAN ";
+            msg.style.color = regex.test(val) ? "green" : "red";
+        } else {
+            msg.innerText = "";
+        }
+    });
+    document.getElementById("gst").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+        const msg = document.getElementById("gstMsg");
+
+        if (val.length === 15) {
+            msg.innerText = regex.test(val) ? "Valid GSTIN " : "Invalid GSTIN ";
+            msg.style.color = regex.test(val) ? "green" : "red";
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+    /* CIN / LLPIN AUTO DETECT */
+    document.getElementById("cin").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const msg = document.getElementById("cinMsg");
+
+        const cinRegex = /^[A-Z0-9]{21}$/;   // CIN
+        const llpRegex = /^[A-Z]{3}-[0-9]{4}$/; // LLPIN
+
+        if (val.length > 0) {
+            if (cinRegex.test(val)) {
+                msg.innerText = "Detected: CIN (Company) ";
+                msg.style.color = "green";
+            }
+            else if (llpRegex.test(val)) {
+                msg.innerText = "Detected: LLPIN (LLP) ";
+                msg.style.color = "green";
+            }
+            else {
+                msg.innerText = "Invalid format ";
+                msg.style.color = "red";
+            }
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+</script>
+<script>
+
+
+
+    /*Combined step 8 declartions*/
+    const declData = {
+        indemnity: `
+        <p>Vendor agrees to indemnify...</p>
+        <ul>
+            <li>Non-compliance with laws</li>
+            <li>Non-payment of dues</li>
+        </ul>
+    `,
+        confidentiality: `
+        <p>Vendor acknowledges access to confidential info...</p>
+        <ul>
+            <li>No disclosure</li>
+            <li>Use only for service</li>
+        </ul>
+    `,
+        conduct: `<p>Code of conduct details...</p>`,
+        aml: `<p>AML declaration...</p>`,
+        abc: `<p>Anti-bribery declaration...</p>`,
+        dpdp: `<p>DPDP compliance...</p>`
+    };
+
+    let currentDecl = null;
+    const completedDecl = new Set();
+
+    /* OPEN MODAL */
+    document.querySelectorAll(".open-decl").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const parent = this.closest(".decl-item");
+            const id = parent.dataset.id;
+
+            currentDecl = id;
+
+            document.getElementById("declTitle").innerText = parent.querySelector("strong").innerText;
+            document.getElementById("declContent").innerText = declData[id];
+
+            document.getElementById("declAgree").checked = false;
+            enableScrollCheck();
+
+            new bootstrap.Modal(document.getElementById("declModal")).show();
+        });
+    });
+
+    function enableScrollCheck() {
+        const box = document.getElementById("declContent");
+        const checkbox = document.getElementById("declAgree");
+
+        checkbox.disabled = true;
+
+        box.scrollTop = 0;
+
+        // If content is small → enable directly
+        if (box.scrollHeight <= box.clientHeight + 10) {
+            checkbox.disabled = false;
+            return;
+        }
+
+        box.onscroll = function () {
+            if (box.scrollTop + box.clientHeight >= box.scrollHeight - 5) {
+                checkbox.disabled = false;
+            }
+        };
+    }
+
+    /* CONFIRM */
+    document.getElementById("confirmDecl").addEventListener("click", function () {
+
+        if (!document.getElementById("declAgree").checked) return;
+
+        completedDecl.add(currentDecl);
+
+        const item = document.querySelector(`.decl-item[data-id="${currentDecl}"]`);
+        item.querySelector(".status").innerText = "Done";
+        item.querySelector(".status").classList.remove("pending");
+        item.querySelector(".status").classList.add("done");
+
+        bootstrap.Modal.getInstance(document.getElementById("declModal")).hide();
+    });
+
+    document.getElementById("declNext").addEventListener("click", function () {
+
+        const total = document.querySelectorAll(".decl-item").length;
+
+        //if (completedDecl.size !== total) {
+        //    alert("Please complete all declarations");
+        //    return;
+        //}
+
+        currentStep++;
+        showStep(currentStep);
+    });
+
+
+</script>
+<script>
+    window.onload = function () {
+
+        var input = document.getElementById("ServicesOffered");
+        var dropdown = document.getElementById("serviceDropdown");
+
+        // open dropdown
+        input.addEventListener("click", function (e) {
+            e.stopPropagation();
+            dropdown.style.display = "block";
+        });
+
+        // checkbox change
+        dropdown.addEventListener("change", function () {
+            var selected = [];
+            var checkboxes = dropdown.querySelectorAll("input[type='checkbox']");
+
+            checkboxes.forEach(function (cb) {
+                if (cb.checked) {
+                    selected.push(cb.value);
+                }
+            });
+
+            input.value = selected.join(", ");
+        });
+
+        // close on outside click
+        document.addEventListener("click", function (e) {
+            if (!dropdown.contains(e.target) && e.target !== input) {
+                dropdown.style.display = "none";
+            }
+        });
+
+    };
+</script>
+
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // OPEN DROPDOWN
+        document.querySelectorAll(".multi-input").forEach(function (input) {
+            input.addEventListener("click", function (e) {
+                e.stopPropagation();
+
+                // close all first
+                document.querySelectorAll(".multi-select-dropdown").forEach(d => d.style.display = "none");
+
+                var targetId = this.getAttribute("data-target");
+                document.getElementById(targetId).style.display = "block";
+            });
+        });
+
+        // SELECT VALUES
+        document.querySelectorAll(".multi-select-dropdown").forEach(function (dropdown) {
+
+            dropdown.addEventListener("change", function () {
+                var selected = [];
+
+                dropdown.querySelectorAll("input[type='checkbox']").forEach(function (cb) {
+                    if (cb.checked) selected.push(cb.value);
+                });
+
+                // find linked input
+                var input = document.querySelector('[data-target="' + dropdown.id + '"]');
+                input.value = selected.join(", ");
+            });
+
+        });
+
+        // CLOSE ON OUTSIDE CLICK
+        document.addEventListener("click", function () {
+            document.querySelectorAll(".multi-select-dropdown").forEach(d => d.style.display = "none");
+        });
+
+    });
+</script>

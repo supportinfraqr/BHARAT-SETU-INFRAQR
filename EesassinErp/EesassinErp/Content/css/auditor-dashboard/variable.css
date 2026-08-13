@@ -1,0 +1,65 @@
+:root {
+    --body-bg-color:hsl(0, 0%, 90%);
+    --bg-white:#fff;
+    --bg-heading-font-size:16px;
+    --bg-heading-font-color:rgb(48, 48, 48);
+    --bg-subheading-font-size:14px;
+    --bg-subheading-font-color:#999;
+    --bg-tab-font-size:18px;
+    --bg-tab-befor-color:#520bc0;
+    --pro-bg:#f7f7f7;
+    --pro-heading-color:#74cbc6;
+    --pro-chart-hea-size: 22px;
+    --pro-chart-hea-color: #000;
+
+    --font-weight-300:300;
+    --font-weight-400:400;
+    --font-weight-500:500;
+    --font-weight-600:600;
+    --font-weight-700:700;
+
+    --width-10:10%;
+    --width-50:50%;
+    --width-100:100%;
+    
+    --bs-blue: #0d6efd;
+    --bs-indigo: #6610f2;
+    --bs-purple: #6f42c1;
+    --bs-pink: #d63384;
+    --bs-red: #dc3545;
+    --bs-orange: #fd7e14;
+    --bs-yellow: #ffc107;
+    --bs-green: #198754;
+    --bs-teal: #20c997;
+    --bs-cyan: #0dcaf0;
+    --bs-white: #fff;
+    --bs-gray: #6c757d;
+    --bs-gray-dark: #343a40;
+    --bs-primary: #0d6efd;
+    --bs-secondary: #6c757d;
+    --bs-success: #198754;
+    --bs-info: #0dcaf0;
+    --bs-warning: #ffc107;
+    --bs-danger: #dc3545;
+    --bs-light: #f8f9fa;
+    --bs-dark: #212529;
+    --bs-font-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --bs-font-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --bs-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
+
+
+    /* ========================== char color */
+    --chart-color1:#006DF0;
+    --chart-color2:#933EC5;
+    --chart-color3:#65b12d;
+    --chart-gridLineColor:#e0e0e0;
+
+    /* ========================= profile icon size and color */
+    --pro-star-col: rgb(226,206,92);
+    --pro-star-col-li: linear-gradient(90deg, rgba(226,206,92,1) 17%, rgba(190,169,47,1) 35%, rgba(184,159,17,1) 38%);
+    --pro-font-size: 20px;
+    
+
+    
+    
+  }

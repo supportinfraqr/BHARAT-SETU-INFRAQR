@@ -1,0 +1,263 @@
+﻿
+
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/ReportsDashboard/CommonReport/style.css" rel="stylesheet" />
+<script src="~/Scripts/RetailJsLib/ReportDashbaord.js"></script>
+<!-- REPORT PAGE 1: COMPLIANCE Report -->
+
+<div class="report-header d-flex justify-content-between align-items-center px-4 py-2 text-white">
+    <button class="btn btn-sm download-btn" ng-click="DownloadPDF('FinanceCommonCompliance')">
+        <i class="bi bi-download me-1"></i> Download Report
+    </button>
+    <h6 class="mb-0"> {{ReportPeriod}}</h6>
+</div>
+<div id="divprint" class="container-report1" ng-init="BindTiles();commonReport();BindFinanceReport()">
+    <!-- HEADER -->
+   
+
+    <!-- BODY -->
+    <div class="report-body p-4">
+        <!-- Overview Title Box -->
+        <div class="overview-box text-center py-2 mb-4">
+            <h5 class="mb-0 ">Finance Compliance Report</h5>
+        </div>
+
+        <!-- Description -->
+        <p class="small text-muted mb-4 text-center">
+            This section provides a consolidated overview of all compliances, highlighting the organization's completion ratio,
+            pending obligations, and compliance health for the selected period.
+        </p>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4 justify-content-center align-items-center">
+            <div class="col-md-2">
+                <div class="summary-card rounded-3 py-3">
+                    <p class="mb-1">Total</p>
+                    <h4 class="mb-0">{{TotalComplied}}</h4>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="summary-card rounded-3 py-3">
+                    <p class="mb-1">Complied</p>
+                    <h4 class="mb-0">{{Complied}}</h4>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="summary-card rounded-3 py-3">
+                    <p class="mb-1 ">Delay Complied</p>
+                    <h4 class="mb-0">{{DelayComplied}}</h4>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="summary-card rounded-3 py-3">
+                    <p class="mb-1">Non Complied</p>
+                    <h4 class="mb-0">{{NonComplied}}</h4>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="summary-card rounded-3 py-3">
+                    <p class="mb-1">Pending</p>
+                    <h4 class="mb-0">{{Pending}}</h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive mb-4">
+            <table class="table text-center align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Risk Metric</th>
+                        <th>Count</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>High</td>
+                        <td>{{HighRisk}}</td>
+                        <td>
+                            Compliances with critical impact and strict regulatory consequences if missed.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Medium</td>
+                        <td>{{MediumRisk}}</td>
+                        <td>
+                            Compliances with moderate impact that require timely monitoring and follow-up.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Low </td>
+                        <td>{{LowRisk}}</td>
+                        <td>
+                            Compliances with minimal impact but required for overall regulatory hygiene.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Insight Box -->
+        @*<div class="insight-box p-2 mb-4 d-flex align-items-center">
+            <div class="insight-bar me-2"></div>
+            <p class="mb-0 small">
+                <strong>Insight:</strong>  Compliance performance remains steady, though certain entries may require review or escalation.
+            </p>
+        </div>*@
+
+        <!-- Charts Section -->
+        @*<div class="charts-section">
+            <div class="row g-4 justify-content-center">
+
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="chart-card text-center bg-white rounded-3 shadow-sm p-3">
+                        <h6 class="fw-semibold mb-3 text-orange">Finance Compliance</h6>
+                        <div class="chart-content d-flex align-items-center justify-content-center">
+                            <div class="chart-left">
+                                <canvas id="chartFinance"></canvas>
+                            </div>
+                            <div class="chart-right ms-3 text-start small fw-semibold">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="legend-dot me-2" style="background:#E45D27"></span>Complied
+                                </div>
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="legend-dot me-2" style="background:#8BC34A"></span>Pending
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="legend-dot me-2" style="background:#FFC107"></span>Delay Complied
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>*@
+
+
+        <!-- Toolbar -->
+        <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Compliance
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">PT</a></li>
+                        <li><a class="dropdown-item" href="#">Pf</a></li>
+                        <li><a class="dropdown-item" href="#">LWF</a></li>
+                        <li><a class="dropdown-item" href="#">ESIC</a></li>
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Status
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Total</a></li>
+                        <li><a class="dropdown-item" href="#">Pending</a></li>
+                        <li><a class="dropdown-item" href="#">Complied</a></li>
+                        <li><a class="dropdown-item" href="#">Delayed</a></li>
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Month
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">January</a></li>
+                        <li><a class="dropdown-item" href="#">February</a></li>
+                        <li><a class="dropdown-item" href="#">March</a></li>
+                        <!-- ... -->
+                    </ul>
+                </div>
+
+                <div class="dropdown">
+                    <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Year
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">2025</a></li>
+                        <li><a class="dropdown-item" href="#">2024</a></li>
+                    </ul>
+                </div>
+
+                <button class="btn btn-sm filter-btn active">Go</button>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                    <div class="input-group input-group-sm">
+                        <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                        <button class="btn btn-sm" id="scSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">CSV</a></li>
+                            <li><a class="dropdown-item" href="#">PDF</a></li>
+                            <li><a class="dropdown-item" href="#">Print</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle text-center">
+                <thead>
+                    <tr>
+                        <th>Act Name</th>
+                        <th>Compliance Name</th>
+                        <th>State Name</th>
+                        <th>Due Date</th>
+                        <th>Submission Date</th>
+                        <th>Days Delay</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="x in FinCompliance">
+                        <td>{{x.Act}}</td>
+                        <td>{{x.ComplianceName}}</td>
+                        <td>{{x.STATE_NM}}</td>
+                        <td> {{x.DueDate}}  </td>
+                        <td>
+                            {{x.ASD}}
+                        </td>
+                        <td>
+                            {{x.DelayDays}}
+                        </td>
+                        <td>
+                            <span class="badge bg-success" ng-if="x.CStatus == 'Complied'">Complied</span>
+                            <span class="badge bg-danger" ng-if="x.CStatus == 'Non Complied'">Non Complied</span>
+                            <span class="badge bg-danger" ng-if="x.CStatus == 'Delay Complied'">Delay Complied</span>
+                            <span class="badge bg-warning text-dark"
+                                  ng-if="x.CStatus == 'Pending' || x.CStatus == '' || x.CStatus == null">
+                                Pending
+                            </span>
+                        </td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+
+    </div>
+
+  
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="~/ReportsDashboard/CommonReport/script.js"></script>
+</div>

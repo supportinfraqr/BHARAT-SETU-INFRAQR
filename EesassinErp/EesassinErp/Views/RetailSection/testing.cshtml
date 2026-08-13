@@ -1,0 +1,129 @@
+﻿
+@{
+    ViewBag.Title = "testing";
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<div class="period 1">
+    <input type="hidden" name="time" value="7" class="start_time_hour" />
+    <input type="hidden" name="time" value="32" class="start_time_min" />
+    <input type="hidden" name="time" value="8" class="end_time_hour" />
+    <input type="hidden" name="time" value="14" class="end_time_min" />
+    Period 1: 7:32-8:14
+</div> 
+<table id="example" class="users list dtable" style="width:100%" ng-init="Schecdular()">
+    <thead>
+        <tr>
+
+            <th width="12%">Sr.No</th>
+            <th width="12%">Store Code</th>
+            <th width="12%">Ref. Store Code</th>
+            <th>Store Name</th>
+            <th>Location</th>
+            <th>City</th>
+            <th>Manager Name</th>
+            <th>Email</th>
+            <th>Contact No.</th>
+            <th width="8%">Status</th>
+            <th width="5%"></th>
+        </tr>
+    </thead>
+    <tbody id="myTable">
+
+        <tr ng-repeat="stores in StoreList">
+
+            <td>{{stores.SrNo}}</td>
+            <td><a class="text-success" href="#" data-bs-toggle="modal" data-bs-target="#requestForm" ng-click="GetLicenseMaster(stores.Id,stores.UserId)"><b>{{stores.StoreCode}}</b></a></td>
+            <td>{{stores.RefStoreCode}}</td>
+            <td>{{stores.StoreName}}</td>
+            <td>{{stores.StoreLocation}}</td>
+            <td>{{stores.CITY_NAME}}</td>
+            <td>{{stores.StoreManagerName}}</td>
+            <td>{{stores.StoreManagerEmail}}</td>
+            <td>{{stores.StoreManagerMobileNo}}</td>
+            <td>
+                <div class="form-control2">
+                    <label class="switch">
+                        <input type="checkbox" id="themeskin" ng-model="stores.IsActive" ng-checked="stores.IsActive==1?true:false" ng-click="ChangeStatus(stores.IsActive,stores.StoreCode)">
+                        <div class="slider round">
+                            <span class="on">Active</span>
+                            <span class="off">Deactive</span>
+                        </div>
+                    </label>
+                </div>
+            </td>
+            <td>
+                <div class="editlist dropdown">
+                    <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><span class="fa fa-ellipsis-v"></span></a>
+                    <div class="dropdown-menu">
+
+                        <a class="dropdown-item" href="#" data-bs-toggle="modal" ng-click="BindSidelicence(stores.StoreId)" data-bs-target="#profileview">License Copy</a>
+                        <a href="@Url.Action("ComplianceDoc","RetailSection")" class="dropdown-item">Compliance Doc</a>
+                        <a href="#" ng-if="SM_ViewFlag==1" ng-click="EditStore(stores.StoreCode)" class="dropdown-item">View More</a>
+
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/jquery/dist/jquery.min.js")"></script>
+<!-- Bootstrap Core JavaScript -->
+
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap/dist/js/bootstrap.min.js")"></script>
+<!-- data-table js -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net/js/jquery.dataTables.min.js")"></script>
+
+<script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js")"></script>
+<script src="@Url.Content("~/Content/colResizable-1.6.js")"></script>
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/dataTables.buttons.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/jszip.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/pdfmake.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/vfs_fonts.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/buttons.print.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/buttons.html5.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/js/dataTables.bootstrap4.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive/js/dataTables.responsive.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js")"></script>
+
+@*<script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js")"></script>*@
+<!-- Tooltipster js -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/tooltipster/tooltipster.bundle.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.tooltipster.js")"></script>
+<!-- Slimscroll JavaScript -->
+
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.slimscroll.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.scrollbar.js")"></script>
+
+<!-- Fancy Dropdown JS -->
+<script src="@Url.Content("~/Content/plugins/assets/js/dropdown-bootstrap-extended.js")"></script>
+<!-- Owl JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/owl.carousel/dist/owl.carousel.min.js")"></script>
+<!-- Sweet-Alert  -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.js")"></script>
+<!-- Switchery JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/switchery/dist/switchery.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/data-table-custom.js")"></script>
+<!-- EChartJS JavaScript -->
+<!-- Init JavaScript -->
+<script src="@Url.Content("~/Content/plugins/assets/js/init.js")"></script>
+
+<script type="text/javascript" src="@Url.Content("~/Content/lib/underscore/underscore.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/bootstrap-select/dist/js/bootstrap-select.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/select2/select2.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/jquery.maskedinput/dist/jquery.maskedinput.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/moment/moment.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js")"></script>
+
+<script src="https://code.angularjs.org/1.3.0/angular.js"></script>
+
+
+
+
+
+<script src="~/scripts/RetailJsLib/RetailStoreMasterController.js"></script>

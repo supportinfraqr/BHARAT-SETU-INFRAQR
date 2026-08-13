@@ -1,0 +1,620 @@
+﻿.contractorGatePass {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 20px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+    /*=========================================================
+    PAGE HEADER
+=========================================================*/
+
+    .contractorGatePass .pageTitle {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--primary);
+        margin: 0;
+    }
+
+    .contractorGatePass .cgpHeader {
+        gap: 20px;
+    }
+
+    /*=========================================================
+    PERMANENT / TEMPORARY TABS
+=========================================================*/
+
+    .contractorGatePass .gatePassTabs {
+        background: #F5F5F5;
+        border: 1px solid #D7DCE5;
+        border-radius: 12px;
+        padding: 6px;
+        overflow: hidden;
+    }
+
+        .contractorGatePass .gatePassTabs .nav-link {
+            border: 0;
+            color: #555;
+            padding: 8px 16px;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: .25s;
+            background: transparent;
+            text-transform: uppercase;
+            font-size: .86rem;
+            letter-spacing: .5px;
+        }
+
+            .contractorGatePass .gatePassTabs .nav-link.active {
+                background: var(--primary);
+                color: #fff;
+            }
+
+            .contractorGatePass .gatePassTabs .nav-link:hover:not(.active) {
+                background: rgba(2,43,94,.08);
+            }
+
+    /*=========================================================
+    CURRENT SESSION CARD
+=========================================================*/
+
+    .contractorGatePass .currentSessionCard {
+        background: var(--primary);
+        border-radius: 14px;
+        padding: 20px 30px;
+        color: #fff;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .contractorGatePass .sessionContent {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 30px;
+    }
+
+    .contractorGatePass .sessionLabel {
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: .95rem;
+        opacity: .8;
+        font-weight: 600;
+    }
+
+    .contractorGatePass .sessionCount {
+        margin-top: 12px;
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .contractorGatePass .countNumber {
+        font-size: 4rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .contractorGatePass .countText {
+        font-size: 1.3rem;
+        opacity: .9;
+        margin-bottom: 8px;
+    }
+
+    .contractorGatePass .sessionIcon {
+        width: 110px;
+        height: 110px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: .12;
+    }
+
+        .contractorGatePass .sessionIcon i {
+            font-size: 5rem;
+        }
+
+    /*=========================================================
+    PREVIEW CARD
+=========================================================*/
+
+    .contractorGatePass .previewCard {
+        background: #fff;
+        border: 1px solid #E4E8EE;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0,0,0,.05);
+    }
+
+    .contractorGatePass .previewHeader {
+        padding: 18px 22px;
+        border-bottom: 1px solid #E5E7EB;
+    }
+
+        .contractorGatePass .previewHeader h4 {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+
+    /*=========================================================
+    PREVIEW HEADER
+=========================================================*/
+
+    .contractorGatePass .previewHeader {
+        padding: 18px 22px;
+        border-bottom: 1px solid #E5E7EB;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+        .contractorGatePass .previewHeader h4 {
+            color: var(--primary);
+            font-weight: 500;
+            margin: 0;
+        }
+
+    .contractorGatePass .previewHeaderRight {
+        display: flex;
+        align-items: center;
+    }
+
+    .contractorGatePass .siteFilter {
+        width: 220px;
+        height: 42px;
+        border-radius: 8px;
+        border: 1px solid #D1D5DB;
+        font-weight: 500;
+        color: #374151;
+        box-shadow: none;
+    }
+
+        .contractorGatePass .siteFilter:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 .15rem rgba(2,43,94,.12);
+        }
+
+/* Mobile */
+
+@media (max-width:576px) {
+
+    .contractorGatePass .previewHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .contractorGatePass .previewHeaderRight {
+        width: 100%;
+    }
+
+    .contractorGatePass .siteFilter {
+        width: 100%;
+    }
+}
+
+    /*=========================================================
+    TABLE
+=========================================================*/
+
+    .contractorGatePass .previewTable {
+        margin-bottom: 0;
+        min-width: 1150px;
+    }
+
+        .contractorGatePass .previewTable thead th {
+            background: #F8F9FD;
+            color: var(--primary);
+            font-size: .9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            white-space: nowrap;
+            padding: 18px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .contractorGatePass .previewTable tbody td {
+            padding: 18px;
+            vertical-align: middle;
+            border-top: 1px solid #EEF2F7;
+        }
+
+        .contractorGatePass .previewTable tbody tr:hover {
+            background: #FBFDFF;
+        }
+
+    /*=========================================================
+    CHECKBOX
+=========================================================*/
+
+    .contractorGatePass .form-check-input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        box-shadow: none;
+    }
+
+        .contractorGatePass .form-check-input:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+    /*=========================================================
+    STATUS
+=========================================================*/
+
+    .contractorGatePass .statusDone,
+    .contractorGatePass .statusPending {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+        font-size: 1rem;
+    }
+
+    .contractorGatePass .statusDone {
+        color: #0A7A21;
+    }
+
+    .contractorGatePass .statusPending {
+        color: #C69A00;
+    }
+
+        .contractorGatePass .statusDone i,
+        .contractorGatePass .statusPending i {
+            font-size: .95rem;
+        }
+
+
+.contractorGatePass .approvalStatus {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: .88rem;
+    font-weight: 500;
+}
+
+    .contractorGatePass .approvalStatus .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .contractorGatePass .approvalStatus.approved {
+        background: #DCFCE7;
+        color: #15803D;
+    }
+
+        .contractorGatePass .approvalStatus.approved .dot {
+            background: #15803D;
+        }
+
+    .contractorGatePass .approvalStatus.rejected {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+        .contractorGatePass .approvalStatus.rejected .dot {
+            background: #DC2626;
+        }
+
+    .contractorGatePass .approvalStatus.pending {
+        background: #FFEAA6;
+        color: #C69A00;
+    }
+
+        .contractorGatePass .approvalStatus.pending .dot {
+            background: #C69A00;
+        }
+
+
+    /*=========================================================
+    ACTION BUTTON
+=========================================================*/
+
+    .contractorGatePass .iconBtn {
+        width: 40px;
+        height: 40px;
+        border: 0;
+        background: transparent;
+        border-radius: 50%;
+        transition: .25s;
+    }
+
+        .contractorGatePass .iconBtn i {
+            font-size: 1.3rem;
+            color: #444;
+        }
+
+        .contractorGatePass .iconBtn:hover {
+            background: #EDF4FC;
+        }
+
+    /*=========================================================
+    BOTTOM SUMMARY
+=========================================================*/
+
+    .contractorGatePass .bottomSummary {
+        margin-top: 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .contractorGatePass .summaryLeft {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .contractorGatePass .summaryDivider {
+        width: 1px;
+        height: 60px;
+        background: #D8DCE3;
+    }
+
+    .contractorGatePass .summaryTitle {
+        font-size: .95rem;
+        color: #6B7280;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .contractorGatePass .summaryValue {
+
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+    .contractorGatePass .statusValue {
+        margin-top: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #0A7A21;
+        font-weight: 500;
+    }
+
+.contractorGatePass .generateBtn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: var(--primary);
+    border: 1px solid var(--primary);
+    color: #fff;
+    font-weight: 500;
+}
+
+        .contractorGatePass .generateBtn:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+
+/*=========================================================
+    RESPONSIVE
+=========================================================*/
+
+@media (max-width:992px) {
+
+    .contractorGatePass .pageTitle {
+        font-size: 1.8rem;
+    }
+
+    .contractorGatePass .cgpHeader {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .contractorGatePass .sessionContent {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .contractorGatePass .sessionIcon {
+        align-self: flex-end;
+    }
+
+    .contractorGatePass .bottomSummary {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .contractorGatePass .generateBtn {
+        width: 100%;
+    }
+}
+
+@media (max-width:768px) {
+
+    .contractorGatePass .summaryLeft {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+
+    .contractorGatePass .summaryDivider {
+        display: none;
+    }
+}
+
+@media (max-width:576px) {
+
+    .contractorGatePass .pageTitle {
+        font-size: 1.55rem;
+    }
+
+    .contractorGatePass .countNumber {
+        font-size: 3rem;
+    }
+
+    .contractorGatePass .countText {
+        font-size: 1.1rem;
+    }
+
+    .contractorGatePass .gatePassTabs {
+        width: 100%;
+    }
+
+        .contractorGatePass .gatePassTabs .nav-link {
+            width: 100%;
+            min-width: unset;
+        }
+}
+
+
+/*=========================================================
+    WORKER PREVIEW MODAL
+=========================================================*/
+
+.contractorGatePass .workerPreviewModal {
+    border: 0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+    .contractorGatePass .workerPreviewModal .modal-header {
+        background: var(--primary);
+        border-bottom: 1px solid #E5E7EB;
+        padding: 12px 24px;
+        align-items: center;
+    }
+
+.contractorGatePass .workerModalName {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: #fff;
+}
+
+.contractorGatePass .workerModalId {
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.contractorGatePass .workerPreviewModal .btn-close {
+    box-shadow: none;
+    opacity: 1;
+}
+
+.contractorGatePass .workerPreviewModal .modal-body {
+    padding: 24px;
+}
+
+/*=========================================================
+    DETAIL GRID
+=========================================================*/
+
+.contractorGatePass .detailItem {
+    min-height: 80px;
+}
+
+.contractorGatePass .detailTitle {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #000;
+    line-height: 1.35;
+}
+
+.contractorGatePass .detailValue {
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+    .contractorGatePass .detailValue.success {
+        color: #0A7A21;
+    }
+
+/*=========================================================
+    SCROLLBAR
+=========================================================*/
+
+.contractorGatePass .table-responsive::-webkit-scrollbar {
+    height: 10px;
+}
+
+.contractorGatePass .table-responsive::-webkit-scrollbar-track {
+    background: #ECECEC;
+    border-radius: 20px;
+}
+
+.contractorGatePass .table-responsive::-webkit-scrollbar-thumb {
+    background: #B9C5D4;
+    border-radius: 20px;
+}
+
+    .contractorGatePass .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #8EA3BC;
+    }
+
+/*=========================================================
+    MODAL RESPONSIVE
+=========================================================*/
+
+@media (max-width:992px) {
+
+    .contractorGatePass .workerModalName {
+        font-size: 1.6rem;
+    }
+
+    .contractorGatePass .detailTitle {
+        font-size: 1.15rem;
+    }
+
+    .contractorGatePass .detailValue {
+        font-size: 1.05rem;
+    }
+}
+
+@media (max-width:768px) {
+
+    .contractorGatePass .workerPreviewModal .modal-body {
+        padding: 20px;
+    }
+
+    .contractorGatePass .workerPreviewModal .modal-header {
+        padding: 18px 20px;
+    }
+}
+
+@media (max-width:576px) {
+
+    .contractorGatePass .workerModalName {
+        font-size: 1.35rem;
+    }
+
+    .contractorGatePass .workerModalId {
+        font-size: .95rem;
+    }
+
+    .contractorGatePass .detailItem {
+        min-height: auto;
+    }
+
+    .contractorGatePass .detailTitle {
+        font-size: 1rem;
+        margin-bottom: 6px;
+    }
+
+    .contractorGatePass .detailValue {
+        font-size: .95rem;
+    }
+}
+

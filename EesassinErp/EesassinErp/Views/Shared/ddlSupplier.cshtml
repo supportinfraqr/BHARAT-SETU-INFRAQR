@@ -1,0 +1,5 @@
+﻿
+<select id="ddlSupplier" class="select2 form-control validate" ng-model="SupplierCode" ng-init="BindSupplierList();" ng-change="BindSupplierDetail()"  >
+    <option value="">Select</option>
+    <option ng-repeat="x in SupplierList" value="{{x.VendorId}}">{{x.Name}}</option>
+</select>

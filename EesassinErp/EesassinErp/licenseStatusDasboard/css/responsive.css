@@ -1,0 +1,45 @@
+
+@media screen and (min-device-width:1470px) and (max-device-width:2560px) {
+}
+
+@media only screen and (max-width:1240px) {
+}
+
+@media only screen and (max-width:990px) {
+}
+
+@media only screen and (max-width:767px) {
+    .contentwraper {
+        margin-left: 260px;
+    }
+
+    .header {
+        left: 260px;
+    }
+
+    .menusidebar {
+        width: 260px;
+    }
+
+    .menumarginleft {
+        margin-left: 0;
+    }
+
+    .menuheader-width {
+        left: 0;
+    }
+
+    .menusidebar-width {
+        width: 0;
+    }
+
+    .tc {
+        text-align: center !important;
+    }
+}
+
+@media only screen and (max-width:640px) {
+}
+
+@media only screen and (max-width:410px) {
+}

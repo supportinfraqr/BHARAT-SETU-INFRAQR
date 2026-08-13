@@ -1,0 +1,1148 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Location Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="~/Dashboards/NewLocationDashboard/style.css" rel="stylesheet" />
+<script src="~/Dashboards/NewLocationDashboard/script.js"></script>
+<script src="~/scripts/RetailJsLib/StoreDashboardController.js?Ver=@ViewBag.Version"></script>
+
+<script type="text/javascript" src="../StoreDashboard/js/circularProgressBar.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* Modal overlay */
+
+.column-popup{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:9999;
+}
+
+/* Modal box */
+
+.popup-content{
+    width:100%;
+    max-width:650px;
+    background:#fff;
+    border-radius:8px;
+    overflow:hidden; 
+    box-shadow:0 5px 20px rgba(0,0,0,0.2);
+}
+
+/* Header */
+
+.popup-header{
+    display:flex;
+    justify-content:space-between;
+    background: var(--primary);
+    color: #fff;
+    align-items:center;
+    padding:12px 16px;
+    border-bottom:1px solid #eee;
+}
+.popup-header .btn-close{
+    transform: scale(0.85);
+}
+
+/* Body grid */
+
+.popup-body{
+    padding:16px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px 20px;
+}
+
+/* Column items */
+
+.column-item label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+    font-size:0.85rem;
+}
+
+/* Tablet */
+
+@@media (max-width:992px){
+
+.popup-body{
+    grid-template-columns:repeat(2,1fr);
+}
+
+}
+
+/* Mobile */
+
+@@media (max-width:576px){
+
+.popup-body{
+    grid-template-columns:1fr;
+}
+
+}
+
+</style>
+<script>
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const element = document.getElementById('exportdiv');
+
+        html2canvas(element, {
+            scale: 3,
+            useCORS: true,
+            allowTaint: true,
+            scrollX: 0,
+            scrollY: -window.scrollY,
+            windowWidth: element.scrollWidth,
+            backgroundColor: '#ffffff'
+        }).then(canvas => {
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+            const pdf = new jsPDF('p', 'mm', 'a4');
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const marginLeft = 10;
+            const marginBottom = 10;
+            let marginTop = 35;
+
+            var companyName = angular.element(document.body).scope().MapUser || '';
+            var now = new Date();
+            var generatedOn = now.toLocaleString();
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(18);
+            pdf.text(companyName, pageWidth / 2, 12, { align: 'center' });
+
+            pdf.setFontSize(14);
+            pdf.text('Location Dashboard Report', pageWidth / 2, 20, { align: 'center' });
+
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(9);
+            pdf.text('Generated on : ' + generatedOn, pageWidth / 2, 26, { align: 'center' });
+
+            const availableWidth = pageWidth - marginLeft * 2;
+            const availableHeight = pageHeight - marginTop - marginBottom;
+
+            const imgWidth = availableWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = marginTop;
+
+            pdf.addImage(imgData, 'JPEG', marginLeft, position, imgWidth, imgHeight);
+            heightLeft -= availableHeight;
+
+            while (heightLeft > 0) {
+                pdf.addPage();
+                position = marginTop - (imgHeight - heightLeft);
+                pdf.addImage(imgData, 'JPEG', marginLeft, position, imgWidth, imgHeight);
+                heightLeft -= availableHeight;
+            }
+
+            pdf.save('LocationDashboard_A4_Clear.pdf');
+
+        }).catch(error => {
+            console.error('Error exporting to PDF:', error);
+        });
+    }
+</script>
+
+<style>
+    #exportdiv {
+        width: 100%; /* A4 width */
+        min-height: 1123px; /* A4 height */
+        background: #FEF3EC;
+    }
+
+    table#locationDashTable {
+        --bs-table-bg: #fef3ec;
+        font-size: 13px;
+    }
+
+    .badge.status-disabled.ng-binding.ng-scope {
+        --bs-badge-color: #c43a5b;
+    }
+
+
+    button.btn.btn-sm.btn-primary.mb-2 {
+        --bs-btn-bg: #f37437;
+        --bs-btn-border-color: #f37437;
+        --bs-btn-hover-color: #fff;
+        --bs-btn-hover-bg: #f37437;
+        --bs-btn-hover-border-color: #f37437;
+        --bs-btn-focus-shadow-rgb: 49, 132, 253;
+        --bs-btn-active-color: #fff;
+        --bs-btn-active-bg: #f37437;
+        --bs-btn-active-border-color: #f37437;
+    }
+
+    button.btn.btn-sm.btn-outline-primary.ng-binding {
+        --bs-btn-color: #ee6666;
+        --bs-btn-border-color: #ee6666;
+        --bs-btn-hover-color: #fff;
+        --bs-btn-hover-bg: #ee6666;
+        --bs-btn-hover-border-color: #ee6666;
+        --bs-btn-focus-shadow-rgb: 13, 110, 253;
+        --bs-btn-active-color: #fff;
+        --bs-btn-active-bg: #ee6666;
+        --bs-btn-active-border-color: #ee6666;
+        --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+        --bs-btn-disabled-color: #ee6666;
+        --bs-btn-disabled-bg: transparent;
+        --bs-btn-disabled-border-color: #ee6666;
+        --bs-gradient: none;
+    }
+
+    /* Btns */
+    #btn1 {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.85rem;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+        #btn1:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+</style>
+<div class="locationDashPage px-4 py-2">
+    <!-- ================= Container 1 : Header + KPI ================= -->
+    <div class="locationDash-container1">
+
+        <!-- Header Row -->
+        <div class="locationDash-header d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+
+            <h4 class="locationDash-title mb-0">
+                Location Dashboard
+            </h4>
+
+            <div class="locationDash-actions d-flex align-items-center gap-2 flex-wrap">
+
+
+
+                <div class="locationDash-filter d-flex align-items-center gap-2">
+                    <input type="date" id="StorestartDate" class="form-control form-control-sm">
+                    <span class="text-muted">-</span>
+                    <input type="date" id="StoreendDate" class="form-control form-control-sm">
+                    <button class="btn btn-sm locationDash-goBtn" ng-click="BindStoreStatus();ManageLog('Click on Go button on Location Dashboard')">
+                        Go
+                    </button>
+                </div>
+                <button class="btn btn-sm locationDash-pdfBtn" ng-click="ManageLog('Click on button Location Dashboard PDF')" onclick="exportToPDF();angular.element(document).scope().ManageLog('Download Pdf Location Dashboard')">
+                    PDF
+                </button>
+
+            </div>
+        </div>
+
+        <!-- KPI Cards Row -->
+
+
+
+    </div>
+    <div id="exportdiv">
+        <div class="row g-3 mb-4 px-3">
+
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="locationDash-kpiCard kpi-active" ng-init="BindStoreStatus()">
+                    <div class="kpi-left">
+                        <div class="kpi-title">Active</div>
+                        <div class="kpi-percent">{{SActivePercentage}}%</div>
+                    </div>
+                    <div class="kpi-value">{{SActive}}</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="locationDash-kpiCard kpi-inactive">
+                    <div class="kpi-left">
+                        <div class="kpi-title">Inactive</div>
+                        <div class="kpi-percent">{{SDeactivePercentage}}%</div>
+                    </div>
+                    <div class="kpi-value">{{SDeactive}}</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="locationDash-kpiCard kpi-upcoming">
+                    <div class="kpi-left">
+                        <div class="kpi-title">Upcoming</div>
+                        <div class="kpi-percent">{{SUpcomingPercentage}}%</div>
+                    </div>
+                    <div class="kpi-value">{{SUpcoming}}</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="locationDash-kpiCard kpi-total">
+                    <div class="kpi-left">
+                        <div class="kpi-title">Total</div>
+                        <div class="kpi-percent">{{STotalPercentage}}%</div>
+                    </div>
+                    <div class="kpi-value">{{STotal}}</div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ================= Container 2 : Upcoming Task + Hots & Hurry ================= -->
+        <div class="locationDash-container2 mb-4" ng-init="BindUpcommingStatus()">
+
+            <div class="row g-3 align-items-stretch">
+
+                <!-- ===== Left Card : Upcoming Task ===== -->
+                <div class="col-12 col-lg-6 d-flex">
+                    <div class="locationDash-card flex-fill">
+
+                        <!-- Header -->
+                        <div class="locationDash-card-header d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="locationDash-card-title mb-0">Upcoming Task</h5>
+
+                            <div class="locationDash-filter small-filter d-flex align-items-center gap-2">
+                                <input type="date" id="UpcomingstartDate" class="form-control form-control-sm">
+                                <span class="text-muted">-</span>
+                                <input type="date" id="UpcomingendDate" class="form-control form-control-sm">
+                                <button class="btn btn-sm locationDash-goBtn" ng-click="BindUpcommingStatus(); ManageLog('Click on Go button on Location Dashboard  Upcoming Task Section')">Go</button>
+                            </div>
+                        </div>
+
+                        <!-- Inner KPI cards -->
+                        <div class="row g-3">
+
+                            <div class="col-6">
+                                <div class="locationDash-miniCard kpi-upcoming">
+                                    <div class="mini-left">
+                                        <div class="mini-title">Upcoming</div>
+                                    </div>
+                                    <div class="mini-value">{{Upcoming}}</div>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="locationDash-miniCard kpi-inactive ">
+                                    <div class="mini-left">
+                                        <div class="mini-title">Upcoming License</div>
+                                        <ul class="mini-list grid-2x2">
+                                            <li>Doc. Pending : {{Draft}}</li>
+                                            <li>Pending App : {{Submit}}</li>
+                                            <li>Applied : {{Applied}}</li>
+                                            <li>Issued :  {{Issued}}</li>
+                                        </ul>
+                                    </div>
+                                    <div class="mini-value">{{TL}}</div>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="locationDash-miniCard kpi-active">
+                                    <div class="mini-left">
+                                        <div class="mini-title">Executed Document</div>
+                                    </div>
+                                    <div class="mini-value">{{ExectedDocument}}</div>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="locationDash-miniCard kpi-total">
+                                    <div class="mini-left">
+                                        <div class="mini-title">Active (Operational)</div>
+                                    </div>
+                                    <div class="mini-value">{{UTA}}</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Right Card : Hots & Hurry ===== -->
+                <div class="col-12 col-lg-6 d-flex" ng-init="BindCircleGraphStatus()">
+                    <div class="locationDash-card flex-fill">
+
+                        <div class="locationDash-card-header mb-3">
+                            <h5 class="locationDash-card-title mb-0">Hots And Hurry (NSO)</h5>
+                        </div>
+
+                        <div class="locationDash-chartRow">
+                            <div class="col-md-4 text-center">
+                                <div class="pie" id="pieChart">
+                                </div>
+
+                                <div class="chart-label" style="text-align: justify;">Total Budgeted (No.)</div>
+                            </div>
+
+                            <div class="col-md-4 text-center">
+                                <div class="pie" id="pieChart1">
+                                    <!-- Pie chart element will be initialized with the dynamic data-pie value -->
+                                </div>
+                                <div class="chart-label" style="text-align: justify;">Location Days</div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="pie" id="pieChart2">
+                                    <!-- Pie chart element will be initialized with the dynamic data-pie value -->
+                                </div>
+                                <div class="chart-label" style="text-align: justify;">Actual Location Days</div>
+                            </div>
+
+                            @*<div class="chart-box">
+                                    <canvas id="locationDaysChart"></canvas>
+                                    <div class="chart-label">Location Days</div>
+                                </div>
+
+                                <div class="chart-box">
+                                    <canvas id="actualDaysChart"></canvas>
+                                    <div class="chart-label">Actual Location Days</div>
+                                </div>*@
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================= Container 3 :  Document Highlights & Distribution ================= -->
+        <div class="locationDash-container3 mb-4">
+
+            <div class="row g-3 align-items-stretch">
+
+                <!-- ===== Left Card : Document Highlights===== -->
+                <div class="col-12 col-lg-6 d-flex">
+                    <div class="locationDash-card flex-fill">
+
+                        <!-- Header -->
+                        <div class="locationDash-card-header d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="locationDash-title mb-0">
+                                    Document Highlights
+                                </h5>
+                            </div>
+                            <div class="locationDash-btnFilters d-flex gap-2 flex-wrap">
+
+                                <!-- Region -->
+                                <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                                    <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                                        <div class="input-group input-group-sm">
+                                            <input id="scSearch"
+                                                   type="text"
+                                                   style="border-color: #E45D27"
+                                                   class="form-control form-control-sm"
+                                                   placeholder="Search..."
+                                                   ng-model="searchText" />
+                                            <button class="btn btn-sm" id="scSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                                        <div class="dropdown">
+                                            <button id="btn1" class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" ng-click="downloadCSV(); ManageLog('Click on CSV Export on Location Dashboard ')">CSV</a></li>
+                                                <li><a class="dropdown-item" ng-click="printTable(); ManageLog('Click on Print Export on Location Dashboard')">Print</a></li>
+                                            </ul>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Document Highlights table -->
+                        <div class="locationDash-chartWrap">
+                            <div style="max-height:350px; overflow-y:auto;" ng-init="DocumentHighlights()">
+
+                                <table class="table table-sm mb-0 small-table" id="locationDashTable">
+                                    <thead style="position: sticky; top: 0; background: #fff; z-index: 1;">
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Location Code</th>
+                                            <th>Document Name</th>
+                                            <th>Period</th>
+                                            <th>Days to Expire</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="noborder"
+                                            ng-repeat="licenseMaster in DocumentHighlightsList | filter:searchText | limitTo: pageSize">
+
+                                            <td>{{ licenseMaster.SrNo }}</td>
+                                            <td>{{ licenseMaster.StoreCode }}</td>
+                                            <td>{{ licenseMaster.DocumentType }}</td>
+                                            <td>{{ licenseMaster.ValidDate }}</td>
+                                            <td>{{ licenseMaster.DayExpire }}</td>
+                                            <td>
+                                                <div ng-if="licenseMaster.ExpiryStatus=='Expired'" class="badge status-disabled">
+                                                    {{licenseMaster.ExpiryStatus}}
+                                                </div>
+                                                <div ng-if="licenseMaster.ExpiryStatus=='Expiring Soon'" class="badge status-upcoming">
+                                                    {{licenseMaster.ExpiryStatus}}
+                                                </div>
+                                                <div ng-if="licenseMaster.ExpiryStatus=='Vaild'" class="badge status-active">
+                                                    {{licenseMaster.ExpiryStatus}}
+                                                </div>
+                                            </td>
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                        <div class="d-flex align-items-center justify-content-end mt-2">
+
+
+                            <button class="btn btn-sm" id="btn1"
+                                    ng-click="toggleViewRows()">
+                                {{ viewAll ? 'View 10 Rows' : 'View All Rows' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Right Card : Distribution ===== -->
+                <div class="col-12 col-lg-6 d-flex">
+                    <div class="locationDash-card flex-fill">
+
+                        <!-- Header -->
+                        <div class="locationDash-card-header d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+
+                            <div class="locationDash-btnFilters d-flex gap-2 flex-wrap">
+
+                                <!-- Year -->
+                                <div class="dropdown" ng-init="BindYear()">
+                                    <select class="btn btn-sm dropdown-toggle locationDash-filterBtn"
+                                            ng-model="Year"
+                                            ng-change="FilterData()"
+                                            ng-options="y for y in YearList">
+                                        <option value="">Year</option>
+                                    </select>
+                                    <select class="btn btn-sm dropdown-toggle locationDash-filterBtn"
+                                            ng-model="Month"
+                                            ng-change="FilterData()"
+                                            ng-options="m as MonthText[m] for m in MonthList">
+                                        <option value="">Select Month</option>
+                                    </select>
+
+                                    <select class="btn btn-sm dropdown-toggle locationDash-filterBtn"
+                                            ng-model="Category"
+                                            ng-change="FilterData()"
+                                            ng-options="c for c in CategoryList">
+                                        <option value="">Select Category</option>
+                                    </select>
+
+                                    <select class="btn btn-sm dropdown-toggle locationDash-filterBtn"
+                                            ng-model="Status1"
+                                            ng-change="FilterData()"
+                                            ng-options="s as StatusText[s] for s in StatusList">
+                                        <option value="">Select Status</option>
+                                    </select>
+                                    <button id="btn1" class="btn btn-sm" ng-click="ResetFilter()">Reset</button>
+                                </div>
+
+                            </div>
+
+
+                        </div>
+
+                        <!-- Donut Chart -->
+                        <div class="locationDash-chartWrap d-flex justify-content-center" ng-init="BindPieChartRegion()">
+                            <div id="pimain" style="width: 100%;height:310px;"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================= Container 4 : Location Highlights ================= -->
+        <div class="locationDash-container4 mb-4" ng-init="GetAllBindStoreList()">
+            <div class="card-body p-3 h-100 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <h5 class="locationDash-title">
+                            Location Highlights
+                        </h5>
+                        <button class="btn btn-sm" id="btn1"
+                                ng-click="showColumnPopup=true">
+                            Show Columns
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch"
+                                       type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..."
+                                       ng-model="NewsearchText" />
+                                <button class="btn btn-sm" id="scSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" ng-click="LocationdownloadCSV(); ManageLog('Click on CSV Export on Location Dashboard ')">CSV</a></li>
+                                    <li><a class="dropdown-item" ng-click="LocationprintTable(); ManageLog('Click on Print Export on Location Dashboard')">Print</a></li>
+                                </ul>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="StoreDashTable">
+
+                            <thead>
+                                <tr>
+
+                                    <th ng-repeat="col in tblheader"
+                                        ng-if="col.ShowColumn=='Yes'"
+                                        style="width:{{col.Width}}">
+                                        {{col.HeaderText}}
+                                    </th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                <tr ng-repeat="row in StoreAllList | filter : NewsearchText">
+
+                                    <td ng-repeat="col in tblheader"
+                                        ng-if="col.ShowColumn=='Yes'"
+                                        ng-class="col.CssClass">
+
+                                        <span ng-if="col.HeaderValue=='SrNo'">
+                                            {{$index+1}}
+                                        </span>
+
+                                        <span ng-if="col.HeaderValue!='SrNo'">
+                                            {{row[col.HeaderValue]}}
+                                        </span>
+
+                                    </td>
+
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--<div class="column-popup" ng-show="showColumnPopup">
+    <div class="popup-content">-->
+<!-- Header -->
+<!--<div class="popup-header">
+    <h6>Select Columns</h6>
+    <button class="close-btn" ng-click="showColumnPopup=false">✖</button>
+</div>-->
+<!-- Column List -->
+<!--<div class="popup-body">
+
+            <div class="column-item" ng-repeat="col in tblheader">
+                <label>
+                    <input type="checkbox"
+                           ng-checked="col.ShowColumn=='Yes'"
+                           ng-click="col.ShowColumn = (col.ShowColumn=='Yes' ? 'No' : 'Yes')">
+
+                    <span>{{col.HeaderText}}</span>
+                </label>
+            </div>
+
+        </div>
+
+    </div>
+</div>-->
+<!-- COLUMN SELECT MODAL -->
+<div class="column-popup" ng-show="showColumnPopup">
+
+    <div class="popup-content">
+
+        <!-- Header -->
+        <div class="popup-header">
+            <h6 class="mb-0">Select Columns</h6>
+
+            <button type="button"
+                    class="btn-close"
+                    ng-click="showColumnPopup=false"
+                    aria-label="Close">
+            </button>
+        </div>
+
+        <!-- Column List -->
+        <div class="popup-body">
+
+            <div class="column-item" ng-repeat="col in tblheader">
+                <label>
+                    <input type="checkbox"
+                           ng-checked="col.ShowColumn=='Yes'"
+                           ng-click="col.ShowColumn = (col.ShowColumn=='Yes' ? 'No' : 'Yes')">
+
+                    <span>{{col.HeaderText}}</span>
+                </label>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+    function FIRESMS() {
+        var CircularProgressBar = function () {
+            "use strict";
+            const t = {
+                colorSlice: "#00a1ff",
+                fontColor: "#000",
+                fontSize: "1.2rem",
+                fontWeight: 600,
+                lineargradient: !1,
+                number: !0,
+                round: !1,
+                fill: "none",
+                unit: "%",
+                rotation: -90,
+                size: 120,
+                stroke: 15
+            }
+                , e = t => {
+                    let { rotation: e, animationSmooth: n } = t;
+                    return `transform:rotate(${e}deg);transform-origin: 50% 50%;${n ? `transition: stroke-dashoffset ${n}` : ""}`
+                }
+                , n = t => ({
+                    "stroke-dasharray": t || "264"
+                })
+                , o = t => {
+                    let { round: e } = t;
+                    return {
+                        "stroke-linecap": e ? "round" : ""
+                    }
+                }
+                , r = t => ({
+                    "font-size": t.fontSize,
+                    "font-weight": t.fontWeight
+                })
+                , i = t => document.querySelector(t)
+                , s = (t, e) => {
+                    let { lineargradient: n, index: o, colorSlice: r } = e;
+                    t.setAttribute("stroke", n ? `url(#linear-${o})` : r)
+                }
+                , a = (t, e) => {
+                    for (const n in e)
+                        t?.setAttribute(n, e[n])
+                }
+                , c = t => document.createElementNS("http://www.w3.org/2000/svg", t)
+                , l = (t, e) => {
+                    const n = c("tspan");
+                    return n.classList.add(t),
+                        e && (n.textContent = e),
+                        n
+                }
+                , d = (t, e, n) => {
+                    const o = 264 - t / 100 * (n ? 2.64 * (100 - n) : 264);
+                    return e ? -o : o
+                }
+                , f = function (t, e, n) {
+                    return void 0 === n && (n = "beforeend"),
+                        t.insertAdjacentElement(n, e)
+                };
+            return class {
+                constructor(t, e) {
+                    void 0 === e && (e = {}),
+                        this.t = t,
+                        this.o = e;
+                    const n = document.querySelectorAll(`.${t}`)
+                        , o = [].slice.call(n);
+                    o.map(((t, n) => {
+                        const o = JSON.parse(t.getAttribute("data-pie"));
+                        t.setAttribute("data-pie-index", o.index || e.index || n + 1)
+                    }
+                    )),
+                        this.i = o
+                }
+                initial(t) {
+                    const e = t || this.i;
+                    Array.isArray(e) ? e.map((t => this.l(t))) : this.l(e)
+                }
+                h(t, d, h) {
+                    const u = this.t;
+                    h.number && f(t, ((t, e) => {
+                        const n = c("text");
+                        n.classList.add(`${e}-text-${t.index}`),
+                            f(n, l(`${e}-percent-${t.index}`)),
+                            f(n, l(`${e}-unit-${t.index}`, t.unit));
+                        const o = {
+                            x: "50%",
+                            y: "50%",
+                            fill: t.fontColor,
+                            "text-anchor": "middle",
+                            dy: t.textPosition || "0.35em",
+                            ...r(t)
+                        };
+                        return a(n, o),
+                            n
+                    }
+                    )(h, u));
+                    const $ = i(`.${u}-circle-${h.index}`)
+                        , m = {
+                            fill: "none",
+                            "stroke-width": h.stroke,
+                            "stroke-dashoffset": "264",
+                            ...n(),
+                            ...o(h)
+                        };
+                    a($, m),
+                        this.animationTo({
+                            ...h,
+                            element: $
+                        }, !0),
+                        $.setAttribute("style", e(h)),
+                        s($, h),
+                        d.setAttribute("style", `width:${h.size}px;height:${h.size}px;`)
+                }
+                animationTo(e, n) {
+                    void 0 === n && (n = !1);
+                    const o = this.t
+                        , c = JSON.parse(i(`[data-pie-index="${e.index}"]`).getAttribute("data-pie"))
+                        , l = i(`.${o}-circle-${e.index}`);
+                    if (!l)
+                        return;
+                    const f = n ? e : {
+                        ...t,
+                        ...c,
+                        ...e,
+                        ...this.o
+                    };
+                    if (n || s(l, f),
+                        !n && f.number) {
+                        const t = {
+                            fill: f.fontColor,
+                            ...r(f)
+                        }
+                            , e = i(`.${o}-text-${f.index}`);
+                        a(e, t)
+                    }
+                    const h = i(`.${o}-percent-${e.index}`);
+                    if (f.animationOff)
+                        return f.number && (h.textContent = `${f.percent}`),
+                            void l.setAttribute("stroke-dashoffset", d(f.percent, f.inverse));
+                    let u = JSON.parse(l.getAttribute("data-angel"));
+                    const $ = Math.round(e.percent);
+                    if (0 === $ && (f.number && (h.textContent = "0"),
+                        l.setAttribute("stroke-dashoffset", "264")),
+                        $ > 100 || $ < 0 || u === $)
+                        return;
+                    let m, p = n ? 0 : u;
+                    const g = 1e3 / (f.speed || 1e3);
+                    let x = performance.now();
+                    const k = t => {
+                        m = requestAnimationFrame(k);
+                        const e = t - x;
+                        e >= g - .1 && (x = t - e % g,
+                            p = p < f.percent ? p + 1 : p - 1),
+                            l.setAttribute("stroke-dashoffset", d(p, f.inverse, f.cut)),
+                            h && f.number && (h.textContent = `${p}`),
+                            l.setAttribute("data-angel", p),
+                            l.parentNode.setAttribute("aria-valuenow", p),
+                            p === $ && cancelAnimationFrame(m)
+                    }
+                        ;
+                    requestAnimationFrame(k)
+                }
+                l(e) {
+                    const n = e.getAttribute("data-pie-index")
+                        , o = JSON.parse(e.getAttribute("data-pie"))
+                        , r = {
+                            ...t,
+                            ...o,
+                            index: n,
+                            ...this.o
+                        }
+                        , i = c("svg")
+                        , s = {
+                            role: "progressbar",
+                            width: r.size,
+                            height: r.size,
+                            viewBox: "0 0 100 100",
+                            "aria-valuemin": "0",
+                            "aria-valuemax": "100"
+                        };
+                    a(i, s),
+                        r.colorCircle && i.appendChild(this.u(r)),
+                        r.lineargradient && i.appendChild((t => {
+                            let { index: e, lineargradient: n } = t;
+                            const o = c("defs")
+                                , r = c("linearGradient");
+                            r.id = `linear-${e}`;
+                            const i = [].slice.call(n);
+                            o.appendChild(r);
+                            let s = 0;
+                            return i.map((t => {
+                                const e = c("stop");
+                                a(e, {
+                                    offset: `${s}%`,
+                                    "stop-color": `${t}`
+                                }),
+                                    r.appendChild(e),
+                                    s += 100 / (i.length - 1)
+                            }
+                            )),
+                                o
+                        }
+                        )(r)),
+                        i.appendChild(this.u(r, "top")),
+                        e.appendChild(i),
+                        this.h(i, e, r)
+                }
+                u(t, r) {
+                    void 0 === r && (r = "bottom");
+                    const i = c("circle");
+                    let s = {};
+                    if (t.cut) {
+                        const r = 264 - 2.64 * (100 - t.cut);
+                        s = {
+                            "stroke-dashoffset": t.inverse ? -r : r,
+                            style: e(t),
+                            ...n(),
+                            ...o(t)
+                        }
+                    }
+                    const l = {
+                        fill: t.fill,
+                        stroke: t.colorCircle,
+                        "stroke-width": t.strokeBottom || t.stroke,
+                        ...s
+                    };
+                    t.strokeDasharray && Object.assign(l, {
+                        ...n(t.strokeDasharray)
+                    });
+                    const d = {
+                        cx: "50%",
+                        cy: "50%",
+                        r: 42,
+                        "shape-rendering": "geometricPrecision",
+                        ..."top" === r ? {
+                            class: `${this.t}-circle-${t.index}`
+                        } : l
+                    };
+                    return a(i, d),
+                        i
+                }
+            }
+        }();
+    }
+    //# sourceMappingURL=circularProgressBar.min.js.map
+    function firecode() {
+        const elements = [].slice.call(document.querySelectorAll(".pie"));
+        const circle = new CircularProgressBar("pie");
+
+        // Check if IntersectionObserver is supported
+        if ("IntersectionObserver" in window) {
+            const config = {
+                root: null,
+                rootMargin: "0px",
+                threshold: 0.75
+            };
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.map((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.75) {
+                        circle.initial(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, config);
+
+            elements.map((item) => {
+                observer.observe(item);
+            });
+        } else {
+            elements.map((element) => {
+                circle.initial(element);
+            });
+        }
+
+        // Start random animation every 3 seconds
+        setInterval(() => {
+            const typeFont = [100, 200, 300, 400, 500, 600, 700];
+            const colorHex = `#${Math.floor((Math.random() * 0xffffff) << 0).toString(16)}`;
+            const options = {
+                index: 17,
+                percent: Math.floor(Math.random() * 100 + 1),
+                colorSlice: colorHex,
+                fontColor: colorHex,
+                fontSize: `${Math.floor(Math.random() * (1.4 - 1 + 1) + 1)}rem`,
+                fontWeight: typeFont[Math.floor(Math.random() * typeFont.length)]
+            };
+            circle.animationTo(options);
+        }, 3000);
+    }
+</script>
+
+<script>
+    function storedoc(A, B, C, D, E, F, G) {
+        var chartDom = document.getElementById('main');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        option = {
+            xAxis: {
+                type: 'category',
+                axisLabel: { interval: 0, rotate: 25 },
+                data: [
+                    'Electricity Bill',
+                    'Lease / LOI',
+                    'Property Tax Receipt',
+                    'Fire NOC',
+                    'Pollution',
+                    'Ownership Docs',
+                    'Additional Doc Name'
+
+                ].map(function (str) {
+                    return str.replace(' ', '\n');
+                })
+            },
+            yAxis: {
+                type: 'value'
+            },
+            grid: {
+                left: 25,
+                top: 20,
+                right: 10,
+                bottom: 45
+            },
+            series: [
+                {
+                    data: [
+                        {
+                            value: A,
+                            itemStyle: { color: '#e45d27' }
+                        },
+                        {
+                            value: B,
+                            itemStyle: { color: '#e45d27' }
+                        },
+                        {
+                            value: C,
+                            itemStyle: { color: '#e45d27' }
+                        },
+                        {
+                            value: D,
+                            itemStyle: { color: '#e45d27' }
+                        },
+                        {
+                            value: E,
+                            itemStyle: { color: '#e45d27' }
+                        },
+                        {
+                            value: F,
+                            itemStyle: { color: '#e45d27' }
+                        },
+                        {
+                            value: G,
+                            itemStyle: { color: '#e45d27' }
+                        }
+
+                    ],
+                    type: 'bar',
+                    barWidth: '25px',
+                }
+            ]
+        };
+
+        option && myChart.setOption(option);
+
+
+    }
+    function PieChartRegion(East, West, North, South, Central) {
+
+        var chartDom1 = document.getElementById('pimain');
+        var myChart1 = echarts.init(chartDom1);
+        var option;
+
+        option = {
+            tooltip: {
+                trigger: 'item'
+            },
+            legend: {
+                top: '25%',
+                left: '5%',
+                orient: 'vertical'
+            },
+            series: [
+                {
+                    name: 'Store',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    padAngle: 3,
+                    itemStyle: {
+                        borderRadius: 8
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 25,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    labelLine: {
+                        show: false
+                    },
+                    label: {
+                        formatter: '{c}',
+                        position: 'inside'
+                    },
+                    data: [
+                        { value: East, name: 'East' },
+                        { value: West, name: 'West' },
+                        { value: North, name: 'North' },
+                        { value: South, name: 'South' },
+                        { value: Central, name: 'Central' }
+                    ]
+                }
+            ]
+        };
+
+        option && myChart1.setOption(option);
+    };
+
+</script>

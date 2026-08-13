@@ -1,0 +1,1978 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Principle Employer Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<link href="~/Dashboards/PrincipleEmployerDashboard/style.css" rel="stylesheet" />
+<script src="~/Dashboards/PrincipleEmployerDashboard/script.js"></script>
+<script src="~/scripts/RetailJsLib/PrincipleEmployerCodeController.js"></script>
+
+
+<script> 
+    $(document).on("click", ".siteSegment-btn", function () {
+
+        var target = $(this).data("tab");
+
+        $(".siteSegment-btn").removeClass("active");
+        $(this).addClass("active");
+
+        $(".employeeManualPanel").removeClass("active");
+        $("#" + target).addClass("active");
+
+    });
+</script>
+
+<style>
+    span.statusPill.ng-binding.redPill {
+        background: #ffb3a2 !important;
+        color: #a31c16 !important;
+    }
+</style>
+
+<div class="principleEmpDashboard px-4 py-3">
+
+    <!-- PAGE HEADER -->
+    <div class="peDashHeader" ng-init="BindEmployerDashboard();BindTiles()">
+        <div>
+            <p class="welcomeText mb-1">Welcome back, {{DashboardDetail1.UserName}}</p>
+
+            <div class="d-flex flex-column gap-2 flex-wrap">
+                <h2 class="dashboardTitle mb-0">{{DashboardDetail1.PartyName}}</h2>
+                <span class="companyCode">{{DashboardDetail1.PartyCode}}</span>
+            </div>
+        </div>
+
+        <div class="statusBadge active">
+            Active
+        </div>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="peKpiGrid">
+
+
+        <div class="peKpiCard blueCard" style="background: #F3F8FF">
+            <div class="kpiIcon blue">
+                <i class="bi bi-people-fill"></i>
+            </div>
+
+            <div class="kpiContent">
+                <h3>{{DashboardDetail.VendorCount}}</h3>
+                <p style="color: #155DFC">Total Contractors</p>
+
+                <span class="kpiGrowth">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    {{DashboardDetail.VendorPercentage}} % vs Apr {{DashboardDetail.Currentyear}}
+                </span>
+            </div>
+        </div>
+
+        <div class="peKpiCard purpleCard" style="background: #F9F4FF">
+            <div class="kpiIcon purple">
+                <i class="bi bi-person-workspace"></i>
+            </div>
+
+            <div class="kpiContent">
+                <h3>{{DashboardDetail.WorkerCount}}</h3>
+                <p style="color: purple">Total Workers</p>
+
+                <span class="kpiGrowth">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    {{DashboardDetail.EmployeePercentage}} % vs Apr {{DashboardDetail.Currentyear}}
+                </span>
+            </div>
+        </div>
+
+        <div class="peKpiCard blueCard" style="background: #F3F5FF">
+            <div class="kpiIcon blue">
+                <i class="bi bi-shield-check"></i>
+            </div>
+
+            <div class="kpiContent">
+                <h3>{{DashboardDetail.SiteCount}}</h3>
+                <p style="color: #003BB2">Active Sites</p>
+
+                <span class="kpiGrowth">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    {{DashboardDetail.SitePercentage}} % vs Apr {{DashboardDetail.Currentyear}}
+                </span>
+            </div>
+        </div>
+
+        <div class="peKpiCard greenCard" style="background: #F3FFF7">
+            <div class="kpiIcon green">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+
+            <div class="kpiContent">
+                <h3>{{DashboardDetail.EmployeeOtherCity}}</h3>
+                <p style="color: green">InterState migrant Workers</p>
+
+                <span class="kpiGrowth">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    {{DashboardDetail.EmployeePercentage }} % vs Apr {{DashboardDetail.Currentyear}}
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ROW 1 HEADER -->
+    <div class="sectionHeader" ng-init="BindActiveConstructionSite()">
+
+        <div>
+            <h3 class="sectionMainTitle">Active Construction Sites</h3>
+            <p class="sectionSubText">Overview of all active contractor sites</p>
+        </div>
+
+        <a href="../Dashboard/Principlesitesoverview">
+            <button class="sectionViewAllBtn">
+                View All
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </a>
+
+
+    </div>
+
+    <!-- ROW 1 : SITE CARDS -->
+    <div class="peRowGrid fourColGrid">
+
+        <!-- CARD -->
+        <div class="peCard siteCard" ng-repeat="x in ActiveConstructionSiteList">
+
+            <div class="siteCardHeader">
+                <div class="siteIcon">
+                    <i class="bi bi-buildings"></i>
+                </div>
+
+                <div class="flex-grow-1">
+                    <h4>{{x.SiteName}}</h4>
+
+                    <p>
+                        <i class="bi bi-geo-alt"></i>
+                        {{x.Address}}
+                    </p>
+                </div>
+
+                <span class="siteStatus">{{x.Status}}</span>
+            </div>
+
+            <div class="siteStatsWrap">
+
+                <div class="siteStat">
+                    <span>Contractors</span>
+                    <strong>{{x.VendorCount}}</strong>
+                </div>
+
+                <div class="siteStat">
+                    <span>Workers</span>
+                    <strong>{{x.EmployeeCount}}</strong>
+                </div>
+
+            </div>
+
+            <div class="complianceProgressWrap">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Average Compliance Score</span>
+                    <strong>{{x.CompliancePercentage}}%</strong>
+                </div>
+
+                <div class="progress peProgressBar">
+                    <div class="progress-bar"
+                         ng-style="{'width': x.CompliancePercentage + '%'}">
+                    </div>
+                </div>
+            </div>
+
+            <button class="viewBtn" data-bs-toggle="modal" data-bs-target="#viewSiteModal" ng-click="SearchSitebyId(x.SiteId)">
+                <i class="bi bi-eye"></i>
+                View
+            </button>
+
+        </div>
+
+
+
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="peRowGrid fourColGrid">
+
+        <div class="peCard complianceCard" ng-init="Bindgatepass()">
+            <h3 class="sectionTitle">Gate Pass Compliance</h3>
+
+            <div class="complianceCardBody">
+                <div class="complianceScoreWrap">
+                    <h2>{{gatepasslist.Percentage}}%</h2>
+                    <span>Compliance score</span>
+                </div>
+
+                <div class="complianceDetails">
+                    <div><span>Total Worker</span><strong>{{DashboardDetail.WorkerCount}}</strong></div>
+                    <div><span>Gate Pass Issued</span><strong>{{gatepasslist.Totalgatepss}}</strong></div>
+                    <div><span>Active</span><strong>{{gatepasslist.ActiveCount}}</strong></div>
+                    <div><span>Expired</span><strong>{{gatepasslist.ExpiredCount}}</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="peCard complianceCard" ng-init="BindMedicalExamination()">
+            <h3 class="sectionTitle">Medical Examination Compliance</h3>
+
+            <div class="complianceCardBody">
+                <div class="complianceScoreWrap orangeText">
+                    <h2>{{MedicalExaminationlist.FitPercentage}}%</h2>
+                    <span>Compliance score</span>
+                </div>
+
+                <div class="complianceDetails">
+                    <div><span>Total Workers</span><strong>{{MedicalExaminationlist.WorkerCount}}</strong></div>
+                    <div><span>Fit To Work</span><strong>{{MedicalExaminationlist.MedicalStatusYesCount}}</strong></div>
+                    <div><span>Unfit / Temporarily Unfit</span><strong>{{MedicalExaminationlist.UnfitCount}}</strong></div>
+                    <div><span>Due for Medical</span><strong>{{MedicalExaminationlist.ExpiredMedicalCount}}</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="peCard complianceCard" ng-init="BindHealth()">
+            <h3 class="sectionTitle">Health & Safety Compliance</h3>
+
+            <div class="complianceCardBody">
+                <div class="complianceScoreWrap">
+                    <h2>
+                        {{HealthList.PPEPercentage }}%
+                    </h2>
+                    <span>Compliance score</span>
+                </div>
+
+                <div class="complianceDetails">
+                    <div><span>Total Workers</span><strong>
+    {{HealthList.TotalEmployee}}
+</strong></div>
+                    <div><span>Safety Kit Issued</span><strong>
+    {{HealthList.PPEYesCount  }}
+</strong></div>
+                    <div><span>Safety Training</span><strong>{{HealthList.SafetyTrainingYesCount}}</strong></div>
+                    <div><span>Site Induction</span><strong>
+    {{HealthList.SiteInductionYesCount}}
+</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="peCard complianceCard" ng-init="OtherFacilities()">
+            <h3 class="sectionTitle">Other Facilities Compliance</h3>
+
+            <div class="complianceCardBody">
+                <div class="complianceScoreWrap">
+                    <h2>{{OtherFacilitiesList.DrinkingwaterPercentage}}%</h2>
+                    <span>Compliance score</span>
+                </div>
+
+                <div class="complianceDetails">
+                    <div><span>Drinking Water</span><strong>{{OtherFacilitiesList.DrinkingwaterYesCount}}</strong></div>
+                    <div><span>Washroom Facilities</span><strong>{{OtherFacilitiesList.WashroomYesCount}}</strong></div>
+                    <div><span>Rest Shelter</span><strong>{{OtherFacilitiesList.RestShelterYesCount}}</strong></div>
+                    <div><span>Canteen Facility</span><strong>{{OtherFacilitiesList.FirstAidYesCount}}</strong></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ROW 3 -->
+    <div class="peRowGrid twoColGrid" ng-init="BindControl();">
+
+        <div class="peCard tableCard">
+
+            <div class="tableCardHeader" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 class="sectionTitle mb-0">Document Submission Overview</h3>
+
+                <div style="position:relative;width:250px;">
+                 
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Search Vendor..."
+                           ng-model="SearchText"
+                           ng-focus="ShowVendorList = true" ng-change="CalculateDashboard()"  />
+
+                    <ul class="list-group"
+                        ng-show="ShowVendorList && SearchText"
+                        style="position:absolute;z-index:999;width:100%;max-height:200px;overflow-y:auto;">
+
+                        <li class="list-group-item"
+                            ng-repeat="v in VendorList | unique:'VName' | filter:{VName: SearchText}"
+                            ng-click="SelectVendor(v);CalculateDashboard()" 
+                            style="cursor:pointer;">
+                            {{v.VName}}
+                        </li>
+
+                    </ul>
+
+                </div>
+            </div>
+
+            <div class="tableScrollWrap">
+
+                <table class="table peTable">
+                    <thead>
+                        <tr>
+
+                            <th>S.No</th>
+                            <th>Contractor Name</th>
+                            <th>SiteCode</th>
+                            <th>Site</th>
+                            <th>State</th>
+                            <th>Financial Year</th>
+                            <th>Month</th> 
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Unique No.</th>
+                            <th>Creation Date</th>
+                            <th>Submission Updated</th>
+
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+
+                        <tr ng-repeat="x in InvoiceList | filter:{VName: SearchText}">
+                            <td>{{$index+1}}</td>
+                            <td>{{x.VName}}</td>
+                            <td>{{x.SiteCode}}</td>
+                            <td>{{x.SiteName}}</td>
+                            <td>{{x.StateName}}</td>
+
+                            <td>{{x.FYID}}</td>
+                            <td>{{x.InMonthName}}</td>
+
+                            <td>{{x.Location}}</td>
+                            <td>
+                                {{x.Status}}
+                            </td>
+                            <td>{{x.InvoiceNo}}</td>
+                            <td>{{x.CreatedOn}}</td>
+                            <td>{{x.UpdatedON}}</td>
+
+                        </tr>
+
+
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+
+        <div class="peCard tableCard">
+
+            <div class="tableCardHeader" ng-init="BindCompliance()">
+                <h3 class="sectionTitle mb-0">Compliance Report</h3>
+            </div>
+
+            <div class="tableScrollWrap">
+           
+
+                <table class="table peTable">
+                    <thead>
+                        <tr>
+                            <th>Contractor Name</th>
+                            <th>Site</th>
+                            <th>Month</th>
+                            <th>Compliance Score</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                       
+                            <tr ng-repeat="x in ComplianceList  | filter:{Name: SearchText}">
+                                <td>{{x.Name}}</td>
+                                <td>{{x.SiteName}}</td>
+                                <td>{{x.MonthName}}</td>
+                                <td>{{x.Percentage}}</td>
+                            </tr>
+                       
+
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ROW 4 -->
+    <div class="peRowGrid" style="display:none">
+
+        <div class="peCard fullWidthCard">
+
+            <div class="tableCardHeader">
+                <h3 class="sectionTitle mb-0">Compliance History</h3>
+            </div>
+
+            <div class="tableScrollWrap largeTableWrap">
+
+                <table class="table peTable">
+                    <thead>
+                        <tr>
+                            <th>Site ID</th>
+                            <th>Contractor ID</th>
+                            <th>Total Workers</th>
+                            <th>Salary Paid</th>
+                            <th>Date of Payment</th>
+                            <th>PF Deposited</th>
+                            <th>Date of Deposit (PF)</th>
+                            <th>ESIC Deposited</th>
+                            <th>Date of Deposit (ESIC)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                      
+                            <tr>
+                                <td>SIGI0526DL01</td>
+                                <td>SIGI0526DL01</td>
+                                <td>421</td>
+                                <td>421</td>
+                                <td>07/05/2026</td>
+                                <td>421</td>
+                                <td>07/05/2026</td>
+                                <td>421</td>
+                                <td>07/05/2026</td>
+                                <td>
+                                    <button class="tableActionBtn">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                      
+
+                    </tbody>
+                </table>
+
+            </div>
+
+            <div class="tableFooterBtn">
+                <button class="viewAllBtn">
+                    View All
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- LAST ROW -->
+    <div class="peBottomGrid">
+
+        <!-- LEFT -->
+        <div class="peCard tableCard">
+
+            <div class="tableCardHeader">
+                <h3 class="sectionTitle mb-0">Worker Compliance Overview</h3>
+            </div>
+
+            <div class="tableScrollWrap smallTableWrap" ng-init="BindEmployeeSite()">
+             
+                <table class="table peTable">
+                    <thead>
+                        <tr>
+                            <th>Worker ID</th>
+                            <th>Worker Name</th>
+                            <th>Contractor Name</th>
+                            <th>Site</th>
+                            <th>Gate Pass</th>
+                            <th>Medical Exam</th>
+                            <th>Health & Safety</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+
+                        <tr ng-repeat="x in EmployeeSiteList  | filter:{VName: SearchText}">
+
+                            <td>{{x.EmployeeCode}}</td>
+                            <td>
+                                {{x.EmployeeName}}
+                            </td>
+                            <td>{{x.VName}}</td>
+                            <td>{{x.SiteName}}</td>
+
+                            <td>
+                                <span class="statusPill"
+                                      ng-class="x.GatePassStatus == 'Valid' ? 'greenPill' : 'redPill'">
+                                    {{x.GatePassStatus}}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="statusPill"
+                                      ng-class="x.MedicalStatusResult == 'Done' ? 'greenPill' : 'redPill'">
+                                    {{x.MedicalStatusResult}}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="statusPill"
+                                      ng-class="x.FitnessStatus == 'Done' ? 'greenPill' : 'redPill'">
+                                    {{x.FitnessStatus}}
+                                </span>
+                            </td>
+
+                        </tr>
+
+
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+
+        <!-- CENTER -->
+        <div class="peCard">
+            
+            <div class="tableCardHeader" ng-init="BindWorkerCerifitacte()">
+                <h3 class="sectionTitle mb-0">Worker Verified Documents</h3>
+            </div>
+
+            <div class="verifiedDocWrap expiryAlertWrap ">
+                <div class="verifiedItem">
+                    <span>PAN Card</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.PANCardPercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.PANCardPercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Cheque / Passbook</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.ChequePassbookPercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.ChequePassbookPercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Education Certificate</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.EducationCertificatePercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.EducationCertificatePercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Experience Certificate</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.ExperienceCertificatePercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.ExperienceCertificatePercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Aadhaar Front</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.AdhaarFrontPercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.AdhaarFrontPercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Aadhaar Back</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.AdhaarBackPercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.AdhaarBackPercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Relieving Letter</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.RelievingLetterPercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.RelievingLetterPercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Payslip</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.PayslipPercentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.PayslipPercentage}}%</strong>
+                </div>
+
+                <div class="verifiedItem">
+                    <span>Photo 1</span>
+
+                    <div class="verifiedProgress">
+                        <div class="verifiedProgressBar"
+                             ng-style="{'width': dashboard.Photo1Percentage + '%'}">
+                        </div>
+                    </div>
+
+                    <strong>{{dashboard.Photo1Percentage}}%</strong>
+                </div>
+
+               
+               
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT -->
+        <div class="peCard" ng-init="BindCLlraLicense()">
+
+            <div class="tableCardHeader">
+                <h3 class="sectionTitle mb-0">Expiry Alerts</h3>
+            </div>
+
+            <div class="expiryAlertWrap">
+
+
+                <div class="expiryItem"  ng-class="[
+        'redAlert',
+        'orangeAlert',
+        'greenAlert'
+     ][$index % 3]"   ng-repeat="x in CLRAList">
+                    <div class="expiryIcon">
+                        <i class="bi bi-exclamation-circle"></i>
+                    </div>
+
+                    <div>
+                        <div  >
+                            <h5>{{x.DocumentName}} for {{x.SiteName}}</h5>
+                            <p>{{x.ExpiryStatus}}</p>
+                        </div>
+                    </div>
+                    @*<i class="bi bi-arrow-down-short"></i>*@
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!--  View Site Modal -->
+    <div class="modal fade sitesOverviewModal"
+         id="viewSiteModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">{{Sitemaster.SiteCode}} - {{Sitemaster.SiteName}}<br />({{Sitemaster.Address}})</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+              
+
+
+
+                <!-- Body -->
+                <div class="modal-body">
+                    <!-- SEGMENT TOGGLE -->
+                    <div class="siteSegment-wrap">
+
+                        <button class="siteSegment-btn active"
+                                data-index="0"
+                                data-tab="basicTab">
+
+                            Basic Info
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="1"
+                                data-tab="addressTab">
+
+                            Address Details
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="2"
+                                data-tab="operationalTab">
+
+                            Operational Details
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="3"
+                                data-tab="complianceTab">
+
+                            Compliance Client
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="4"
+                                data-tab="contactTab">
+
+                            Contact Details
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="5"
+                                data-tab="attendanceTab">
+
+                            Attendance Access
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="6"
+                                data-tab="billingTab">
+
+                            Billing Contractor
+
+                        </button>
+
+                        <button class="siteSegment-btn"
+                                data-index="7"
+                                data-tab="otherTab">
+
+                            Other Facilities
+
+                        </button>
+
+                    </div>
+
+
+                    <div class="employeeManualPanel-wrap">
+
+                        <!-- BASIC DETAILS -->
+                        <div class="employeeManualPanel active"
+                             id="basicTab">
+
+                            <div class="row g-4">
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site ID
+                                    </label>
+
+                                    <input class="form-control employeeManual-input" ng-model="{{Sitemaster.SiteCode}}">
+                                </div>
+                             
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site Name
+                                    </label>
+
+                                    <input class="form-control employeeManual-input " ng-disabled="true" ng-model="{{Sitemaster.SiteName}}">
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Assign Color
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate" ng-disabled="true" ng-model="{{Sitemaster.AssignColor}}">
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site Type
+                                        <span>*</span>
+                                    </label>
+
+                                    <select class="form-select employeeManual-input validate" >
+
+                                        <option value="">Select</option>
+
+                                        
+                                    </select>
+                                </div>
+
+                                <!-- Designation -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Site Short Name
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+                                </div>
+
+
+                                <!-- Department -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Operational Status
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           id="txtEmployeeDepartment" >
+                                </div>
+
+
+                                <!-- Father / Husband Name -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="employeeManual-label">
+                                        Industry Type
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+                                </div>
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Address TAB -->
+                        <div class="employeeManualPanel"
+                             id="addressTab">
+
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <!-- Present Address -->
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Address Line 1
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"  ng-disabled="true" ng-model="{{Sitemaster.Address}}"> 
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Address Line 2
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Landmark
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        City
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Pincode
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"  ng-disabled="true" ng-model="{{Sitemaster.Pincode}}"> 
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        District
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        State
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           id="txtState">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Country
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Longitude
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           id="txtPIN">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Latitude
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Geofencing Status
+                                    </label>
+
+                                    <select class="form-select employeeManual-input"
+                                            ng-model="MinimumWageCategory">
+
+                                        <option value="">Select</option>
+
+
+                                    </select>
+
+                                </div>
+
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Operational Details TAB -->
+                        <div class="employeeManualPanel"
+                             id="operationalTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Site Start Date
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Site End Date
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Shift Type
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Operational Hours
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Weekly Off days
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Total Worker Capacity
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Current Worker Strength
+                                    </label>
+
+                                    <input class="form-control employeeManual-input"
+                                           numeric-only>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Active Contractors
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Compliance Client TAB -->
+                        <div class="employeeManualPanel"
+                             id="complianceTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Required
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Type
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Form
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input validate">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Labour License Number
+                                        <span>*</span>
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Validity From
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        License Validity To
+                                        <span>*</span>
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input validate">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Contact Details TAB -->
+                        <div class="employeeManualPanel"
+                             id="contactTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Plant Head Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Plant HR Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Health & Safety Officer Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-12 col-md-12">
+                                    <h5>Medical Officer Details</h5>
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Name
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Designation
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Email ID
+                                    </label>
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Emergency Contact No.
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Attendance Access TAB -->
+                        <div class="employeeManualPanel"
+                             id="attendanceTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Biometric Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        GPS Tracking Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        QR Attendance Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Gate Pass Required
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Face Recognition Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Visitor Management Enabled
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Billing Contractor TAB -->
+                        <div class="employeeManualPanel"
+                             id="billingTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Number
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO(Qty)
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Value
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Validity Date From
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        PO Validity Date To
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Invoice Submission Date
+                                    </label>
+
+                                    <input type="date"
+                                           class="form-control employeeManual-input">
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Payment Terms
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Attach Copy
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                            </div>
+
+                        </div>
+
+                        <!-- Other Facilities TAB -->
+                        <div class="employeeManualPanel"
+                             id="otherTab">
+
+                            <!-- FORM -->
+                            <div class="row g-4">
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Drinking Water
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Washroom Facilities
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Rest Shelter
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Canteen Facility
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        First Aid Kit
+                                    </label>
+
+                                    <select class="form-select employeeManual-input">
+
+                                        <option value="">Select</option>
+
+                                        <option value="Yes">
+                                            Yes
+                                        </option>
+
+                                        <option value="No">
+                                            No
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Trainer Name
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+                                <div class="col-lg-3 col-md-6">
+
+                                    <label class="employeeManual-label">
+                                        Trainer Number
+                                    </label>
+
+                                    <input class="form-control employeeManual-input">
+
+                                </div>
+
+
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+<style>
+    /========View site modal ========/
+
+.principleEmpDashboard .sitesOverviewModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.principleEmpDashboard .sitesOverviewModal .modal-title {
+    font-weight: 400;
+}
+
+.principleEmpDashboard .sitesOverviewModal .modal-body {
+    background: #FEF3EC;
+}
+
+.sitesOverviewModal .employeeManual-label {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: #444 !important;
+}
+
+    .sitesOverviewModal .employeeManual-label span {
+        color: #E45D27 !important;
+    }
+
+.sitesOverviewModal .form-control,
+.sitesOverviewModal .form-select {
+    font-size: 0.78rem; 
+    border-radius: 6px !important;
+}
+
+.sitesOverviewModal .employeeManual-input {
+    /font-size: 0.78rem;/
+    border-radius: 6px !important;
+}
+
+.sitesOverviewModal #contactTab h5 {
+    font-size: 1rem;
+    margin-bottom: 0;
+    color: var(--primary);
+}
+
+.sitesOverviewModal .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}
+
+/* SEGMENT TOGGLE */
+
+.principleEmpDashboard .siteSegment-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #E7DFDA;
+    border-radius: 999px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 24px;
+    width: fit-content;
+    max-width: 100%;
+    scrollbar-width: none;
+}
+
+    .principleEmpDashboard .siteSegment-wrap::-webkit-scrollbar {
+        display: none;
+    }
+
+/* BUTTONS */
+
+.principleEmpDashboard .siteSegment-btn {
+    border: 0;
+    background: transparent;
+    color: #555;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+
+    /* HOVER */
+
+    .principleEmpDashboard .siteSegment-btn:hover {
+        color: var(--primary);
+    }
+
+    /* ACTIVE */
+
+    .principleEmpDashboard .siteSegment-btn.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    /* CLICK EFFECT */
+
+    .principleEmpDashboard .siteSegment-btn:active {
+        transform: scale(0.97);
+    }
+
+
+/* PANELS */
+
+.principleEmpDashboard .employeeManualPanel-wrap {
+    position: relative;
+}
+
+.principleEmpDashboard .employeeManualPanel {
+    display: none;
+    animation: employeePanelFade 0.28s ease;
+}
+
+    .principleEmpDashboard .employeeManualPanel.active {
+        display: block;
+    }
+
+@@keyframes employeePanelFade {
+
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* CARD */
+
+.principleEmpDashboard .employeeManualPanel {
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+}
+
+
+/* HEADER */
+
+.principleEmpDashboard .employeeManualPanel-header {
+    margin-bottom: 28px;
+}
+
+    .principleEmpDashboard .employeeManualPanel-header h4 {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+
+    .principleEmpDashboard .employeeManualPanel-header p {
+        margin: 0;
+        color: #888;
+    }
+</style>

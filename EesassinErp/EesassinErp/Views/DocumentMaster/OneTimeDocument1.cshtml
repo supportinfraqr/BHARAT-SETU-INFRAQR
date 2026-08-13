@@ -1,0 +1,52 @@
+﻿
+@{
+    ViewBag.Title = "Auditor DashBoard";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<h2>One Time Document</h2>
+<style>
+    table, th, td {
+  border: 1px solid black;
+}
+</style>
+<script src="~/scripts/myjslib/OneTimeDocumentController.js"></script> 
+<table style="text-align: center;width: 100%;color:black" ng-init="BindDocument()">
+    <thead>
+        <tr>
+            <th>SNo</th>
+            <th>Status</th>
+            <th>Document Name</th>
+            <th>Description</th>
+          
+            <th>VaildFrom</th> 
+
+            <th>vaildTo</th> 
+            <th >View/Upload</th>
+        </tr>
+    </thead>
+    <tbody   ng-repeat="xx in InOneTimeDocList" >
+        <tr>
+            <td>{{xx.Orderby}}</td>
+            <td><img ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='1'" src="~/Content/img/SucessUpload.png" style="width: 20px;height: 20px;"/>
+<img ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='0'" src="~/Content/img/upload.png" style="width: 20px;height: 20px" /></td>
+            <td>{{xx.DocumentName}}</td>
+            
+            <td><input type="text" ng-model="InOneTimeDocList[$index].Description" ng-bind="InOneTimeDocList[$index].Description=xx.Description"/></td>
+            {{convertTodate(InOneTimeDocList[$index].VaildFrom)}}
+             {{convertTodate(InOneTimeDocList[$index].VaildTo)}}
+            <td><input type="date" ng-show="{{xx.AllowExpire}}=='1'" ng-model="InOneTimeDocList[$index].VaildFrom"  value="{{convertTodate(InOneTimeDocList[$index].VaildFrom)}}" ng-bind="InOneTimeDocList[$index].VaildFrom=xx.VaildFrom" date-format /></td>
+            <td><input type="date" ng-show="{{xx.AllowExpire}}=='1'"  ng-model="InOneTimeDocList[$index].VaildTo" value="{{convertTodate(InOneTimeDocList[$index].VaildTo)}}"  ng-bind="InOneTimeDocList[$index].vaildTo=xx.VaildTo" date-format /></td>
+            <td  >
+                
+                <img   ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='0'" id="CandidatePhoto{{$index}}" src="~/Content/img/upload.png" ng-click="SetValue($index,'#fuCandidatePhoto'+$index)" style="width: 40PX; height: 30px" />
+              
+            <input type="file"  ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='0'" id="fuCandidatePhoto{{$index}}" style="display:none" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InOneTimeDocList[$index].FileDoc">
+            <div class="button"  ng-show="{{xx.Status}}=='0'"   ng-click="UploadDocument(xx.Id,$index)" style="width: 40PX; height: 30px" >Save</div> 
+            <div ng-show="{{xx.AllowFileUpload}}=='1' && {{xx.Status}}=='1'" ><a target="_blank" href="{{xx.FileDoc}}">View Document</a></div>
+            </td>
+         
+        </tr>
+    </tbody>
+  
+</table>

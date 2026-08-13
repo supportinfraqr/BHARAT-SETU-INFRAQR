@@ -1,0 +1,15 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Compliance";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/RozgarController.js"></script>
+<script src="~/Content/Dashboards/Rozgar/workerRozgar/script.js"></script>
+<link href="~/Content/Dashboards/Rozgar/workerRozgar/style.css" rel="stylesheet" />
+
+<div class="workerRozgar px-4 py-4">
+    <div class="workerRozgarHero">
+        <h2>Upcoming</h2>
+    </div>
+</div>

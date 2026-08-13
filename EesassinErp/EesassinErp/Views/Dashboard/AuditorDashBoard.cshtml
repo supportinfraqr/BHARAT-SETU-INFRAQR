@@ -1,0 +1,575 @@
+﻿@{
+	ViewBag.Title = "Auditor DashBoard";
+	ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+	Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<!-- Load Simple DataTables Stylesheet-->
+<link href="~/Content/css/auditor-dashboard/font-awesome.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" />
+<link href="~/Content/css/auditor-dashboard/styles.css" rel="stylesheet" />
+<link href="~/Content/css/auditor-dashboard/main.css" rel="stylesheet" />
+<!-- c3 CSS
+============================================ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css">
+<!-- morrisjs CSS
+============================================ -->
+<link href="~/Content/css/auditor-dashboard/morrisjs/morris.css" rel="stylesheet" />
+<!-- animate CSS
+============================================ -->
+<link href="~/Content/css/auditor-dashboard/animate.css" rel="stylesheet" />
+<!-- Bootstrap CSS -->
+<link href="~/Content/css/auditor-dashboard/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">            
+<style>
+	.c3-arc-Completed-Documents {
+		fill: #6dbaf0 !important;
+	}
+
+	.c3-arc.target-Pending-Documentes,
+	.custom-legend-color.is-neutral {
+		fill: #ffa197 !important;
+	}
+
+	.c3-arc.c3-target-Sent-Documents,
+	.custom-legend-color.is-bad {
+		fill: #46c9b7 !important;
+	}
+	.drop-box{
+	width: 92%;
+    position: absolute;
+    background-color: #ffffff;
+    z-index: 99;
+    top: 34px;
+	/*border: 1px solid #ccc;*/
+	max-height: 0px;
+	max-height: 150px;
+    overflow: auto;
+	}
+	#popupdivID{
+	    width: 100%;
+    position: relative;
+	}
+	.fa-clock{
+	color: #ccc;
+    margin-right: 10px;
+	}
+</style>
+<script>
+    $(".button").click(function (e) {
+        $(".dropdown").show();
+        e.stopPropagation();
+    });
+
+    $(".dropdown").click(function (e) {
+        e.stopPropagation();
+    });
+
+    $(document).click(function () {
+        $(".dropdown").hide();
+    });
+</script>
+
+<div class="dashboard-content">
+	<div class="container-fluid">
+		<div class="page-title-box">
+			<h4>Auditor Dashboard</h4>
+		</div>
+		<div class="row">
+			<div class="col-lg-8 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<div class="d-flex justify-content-between align-items-center">
+							<div class="mb-4">
+								<h4 class="card-title mb-0">Invoice Compliance</h4>
+								<div class="card-subtitle">Compared to previous year</div>
+							</div>
+							<div class="d-flex gap-2">
+								@*<select class="form-control-sm p-0">
+									<option value="pt_1">All Vendors</option>
+									 <option value="pt_1">Vendor Test</option> 
+								</select>*@
+							</div>
+						</div>
+						<div class="invoice-chart-info">
+							<div class="d-flex flex-wrap align-items-center">
+								@*<div class="h5 text-muted pr-1">Overall Compliance:</div>
+								<div class="h4">$00,000</div>
+								<div class="px-2">|</div>*@
+								<div class="h5 text-muted pr-1">Vendor Completed invoice</div>
+								<div class="h4">{{AllCompleteCount}}</div>
+								@*<div class="px-2">|</div>
+								<div class="h5 text-muted pr-1">Goal</div>
+								<div class="h4">119%</div>*@
+							</div>
+						</div>
+						<canvas id="dashboardBarChart" width="736" height="300" style="display: block; box-sizing: border-box; width: 589.438px; height: 294px;"></canvas>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<div class="single-review-st-item res-mg-t-30 table-mg-t-pro-n">
+							<div class="single-review-st-text">
+							 
+                                <img ng-src={{Photo}} src="~/Content/img/vendor/profile.jpg" />
+								<div class="review-ctn-hf w100">
+									<div class="d-flex justify-content-between align-items-center mb-3">
+										<span class="profile-heading">{{Name}}</span>
+										<span class="pull-right">
+										<a href="../DocumentMaster/OneTimeDocument"><i class="fa fa-pencil profile-icon-size"></i></a>
+										</span>
+									</div>
+									@*<a href="#" class="link">Certificate Downlaod</a>*@
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+								<div id="g1" class="gauge" style="height: 150px;"></div>
+								<p class="profile-chart-name">Profile Completion</p>
+							</div>
+							<!-- <hr class="name-of-your-vertical-line"/> -->
+						</div>
+						@*<button type="button" class="btn w100 pro-btton-color">
+                            Profile Completion
+						</button>*@
+                        <a class="btn w100 pro-btton-color" href="../DocumentMaster/OneTimeDocument">Profile Completion</a>
+</div>
+				</div>
+
+			</div>
+		</div>
+		<!-- ==================================== -->
+		<div class="row" ng-init="BindAuditorStatus();BindNotification()">
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g3" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">New Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{AllDraftCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{AllDraftAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g6" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">Pending Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{AllPendingCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{AllPendingAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g5" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">Validate Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{ValidCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{ValidAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 stretch-card">
+				<div class="card w-100 invoice-box">
+					<div class="card-body">
+						<div class="pull-right position-relative">
+							<div id="g4" class="chart-area"></div>
+						</div>
+						<div>
+							<h4 class="mb-1 mt-1">Complete Invoice</h4>
+							<p class="text-muted mb-0">Counts: {{AllCompleteCount}}</p>
+						</div>
+						<p class="text-muted mb-0">
+							Amount: <i class="fa fa-rupee"></i> {{AllCompleteAmount}}
+						</p>
+					</div>
+				</div>
+			</div>
+			<!-- ==================================== -->
+
+			<div class="col-lg-8 col-md-8 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<div class="d-flex justify-content-between align-items-center">
+							<div class="mb-4">
+								<h4 class="card-title mb-0">Vendor Completed Documents</h4>
+								<div class="card-subtitle">Compared to previous year</div>
+							</div>
+							<div class="d-flex gap-2">
+								@*<select class="form-control-sm p-0">
+									<option value="pt_1">All Vendors</option>
+									<option value="pt_1">Vendor Test</option>
+								</select>*@
+							</div>
+						</div>
+						<div id="container">
+							<canvas id="canvas1" style="display: block;height: 300px !important;width: 100% !important;"></canvas>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Documents</h4>
+						<form>
+							<div class="row">
+								@*<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+									<select class="form-control mb-3 py-0 px-2">
+										<option value="pt_1">Option 1</option>
+										<option value="en_2">Option 2</option>
+										<option value="es_3" disabled>Option 3</option>
+										<option value="ch_4">Option 4</option>
+										<option value="5">Option 5</option>
+									</select>
+								</div>
+								<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+									<select class="form-control mb-3 py-0 px-2">
+										<option value="pt_1">Option 1</option>
+										<option value="en_2">Option 2</option>
+										<option value="es_3" disabled>Option 3</option>
+										<option value="ch_4">Option 4</option>
+										<option value="5">Option 5</option>
+									</select>
+								</div>*@
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									@*<select class="form-control mb-3 py-0 px-2">
+										<option value="pt_1">Option 1</option>
+										<option value="en_2">Option 2</option>
+										<option value="es_3" disabled>Option 3</option>
+										<option value="ch_4">Option 4</option>
+										<option value="5">Option 5</option>
+									</select>*@
+                                    @*<input id="txtInvoice" class="form-control mb-3 py-0 px-2 validate" ng-model="InvoiceNo"/>*@
+                                    <input id="txtInvoice" class="form-control mb-3 py-0 px-2 validate" placeholder="Enter Invoice No" ng-model="InvoiceNo" ng-keyup="AuSearchInvoice()"  ng-click="AuSearchInvoice()"   />
+                                    <div class="drop-box">
+									<div id="popupdivID" class='dropdown' ng-repeat="xx in ListOfInvoice" >
+                                        <div class="mb-3 py-0 px-2" ng-click="SetTextbox(xx.VendorInvNum,xx.ClientId)"><i class='fa fa-clock'></i> {{xx.Name}} </div>
+
+                                    </div>
+									</div>
+								</div>
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									<h4 class="check-Box-He">Report Type</h4>
+									<div class="row">
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio1" checked="checked">
+												<label class="form-check-label mb-0" for="radio1">
+													Closed Report
+												</label>
+											</div>
+										</div>
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio2">
+												<label class="form-check-label mb-0" for="radio2">
+													New Report
+												</label>
+											</div>
+										</div>
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio3">
+												<label class="form-check-label mb-0" for="radio3">
+													Open Report
+												</label>
+											</div>
+										</div>
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio4">
+												<label class="form-check-label mb-0" for="radio4">
+													Closed Report
+												</label>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									<div class="box-show"> 
+                                        <a class="btn w100 pro-btton-color" ng-click="checkandgetreport()">Compliance Report</a>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+
+			<!-- ==================================== -->
+		<div class="row">
+			<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Documents</h4>
+						<form>
+							<div class="row">
+								<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+									<select class="form-control mb-3 py-0 px-2">
+										<option value="pt_1">Option 1</option>
+										<option value="en_2">Option 2</option>
+										<option value="es_3" disabled>Option 3</option>
+										<option value="ch_4">Option 4</option>
+										<option value="5">Option 5</option>
+									</select>
+								</div>
+								<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12">
+									<select class="form-control mb-3 py-0 px-2">
+										<option value="pt_1">Option 1</option>
+										<option value="en_2">Option 2</option>
+										<option value="es_3" disabled>Option 3</option>
+										<option value="ch_4">Option 4</option>
+										<option value="5">Option 5</option>
+									</select>
+								</div>
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									<select class="form-control mb-3 py-0 px-2">
+										<option value="pt_1">Option 1</option>
+										<option value="en_2">Option 2</option>
+										<option value="es_3" disabled>Option 3</option>
+										<option value="ch_4">Option 4</option>
+										<option value="5">Option 5</option>
+									</select>
+								</div>
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									<h4 class="check-Box-He">Report Type</h4>
+									<div class="row">
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio1" checked="checked">
+												<label class="form-check-label mb-0" for="radio1">
+													Closed Report
+												</label>
+											</div>
+										</div>
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio2">
+												<label class="form-check-label mb-0" for="radio2">
+													New Report
+												</label>
+											</div>
+										</div>
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio3">
+												<label class="form-check-label mb-0" for="radio3">
+													Open Report
+												</label>
+											</div>
+										</div>
+										<div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+											<div class="form-check mb-4 d-flex align-items-center">
+												<input class="form-check-input mr-2 mt-0" type="radio" name="flexRadioDefault" id="radio4">
+												<label class="form-check-label mb-0" for="radio4">
+													Closed Report
+												</label>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+									<div class="box-show">
+										<button type="button" class="btn w100 pro-btton-color">
+											Submit
+										</button>
+									</div>
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-lg-8 col-md-8 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Auditor Compliance</h4>
+						<div id="container">
+							<canvas id="canvas" style="display: block;height: 332px !important;width: 100% !important;"></canvas>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- ================================ -->
+
+			<div class="col-lg-12 col-md-12 col-sm-12 col-12 stretch-card">
+				<div class="card w-100" ng-init="BindDashBoardInvoice()">
+					<div class="card-body">
+						<div class="d-flex justify-content-between align-items-center">
+							<div class="mb-3">
+								<h4 class="card-title mb-0">Auditor Compliance Summary</h4>
+								<div class="card-subtitle">Details and history</div>
+							</div>
+							<div class="d-flex">
+								@*<i class="fa fa-download mr-3"></i>
+								<i class="fa fa-print"></i>*@
+							</div>
+						</div>
+						<div class="table-responsive fixed-height-table">
+							<table id="datatablesSimple" class="dataTable-table table">
+								<thead>
+									<tr>
+										<th data-sortable="" style="width: 26.6139%;">#</th>
+										<th class="dataTable-sorter">Invoice no.</th>
+										<th style="width: 25.3552%;">Vendor Name</th>
+										<th style="width: 25.3552%;">Status</th>
+										<th style="width: 25.3552%;">Progress</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr ng-repeat="x in ComplianceDashBoardInvoice">
+										<td>{{x.SNO}}</td>
+										<td>{{x.VendorInvNum}}</td>
+										<td>{{x.VendorName}}</td>
+										<td><div class="table-box-style table-box-col2">{{x.Status}}</div></td>
+										<td style="text-align: center;">
+											<span class="text-success">{{x.PercentageStatus}}</span>
+											@*<div class="progress m-b-0" style="height: 10px;margin-bottom: 0;">
+												<div class="progress-bar progress-bar-success2" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" style="width:100%;"> <span class="sr-only">20% Complete</span> </div>
+											</div>*@
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- ================================= -->
+
+
+			<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body">
+						<h4 class="card-title">Work in Progress</h4>
+						<div class="table-responsive fixed-height-table" ng-init="BindAuditorWork()">
+							<table class="table mb-0">
+								<thead>
+									<tr>
+										<th>#</th>
+										<th>Invoice no./Unique No.</th>
+										<th>Vendor Name</th>
+										<th>Status</th>
+										<th>Compliance Score</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr ng-repeat="x in DashBoardInvoice">
+										<td>{{x.SNO}}</td>
+										<td>{{x.VendorInvNum}}</td>
+										<td>{{x.VendorName}}</td>
+										<td><label class="badge badge-warning">{{x.Status}}</label></td>
+                                        <td>{{ x.Status !== 'Pending' ? x.totalComplianceScore : '' }}</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 stretch-card">
+				<div class="card w-100">
+					<div class="card-body" ng-init="HighAuditorlightsExpire()">
+						<h4 class="card-title">Highlights</h4>
+						<div class="table-responsive fixed-height-table">
+							<table class="table mb-0">
+								<thead>
+									<tr>
+										<th>Document Code</th>
+                                        <th>Vendor Name</th>
+										<th>Document Name</th>
+										<th>Description</th>
+										<th>Valid From </th>
+										<th>Valid To</th>
+									</tr>
+								</thead>
+                                <tbody>
+                                    <tr ng-repeat="x in ListOnetimeDocument">
+                                        <td>{{x.SNO}}</td>
+                                        <td>{{x.PartyName}}</td>
+                                        <td>{{x.DocumentName}}</td>
+                                        <td>{{x.Description}}</td>
+                                        <td>{{x.VaildFrom}}</td>
+                                        <td>{{x.VaildTo}}</td>
+                                    </tr>
+                                </tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- jquery
+	   ============================================ -->
+<script src="~/Content/client-Js/vendor/jquery-1.12.4.min.js"></script>
+<script src="~/Content/client-Js/jquery.meanmenu.js"></script>
+<script src="~/Content/client-Js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.0/Chart.min.js"></script>
+<!--  c3chart
+============================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
+<!--  justgag
+============================================ -->
+<script src="~/Content/client-Js/raphael-2.1.4.min.js"></script>
+<script src="~/Content/client-Js/justgage.js"></script>
+<!-- morrisjs JS
+============================================ -->
+<script src="~/Content/client-Js/morrisjs/raphael-min.js"></script>
+<script src="~/Content/client-Js/morrisjs/morris.js"></script>
+<script src="~/Content/client-Js/morrisjs/morris-active.js"></script>
+<!-- morrisjs JS
+============================================ -->
+<!-- tab JS
+============================================ -->
+<script src="~/Content/client-Js/tab.js"></script>
+<script src="~/Content/client-Js/main.js"></script>
+
+
+
+<!-- Load Simple DataTables Scripts-->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+<script src="~/Content/client-Js/scripts.js"></script>
+<!--  Load Chart.js via CDN-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.0.0-beta.10/chart.min.js" crossorigin="anonymous"></script>
+<!--  Load Chart.js customized defaults-->
+<script src="~/Content/client-Js/charts/chart-defaults.js"></script>
+<!--  Load chart demos for this page-->
+<script src="~/Content/client-Js/charts/demos/chart-pie-demo.js"></script>
+<script src="~/Content/client-Js/charts/demos/dashboard-chart-bar-grouped-demo.js"></script>
+<!-- Load Simple DataTables Scripts-->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+<script src="~/Content/client-Js/datatables/datatables-simple-demo.js"></script>
+
+<script src="../assets.startbootstrap.com/js/sb-customizer.js"></script>
+<script src="~/Content/client-Js/datatables/datatables-simple-demo.js"></script>
+
+

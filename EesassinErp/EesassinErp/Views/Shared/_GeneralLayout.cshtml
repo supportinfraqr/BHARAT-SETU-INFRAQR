@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>@ViewBag.Title - Compliance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <link href="~/Content/general/css/bootstrap.css" rel='stylesheet' />
+    <link href="~/Content/general/css/all.css" rel="stylesheet" />
+    <link href="~/Content/general/css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+    <link href="~/Content/general/css/datepicker.min.css" rel='stylesheet' />
+    <link href="~/Content/general/css/custom_theme.css" rel='stylesheet' />
+    <link href="~/Content/general/css/colorTheme/default.css" rel='stylesheet' />
+    <link href="~/Content/general/css/draggle.css" rel="stylesheet" />
+    <link href="~/Content/general/css/jquery.dropdown.css" rel="stylesheet" />
+    <link href="~/Content/general/css/responsive.css" rel='stylesheet' />
+    <link href="~/Content/general/css/jquery-ui.css" rel="stylesheet" />
+    <link href="~/Content/general/css/datepicker.css" rel="stylesheet" />
+    <link href="~/Content/general/css/sweetalert2.css" rel="stylesheet" />
+
+    <script type="text/javascript" src="~/Content/general/js/jquery-min.js"></script>
+</head>
+<body class="dashbg">
+    <div class="contentwraper menumarginleft">
+        @*<header class="header menuheader-width">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col col-md-12">
+                        <div class="row">
+                            <div class="col">
+                                <h4 class="moudlename">
+                                    <div class="list-control">
+                                        <a class="sidemenutoggle">
+                                            <span class="icons icon-menu"></span>
+                                        </a>
+                                        <div class="menusidebar menusidebar-width">
+                                            <div class="profiletitle">
+                                                <img src="~/Content/general/images/dash-logo.png" alt="" class="dash-logo" />
+                                            </div>
+                                            <div class="menuscrollwrap">
+                                                <div class="nano-content">
+                                                    <span class="profiletxt">General</span>
+                                                    <ul class="navsidebar">
+                                                        <li class="nav-item">
+                                                            <a href="@Url.Action("unit", "DashBoard")">
+                                                                <span class="icons icon-home"></span>Unit
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="@Url.Action("employee", "DashBoard")">
+                                                                <span class="icons icon-user"></span>Employee
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="@Url.Action("communication", "DashBoard")">
+                                                                <span class="icons icon-globe"></span>Communication
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="@Url.Action("documentsMaster", "DashBoard")">
+                                                                <span class="icons icon-docs"></span>Documents Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item seprat">
+                                                            <a href="#">
+                                                                <span class="icons icon-login"></span>Logout
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>*@
+        <!-- InstanceBeginEditable name="Content Area" -->
+        @RenderBody()        
+        <!-- InstanceEndEditable -->
+    </div>
+
+    
+    <script type="text/javascript" src="~/Content/general/js/bootstrap.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/jquery.nanoscroller.min.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/datepicker.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/datepicker.en.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/builder.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/beautifyhtml.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/dragble.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/jquery.dropdown.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/sweetalert2.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/theme-script.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/jquery-ui.js"></script>
+    <script type="text/javascript" src="~/Content/general/js/datepicker.js"></script>
+    <script>        
+        jQuery(function ($) {
+            var path = window.location.href;
+            // because the 'href' property of the DOM element is the absolute path
+            $('ul .nav-item a').each(function () {
+                if (this.href === path) {
+                    $(this).parent().addClass('active');
+                }
+            });
+        });
+    </script>
+    <!-- InstanceBeginEditable name="for-javascript" -->
+    
+</body>
+</html>

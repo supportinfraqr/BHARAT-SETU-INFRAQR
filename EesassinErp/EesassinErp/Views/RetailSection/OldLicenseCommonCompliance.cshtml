@@ -1,0 +1,229 @@
+﻿
+
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+@*<div id="divprint" ng-init="BindReport()">*@
+
+
+
+<link href="~/ReportsDashboard/CommonReport/style.css" rel="stylesheet" />
+<script src="~/Scripts/RetailJsLib/ReportDashbaord.js"></script>
+
+
+<div class="report-header d-flex justify-content-between align-items-center px-4 py-2 text-white">
+    <button class="btn btn-light btn-sm fw-semibold" ng-click="DownloadPDF('licenseCommonCompliance')">
+        <i class="bi bi-download me-1"></i> Download Report
+    </button>
+    <h6 class="mb-0"> {{ReportPeriod}}</h6>
+</div>
+
+<div id="divprint">
+    <!-- REPORT PAGE 1: COMPLIANCE Report -->
+    <!--<div class="container-report1 py-3" ng-init="BindTiles();commonReport()">-->
+        <!-- HEADER -->
+
+
+        <!-- BODY -->
+        <!--<div class="report-body p-4">-->
+            <!-- Overview Title Box -->
+            <!--<div class="overview-box text-center py-2 mb-4">
+                <h5 class="mb-0 fw-semibold">License Report</h5>
+            </div>-->
+
+            <!-- Description -->
+            <!--<p class="small text-muted mb-4 text-center">
+                This section provides a consolidated overview of all compliances, highlighting the organization's completion ratio,
+                pending obligations, and compliance health for the selected period.
+            </p>-->
+
+            <!-- Summary Cards -->
+            <!--<div class="row g-3 mb-4 text-center">
+                <div class="col-md-4">
+                    <div class="summary-card pending text-white rounded-3 py-3">
+                        <p class="mb-1 fw-semibold">Total</p>
+                        <h4 class="mb-0 fw-bold">{{TotalComplied}}</h4>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card submitted text-white rounded-3 py-3">
+                        <p class="mb-1 fw-semibold">Submitted</p>
+                        <h4 class="mb-0 fw-bold">{{Complied}}</h4>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card total text-white rounded-3 py-3">
+                        <p class="mb-1 fw-semibold">Delay Complied</p>
+                        <h4 class="mb-0 fw-bold">{{DelayComplied}}</h4>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card total text-white rounded-3 py-3">
+                        <p class="mb-1 fw-semibold">Non Complied</p>
+                        <h4 class="mb-0 fw-bold">{{NonComplied}}</h4>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card total text-white rounded-3 py-3">
+                        <p class="mb-1 fw-semibold">Pending</p>
+                        <h4 class="mb-0 fw-bold">{{Pending}}</h4>
+                    </div>
+                </div>
+            </div>-->
+
+            <!-- Table -->
+            <!--<div class="table-responsive mb-4">
+                <table class="table table-bordered text-center align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Count</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Compliance</td>
+                            <td>{{TotalComplied}}</td>
+                            <td>Total number of compliances monitored across all states and departments.</td>
+                        </tr>
+                        <tr>
+                            <td>Completed</td>
+                            <td>{{Complied}}</td>
+                            <td>Successfully filed or executed within the defined due date.</td>
+                        </tr>
+                        <tr>
+                            <td>Pending</td>
+                            <td>{{Pending}}</td>
+                            <td>Awaiting submission or in process of completion.</td>
+                        </tr>
+                        <tr>
+                            <td>Not Complied</td>
+                            <td>{{NonComplied}}</td>
+                            <td>Missed compliances that require corrective action or follow-up.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>-->
+
+            <!-- Insight Box -->
+            <!--<div class="insight-box p-2 mb-4 d-flex align-items-center">
+                <div class="insight-bar me-2"></div>
+                <p class="mb-0 small">
+                    <strong>Insight:</strong>  Compliance performance remains steady, though certain entries may require review or escalation.
+                </p>
+            </div>
+        </div>
+    </div>-->
+    <!-- REPORT PAGE 3: Labour Compliance Report -->
+    <!-- REPORT PAGE 7: License Report -->
+    <div class="container-report7 py-4" ng-init="BindTiles();commonReport()">
+
+        <!-- HEADER -->
+        <div class="report-header7 d-flex justify-content-end align-items-center mb-3">
+            <h6 class="mb-0 fw-semibold text-end">Report Period: Oct 2025</h6>
+        </div>
+
+        <!-- BODY -->
+        <div class="report-body7 p-4">
+
+            <!-- TITLE -->
+            <div class="report-title-box text-center py-2 px-2 mb-3">
+                <h5 class="fw-semibold mb-0">
+                    License Report
+                </h5>
+            </div>
+
+            <!-- DESCRIPTION -->
+            <p class="text-muted text-center mb-4" style="font-size:14px;">
+                This section provides a consolidated overview of all compliances, highlighting the organization’s completion ratio,
+                pending obligations, and compliance health for the selected period.
+            </p>
+
+            <!-- SMALL CARDS -->
+            <div class="row g-3 mb-4 justify-content-center text-center">
+                <div class="col-md-2 col-6">
+                    <div class="card small-card bg-success text-white py-3">
+                        <h6>All Licenses</h6>
+                        <h5>{{licenseCount.total}}</h5>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6">
+                    <div class="card small-card bg-danger text-white py-3">
+                        <h6>Expire</h6>
+                        <h5>{{licenseCount.expired}}</h5>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6">
+                    <div class="card small-card bg-warning text-dark py-3">
+                        <h6>Expiring Soon</h6>
+                        <h5>{{licenseCount.expiringSoon}}</h5>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6">
+                    <div class="card small-card bg-orange text-white py-3" style="background-color:#E45D27;">
+                        <h6>Application Copy Count</h6>
+                        <h5>{{licenseCount.appCopy}}</h5>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6">
+                    <div class="card small-card bg-success text-white py-3">
+                        <h6>License Count</h6>
+                        <h5>{{licenseCount.uploadCopy}}</h5>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRAPH -->
+            <div class="card mb-4 shadow-sm border-0">
+                <div class="card-body" style="height: 320px;">
+                    <canvas id="licenseReportChart"></canvas>
+                </div>
+            </div>
+
+
+            <h6 class="mb-2 fw-semibold text-center" style="color: #E45D27">License Applicability</h6>
+
+            <!-- TABLE  -->
+            <div class="table-responsive" ng-init="BindlicenseReport()">
+                <table class="table table-bordered align-middle text-center">
+                    <thead>
+                        <tr>
+                            <th>License</th>
+                            <th>State</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="x in licenseCompliance">
+                            <td>{{x.LicenseName}}</td>
+                            <td>{{x.STATE_NAME}}</td>
+                            <td>{{x.StoreCode}}</td>
+                        </tr>
+
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <!-- ===== Foote    r ===== -->
+        @*<div class="report-footer d-flex justify-content-between align-items-center px-4 py-2 mt-4 border-top">
+            <span class="small fw-semibold">Prepared By: EZ Compliance</span>
+            <span class="small fw-semibold">Generated for: {{MapUser}}</span>
+        </div>*@
+    </div>
+
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="~/ReportsDashboard/CommonReport/script.js"></script>
+

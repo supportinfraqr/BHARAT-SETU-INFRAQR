@@ -1,0 +1,116 @@
+﻿
+@{
+    ViewBag.Title = "Module RegMaster";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+
+<script src="~/scripts/RetailJsLib/RetailController.js?Ver=@ViewBag.Version"></script>
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<input type="hidden" id="Id1" name="Id1" value="" ng-model="hfId1" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Module Registration Master</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Retail</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Module Registration Master</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Module Name<span class="vd_red">*</span></label>
+                                            <input id="txtModuleName" type="text" ng-model="Module_Name" onKeyUp="$(this).val($(this).val().replace(/[^\w\s]+/g, ''))" class="form-control  clear validate" />
+
+                                            <div class="text-box-msg-r">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Description<span class="vd_red">*</span></label>
+                                            <input id="txtDescription" type="text" ng-model="Description" onKeyUp="$(this).val($(this).val().replace(/[^\w\s]+/g, ''))" class="form-control  clear validate" />
+
+                                            <div class="text-box-msg-r">
+                                            </div>
+                                        </div>
+                                        @*<div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Start Date<span class="vd_red">*</span></label>
+                                                <div class="input-box">
+                                                    @Html.TextBox("txtStartDate", "", new { @class = "form-control clear validate", @type = "date", @placeholder = "", @ng_model = "Start_Date", @value = "{{RConverttoDate(Start_Date)}}" })
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">End Date  </label>
+                                                <div class="input-box">
+                                                    @Html.TextBox("txtEndDate", "", new { @class = "form-control clear", @type = "date", @placeholder = "", @ng_model = "End_Date", @value = "{{RConverttoDate(End_Date)}}" })
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>*@
+
+
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Start Date<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input class="form-control clear validate" type="date" placeholder="" ng-model="Start_Date" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">End Date</label>
+                                            <div class="input-box">
+                                                <input class="form-control clear" type="date" placeholder="" ng-model="End_Date" end-date-after-start="Start_Date" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>

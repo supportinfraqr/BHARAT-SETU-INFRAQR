@@ -1,0 +1,302 @@
+﻿@{
+    ViewBag.Title = "Expectation Report";
+    ViewBag.TitleList = "Expectation Report";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"]; 
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<link type="text/css" href="@Url.Content("~/Content/css/loader.css")" rel="stylesheet" />
+<link rel="icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
+
+<link href="@Url.Content("~/Content/plugins/assets/css/animate.css")" rel="stylesheet " />
+<!-- Owl CSS -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/owl.carousel/dist/assets/owl.carousel.min.css")"
+      rel="stylesheet" type="text/css">
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/owl.carousel/dist/assets/owl.theme.default.min.css")"
+      rel="stylesheet" type="text/css">
+<!--alerts CSS -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css")" rel="stylesheet" type="text/css">
+<!-- Form wizards -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/wizard/steps.css")" rel="stylesheet">
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap-material-datetimepicker/css/bootstrap-material-datetimepicker.css")" rel="stylesheet">
+<!-- Page plugins css -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/clockpicker/dist/jquery-clockpicker.min.css")" rel="stylesheet">
+<!-- Color picker plugins css -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/jquery-asColorPicker-master/css/asColorPicker.css")" rel="stylesheet">
+<!-- Tooltipster css -->
+<link rel="stylesheet" href="@Url.Content("~/Content/plugins/vendors/bower_components/tooltipster/tooltipster.bundle.min.css")">
+<!-- Date picker plugins css -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap-datepicker/bootstrap-datepicker.min.css")" rel="stylesheet" type="text/css" />
+<!-- xeditable css -->
+<link rel="stylesheet" href="@Url.Content("~/Content/plugins/vendors/bower_components/dropify/dist/css/dropify.min.css")">
+<!-- Daterange picker plugins css -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/timepicker/bootstrap-timepicker.min.css")" rel="stylesheet">
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap-daterangepicker/daterangepicker.css")" rel="stylesheet">
+<!-- Custom CSS -->
+<link href="@Url.Content("~/Content/plugins/vendors/bower_components/c3/c3.css")" rel="stylesheet" />
+<!-- Calendar CSS -->
+
+<link href="@Url.Content("~/Content/Calendar/fullcalendar.min.css")" rel="stylesheet" />
+<link href="@Url.Content("~/Content/Calendar/fullcalendar.print.min.css")" rel="stylesheet" media="print" />
+<!-- Custom CSS -->
+<link href="@Url.Content("~/Content/plugins/assets/css/default.css")" rel="stylesheet" />
+
+
+
+<script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+
+<style>
+    div.dt-buttons > .dt-button, div.dt-buttons > div.dt-button-split .dt-button {
+        font-size: 20px !important;
+    }
+</style>
+<script>
+    $(window).ready(function FindWindow() {
+        //debugger;
+        var InW = $(window).width();
+        var InH = $(window).height();
+
+        $('.message-nicescroll-bar').css({ "height": (InH - 141) });
+        $('.message-nicescroll-bar').parent(".slimScrollDiv").css({ "height": (InH - 141) });
+        $('.msg-box-list-scroll').css({ "height": (InH - 215) });
+        $('.msg-box-list-scroll').parent(".slimScrollDiv").css({ "height": (InH - 215) });
+        if (InW > 1024) {
+            $('.autoheightset').css({ "height": InH });
+            $('.autoheightset').parent(".slimScrollDiv").css({ "height": InH });
+        }
+        else {
+            $('.autoheightset').css({ "width": InW });
+            $('.autoheightset').css({ "height": InH });
+            $('.autoheightset').parent(".slimScrollDiv").css({ "width": InW });
+            $('.autoheightset').parent(".slimScrollDiv").css({ "height": InH });
+        }
+        $('input').removeAttr('readonly');
+    });
+    $(window).on('resize', function () {
+        var InW = $(window).width();
+        var InH = $(window).height();
+        if (InW > 1024) {
+            $('.autoheightset').css({ "height": InH });
+            $('.autoheightset').parent(".slimScrollDiv").css({ "height": InH });
+        }
+        else {
+            $('.autoheightset').css({ "width": InW });
+            $('.autoheightset').css({ "height": InH });
+            $('.autoheightset').parent(".slimScrollDiv").css({ "width": InW });
+            $('.autoheightset').parent(".slimScrollDiv").css({ "height": InH });
+        }
+
+        $('.message-nicescroll-bar').css({ "height": (InH - 141) });
+        $('.message-nicescroll-bar').parent(".slimScrollDiv").css({ "height": (InH - 141) });
+        $('.msg-box-list-scroll').css({ "height": (InH - 215) });
+        $('.msg-box-list-scroll').parent(".slimScrollDiv").css({ "height": (InH - 215) });
+
+        $('input').removeAttr('readonly');
+    });
+</script>
+
+
+
+<script type="text/javascript" src="@Url.Content("~/Scripts/jscolor.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js?Ver="+ViewBag.Version+"")"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/moment.js")"></script>
+
+<link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css")" />
+<link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/css/buttons.dataTables.min.css")" />
+<link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css")" />
+
+<!-- AngularUI TinyMCE -->
+<script type="text/javascript" src="index.js"></script>
+
+<script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.9.5/tinymce.min.js"></script>
+<script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+<script src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
+<script src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
+
+<script src="@Url.Content("~/Scripts/myjslib/controller.js?Ver="+ViewBag.Version+"")"></script>
+<script src="@Url.Content("~/Scripts/myjslib/ddlBindings.js?Ver="+ViewBag.Version+"")"></script>
+
+<script src="@Url.Content("~/Content/lib/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js")"></script>
+<script src="@Url.Content("~/Scripts/myjslib/ddlBindings.js?Ver="+ViewBag.Version+"")"></script>
+
+ 
+
+<script src="~/Scripts/RetailJsLib/ExpectationController.js?Ver=@ViewBag.Version"></script>
+
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+
+        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Exception   Report</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12 ">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Retail</span></a></li>
+                <li><a href="#"><span>Exception Report</span></a></li>
+                <li class="active"><span>Report</span></li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="section-toggle">
+
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Exception Date</label>
+                                                <div class="input-box">
+                                                    <input id="txtStartDate" type="date" class="form-control" ng-model="StartDate" />
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <br />
+                                                @Html.Partial("ActionSearch")
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding report-box">
+                                    <div class="arrow-container animated fadeInDown filter-toggle " ng-click="FilterToggle()">
+                                        <div class="arrow-2">
+                                            <i class="fa fa-angle-down"></i>
+                                        </div>
+                                        <div class="arrow-1 animated hinge infinite zoomIn"></div>
+                                    </div>
+                                    @Html.Partial("GeneralReportGrid")
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- /#wrapper -->
+<!-- JavaScript -->
+<!-- jQuery -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/jquery/dist/jquery.min.js")"></script>
+<!-- Bootstrap Core JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap/dist/js/bootstrap.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap-material-datetimepicker/js/bootstrap-material-datetimepicker.js")"></script>
+<!-- Clock Plugin JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/clockpicker/dist/jquery-clockpicker.min.js")"></script>
+<!-- Color Picker Plugin JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/jquery-asColorPicker-master/libs/jquery-asColor.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/jquery-asColorPicker-master/libs/jquery-asGradient.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/jquery-asColorPicker-master/dist/jquery-asColorPicker.min.js")"></script>
+<!-- Date Picker Plugin JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap-datepicker/bootstrap-datepicker.min.js")"></script>
+<!-- Date range Plugin JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/timepicker/bootstrap-timepicker.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap-daterangepicker/daterangepicker.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/form-picker-data.js")"></script>
+<!-- Forms JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/forms-mod-bootstrap/dist/js/forms-mod-bootstrap.min.js")"></script>
+<!-- data-table js -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net/js/jquery.dataTables.min.js")"></script>
+
+<script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js")"></script>
+
+<script src="@Url.Content("~/Content/colResizable-1.6.js")"></script>
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/dataTables.buttons.min.js")"></script>
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/jszip.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/pdfmake.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/vfs_fonts.js")"></script>
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/buttons.print.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/buttons.html5.min.js")"></script>
+
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/js/dataTables.bootstrap4.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive/js/dataTables.responsive.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js")"></script>
+
+
+<!-- File Upload -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/dropify/dist/js/dropify.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/dropify.js")"></script>
+<!-- Tooltipster js -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/tooltipster/tooltipster.bundle.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.tooltipster.js")"></script>
+<!-- Owl JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/owl.carousel/dist/owl.carousel.min.js")"></script>
+<!-- Owl Init JavaScript -->
+<script src="@Url.Content("~/Content/plugins/assets/js/owl-data.js")"></script>
+<!-- Switchery JavaScript -->
+
+<script src="@Url.Content("~/Content/Calendar/lib/moment.min.js")"></script>
+<script src="@Url.Content("~/Content/Calendar/fullcalendar.min.js")"></script>
+<!-- Gallery JavaScript -->
+<script src="@Url.Content("~/Content/plugins/assets/js/isotope.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/lightgallery-all.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/froogaloop2.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/gallery-data.js")"></script>
+<!-- Slimscroll JavaScript -->
+<!-- Slimscroll JavaScript -->
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.slimscroll.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.scrollbar.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/wizard/jquery.steps.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/wizard/jquery.validate.min.js")"></script>
+<!-- Fancy Dropdown JS -->
+<script src="@Url.Content("~/Content/plugins/assets/js/dropdown-bootstrap-extended.js")"></script>
+<!-- Sweet-Alert -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/owl.carousel/dist/owl.carousel.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/wizard/steps.js")"></script>
+<!-- Switchery JavaScript -->
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/switchery/dist/switchery.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/data-table-custom.js")"></script>
+<!-- EChartJS JavaScript -->
+<!-- Init JavaScript -->
+<script src="@Url.Content("~/Content/plugins/assets/js/jquery.bootstrap.newsbox.min.js")"></script>
+<script src="@Url.Content("~/Content/plugins/assets/js/init.js")"></script>
+
+<script src="@Url.Content("~/Content/plugins/assets/js/multislider.js")"></script>
+
+
+<script src="@Url.Content("~/Content/plugins/assets/js/highcharts.js")"></script>
+
+
+<script type="text/javascript" src="@Url.Content("~/Content/lib/underscore/underscore.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/bootstrap-select/dist/js/bootstrap-select.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/select2/select2.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/jquery.maskedinput/dist/jquery.maskedinput.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/moment/moment.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Content/lib/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js")"></script>

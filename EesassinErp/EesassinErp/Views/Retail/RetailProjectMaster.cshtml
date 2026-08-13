@@ -1,0 +1,1825 @@
+﻿@{
+    ViewBag.Title = "Project Management";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<script src="~/Scripts/myjslib/PartySiteManagerController.js?Ver=@ViewBag.Version"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    function downloadPDF() {
+        const element = document.getElementById('print-header');
+
+        // Show element temporarily
+        element.style.display = 'block';
+        element.style.width = '100%'; // Force full width
+
+        const opt = {
+            margin: [0.2, 0, 0.5, 0.2], // top, right, bottom, left
+            filename: 'ProjectDetails.pdf',
+            image: { type: 'jpeg', quality: 0.99 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.style.display = 'none';
+        });
+    }
+</script>
+
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<input type="hidden" id="Id1" name="Id1" value="" ng-model="hfId1" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Project Management</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Project Management</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="AllParty()">
+                                        <label class="control-label">Party Name<span class="vd_red">*</span></label>
+                                        <div class="input-box">
+                                            <select id="ddlPartyId" autocomplete='address-level2' class="select2 form-control validate" ng-model="PartyId" ng-disabled="DISABLEFIELD" ng-change="BindClientSite()">
+                                                <option value="">Select Party</option>
+                                                <option ng-repeat="x in AllPartyList | filter: { PartyType: 'Client' }" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                            </select>
+                                            <div class="text-box-msg-r">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                        <label class="control-label">Site<span class="vd_red">*</span></label>
+                                        <div class="input-box">
+                                            <select id="ddlSite" autocomplete='address-level2' class="select2 form-control validate" ng-model="SiteId" ng-change="SetProjectManagement();Preload();IsOpenPrint()">
+                                                <option value="">Select Site</option>
+                                                <option ng-repeat="x in AllPartySiteCList" value="{{x.SiteId}}">{{x.SiteName}}</option>
+                                            </select>
+                                            <div class="text-box-msg-r">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                        <label class="control-label"></label>
+                                        <div class="input-box">
+                                            <button id="btnSubmit" style="display:none" type="button" value="Print" class="btn2 btn-common btn-3 btn-3d pe-7s-check ng-pristine ng-untouched ng-valid ng-not-empty" onclick="downloadPDF()">
+                                                <span class="triangle-box" title="Print"></span>
+                                                <span id="btnPrinttxt">Print</span>
+                                            </button>
+                                            <div class="text-box-msg-r">
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                    <div class="col-md-12 col-sm-6 col-xs-12 mgbt-xs-15"> </div>
+                                    <form id="user-form">
+                                        <ul class="nav nav-tabs">
+                                            <li ng-class="{active: activeTab === 1}"><a href="" ng-click="goToTab(1)">Tab 1: Site Manager</a></li>
+
+                                            <li ng-class="{active: activeTab === 2}"><a href="" ng-click="goToTab(2)">Tab 2 : Project</a></li>
+                                            <li ng-class="{active: activeTab === 3}"><a href="" ng-click="goToTab(3)">Tab 3 : Technical</a></li>
+                                            <li ng-class="{active: activeTab === 4}"><a href="" ng-click="goToTab(4)">Tab 4 : Land details</a></li>
+                                            <li ng-class="{active: activeTab === 5}"><a href="" ng-click="goToTab(5)">Tab 5 : Commercials</a></li>
+                                            <li ng-class="{active: activeTab === 6}"><a href="" ng-click="goToTab(6)">Tab 6 : Legal</a></li>
+                                            <li ng-class="{active: activeTab === 7}"><a href="" ng-click="goToTab(7)">Tab 7 : List of documents to legal</a></li>
+                                            <li ng-class="{active: activeTab === 8}"><a href="" ng-click="goToTab(8)">Tab 8 : Financials</a></li>
+                                        </ul>
+
+                                        <div class="tab-content p-3 border border-top-0">
+                                            <div ng-show="activeTab === 1">
+                                                <h5>Site Manager</h5>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Site Name<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtSiteName", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "SiteName" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                 
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Manpower Count</label>
+                                                    <div class="input-box">
+                                                        <input id="txtManpowerCount" type="text" ng-model="ManPowerCount" onblur="validateNumberAndDecimalOnly('#txtManpowerCount')"
+                                                               class="form-control text-right clear" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Address<span class="vd_red">*</span> </label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtAddress", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "Address" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Pincode</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear" id="txtpincode" ng-model="Pincode" type="text" maxlength="6" onblur="validateNumberAndDecimalOnly('#txtpincode')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Country<span class="vd_red">*</span></label>
+                                                    <div class="input-box" ng-init="AllCountry()">
+                                                        <select id="ddlcountry" autocomplete='address-level2' class="select2 form-control validate" ng-change="AllState()" ng-model="CountryId">
+                                                            <option value="">Select Country</option>
+                                                            <option ng-repeat="x in AllCountryList" value="{{x.CountryId}}">{{x.CountryName}}</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">State<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <select id="ddlstate" autocomplete='address-level2' class="select2 form-control validate" ng-change="AllCity()" ng-model="StateId">
+                                                            <option value="">Select State</option>
+                                                            <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">City<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <select id="ddlcity" autocomplete='address-level2' class="select2 form-control validate" ng-model="CityId">
+                                                            <option value="">Select City</option>
+                                                            <option ng-repeat="x in AllCityList" value="{{x.CITY_CODE}}">{{x.CITY_NAME}}</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                             
+
+                                            
+
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" style="display:none">
+                                                    <label class="control-label">Providing Bank Details<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtBankDetails", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "BankDetails" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15" style="display:none">
+                                                    <label class="control-label">Account No<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtAccountNo", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "AccountNo" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15" style="display:none">
+                                                    <label class="control-label">Description<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.TextArea("txtDescription", "", new { @class = "form-control clear", @placeholder = "Description", @ng_model = "Description", @name = "txtDescription", @id = "txtDescription" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">PAN NO.</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtPanitno", "", new { @class = "form-control clear", @maxlength = "10", @placeholder = "", @ng_model = "Panitno" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">GSTIN/UIN</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtGstinuin", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "Gstinuin" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">CLRA RC<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <select id="ddlCLRARC" class="select2 form-control validate " ng-model="CLRARC">
+                                                            <option value="">Select</option>
+                                                            <option value="1">Yes</option>
+                                                            <option value="0">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Contact Person Name</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtContactPerson", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "ContactPerson" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Contact Person Mobile No.</label>
+                                                    <div class="input-box">
+                                                        <input id="txtContactMobile" class="form-control clear" maxlength="10" onblur="validatePhoneNo('#txtContactMobile')" placeholder="" ng-model="ContactMobile" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Contact Person  Email Id </label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " id="txtEmailID" ng-model="EmailId" onblur="validateEmail('#txtEmailID')" type="email" />
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Descritpion</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtDescritpion", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "Descritpion" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Valid From  </label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtValidFrom", "", new { @class = "form-control clear", @type = "date", @placeholder = "", @ng_model = "ValidFrom" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Valid To</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtValidTo", "", new { @class = "form-control clear", @type = "date", @placeholder = "", @ng_model = "ValidTo" })
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Only Admin can Upload, Format will be PDF</label>
+                                                    <div class="input-box">
+                                                        <input type="file" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().Adminshow(this, '#AlbumIcon')" ng-disabled="loginType !='1'" ng-model="AdminFileDoc" accept="application/pdf">
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" style="display:none">
+                                                    <label class="control-label">Only Vendor can Upload, Format will be PDF</label>
+                                                    <div class="input-box">
+                                                        <input type="file" id="Vendor{{$index}}" ng-disabled="loginType =='1'" onchange="angular.element(this).scope().Vendorshow(this, '#AlbumIcon')" ng-model="VendorFileDoc" accept="application/pdf">
+                                                        <div class="text-box-msg-r">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div ng-show="activeTab === 2">
+                                                <h5>Project</h5>
+
+                                                <!-- 1. Name of the Project -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Name of the Project<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtProjectName", "", new { @class = "form-control clear ", @placeholder = "", @ng_model = "ProjectName" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 2. Project Size and Capacity -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Project Size and Capacity<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtSizeCapacity", "", new { @class = "form-control clear ", @placeholder = "", @ng_model = "SizeCapacity" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 3. Project Ownership Type -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Project ownership type<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        @Html.DropDownList("ddlGovtPrivate", new SelectList(new[] { "Govt", "Private" }), "Select", new { @class = "form-control clear ", @ng_model = "GovtPrivate" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 4. Name of End User Party -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Name of end user party</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtEndUser", "", new { @class = "form-control clear ", @placeholder = "", @ng_model = "EndUserParty" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 5. Commissioning Date -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Plan Date for the commissioning of the Project</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtCommissioningDate", "", new { @class = "form-control clear ", @type = "date", @ng_model = "CommissioningDate" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 6. Execution Date -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Execution Date of the Project</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtExecutionDate", "", new { @class = "form-control clear ", @type = "date", @ng_model = "ExecutionDate" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 7. Aggregator Fees -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Fees of Aggregator</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtAggregatorFees", "", new { @class = "form-control clear ", @ng_model = "AggregatorFees" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 9. Land Conversion -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Conversion of land by Aggregator (If required)</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtLandConversion", "", new { @class = "form-control clear ", @ng_model = "LandConversion" })
+
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 10. Actual Cost -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Actual Cost</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtActualCost", "", new { @class = "form-control clear ", @ng_model = "ActualCost" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 11. Registry Value -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Registered Value of the project</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtRegistryValue", "", new { @class = "form-control clear ", @ng_model = "RegistryValue" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 12. Variance (Auto) -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Differential cost of the project</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="Variance" readonly />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 13. Mortgage Property -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Loans on the Land</label>
+                                                    <div class="input-box">
+                                                        @Html.DropDownList("ddlMortgageProperty", new SelectList(new[] { "Yes", "No" }), "Select", new { @class = "form-control clear ", @ng_model = "MortgageProperty" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 14. Loan Agreements -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Loan Agreements</label>
+                                                    <div class="input-box">
+                                                        @Html.DropDownList("ddlLoanAgreements", new SelectList(new[] { "Yes", "No" }), "Select", new { @class = "form-control clear ", @ng_model = "LoanAgreements" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 15. Mortgage Amount -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Loan Amount on the Land (KCC)</label>
+                                                    <div class="input-box">
+                                                        @Html.TextBox("txtMortgageAmount", "", new { @class = "form-control clear ", @ng_model = "MortgageAmount" })
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 17. Miscellaneous Terms -->
+                                                <div class="col-md-4 col-sm-12 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Miscellaneous Terms</label>
+                                                    <div class="input-box">
+                                                        <input id="txtMiscellaenous" class="form-control clear " ng-model="Miscellaenous" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-12 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">  Any other details of the Project</label>
+                                                    <div class="input-box">
+                                                        <input id="txtProjectdetails" class="form-control clear " ng-model="AnyOtherDetail" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+
+
+                                            </div>
+
+
+                                            <div ng-show="activeTab === 3">
+                                                <h5>Technical</h5>
+                                                <!-- 1. Technical feasibility check Status -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Technical feasibility check Status<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="TechFeasibilityStatus">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 2. Person name for technical feasibility -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Person name for technical feasibility<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <input id='txtTechPerson' class="form-control clear " placeholder="" ng-model="TechPersonName" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Distance of Grid Substation from the site -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Distance of Grid Substation from the site</label>
+                                                    <div class="input-box">
+                                                        <input id='txtGridDistance' class="form-control clear " placeholder="" ng-model="GridDistance" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 3. Grid substation connectivity -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Grid substation connectivity</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="GridConnectivity">
+                                                            <option value="">Select</option>
+                                                            <option value="Available">Available</option>
+                                                            <option value="Granted">Granted</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 4. Distance of Right of Way -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Distance of Right of Way</label>
+                                                    <div class="input-box">
+                                                        <input id='txtRightOfWayDistance' class="form-control clear " placeholder="" ng-model="RightOfWayDistance" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 5. Feasibility of Right of Way Status -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Feasibility of Right of Way Status</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="RightOfWayFeasibility">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 6. Person Name for Right of Way feasibility -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Person Name for Right of Way feasibility</label>
+                                                    <div class="input-box">
+                                                        <input id='txtROWPerson' class="form-control clear " placeholder="" ng-model="ROWPersonName" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 7. Access road to the Project -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Access road to the Project</label>
+                                                    <div class="input-box">
+                                                        <input id='txtAccessRoad' class="form-control clear " placeholder="" ng-model="AccessRoad" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 8. Verifier Name -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Verifier Name</label>
+                                                    <div class="input-box">
+                                                        <input id='txtVerifierName' class="form-control clear " placeholder="" ng-model="VerifierName" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 9. Supporting documents attached -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Supporting documents attached</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="SupportingDocsAttached">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 10. Status of Road construction near to the Project -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Status of Road construction near to the Project</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="RoadConstructionStatus">
+                                                            <option value="">Select</option>
+                                                            <option value="Constructed">Constructed</option>
+                                                            <option value="Yet to be constructed">Yet to be constructed</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 11. Proposed date of completion of construction -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Proposed date of completion of construction</label>
+                                                    <div class="input-box">
+                                                        <input id='txtRoadCompletionDate' type="date" class="form-control clear " ng-model="RoadCompletionDate" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- 12. Any additional details -->
+                                                <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Any additional details</label>
+                                                    <div class="input-box">
+                                                        <textarea id='txtAdditionalDetails' class="form-control clear " placeholder="" ng-model="AdditionalDetails" rows="3"></textarea>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div ng-show="activeTab === 4">
+                                                <h5> Land details</h5>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Farmer Name<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="FarmerName" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Khatedar Name -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Khatedar Name<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="KhatedarName" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Village -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Village<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="Village" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Khasra No. -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Khasra No.</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="KhasraNo" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Khatauli No. -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Khatauli No.</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="KhatauliNo" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Area in Acre -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Area in Acre</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="AreaAcre" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Area in Bigah -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Area in Bigah</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="AreaBigah" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Charge on the Land -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Charge on the Land</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="LandCharge">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Amount of Charge -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Amount of Charge</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="ChargeAmount" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Tenure of Charge -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Tenure of Charge</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="ChargeTenure" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Name of the Chargeholder -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Name of the Chargeholder</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="ChargeholderName" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Land Status -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Land Status</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="LandStatus">
+                                                            <option value="">Select</option>
+                                                            <option value="Government">Government</option>
+                                                            <option value="Private">Private</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Type of Land -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Type of Land</label>
+                                                    <select class="form-control clear " ng-model="LandType">
+                                                        <option value="">Select</option>
+                                                        <option value="Leased">Leased</option>
+                                                        <option value="Purchased">Purchased</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r"></div>
+                                                </div>
+                                            </div>
+                                            <div ng-show="activeTab === 5">
+                                                <h5>Commercials</h5>
+                                                <!-- Rate of the land (per acre) -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Rate of the land (per acre)</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="RatePerAcre" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Total cost of the Land -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Total cost of the Land</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TotalLandCost" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- ATL/Total advance paid -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">ATL/ Total advance paid</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="AdvancePaid" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Lease value -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Lease value (if taken on Lease)</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="LeaseValue" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Lease duration -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Lease duration</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="LeaseDuration" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Lease escalation -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Lease escalation (if any)</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="LeaseEscalation" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Applicable TDS -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Applicable TDS</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="ApplicableTDS" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Security Cheque to aggregator No. -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Security Cheque to aggregator No.</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="SecurityChequeNo" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Security Cheque Amount -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Security Cheque to aggregator Amount</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="SecurityChequeAmount" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Total advance paid to Farmers -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Total advance paid to the Farmers (if any)</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TotalAdvanceToFarmers" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Total payment to Farmers -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Total payment to Farmers</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TotalPaymentToFarmers" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of total payment -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of total payment to the Farmers</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtPaymentDateToFarmers" ng-model="PaymentDateToFarmers" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Registration charges -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Registration charges</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="RegistrationCharges" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Stamp Duty charges -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Stamp Duty charges</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="StampDutyCharges" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Payment to stamp vendor -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Payment to stamp vendor</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="StampVendorPayment" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Miscellaneous expenses -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Miscellaneous expenses</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="MiscExpenses" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Advocate Fee or statutory fee -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Advocate Fee or statutory fee</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="AdvocateFee" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Advocate/Party Name -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Advocate Name/Party Name</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="AdvocateName5" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div ng-show="activeTab === 6">
+                                                <h5>Legal</h5>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">TSR Status <span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="TSRStatus">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TSR Conducted By (Name) -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">TSR Conducted By (Name)</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TSRConductedBy" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TSR d by local advocate -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Whether TSR validated by local advocate</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="TSRValidatedByLocalAdvocate">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Name of Advocate -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Name of Advocate</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear" ng-model="AdvocateName" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Local advocate validated by Aggregator -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Local advocate validated by Aggregator</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="LocalAdvocateByAggregator" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Local advocate validated by Company -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Local advocate validated by Company</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="LocalAdvocateByCompany" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Advocate Fees for TSR - Aggregator -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Advocate Fees for TSR - Aggregator</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TSRFeesAggregator" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Advocate Fees for TSR - Company -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Advocate Fees for TSR - Company</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TSRFeesCompany" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of Payment to Local Advocate (Aggregator) -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Payment to Local Advocate (Aggregator)</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtTSRPaymentDateAggregator" ng-model="TSRPaymentDateAggregator" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of Payment to Local Advocate (Company) -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Payment to Local Advocate (Company)</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear" id="txtTSRPaymentDateCompany" ng-model="TSRPaymentDateCompany" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Validated by In-house Legal Department -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Validated by Company in-house legal department</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="TSRValidatedByInHouse">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Name of person who validated TSR - In-house -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Validated TSR by (In-house Person)</label>
+                                                    <div class="input-box">
+                                                        <input class="form-control clear " ng-model="TSRValidatedInHousePerson" placeholder="" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Documents submitted to legal dept -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Documents submitted to Internal Legal Dept</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="DocumentsSubmittedToLegal">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of signing of Term Sheet with Aggregator -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Signing Term Sheet with Aggregator</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtTermSheetDateAggregator" ng-model="TermSheetDateAggregator" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of signing of Term Sheet with Offtaker -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Signing Term Sheet with Offtaker</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtTermSheetDateOfftaker" ng-model="TermSheetDateOfftaker" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                            <div ng-show="activeTab === 7">
+                                                <h5>List of documents to legal</h5>
+                                                <!-- Name of Document -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Name of Document<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="DocumentName" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Document Sharing Status -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Document Sharing Status</label>
+                                                    <div class="input-box">
+                                                        <select class="form-control clear " ng-model="DocumentSharingStatus">
+                                                            <option value="">Select</option>
+                                                            <option value="Yes">Yes</option>
+                                                            <option value="No">No</option>
+                                                        </select>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Remarks (if any) -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Remarks (if any)</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="DocumentRemarks" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of Sharing -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Sharing</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtDocumentSharingDate" ng-model="DocumentSharingDate" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Mode of Sharing -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Mode of Sharing</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="DocumentSharingMode" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Uploads 1 to 10 -->
+                                                <!-- Repeat for Upload1 to Upload10 -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 1</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload1" name="Upload1" file-model="Upload1" />
+                                                        <div ng-if="UploadedFilesPaths1" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths1)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths1}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 2</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload2" name="Upload2" file-model="Upload2" />
+                                                        <div ng-if="UploadedFilesPaths2" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths2)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths2}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 3</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload3" name="Upload3" file-model="Upload3" />
+                                                        <div ng-if="UploadedFilesPaths3" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths3)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths3}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 4</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload4" name="Upload4" file-model="Upload4" />
+                                                        <div ng-if="UploadedFilesPaths4" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths4)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths4}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 5</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload5" name="Upload5" file-model="Upload5" />
+                                                        <div ng-if="UploadedFilesPaths5" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths5)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths5}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 6</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload6" name="Upload6" file-model="Upload6" />
+                                                        <div ng-if="UploadedFilesPaths6" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths6)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths6}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 7</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload7" name="Upload7" file-model="Upload7" />
+                                                        <div ng-if="UploadedFilesPaths7" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths7)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths7}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 8</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload8" name="Upload8" file-model="Upload8" />
+                                                        <div ng-if="UploadedFilesPaths8" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths8)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths8}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 9</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload9" name="Upload9" file-model="Upload9" />
+                                                        <div ng-if="UploadedFilesPaths9" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths9)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths9}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Upload 10</label>
+                                                    <div class="input-box">
+                                                        <input type="file" class="form-control clear " id="Upload10" name="Upload10" file-model="Upload10" />
+                                                        <div ng-if="UploadedFilesPaths10" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(UploadedFilesPaths10)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{UploadedFilesPaths10}}" target="_blank">
+                                                                View &  Download File
+                                                            </a>
+                                                        </div>
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div ng-show="activeTab === 8">
+                                                <h5>Financials</h5>
+                                                <!-- Total Project Cost -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Total Project Cost<span class="vd_red">*</span></label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="TotalProjectCost" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Debt -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Debt</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="Debt" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Equity OPL -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Equity OPL</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="EquityOPL" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Equity Off Taker -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Equity Off Taker</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="EquityOffTaker" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Legal Name of the Entity -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Legal Name of the Entity</label>
+                                                    <div class="input-box">
+                                                        <input type="text" class="form-control clear " ng-model="LegalEntityName" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of Execution of SSHA -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Execution of SSHA</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtExecutionDateSSHA" ng-model="ExecutionDateSSHA" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Date of Execution of PPA -->
+                                                <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                    <label class="control-label">Date of Execution of PPA</label>
+                                                    <div class="input-box">
+                                                        <input type="date" class="form-control clear " id="txtExecutionDatePPA" ng-model="ExecutionDatePPA" />
+                                                        <div class="text-box-msg-r"></div>
+                                                    </div>
+                                                </div>
+
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            <div class="mt-12  justify-content-between">
+                                                <button id="btnSave" type="button" value="Save" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="saveButton"
+                                                        ng-model="Previous" ng-init="Previous='Previous'" ng-click="prevTab()" ng-disabled="activeTab === 1">
+                                                    <span class="triangle-box" title="Previous"></span>
+                                                    <span id="btnPrevioustxt" ng-bind="Previous">Previous</span>
+                                                </button>
+                                                <button id="btnSubmit" type="button" value="Submit" class="btn2 btn-common btn-3 btn-3d pe-7s-check ng-pristine ng-untouched ng-valid ng-not-empty" name="SubmitButton" ng-model="Submit" ng-init="Submit='Submit'" ng-click="SaveRecord()">
+                                                    <span class="triangle-box" title="Submit"></span>
+                                                    <span id="btnSubmittxt" ng-bind="Submit">Submit</span>
+                                                </button>
+                                                <button id="btnSave" type="button" value="Next" style=" margin-left: 70%;" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="saveButton"
+                                                        ng-model="Next" ng-init="Next='Next'" ng-click="nextTab()" ng-disabled="activeTab === 8">
+                                                    <span class="triangle-box" title="Next"></span>
+                                                    <span id="btnNexttxt" ng-bind="Next">Next</span>
+                                                </button>
+
+                                            </div>
+
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>
+
+<style>
+    #print-header {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+    }
+
+        #print-header table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #print-header th, #print-header td {
+            box-sizing: border-box;
+            padding: 10px;
+            font-size: 14px;
+        }
+</style>
+
+
+<div style="width: 100% !important;display:none;font-family: Arial, sans-serif; color: #2e2929 !important; margin: 30px; background-color: #f8f8f8; color: #333; " id="print-header">
+
+    <div style="text-align:center; margin-bottom:20px;">
+        <h2 style="margin:3px; font-weight:bold;">PROJECT MANAGEMENT</h2>
+    </div>
+
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left;">Site Details</div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1);  margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Site Name</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{SiteName}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Manpower Count</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ManPowerCount}}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Address</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{Address}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Pincode</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{Pincode}}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Country</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{CountryName}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">State</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{StateName}}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">City</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{CityName}}</td>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">PAN NO.</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{Panitno}}</td>
+        </tr>
+
+
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">GSTIN/UIN</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{Gstinuin}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">CLRA RC</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ddlCLRARC}}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Contact Person</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ContactPerson}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Contact Person Mobile</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ContactMobile}}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Contact Person Email</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{EmailId}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Description</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{Descritpion}}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Valid From</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ValidFrom | date:'dd-MM-yyyy'}}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Valid To</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ValidTo | date:'dd-MM-yyyy'}}</td>
+        </tr>
+    </table>
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left;">Project Details</div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1);   margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Name of the Project</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ ProjectName }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Project Size and Capacity</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ SizeCapacity }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Project Ownership Type</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ GovtPrivate }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Name of End User Party</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ EndUserParty }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Plan Date for Commissioning</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ CommissioningDate | date:'yyyy-MM-dd' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Execution Date of the Project</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ ExecutionDate | date:'yyyy-MM-dd' }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Fees of Aggregator</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ AggregatorFees }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Conversion of land by Aggregator</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ LandConversion }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Actual Cost</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ ActualCost }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Registered Value of the project</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ RegistryValue }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Differential Cost of the project</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ Variance }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Loans on the Land</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ MortgageProperty }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Loan Agreements</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ LoanAgreements }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Loan Amount on the Land (KCC)</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ MortgageAmount }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Miscellaneous Terms</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ Miscellaenous }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important ; font-weight: bold;">Any other details of the Project</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ AnyOtherDetail }}</td>
+        </tr>
+    </table>
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left;">Technical Details</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1);  margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Technical feasibility check Status</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{TechFeasibilityStatus}}
+            </td>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Person name for technical feasibility            </th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{TechPersonName}}
+            </td>
+
+        </tr>
+
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Distance of Grid Substation from the site</th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{GridDistance}}
+            </td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Grid substation connectivity</th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{GridDistance}}
+            </td>
+        </tr>
+
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Distance of Right of Way </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{RightOfWayDistance}}
+            </td>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Feasibility of Right of Way Status </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{RightOfWayFeasibility}}
+            </td>
+        </tr>
+
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Person Name for Right of Way feasibility </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important; ">
+                {{ROWPersonName}}
+            </td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Access road to the Project </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{AccessRoad}}
+            </td>
+        </tr>
+
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Verifier Name </th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important; ">
+                {{VerifierName}}
+            </td>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Supporting documents attached </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{SupportingDocsAttached}}
+            </td>
+        </tr>
+
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Status of Road construction near to the Project </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important;">
+                {{RoadConstructionStatus}}
+            </td>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Proposed date of completion of construction </th>
+
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important; ">
+                {{RoadCompletionDate}}
+            </td>
+        </tr>
+
+        <tr>
+            <th colspan="1" style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Any additional details </th>
+            <td colspan="3" style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">
+                {{AdditionalDetails}}
+            </td>
+        </tr>
+    </table>
+    <br>
+
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left;">Land Details</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Farmer Name</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ FarmerName }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Khatedar Name</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ KhatedarName }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Village</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ Village }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Khasra No.</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ KhasraNo }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Khatauli No.</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ KhatauliNo }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Area in Acre</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ AreaAcre }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Area in Bigah</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ AreaBigah }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Charge on the Land</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ LandCharge }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Amount of Charge</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ ChargeAmount }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Tenure of Charge</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ ChargeTenure }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important ;font-weight: bold;">Name of the Chargeholder</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ ChargeholderName }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Land Status</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;">{{ LandStatus }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Type of Land</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; color: #2e2929 !important;" colspan="3">{{ LandType }}</td>
+        </tr>
+    </table>
+    <br />
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left;">Commercials Detail</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Rate of the land (per acre)</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ RatePerAcre }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Total cost of the Land</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ TotalLandCost }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">ATL/ Total advance paid</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ AdvancePaid }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Lease value (if taken on Lease)</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ LeaseValue }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Lease duration</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ LeaseDuration }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Lease escalation (if any)</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ LeaseEscalation }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Applicable TDS</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ ApplicableTDS }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Security Cheque to aggregator No.</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ SecurityChequeNo }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Security Cheque to aggregator Amount</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ SecurityChequeAmount }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Total advance paid to the Farmers (if any)</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ TotalAdvanceToFarmers }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Total payment to Farmers</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ TotalPaymentToFarmers }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Date of total payment to the Farmers</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ PaymentDateToFarmers | date:'yyyy-MM-dd' }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Registration charges</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ RegistrationCharges }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Stamp Duty charges</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ StampDutyCharges }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Payment to stamp vendor</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ StampVendorPayment }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Miscellaneous expenses</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ MiscExpenses }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Advocate Fee or statutory fee</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ AdvocateFee }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Advocate Name</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ AdvocateName5 }}</td>
+        </tr>
+    </table>
+
+    <br>
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left; font-weight: bold;">Legal</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; background-color: #f0f0f0; color: #2e2929 !important;font-weight: bold;">TSR Status</th>
+            <td style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important">{{ TSRStatus }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">TSR Conducted By</th>
+            <td style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important">{{ TSRConductedBy }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Whether TSR validated by local advocate</th>
+            <td style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important">{{ TSRValidatedByLocalAdvocate }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px; background-color: #f0f0f0; color: #2e2929 !important; font-weight: bold;">Name of Advocate</th>
+            <td style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important;">{{ AdvocateName }}</td>
+        </tr>
+        
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0;; font-weight: bold;">Local advocate validated by Aggregator</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ LocalAdvocateByAggregator }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0;; font-weight: bold;">Local advocate validated by Company</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ LocalAdvocateByCompany }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0;; font-weight: bold;">Advocate Fees for TSR - Aggregator</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ TSRFeesAggregator }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0;; font-weight: bold;">Advocate Fees for TSR - Company</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ TSRFeesCompany }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0;font-weight: bold;">Date of Payment to Local Advocate (Aggregator)</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ TSRPaymentDateAggregator | date:'dd-MM-yyyy' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0; font-weight: bold;">Date of Payment to Local Advocate (Company)</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ TSRPaymentDateCompany | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0; font-weight: bold;">Validated by Company in-house legal department</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ TSRValidatedByInHouse }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0; font-weight: bold;">Validated TSR by (In-house Person)</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ TSRValidatedInHousePerson }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0; font-weight: bold;">Documents submitted to Internal Legal Dept</th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{ DocumentsSubmittedToLegal }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important; background-color: #f0f0f0;">
+                Date of Signing Term Sheet with Aggregator
+            </th>
+            <td style="border: 1px solid #ddd; padding: 10px;color: #2e2929 !important;">{{TermSheetDateAggregator | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px; color: #2e2929 !important; background-color: #f0f0f0; font-weight: bold;">Date of Signing Term Sheet with Offtaker{{TermSheetDateOfftaker}}</th>
+            <td colspan="3" style="border: 1px solid #ddd; color: #2e2929 !important; padding: 10px;">{{TermSheetDateOfftaker | date:'dd-MM-yyyy' }}</td>
+        </tr>
+    </table>
+
+    <br>
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left; font-weight: bold;">List of documents to legal Detail</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Name of Document</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ DocumentName }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Document Sharing Status</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ DocumentSharingStatus }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Remarks (if any)</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ DocumentRemarks }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Date of Sharing</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ DocumentSharingDate | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Mode of Sharing</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ DocumentSharingMode }}</td>
+
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 1</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFiles1 ? 'Uploaded' : 'N/A' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 2</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths2 ? 'Uploaded' : 'N/A' }}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 3</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths3 ? 'Uploaded' : 'N/A' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 4</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths4 ? 'Uploaded' : 'N/A' }}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 5</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths5 ? 'Uploaded' : 'N/A' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 6</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths6 ? 'Uploaded' : 'N/A' }}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 7</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths7 ? 'Uploaded' : 'N/A' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 8</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths8 ? 'Uploaded' : 'N/A' }}</td>
+        </tr>
+        <tr>
+
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 9</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths9 ? 'Uploaded' : 'N/A' }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Uploaded Files 10</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ UploadedFilesPaths10 ? 'Uploaded' : 'N/A' }}</td>
+        </tr>
+    </table>
+
+    <br>
+
+
+    <div style="background-color: #004080; color: #fff; padding: 10px; font-size: 16px; text-align: left;">Financials</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1);  margin: 20px auto; font-family: Arial, sans-serif;" id="print-content">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Total Project Cost</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ TotalProjectCost }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Debt</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ Debt }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Equity OPL</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ EquityOPL }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Equity Off Taker</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ EquityOffTaker }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Legal Name of the Entity</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ LegalEntityName }}</td>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Date of Execution of SSHA</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ ExecutionDateSSHA | date:'dd-MM-yyyy' }}</td>
+        </tr>
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; background-color: #f0f0f0;color: #2e2929 !important; font-weight: bold;">Date of Execution of PPA</th>
+            <td style="border: 1px solid #ddd; padding: 10px 12px; text-align: left; font-size: 14px; color: #2e2929 !important">{{ ExecutionDatePPA | date:'dd-MM-yyyy' }}</td>
+        </tr>
+    </table>
+
+    <!-- ❗Paste additional sections (Technical Details, Legal Details, Commercials etc.) similarly below -->
+
+</div>
+
+
+

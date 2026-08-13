@@ -1,0 +1,304 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Invoice Registration";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<style>
+    #invoiceRegPage {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27; /* theme accent */
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        color: #223;
+        min-height: 85vh;
+    }
+
+    .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    /* Section cards */
+    #invoiceRegPage .section-card {
+        background: transparent;
+        border: none;
+    }
+
+        #invoiceRegPage .section-card .card-body {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            min-height: 320px;
+        }
+
+    /* Table wrapper and hide scrollbar visually */
+    #invoiceRegPage .small-table-wrapper .table-responsive {
+        max-height: 75vh;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scroll-behavior: smooth;
+        position: relative;
+    }
+
+        #invoiceRegPage .small-table-wrapper .table-responsive::-webkit-scrollbar {
+            display: none;
+        }
+
+    /* table header sticky */
+    #invoiceRegPage .small-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #F37437;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+    /* table body */
+    #invoiceRegPage .small-table tbody td {
+        background-color: var(--card-bg);
+        font-size: 0.78rem;
+        vertical-align: middle;
+        text-align: center;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    /* hover */
+    #invoiceRegPage .small-table tbody tr:hover td {
+        background-color: #FFE8D9;
+    }
+
+    /* filter button */
+    #invoiceRegPage .filter-btn {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        #invoiceRegPage .filter-btn.active,
+        #invoiceRegPage .filter-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    #invoiceRegPage #goBtn,
+    #invoiceRegPage #refBtn {
+        border-radius: 999px;
+        border: none;
+        color: #fff;
+        background: var(--primary);
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+    #invoiceRegPage #goBtn:hover,
+    #invoiceRegPage #refBtn:hover{
+        background:var(--primary-dark);
+    }
+
+    /* Table Buttons*/
+
+    .btn-upload, .btn-view, .btn-submit {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.78rem;
+    }
+
+        .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Table Selects*/
+    #invoiceRegPage .form-select {
+        font-size: .78rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid #dcdcdc;
+        outline: none;
+        width: 80px;
+    }
+    #invoiceRegPage .form-control {
+        font-size: .78rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid #dcdcdc;
+        outline: none;
+        width: 90px;
+    }
+</style>
+<div id="invoiceRegPage" class="px-4 py-2">
+    <div class="card section-card">
+        <h4 class="my-4" style="color: #E45D27">Invoice Registration & Details</h4>
+        <div class="card-body p-3 h-100 d-flex flex-column">
+
+            <!-- Toolbar -->
+            <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Client
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Client 1</a></li>
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            State
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Delhi</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Financial Year
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">2020-21</a></li>
+                            <li><a class="dropdown-item" href="#">2021-22</a></li>
+                            <li><a class="dropdown-item" href="#">2022-23</a></li>
+                            <li><a class="dropdown-item" href="#">2023-24</a></li>
+                            <li><a class="dropdown-item" href="#">2024-25</a></li>
+                            <li><a class="dropdown-item" href="#">2025-26</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Month
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">January</a></li>
+                            <li><a class="dropdown-item" href="#">February</a></li>
+                            <li><a class="dropdown-item" href="#">March</a></li>
+                            <!-- ... -->
+                        </ul>
+                    </div>
+                    <button class="btn btn-sm filter-btn" id="goBtn">Go</button>
+                    <button class="btn btn-sm filter-btn" id="refBtn">Refresh</button>
+                </div>
+
+                @*<div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                    <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                        <div class="input-group input-group-sm">
+                            <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                            <button class="btn btn-sm" id="scSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">CSV</a></li>
+                                <li><a class="dropdown-item" href="#">PDF</a></li>
+                                <li><a class="dropdown-item" href="#">Print</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>*@
+            </div>
+
+            <!-- Table wrapper -->
+            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 small-table">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Site</th>
+                                <th>Invoice Date</th>
+                                <th>Invoice No.</th>
+                                <th>Location</th>
+                                <th>Manpower Count</th>
+                                <th>Invoice Type</th>
+                                <th>Taxable Value</th>
+                                <th>CGST</th>
+                                <th>SGST</th>
+                                <th>IGST</th>
+                                <th>Gross Amount</th>
+                                <th>Upload Invoice Copy</th>
+                                <th>View</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scTableBody">
+                            <tr>
+                                <td>1</td>
+                                <td>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Option 1</option>
+                                        <option>Option 2</option>
+                                    </select>
+                                </td>
+                                <td><input type="date" class="form-control form-control-sm"></td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Location 1</option>
+                                        <option>Loaction 2</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td>
+                                    <select class="form-select form-select-sm">
+                                        <option value="">Select</option>
+                                        <option>Regular</option>
+                                        <option>Reimbursement</option>
+                                        <option>Overtime</option>
+                                        <option>Other</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+                                <!--Upload File column-->
+                                <td>
+                                    <label class="btn btn-sm btn-upload px-3" style="white-space:nowrap; cursor:pointer;">
+                                        Choose File
+                                        <input type="file" hidden>
+                                    </label>
+                                </td>
+                                <!--View column-->
+                                <td>
+                                    <button class="btn btn-sm btn-view">View</button>
+                                </td>
+                                <!--Actyion column-->
+                                <td>
+                                    <button class="btn btn-sm btn-submit px-3">Submit</button>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

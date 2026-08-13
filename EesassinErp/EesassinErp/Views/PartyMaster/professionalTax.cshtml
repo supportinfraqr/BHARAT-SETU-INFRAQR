@@ -1,0 +1,229 @@
+﻿@{
+    ViewBag.Title = "Professional Tax";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<script src="~/Scripts/myjslib/ProfessionalTaxController.js?Ver=@ViewBag.Version"></script>
+@*<script src="~/Scripts/myjslib/ddlBindings.js"></script>*@
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Professional Tax</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Party Master</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">State<span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="AllCity()">
+                                                <select class="select2 form-control validate" ng-model="State">
+                                                    <option value="">Select State</option>
+                                                    <option ng-repeat="x in AllCityList | unique:'STATE_NAME'"
+                                                            value="{{x.STATE_NAME}}">
+                                                        {{x.STATE_NAME}}
+                                                    </option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Status<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select class="form-control clear" ng-model="Status">
+                                                    <option value="">Select</option>
+                                                    <option value="Active">Active</option>
+                                                    <option value="Inactive">Inactive</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Deduction Cycle</label>
+                                            <div class="input-box">
+                                                <input type="text" class="form-control clear" ng-model="DeductionCycle"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">PT Number</label>
+                                            <div class="input-box">
+                                                <input type="text" class="form-control clear" ng-model="PTNumber"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Applicability</label>
+                                            <div class="input-box">
+                                                <select class="form-control clear" ng-model="Applicability"> 
+                                                    <option value="">Select</option>
+                                                    <option>Employee Count Based</option>
+                                                    <option>CLRA Based</option>
+                                                </select>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Effective From</label>
+                                            <div class="input-box">
+                                                <input type="date" class="form-control clear" id="txtefectivefrom" ng-model="EffectiveFrom"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Effective To</label>
+                                            <div class="input-box">
+                                                <input type="date" class="form-control clear" id="txteffectiveto" ng-model="Effectiveto"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Gov Fees</label>
+                                            <div class="input-box">
+                                                <input type="text" class="form-control clear" ng-model="GovtFees"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Security Deposit Amount</label>
+                                            <div class="input-box">
+                                                <input type="text" class="form-control clear" ng-model="DepositeAmt"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Payment</label>
+                                            <div class="input-box">
+                                                <input type="text" class="form-control clear" ng-model="Payment"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Application Link</label>
+                                            <div class="input-box">
+                                                <input type="text" class="form-control clear" ng-model="ApplicationLink"/>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="clearfix"></div>
+
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 mgbt-xs-20">
+
+                                            <label class="control-label" style="font-size:15px;font-weight:600;margin-bottom:15px;">
+                                                Tax Slabs based on Monthly Gross Salary
+                                            </label>
+
+                                            <table class="table" style="margin-bottom:10px;">
+                                                <thead>
+                                                    <tr style="border-bottom:1px solid #ddd;">
+                                                        <th style="width:30%;font-size:12px;">START RANGE (₹)</th>
+                                                        <th style="width:30%;font-size:12px;">END RANGE (₹)</th>
+                                                        <th style="width:30%;font-size:12px;">MONTHLY TAX AMOUNT (₹)</th>
+                                                        <th style="width:10%;"></th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    <tr ng-repeat="item in DynamicRows">
+                                                        <td style="border-top:none;">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   ng-model="item.Value1"
+                                                                   value="0" />
+                                                        </td>
+
+                                                        <td style="border-top:none;">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   ng-model="item.Value2"
+                                                                   value="0" />
+                                                        </td>
+                                                        <td style="border-top:none;">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   ng-model="item.Value3"
+                                                                   value="0" />
+                                                        </td>
+
+                                                        <td style="border-top:none;">
+                                                            <button type="button"
+                                                                    class="btn-remove-row"
+                                                                    ng-click="removeRow($index)"
+                                                                    title="Remove Row">
+                                                                <i class="fa fa-trash"></i>
+                                                            </button>
+                                                        </td>
+
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+
+                                            <div class="text-right" style="margin-top:15px;">
+                                                <button type="button" class="btn btn-primary"  ng-click="addRow()">
+                                                    + Additional Slab
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>
+

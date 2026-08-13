@@ -1,0 +1,175 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Principle Skill Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/SkillPages/PrincipleSkillDashboard/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/SkillController.js"></script>
+<div class="principleSkillDash px-4 py-4">
+
+        <!-- Top Header -->
+
+        <div class="skillDashboardHeader">
+
+            <div class="skillDashboardTitle">
+                <h2>Training Programs</h2>
+            </div>
+
+            <div class="skillDashboardActions">
+
+                <!-- Search -->
+
+                <div class="skillSearchBox">
+
+                    <i class="bi bi-search"></i>
+
+                    <input type="text"
+                           placeholder="Search here">
+
+                </div>
+
+                <!-- Filter -->
+
+                <div class="dropdown">
+                    <button class="skillFilterBtn"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+
+                        <i class="bi bi-funnel"></i>
+
+                    </button>
+
+                    <ul class="dropdown-menu skillFilterDropdown">
+
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)">
+                                Today
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)">
+                                Yesterday
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)">
+                                Last 7 Days
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)">
+                                Last 30 Days
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)">
+                                This Month
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="dropdown-item" href="javascript:void(0)">
+                                Last Month
+                            </a>
+                        </li>
+
+                        
+
+                    </ul>
+
+                </div>
+
+                <!-- Add -->
+
+                <a href="../Skill/PrincipleSkillCourses" class="skillAddBtn" style="text-decoration:none;">
+
+                    <i class="bi bi-plus-lg"></i>
+
+                    Add New
+
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- ==========================================
+            Course Grid
+        =========================================== -->
+
+        <div class="row g-4 mt-1" ng-init="getUserAlbum()">
+
+           
+
+            <div ng-if="AllDetail.length==0"
+                 style="text-align:center; padding:35px 15px; color:#777;">
+
+                <i class="bi bi-play-btn"
+                   style="font-size:45px; color:#ccc; margin-bottom:15px;"></i>
+
+                <h5 style="margin:8px 0; color:#555;">
+                    No Video Available
+                </h5>
+
+                <p style="margin:0; font-size:14px; color:#999;">
+                    Please add the first video to this course.
+                </p>
+
+            </div>
+                <div class="col-xl-3 col-lg-4 col-md-6" ng-repeat="x in AllDetail">
+                    
+                    <div class="skillCourseCard" style="cursor:pointer" ng-click="redirectotupdate(x.id)">
+
+                        <div class="skillCourseImage">
+
+                            <img class="img-fluid"
+                                 ng-src="{{x.CourseCoverPage || '../Content/Skill/coverpreview.png'}}"
+                                 alt="Course">
+
+                            @*<span class="courseBadge">
+                                Manufacturing
+                            </span>*@
+
+                        </div>
+
+                        <div class="skillCourseBody">
+
+                            <div class="courseTitleRow">
+
+                                <h5>
+                                    {{x.Title}}
+                                </h5>
+
+                                <div class="form-check form-switch">
+                                   
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           ng-true-value="'1'"
+                                           ng-false-value="'0'"
+                                           ng-model="x.Status"
+                                           ng-change="UpdateAlbumStatus(x.id, x.Status)">
+
+                                </div>
+
+                            </div>
+
+                            <p class="courseStatus">
+                                {{x.Status=='1'?'Active' :'Draft'}}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div> 
+
+        </div>
+
+</div>

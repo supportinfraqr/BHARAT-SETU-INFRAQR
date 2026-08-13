@@ -1,0 +1,30 @@
+﻿<div id="mainContainer">
+</div>
+
+<script>
+
+function loadPage(url) {
+
+    localStorage.setItem("lastPage", url);
+
+    $("#mainContainer").load(url, function () {
+        window.history.replaceState({}, '', '/');
+    });
+}
+
+
+// Page load par check
+$(document).ready(function () {
+
+    var lastPage = localStorage.getItem("lastPage");
+
+    if (lastPage) {
+        loadPage(lastPage);
+    }
+    else {
+        loadPage('/RetailSection/LocationMaster');
+    }
+
+});
+
+</script>

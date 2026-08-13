@@ -1,0 +1,492 @@
+﻿.workerSkillDash {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+    /* =====================================================
+   HEADER
+===================================================== */
+
+    .workerSkillDash .workerSkillHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 36px;
+        flex-wrap: wrap;
+    }
+
+    .workerSkillDash .workerSkillTitle {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--primary);
+        margin: 0;
+    }
+
+    .workerSkillDash .workerSkillSubtitle {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .workerSkillDash .workerSkillActions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+
+    /* =====================================================
+   SEARCH
+===================================================== */
+
+    .workerSkillDash .workerSkillSearch {
+        position: relative;
+        width: 340px;
+    }
+
+        .workerSkillDash .workerSkillSearch input {
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding-left: 45px;
+            box-shadow: none;
+            transition: .25s;
+            font-size: 15px;
+        }
+
+            .workerSkillDash .workerSkillSearch input:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(2,43,94,.08);
+            }
+
+        .workerSkillDash .workerSkillSearch i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8c8c8c;
+        }
+
+
+    /* =====================================================
+   FILTER
+===================================================== */
+
+    .workerSkillDash .workerSkillFilterBtn {
+        height: 40px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: white;
+        color: var(--primary);
+        font-weight: 500;
+        padding: 0 22px;
+        transition: .25s;
+    }
+
+        .workerSkillDash .workerSkillFilterBtn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+    .workerSkillDash .workerSkillDropdown {
+        border-radius: 12px;
+        border: none;
+        padding: 8px;
+        box-shadow: 0 14px 35px rgba(0,0,0,.12);
+    }
+
+        .workerSkillDash .workerSkillDropdown .dropdown-item {
+            border-radius: 8px;
+            font-size: 14px;
+            padding: 10px 14px;
+            transition: .2s;
+        }
+
+            .workerSkillDash .workerSkillDropdown .dropdown-item:hover {
+                background: rgba(2,43,94,.08);
+            }
+
+        .workerSkillDash .workerSkillDropdown .active {
+            background: var(--primary);
+        }
+
+
+    /* =====================================================
+   GRID
+===================================================== */
+
+    .workerSkillDash .workerSkillGrid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 30px;
+    }
+
+
+    /* =====================================================
+   CARD
+===================================================== */
+
+    .workerSkillDash .workerSkillCard {
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #ececec;
+        transition: .35s ease;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+        .workerSkillDash .workerSkillCard:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 18px 40px rgba(0,0,0,.12);
+        }
+
+
+    /* =====================================================
+   THUMBNAIL
+===================================================== */
+
+    .workerSkillDash .workerSkillThumb {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 16/9;
+        background: #f4f4f4;
+    }
+
+        .workerSkillDash .workerSkillThumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: .45s;
+        }
+
+    .workerSkillDash .workerSkillCard:hover .workerSkillThumb img {
+        transform: scale(1.08);
+    }
+
+
+    /* =====================================================
+   PLAY BUTTON
+===================================================== */
+
+    .workerSkillDash .workerSkillPlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .workerSkillDash .workerSkillPlay i {
+            width: 66px;
+            height: 66px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.92);
+            color: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            transition: .3s;
+            box-shadow: 0 10px 25px rgba(0,0,0,.18);
+        }
+
+    .workerSkillDash .workerSkillCard:hover .workerSkillPlay i {
+        transform: scale(1.12);
+    }
+
+
+    /* =====================================================
+   PROGRESS
+===================================================== */
+
+    .workerSkillDash .workerSkillProgress {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        background: var(--primary);
+        color: white;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 40px;
+    }
+
+
+    /* =====================================================
+   CARD BODY
+===================================================== */
+
+    .workerSkillDash .workerSkillBody {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .workerSkillDash .workerSkillModuleTitle {
+        font-size: 18px;
+        /* line-height: 1.45; */
+        font-weight: 500;
+        color: #222;
+        /* margin-bottom: 14px; */
+        /* min-height: 52px;*/
+    }
+
+    .workerSkillDash .workerSkillTrainer {
+        margin: auto 0 0;
+        font-size: 14px;
+        color: var(--muted);
+    }
+
+        .workerSkillDash .workerSkillTrainer span {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+
+    /* =====================================================
+   LOAD MORE
+===================================================== */
+
+        .workerSkillDash .workerSkillLoadMore {
+        margin-top: 50px;
+        text-align: center;
+    }
+
+    .workerSkillDash .workerSkillLoadBtn {
+        background: var(--primary);
+        color: white;
+        border-radius: 12px;
+        padding: 12px 34px;
+        font-weight: 500;
+        transition: .3s;
+    }
+
+        .workerSkillDash .workerSkillLoadBtn:hover {
+            background: var(--primary-dark);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+/* ---------- Large Laptop ---------- */
+
+@media (max-width:1400px) {
+
+    .workerSkillDash .workerSkillGrid {
+        grid-template-columns: repeat(4,minmax(0,1fr));
+        gap: 24px;
+    }
+}
+
+
+/* ---------- Laptop ---------- */
+
+@media (max-width:1200px) {
+
+    .workerSkillDash .workerSkillGrid {
+        grid-template-columns: repeat(3,minmax(0,1fr));
+    }
+}
+
+
+/* ---------- Tablet ---------- */
+
+@media (max-width:992px) {
+
+    .workerSkillDash {
+        padding: 24px !important;
+    }
+
+        .workerSkillDash .workerSkillHeader {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .workerSkillDash .workerSkillActions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .workerSkillDash .workerSkillSearch {
+            flex: 1;
+            width: 100%;
+        }
+
+        .workerSkillDash .workerSkillGrid {
+            grid-template-columns: repeat(2,minmax(0,1fr));
+        }
+}
+
+
+/* ---------- Mobile ---------- */
+
+@media (max-width:768px) {
+
+    .workerSkillDash {
+        padding: 18px !important;
+    }
+
+        .workerSkillDash .workerSkillTitle {
+            font-size: 26px;
+        }
+
+        .workerSkillDash .workerSkillSubtitle {
+            font-size: 14px;
+        }
+
+        .workerSkillDash .workerSkillActions {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+        }
+
+        .workerSkillDash .workerSkillSearch {
+            width: 100%;
+        }
+
+        .workerSkillDash .workerSkillFilterBtn {
+            width: 100%;
+        }
+
+        .workerSkillDash .workerSkillGrid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .workerSkillDash .workerSkillModuleTitle {
+            font-size: 17px;
+            min-height: auto;
+        }
+}
+
+
+/* ---------- Small Mobile ---------- */
+
+@media (max-width:480px) {
+
+    .workerSkillDash {
+        padding: 14px !important;
+    }
+
+        .workerSkillDash .workerSkillTitle {
+            font-size: 22px;
+        }
+
+        .workerSkillDash .workerSkillSubtitle {
+            display: none;
+        }
+
+        .workerSkillDash .workerSkillBody {
+            padding: 16px;
+        }
+
+        .workerSkillDash .workerSkillPlay i {
+            width: 58px;
+            height: 58px;
+            font-size: 18px;
+        }
+
+        .workerSkillDash .workerSkillProgress {
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+
+        .workerSkillDash .workerSkillLoadBtn {
+            width: 100%;
+        }
+}
+
+
+
+/* =====================================================
+   SMOOTHNESS
+===================================================== */
+
+.workerSkillDash *,
+.workerSkillDash *::before,
+.workerSkillDash *::after {
+    box-sizing: border-box;
+}
+
+.workerSkillDash img {
+    display: block;
+}
+
+.workerSkillDash button {
+    outline: none;
+}
+
+.workerSkillDash input {
+    outline: none;
+}
+
+
+
+/* =====================================================
+   SCROLLBAR
+===================================================== */
+
+.workerSkillDash ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.workerSkillDash ::-webkit-scrollbar-thumb {
+    background: #c8c8c8;
+    border-radius: 30px;
+}
+
+    .workerSkillDash ::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+
+
+/* =====================================================
+   OPTIONAL EMPTY STATE
+===================================================== */
+
+.workerSkillDash .workerSkillEmpty {
+    display: none;
+    padding: 70px 20px;
+    text-align: center;
+    border: 1px dashed #d8d8d8;
+    border-radius: 16px;
+    background: #fafafa;
+}
+
+    .workerSkillDash .workerSkillEmpty i {
+        font-size: 55px;
+        color: #bfbfbf;
+        margin-bottom: 18px;
+    }
+
+    .workerSkillDash .workerSkillEmpty h4 {
+        color: var(--primary);
+        margin-bottom: 8px;
+    }
+
+    .workerSkillDash .workerSkillEmpty p {
+        color: var(--muted);
+        margin: 0;
+    }

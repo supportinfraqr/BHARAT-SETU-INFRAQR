@@ -1,0 +1,850 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Profile";
+    Layout = "~/Views/Common/Withoutlayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/Rozgar/AppointmentLetter/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/ReleaseWorkerController.js"></script>
+
+<div class="appointmentLetter px-4 py-4" ng-init="GetexpDetails()">
+
+
+    <!-- ===========================================================
+        Toolbar
+    =========================================================== -->
+
+    <div class="letterToolbar">
+
+        <div class="toolbarTitle">
+            <i class="bi bi-file-earmark-text"></i>
+            Experience Letter Preview
+        </div>
+
+        <div class="toolbarActions">
+
+            <button type="button"
+                    class="btn btn-download" hidden>
+                <i class="bi bi-download me-1"></i>
+                Download PDF
+            </button>
+
+            <button type="button"
+                    class="btn btn-print"
+                    onclick="window.print();">
+                <i class="bi bi-printer me-1"></i>
+                Print
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ===========================================================
+        PAGE 1
+    =========================================================== -->
+
+    <div class="appointment-page page-break">
+
+        <!-- ================= Header ================= -->
+
+        <div class="letter-header">
+
+            @*<div class="header-top">
+
+                    <div class="company-logo">
+                        <img src="~/Content/logo.png" alt="Logo">
+                    </div>
+
+                    <div class="company-address">
+                        <div>CompanyAddressLine1</div>
+                        <div>CompanyAddressLine2</div>
+                        <div>CompanyPincode</div>
+                    </div>
+
+                </div>
+
+                <div class="header-line"></div>*@
+
+            <div class="header-info">
+
+                <div class="info-box">
+                    <div class="info-label">
+                        APPOINTMENT LETTER NO.
+                    </div>
+
+                    <div class="info-value">
+                        00001
+                    </div>
+                </div>
+
+                <div class="info-box text-center">
+                    <div class="info-label">
+                        WORKER ID
+                    </div>
+
+                    <div class="info-value">
+                        {{Appointmentdetail.EmployeeCode}}
+                    </div>
+                </div>
+
+                <div class="info-box text-end">
+                    <div class="info-label">
+                        DATE OF ISSUE
+                    </div>
+
+                    <div class="info-value">
+                        {{Appointmentdetail.Issuedt}}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================= Title ================= -->
+
+        <h1 class="letter-title">
+            APPOINTMENT LETTER
+        </h1>
+
+        <!-- =======================================================
+            A. EMPLOYER DETAILS
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                A: EMPLOYER DETAILS
+            </h2>
+
+            <!-- Contractor -->
+
+            <div class="sub-heading">
+                1. CONTRACTOR (Service Provider)
+            </div>
+
+            <table class="details-table">
+
+                <tr>
+                    <td class="label">
+                        Legal Entity Name
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{ConName}}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Registered Office
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{ConAddress}}
+                    </td>
+                </tr>
+
+            </table>
+
+            <!-- Principal Employer -->
+
+            <div class="sub-heading mt-4">
+                2. PRINCIPAL EMPLOYER
+            </div>
+            <table class="details-table">
+                <tr>
+                    <td class="label">
+                        Establishment Name
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Employername}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        Site / Project Location
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.sitename}} / {{Appointmentdetail.LocationCode}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        Industry
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{industry}}
+                    </td>
+
+                </tr>
+
+            </table>
+
+        </section>
+
+        <!-- =======================================================
+            B. WORKER PARTICULARS
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                B: WORKER PARTICULARS
+            </h2>
+
+            <table class="details-table">
+
+                <tr>
+
+                    <td class="label">
+                        Full Name
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.EmployeeName}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        Father's Name
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.Father_Husband_Name}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        Date of Birth / Gender
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.DateOfBirth}} / {{Appointmentdetail.Gendar}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        Nationality
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        Indian                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        Permanent Address
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.PermanemtAddress}}
+                    </td>
+
+                </tr>
+  <tr>
+
+                    <td class="label">
+                        Date of Joining
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.DOJ}}
+                    </td>
+
+                </tr>
+
+            </table>
+
+        </section>
+
+        <!-- =======================================================
+            C. APPOINTMENT & EMPLOYMENT TERMS
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                C: APPOINTMENT &amp; EMPLOYMENT TERMS
+            </h2>
+
+            <table class="details-table">
+
+                <tr>
+
+                    <td class="label">
+                        1. Designation / Trade
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.EmployeeDesignation}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        2. Skill Category
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        {{Appointmentdetail.WorkerGrade}}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="label">
+                        3. Employment Type
+                    </td>
+
+                    <td class="colon">:</td>
+
+                    <td class="value">
+                        Permanent
+                    </td>
+
+                </tr>
+
+            </table>
+
+        </section>
+
+    </div>
+
+
+    <!-- ===========================================================
+        PAGE 2
+    =========================================================== -->
+
+    <div class="appointment-page page-break">
+
+        <!-- ================= Header ================= -->
+
+        <div class="letter-header">
+
+            @*<div class="header-top">
+
+                    <div class="company-logo">
+                        <img src="~/Content/images/logo.png" alt="Logo">
+                    </div>
+
+                    <div class="company-address">
+                        <div> CompanyAddressLine1</div>
+                        <div> CompanyAddressLine2</div>
+                        <div> CompanyPincode</div>
+                    </div>
+
+                </div>
+
+                <div class="header-line"></div>*@
+
+            <div class="header-info">
+
+                <div class="info-box">
+                    <div class="info-label">
+                        APPOINTMENT LETTER NO.
+                    </div>
+                    <div class="info-value">
+                       00001
+                    </div>
+                </div>
+
+                <div class="info-box text-center">
+                    <div class="info-label">
+                        WORKER ID
+                    </div>
+                    <div class="info-value">
+                        {{Appointmentdetail.EmployeeCode}}
+                    </div>
+                </div>
+
+                <div class="info-box text-end">
+                    <div class="info-label">
+                        DATE OF ISSUE
+                    </div>
+                    <div class="info-value">
+                        {{Appointmentdetail.Issuedt}}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =======================================================
+            D. WAGES DETAIL
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                D. WAGES DETAIL
+            </h2>
+
+            <div class="wages-card">
+
+                <table class="wages-table">
+
+                    <thead>
+
+                        <tr>
+                            <th>Wage Components</th>
+                            <th class="text-end">Amount (₹)</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+                            <td>Basic Wage</td>
+                            <td class="text-end"> BasicWage</td>
+                        </tr>
+
+                        <tr>
+                            <td>Dearness Allowance</td>
+                            <td class="text-end"> DearnessAllowance</td>
+                        </tr>
+
+                        <tr>
+                            <td>Retaining Allowance (if applicable)</td>
+                            <td class="text-end"> RetainingAllowance</td>
+                        </tr>
+
+                        <tr>
+                            <td>Other Components</td>
+                            <td class="text-end"> OtherComponents</td>
+                        </tr>
+
+                    </tbody>
+
+                    <tfoot>
+
+                        <tr>
+                            <td>Gross Monthly Wage</td>
+                            <td class="text-end"> GrossMonthlyWage</td>
+                        </tr>
+
+                    </tfoot>
+
+                </table>
+
+            </div>
+
+        </section>
+
+        <!-- =======================================================
+            E. SOCIAL SECURITY
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                E. SOCIAL SECURITY
+            </h2>
+
+            <p class="section-description">
+                Subject to eligibility and applicable law, you shall be covered under the following statutory benefits:
+            </p>
+
+            <div class="benefits-grid">
+
+                <div class="benefit-item">
+                    <span class="benefit-icon"><input type="checkbox" /></span>
+                    <span>Employees' Provident Fund (EPF)</span>
+                </div>
+
+                <div class="benefit-item">
+                    <span class="benefit-icon"><input type="checkbox" /></span>
+                    <span>Employees' State Insurance (ESIC)</span>
+                </div>
+
+                <div class="benefit-item">
+                    <span class="benefit-icon"><input type="checkbox" /></span>
+                    <span>Gratuity</span>
+                </div>
+
+                <div class="benefit-item">
+                    <span class="benefit-icon"><input type="checkbox" /></span>
+                    <span>Maternity Benefit</span>
+                </div>
+
+                <div class="benefit-item">
+                    <span class="benefit-icon"><input type="checkbox" /></span>
+                    <span>Employee Compensation</span>
+                </div>
+
+                <div class="benefit-item">
+                    <span class="benefit-icon"><input type="checkbox" /></span>
+                    <span>Payment of Bonus</span>
+                </div>
+
+            </div>
+
+            <div class="benefit-notes">
+
+                <p>
+                    • Building &amp; Other Construction Workers Welfare Schemes (where applicable)
+                </p>
+
+                <p>
+                    • Any other statutory benefits notified by the Government from time to time.
+                </p>
+
+            </div>
+
+        </section>
+
+        <!-- =======================================================
+            F. OCCUPATIONAL SAFETY & HEALTH
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                F. OCCUPATIONAL SAFETY &amp; HEALTH
+            </h2>
+
+            <ul class="policy-list">
+
+                <li>
+                    You shall follow all safety rules, Standard Operating Procedures (SOPs), and lawful instructions at the workplace.
+                </li>
+
+                <li>
+                    You shall use the Personal Protective Equipment (PPE) provided by the employer consistently and correctly.
+                </li>
+
+                <li>
+                    You shall participate in all safety training sessions and emergency drills as scheduled by the management.
+                </li>
+
+                <li>
+                    You shall immediately report any unsafe condition, workplace accident, or near-miss injury to your supervisor.
+                </li>
+
+                <li>
+                    You shall undergo periodic medical examinations as required by the nature of your work and statutory rules.
+                </li>
+
+            </ul>
+
+        </section>
+
+    </div>
+
+
+    <!-- ===========================================================
+        PAGE 3
+    =========================================================== -->
+
+    <div class="appointment-page">
+
+        <!-- ================= Header ================= -->
+
+        <div class="letter-header">
+
+            @*<div class="header-top">
+
+                    <div class="company-logo">
+                        <img src="~/Content/images/logo.png" alt="Logo">
+                    </div>
+
+                    <div class="company-address">
+                        <div> CompanyAddressLine1</div>
+                        <div> CompanyAddressLine2</div>
+                        <div> CompanyPincode</div>
+                    </div>
+
+                </div>
+
+                <div class="header-line"></div>*@
+
+            <div class="header-info">
+
+                <div class="info-box">
+                    <div class="info-label">
+                        APPOINTMENT LETTER NO.
+                    </div>
+                    <div class="info-value">
+                        00001
+                    </div>
+                </div>
+
+                <div class="info-box text-center">
+                    <div class="info-label">
+                        WORKER ID
+                    </div>
+                    <div class="info-value">
+                        {{Appointmentdetail.EmployeeCode}}
+                    </div>
+                </div>
+
+                <div class="info-box text-end">
+                    <div class="info-label">
+                        DATE OF ISSUE
+                    </div>
+                    <div class="info-value">
+                        {{Appointmentdetail.Issuedt}}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =======================================================
+            G. CODE OF CONDUCT
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                G. CODE OF CONDUCT
+            </h2>
+
+            <p class="paragraph">
+                Maintain strict discipline, dignity, and professional conduct at all times.
+                Abstain from violence, harassment, discrimination, or any unlawful activity.
+                Protect and preserve company property and confidential business
+                information. Comply with all lawful and reasonable instructions issued
+                by authorized personnel.
+            </p>
+
+        </section>
+
+        <!-- =======================================================
+            H. TRANSFER
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                H. TRANSFER
+            </h2>
+
+            <p class="paragraph">
+                You may be deployed to any project, establishment, or location of the
+                Contractor within the scope of the service contract, subject to
+                applicable labour laws.
+            </p>
+
+        </section>
+
+        <!-- =======================================================
+            I. TERMINATION
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                I. TERMINATION / SEPARATION
+            </h2>
+
+            <p class="paragraph">
+                Employment may cease due to completion of the project, expiry of
+                fixed-term employment, or resignation. Final settlement will be
+                processed as per statutory timelines.
+            </p>
+
+        </section>
+
+        <!-- =======================================================
+            J. GRIEVANCE REDRESSAL
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                J. GRIEVANCE REDRESSAL
+            </h2>
+
+            <p class="paragraph mb-2">
+                Raise any concerns through the following channels:
+            </p>
+
+            <div class="contact-details">
+
+                <div>
+                    <strong>Email:</strong>
+                    -
+                </div>
+
+                <div>
+                    <strong>Helpline:</strong>
+                   -
+                </div>
+
+            </div>
+
+        </section>
+
+        <hr class="section-divider">
+
+        <!-- =======================================================
+            K. DECLARATION
+        ======================================================== -->
+
+        <section class="letter-section">
+
+            <h2 class="section-title">
+                K. DECLARATION
+            </h2>
+
+            <p class="paragraph">
+                I hereby declare that I have read and understood the terms and
+                conditions of my employment including the particulars mentioned above
+                as required under Schedule I of the Code on Wages, 2026. I agree to
+                abide by these terms, workplace policies, safety requirements and all
+                applicable labour laws during the tenure of my employment.
+            </p>
+
+        </section>
+
+        <!-- =======================================================
+            SIGNATURES
+        ======================================================== -->
+
+        <div class="signature-wrapper">
+
+            <!-- Worker -->
+
+            <div class="signature-box">
+                <div class="signature-image" hidden>
+
+                    <img src="" alt="Worker Signature">
+
+                </div>
+
+                <div class="signature-line"></div>
+
+                <div class="signature-title">
+                    1. WORKER
+                </div>
+
+                <div class="signature-name">
+                    {{Appointmentdetail.EmployeeName}}
+                </div>
+
+                <div class="signature-date" hidden>
+                    Date:  DateOfIssue
+                </div>
+
+            </div>
+
+            <!-- Contractor -->
+
+            <div class="signature-box">
+
+                <div class="signature-image" hidden>
+
+                    <img src="" alt="Contractor Signature">
+
+                </div>
+
+                <div class="signature-line"></div>
+
+                <div class="signature-title">
+                    2. CONTRACTOR
+                </div>
+
+                <div class="signature-name">
+                    {{ContDashboard.connanme}}
+                </div>
+
+                <div class="signature-designation" hidden>
+                    ContractorDesignation
+                </div>
+
+                <div class="signature-date" hidden>
+                    Date:  DateOfIssue
+                </div>
+
+            </div>
+
+            <!-- Principal Employer -->
+
+            <div class="signature-box">
+
+                <div class="signature-image" hidden>
+
+                    <img src=" PrincipalEmployerSignature" alt="Principal Employer Signature">
+
+                </div>
+
+                <div class="signature-line"></div>
+
+                <div class="signature-title">
+                    3. PRINCIPAL EMPLOYER
+                </div>
+
+                <div class="signature-name">
+                    {{client.Contractorname}}
+                </div>
+
+                <div class="signature-designation" hidden>
+                    PrincipalEmployerDesignation
+                </div>
+
+                <div class="signature-date" hidden>
+                    Date:  DateOfIssue
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>

@@ -1,0 +1,922 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Dashboard";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+
+<link href="~/Content/Dashboards/WorkerDashboard/style.css" rel="stylesheet" />
+<script src="~/Content/Dashboards/WorkerDashboard/script.js"></script>
+<script src="~/scripts/RetailJsLib/WorkerDashboardController.js"></script>
+ 
+<style>
+    .workerCard {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 12px;
+        min-width: 0;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        max-height: 260px; /* apni requirement ke hisab se */
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    button.swal2-confirm.swal2-styled {
+        background-color: #163b8d !important;
+    }
+        .workerCard::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .workerCard::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .workerCard::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+            .workerCard::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+    .verifyCard {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: .3s;
+        width:100%
+    }
+
+        .verifyCard:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        }
+
+    .verifyHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .verifyInfo h5 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .verifyInfo span {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .verifyRight {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .statusBadge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .pending {
+        background: #fde8e8;
+        color: #dc2626;
+    }
+
+    .approved {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .verifyBtn {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+        .verifyBtn:hover {
+            background: #1d4ed8;
+        }
+
+    .verifyCenter {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+        .verifyCenter h6 {
+            margin-top: 10px;
+            margin-bottom: 0;
+            font-size: 14px;
+        }
+
+    .optionCard {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        margin-bottom: 10px;
+        transition: .3s;
+    }
+
+        .optionCard p {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .optionCard:hover {
+            transform: translateX(5px);
+        }
+
+    .uidaiCard {
+        background: #ecfdf5;
+        border: 1px solid #86efac;
+    }
+
+    .ezaiCard {
+        background: #f5f3ff;
+        border: 1px solid #c4b5fd;
+    }
+
+    .optionCard i {
+        font-size: 18px;
+    }
+
+    .workerVerificationList {
+        max-height: 550px;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+        .workerVerificationList::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .workerVerificationList::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 20px;
+        }
+    div:where(.swal2-container) .swal2-input {
+        height: 2.625em;
+        padding: 4px 2.75em;
+    }
+</style>
+
+ 
+<div class="workerDashboard px-4 py-3" ng-controller="WorkerDashboardController">
+    <input type="file" id="docFile" hidden />
+    <!-- ========================= -->
+    <!-- ROW 1 -->
+    <!-- ========================= -->
+    <div class="workerDashboardRow workerDashboardRowTop" ng-init="bindworkerdashboard()">
+
+        <!-- PROFILE CARD -->
+        <div class="workerCard workerProfileCard">
+
+            <div class="workerProfileHeader">
+
+                <div class="workerProfileLeft">
+
+                    <div class="workerProfileImage">
+                        <img ng-src="{{DashboardDetail.EmployeePhotos}}" alt="">
+                    </div>
+
+                    <div class="workerProfileInfo">
+
+                        <div class="workerProfileTitleWrap">
+                            <h2>{{DashboardDetail.EmployeeName}}</h2>
+
+                            <span class="workerBadge workerBadgeSuccess">
+                                Active
+                            </span>
+                        </div>
+
+                        <div class="workerWorkerId">
+                            {{DashboardDetail.EmployeeCode}}
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="dropdown">
+
+                    <button class="workerIconBtn"
+                            type="button"
+                            data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item"
+                               ng-href="../RetailSection/WorkerProfile?WorkerId={{DashboardDetail.EmployeeCode}}&RefWorkerCode={{DashboardDetail.RefEmployeeCode}}">
+                                View Profile
+                            </a>
+                        </li>
+                        @*
+                        <li><a class="dropdown-item" href="#">Edit</a></li>*@
+                    </ul>
+
+                </div>
+
+            </div>
+
+
+            <div class="workerProfileBody">
+
+                <div class="workerProfileDetails">
+
+                    <div class="workerInfoGrid">
+
+                        <div class="workerInfoItem">
+                            <span>DOR:</span>
+                            <strong>
+                                {{DashboardDetail.CreatedOn}}
+                            </strong>
+                        </div>
+
+                        <div class="workerInfoItem">
+                            <span>Email:</span>
+                            <strong>
+                                {{DashboardDetail.EmployeeEmailID}}
+                            </strong>
+                        </div>
+
+                        <div class="workerInfoItem">
+                            <span>UAN:</span>
+                            <strong>
+                                {{maskNumber(DashboardDetail.PreviousUAN) || '-'}}
+                            </strong>
+                        </div>
+
+                        <div class="workerInfoItem">
+                            <span>Phone Number:</span>
+                            <strong>
+                                {{maskNumber(DashboardDetail.MobileNumber) || '-'}}
+                            </strong>
+                        </div>
+
+                        <div class="workerInfoItem">
+                            <span>ESIC No:</span>
+                            <strong>
+                                {{maskNumber(DashboardDetail.PreviousESI) || '-'}}
+                            </strong>
+                        </div>
+
+                        <div class="workerInfoItem">
+                            <span>Aadhar No.:</span>
+                            <strong>
+                                {{maskNumber(DashboardDetail.AdharCardNumber) || '-'}}
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="workerQrBox">
+                    <img ng-src="{{getQrUrl(DashboardDetail.EmployeeCode)}}" style="width:64px;">
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- IDENTITY CARD -->
+        <div class="workerCard workerVerificationCard" ng-init="getapprovalSection()">
+
+            <div class="workerCardHeader">
+                <h3>Identity Verification</h3>
+            </div>
+
+            <div class="workerVerificationList">
+
+                <!-- Aadhaar -->
+                <div class="workerVerificationItem aadhaarVerification">
+
+                    <div class="verifyCard">
+
+                        <div class="verifyHeader" ng-hide="showAadhaarOptions">
+
+                            <div class="verifyInfo">
+                                <h5>Aadhaar Verification</h5>
+                                <span>Identity & eKYC Verification</span>
+                            </div>
+
+                            <div class="verifyRight" ng-show="AdhaarApprove=='Pending'">
+                                <span class="statusBadge pending">Pending</span>
+
+                                <button class="verifyBtn"
+                                        ng-click="showAadhaarOptions=!showAadhaarOptions">
+                                    Verify
+                                </button>
+                            </div>
+                            <div class="verifyRight" ng-show="AdhaarApprove !='Pending'" style="color: green;">
+                                <span class="statusBadge success">{{AdhaarApprove}}</span>                                 
+                            </div>
+
+                        </div>
+
+                        <div ng-show="showAadhaarOptions">
+                            <button class="verifyBtn" style="float:RIGHT"
+                                    ng-click="showAadhaarOptions=!showAadhaarOptions">
+                                x
+                            </button>
+                            <div class="verifyCenter">
+                                <h5>Aadhaar Verification</h5>
+                                <span class="statusBadge pending">Pending</span>
+                                <h6>Choose Verification Method</h6>
+                            </div>
+
+                            <div class="optionCard uidaiCard" ng-click="VerifyByUIDAI()">
+                                <div>
+                                    <b><i class="bi bi-shield-check"></i> UIDAI eKYC</b>
+                                    <p>OTP Based Aadhaar Verification</p>
+                                </div>
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+
+                            <div class="optionCard ezaiCard" ng-click="VerifyByEZAI()">
+                                <div>
+
+                                    <b><i class="bi bi-cpu"></i> EZIN AI </b>
+                                    <p>Document OCR & Data Extraction</p>
+                                </div>
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="workerVerificationItem aadhaarVerification">
+
+                    <div class="verifyCard">
+
+                        <div class="verifyHeader" ng-hide="showPanOptions">
+
+                            <div class="verifyInfo">
+                                <h5><i class="bi bi-credit-card"></i> PAN Verification</h5>
+                                <span>Income Tax Identity Validation</span>
+                            </div>
+
+                            <div class="verifyRight"  ng-show="PanApprove=='Pending'">
+                                <span class="statusBadge pending">Pending</span>
+
+                                <button class="verifyBtn"
+                                        ng-click="showPanOptions=true">
+                                    Verify
+                                </button>
+                            </div>
+                            <div class="verifyRight" ng-show="PanApprove !='Pending'" style="color: green;">
+                                <span class="statusBadge success">{{PanApprove}}</span>
+                            </div>
+                        </div>
+
+                        <div ng-show="showPanOptions">
+
+                            <button class="verifyBtn" style="float:RIGHT"
+                                    ng-click="showPanOptions=!showPanOptions">
+                                x
+                            </button>
+
+                            <div class="verifyCenter">
+                                <h5>PAN Verification</h5>
+                                <span class="statusBadge pending">Pending</span>
+                            </div>
+
+                            <div class="optionCard ezaiCard" ng-click="VerifyPAN()">
+                                <div>
+                                    <b><i class="bi bi-card-text"></i> PAN Validation</b>
+                                    <p>Verify PAN Details</p>
+                                </div>
+
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div class="workerVerificationItem aadhaarVerification">
+
+                    <div class="verifyCard">
+
+                        <div class="verifyHeader" ng-hide="showUanOptions">
+
+                            <div class="verifyInfo">
+                                <h5><i class="bi bi-person-vcard"></i> UAN Verification</h5>
+                                <span>EPFO Member Validation</span>
+                            </div>
+
+                            <div class="verifyRight" ng-show="UANApprove=='Pending'">
+                                <span class="statusBadge pending">Pending</span>
+
+                                <button class="verifyBtn"
+                                        ng-click="showUanOptions=true">
+                                    Verify
+                                </button>
+                            </div>
+                            <div class="verifyRight" ng-show="UANApprove !='Pending'" style="color: green;">
+                                <span class="statusBadge success">{{UANApprove}}</span>
+                            </div>
+                        </div>
+
+                        <div ng-show="showUanOptions">
+
+                            <button class="verifyBtn" style="float:RIGHT"
+                                    ng-click="showUanOptions=!showUanOptions">
+                                x
+                            </button>
+
+                            <div class="verifyCenter">
+                                <h5>UAN Verification</h5>
+                                <span class="statusBadge pending">Pending</span>
+                            </div>
+
+                            <div class="optionCard uidaiCard" ng-click="VerifyUAN()">
+                                <div>
+                                    <b><i class="bi bi-person-badge"></i> UAN Validation</b>
+                                    <p>EPFO UAN Verification</p>
+                                </div>
+
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div class="workerVerificationItem aadhaarVerification">
+
+                    <div class="verifyCard">
+
+                        <div class="verifyHeader" ng-hide="showEsicOptions">
+
+                            <div class="verifyInfo">
+                                <h5><i class="bi bi-hospital"></i> ESIC Verification</h5>
+                                <span>Insured Person Validation</span>
+                            </div>
+
+
+                            <div class="verifyRight" ng-show="ESICApprove=='Pending'">
+                                <span class="statusBadge pending">Pending</span>
+
+                                <button class="verifyBtn"
+                                        ng-click="showEsicOptions=true">
+                                    Verify
+                                </button>
+                            </div>
+                            <div class="verifyRight" ng-show="ESICApprove !='Pending'" style="color: green;">
+                                <span class="statusBadge success">{{ESICApprove}}</span>
+                            </div>
+                        </div>
+
+                        <div ng-show="showEsicOptions">
+
+                            <button class="verifyBtn" style="float:RIGHT"
+                                    ng-click="showEsicOptions=!showEsicOptions">
+                                x
+                            </button>
+
+                            <div class="verifyCenter">
+                                <h5>ESIC Verification</h5>
+                                <span class="statusBadge pending">Pending</span>
+                            </div>
+
+                            <div class="optionCard uidaiCard" ng-click="VerifyESIC()">
+                                <div>
+                                    <b><i class="bi bi-shield-check"></i> ESIC Validation</b>
+                                    <p>Insured Person Verification</p>
+                                </div>
+
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- PENDING REQUEST -->
+        <div class="workerCard">
+
+            <div class="workerCardHeader workerHeaderBetween">
+
+                <h3>Request {{DashboardDetail.Req}}</h3>
+
+                <span class="workerBadge"
+                      ng-class="DashboardDetail.Req == 'Accepted' ? 'workerBadgeSuccess' : 'workerBadgeDanger'">
+                    {{DashboardDetail.Req}}
+                </span>
+
+            </div>
+
+            <p class="workerCardSubText">
+                {{DashboardDetail.reqsms}}
+            </p>
+
+
+            <div class="workerRequestCard">
+
+                <div class="workerRequestTop">
+
+                    <div class="workerRequestIcon">
+                        <i class="bi bi-building"></i>
+                    </div>
+
+                    <div>
+                        <h4>{{ContDashboard.Partyname}}</h4>
+                        <p>Onboarding Request</p>
+                    </div>
+
+                </div>
+
+                <div class="workerRequestActions" ng-show="DashboardDetail.Flag===0">
+                    <button class="workerBtn workerBtnSuccess" ng-click="GiveConsentByWorker(1)">
+                        Give Consent
+                    </button>
+                    <button class="workerBtn workerBtnDanger" ng-click="GiveConsentByWorker(2)">
+                        Cancel
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+    </div>
+
+
+
+    <!-- ========================= -->
+    <!-- ROW 2 -->
+    <!-- ========================= -->
+    <div class="workerDashboardRow workerDashboardRowEqual">
+
+        <!-- CONTRACTOR DETAILS -->
+        <div class="workerCard">
+
+            <div class="workerCardHeader">
+                <h3>Contractor Details</h3>
+            </div>
+
+            <div class="workerInfoRows">
+
+                <div class="workerInfoRow">
+                    <span>Contractor Name</span>
+                    <strong>{{DashboardDetail.PartyName || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Contractor Code</span>
+                    <strong>{{DashboardDetail.PartyCode || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Contact Number</span>
+                    <strong>{{DashboardDetail.ContactNo || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Email ID</span>
+                    <strong>{{DashboardDetail.ConEmail || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>LIN No.</span>
+                    <strong>
+                        {{DashboardDetail.LIN || '-'}}
+                    </strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- PRINCIPAL EMPLOYER -->
+        <div class="workerCard">
+
+            <div class="workerCardHeader">
+                <h3>Principle Employer</h3>
+            </div>
+
+            <div class="workerInfoRows">
+
+                <div class="workerInfoRow">
+                    <span>Principle Employer</span>
+                    <strong>{{client.Contractorname || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Employer Code</span>
+                    <strong>{{client.EmployerCode || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Industry</span>
+                    <strong>{{client.Industry || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Email ID</span>
+                    <strong>{{client.EmailId || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>LIN No</span>
+                    <strong>{{client.LIN || '-'}}</strong>
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- CURRENT SITE -->
+        <div class="workerCard">
+
+            <div class="workerCardHeader">
+                <h3>Current Site</h3>
+            </div>
+
+            <div class="workerInfoRows">
+
+                <div class="workerInfoRow">
+                    <span>Site Name</span>
+                    <strong>{{DashboardDetail.sname || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Site Code</span>
+                    <strong>{{DashboardDetail.code || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Site Location</span>
+                    <strong>{{DashboardDetail.SiteLocation || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Medical Officer Name</span>
+                    <strong>{{DashboardDetail.medicalofname || '-'}}</strong>
+                </div>
+                <div class="workerInfoRow">
+                    <span>Officer Contact no</span>
+                    <strong>{{DashboardDetail.officercontactname || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow" hidden>
+                    <span>Address</span>
+                    <strong>{{DashboardDetail.SiteAddress || '-'}}</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- COMPANY CARD -->
+        <div class="workerCard workerCompanyCard" ng-init="Tempgatepass();Pergatepass()">
+            <div class="workerCardHeader">
+                <h3>Worker Compliance Overview</h3>
+            </div>
+            <div class="workerInfoRows">
+
+                <div class="workerInfoRow">
+                    <span>Appointment Letter</span>
+                    <strong>  {{DashboardDetail.Appointment || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Gate Pass</span>
+                    <strong>{{ PermanentGatePassStatus ? PermanentGatePassStatus : (TemporaryGatePassStatus ? TemporaryGatePassStatus : 'Pending') }}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Medical Status</span>
+                    <strong>{{DashboardDetail.MedicalStatus || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Safety Kit</span>
+                    <strong>{{DashboardDetail.PPE || '-'}}</strong>
+                </div>
+
+                <div class="workerInfoRow">
+                    <span>Safety Training</span>
+                    <strong>{{DashboardDetail.SafetyTrainingStatus || '-'}}</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- ROW 4 -->
+    <!-- ========================= -->
+    <div class="workerDashboardRow">
+
+        <div class="workerCard workerWageCard">
+
+            <div class="workerCardHeader">
+                <h3>Wage History</h3>
+            </div>
+
+
+            <div class="workerWageTableWrap">
+
+                <table class="workerTable workerWageTable">
+
+                    <thead>
+
+                        <tr>
+                            <th>Worker Code</th>
+                            <th>Wage Month</th>
+                            <th>Wage Year</th>
+                            <th>Salary Days</th>
+                            <th>Basic Wages</th>
+                            <th>Dearness Allowances</th>
+                            <th>HRA</th>
+                            <th>Bonus</th>
+                            <th>Leave Wages</th>
+                            <th>Other Allowances</th>
+                            <th>OT Wages</th>
+                            <th>Other Cash Payment</th>
+                            <th>Total Gross Wages</th>
+                            <th>PF</th>
+                            <th>ESIC</th>
+                            <th>Other Deduction</th>
+                            <th>Total Deduction</th>
+                            <th>Net Amount Paid</th>
+                            <th>Status</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody style="display:none;">
+                        <tr>
+                            <td>{{DashboardDetail.EmployeeCode}}</td>
+                            <td>April</td>
+                            <td>2026</td>
+                            <td>26</td>
+                            <td>8034</td>
+                            <td>2085</td>
+                            <td>669</td>
+                            <td>0</td>
+                            <td>5517</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>16305</td>
+                            <td>964</td>
+                            <td>123</td>
+                            <td>50</td>
+                            <td>1137</td>
+                            <td>15168</td>
+                            <td><span class="workerBadge workerBadgeSuccess">Matched</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>{{DashboardDetail.EmployeeCode}}</td>
+                            <td>May</td>
+                            <td>2026</td>
+                            <td>13</td>
+                            <td>3481</td>
+                            <td>904</td>
+                            <td>290</td>
+                            <td>0</td>
+                            <td>2391</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>7066</td>
+                            <td>418</td>
+                            <td>53</td>
+                            <td>50</td>
+                            <td>521</td>
+                            <td>6545</td>
+                            <td><span class="workerBadge workerBadgeSuccess">Matched</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>{{DashboardDetail.EmployeeCode}}</td>
+                            <td>June</td>
+                            <td>2026</td>
+                            <td>26</td>
+                            <td>8034</td>
+                            <td>2085</td>
+                            <td>669</td>
+                            <td>0</td>
+                            <td>5517</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>16305</td>
+                            <td>964</td>
+                            <td>123</td>
+                            <td>50</td>
+                            <td>1137</td>
+                            <td>15168</td>
+                            <td><span class="workerBadge workerBadgeSuccess">Matched</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>{{DashboardDetail.EmployeeCode}}</td>
+                            <td>July</td>
+                            <td>2026</td>
+                            <td>26</td>
+                            <td>8034</td>
+                            <td>2085</td>
+                            <td>669</td>
+                            <td>0</td>
+                            <td>5517</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>16305</td>
+                            <td>964</td>
+                            <td>123</td>
+                            <td>50</td>
+                            <td>1137</td>
+                            <td>15168</td>
+                            <td><span class="workerBadge workerBadgeSuccess">Matched</span></td>
+                        </tr>
+
+                        <tr>
+                            <td>{{DashboardDetail.EmployeeCode}}</td>
+                            <td>July</td>
+                            <td>2026</td>
+                            <td>26</td>
+                            <td>8034</td>
+                            <td>2085</td>
+                            <td>669</td>
+                            <td>0</td>
+                            <td>5517</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>16305</td>
+                            <td>964</td>
+                            <td>123</td>
+                            <td>50</td>
+                            <td>1137</td>
+                            <td>15168</td>
+                            <td><span class="workerBadge workerBadgeSuccess">Matched</span></td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <div class="workerTableFooter" hidden>
+
+                <div>
+                    Showing 5 of 24 payments
+                </div>
+
+                <button class="workerBtn workerBtnLight">
+
+                    View All Payments
+
+                    <i class="bi bi-chevron-right"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

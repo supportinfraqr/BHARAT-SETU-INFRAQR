@@ -1,0 +1,965 @@
+﻿* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+
+
+/*================== NAVBAR ===================*/
+
+.navbar {
+    height: 66px;
+    background: #FFF1EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.logo {
+    height: 48px;
+}
+
+/* Center buttons */
+.nav-center {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.dropbtn {
+    border: 1px solid #E45D27;
+    color: #E45D27;
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+    .dropbtn:hover {
+        background: #E45D27;
+        color: #fff;
+    }
+
+.arrow {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.3s;
+}
+
+/* Rotate arrow on open */
+.dropdown.show .arrow {
+    transform: rotate(180deg);
+}
+
+/* Right icons */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#user-switch-icon {
+    width: 30px;
+    height: 30px;
+}
+
+    .icon:hover {
+        transform: scale(1.1);
+    }
+
+
+/* ================== USER SWITCH DROPDOWN ================== */
+.navbar .dropdown #userSwitchDropdown {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+    .navbar .dropdown #userSwitchDropdown:hover {
+        transform: scale(1.1);
+    }
+
+/* Tooltip-like hover text */
+.navbar #userSwitchDropdown[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #E45D27;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0.95;
+}
+
+/* Match dropdown design to others */
+.navbar .dropdown-menu {
+    font-size: 0.85rem;
+    border-radius: 8px;
+}
+
+    .navbar .dropdown-menu .dropdown-item:hover {
+        background-color: #FFE0D1;
+        color: #E45D27;
+    }
+
+
+
+/* SEARCH FIELD */
+.search-wrapper {
+    position: relative;
+}
+
+#search-field {
+    display: inline-block;
+    visibility: hidden;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 0;
+    padding: 5px 10px;
+    border: 1px solid #E45D27;
+    border-radius: 20px;
+    outline: none;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+    #search-field.show {
+        width: 180px;
+        opacity: 1;
+        visibility: visible;
+    }
+
+/* Profile */
+.profile-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #E45D27;
+    background: transparent;
+    padding: 0;
+}
+
+    .profile-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+
+
+
+/*================== STATUS BAR ================== */
+.status-bar {
+    height: 40px;
+    background: linear-gradient(to right, #FD670B 80%, #E24309);
+    color: white;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16A34A;
+}
+
+.login-btn {
+    background: white;
+    color: #E24309;
+    border: 1px solid white;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Dropdown items hover */
+.dropdown-menu a:hover {
+    background: #FFE2D5;
+    color: #E45D27;
+}
+
+
+
+
+
+
+/* ==================================== DASHBOARD ==================================== */
+
+
+.dashboard {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 100%;
+}
+
+/* Toggle pill - single capsule container */
+    .dashboard .toggle-pill {
+        display: inline-flex;
+        border-radius: 999px;
+        background: rgba(0,0,0,0.03);
+        padding: 4px;
+        overflow: hidden;
+        gap: 4px;
+        align-items: center;
+    }
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+        .dashboard .toggle-pill .btn-pill {
+            background: transparent;
+            border: 0;
+            padding: 8px 18px;
+            margin: 0;
+            font-weight: 500;
+            color: #333;
+            border-radius: 999px;
+            transition: background .15s ease, color .15s ease, transform .06s ease;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+        /* active pill */
+            .dashboard .toggle-pill .btn-pill.active {
+                background: var(--primary);
+                color: #fff;
+                box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+            }
+
+        /* ensure focus ring for accessibility (subtle) */
+            .dashboard .toggle-pill .btn-pill:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+            }
+
+
+/* ============ Payroll Section ============ */
+/* ============ CONTAINER 1 STYLES ============ */
+#PFCard .container1 {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+    /* Custom card */
+    #PFCard .container1 .custom-card {
+        background-color: #FBFBFB;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Summary main card */
+    #PFCard .container1 .summary-card {
+        background-color: #FFF1EB;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    #PFCard .container1 .summary-list li {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px dashed #f0c2b5;
+        padding: 6px 4px;
+    }
+
+    /* Payroll button */
+    #PFCard .container1 #payroll-btn {
+        background-color: #E45D27;
+        border-radius: 999px;
+        color: #fff;
+        border: none;
+        padding: 6px 8px;
+        transition: background 0.2s ease-in-out;
+    }
+
+        #PFCard .container1 #payroll-btn:hover {
+            background-color: #c44b1d;
+        }
+
+    #PFCard .container1 .summary-card .btn {
+        color: #E45D27;
+        border-color: #E45D27;
+    }
+
+        #PFCard .container1 .summary-card .btn:hover {
+            color: #fff;
+            background-color: #E45D27;
+            border-color: #E45D27;
+        }
+
+    #PFCard .container1 .summary-card .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    #PFCard .container1 .summary-card .dropdown-item:hover {
+        background-color: #FFE2D5;
+        color: #E45D27;
+    }
+
+    /* Override Bootstrap blue hover on dropdown items */
+    #PFCard .container1 .summary-card .dropdown-menu .dropdown-item {
+        color: #333;
+        transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    }
+
+        /* Stronger hover selector — keeps the theme orange */
+        #PFCard .container1 .summary-card .dropdown-menu .dropdown-item:hover,
+        #PFCard .container1 .summary-card .dropdown-menu .dropdown-item:focus,
+        #PFCard .container1 .summary-card .dropdown-menu .dropdown-item.active {
+            background-color: #FFE2D5 !important;
+            color: #E45D27 !important;
+        }
+
+    /* Prevent Bootstrap blue focus/active color on dropdown buttons */
+    #PFCard .container1 .summary-card .btn-outline-primary:focus,
+    #PFCard .container1 .summary-card .btn-outline-primary:active,
+    #PFCard .container1 .summary-card .btn-outline-primary.show,
+    #PFCard .container1 .summary-card .btn-outline-primary.dropdown-toggle.show,
+    #PFCard .container1 .summary-card .btn-outline-primary:focus-visible {
+        background-color: #E45D27 !important;
+        border-color: #E45D27 !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+
+    /* Summary list layout */
+    #PFCard .container1 .summary-list li {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 0.95rem;
+        color: #333;
+        gap: 4px;
+    }
+
+        #PFCard .container1 .summary-list li span {
+            color: #000;
+        }
+
+        #PFCard .container1 .summary-list li strong {
+            color: #000;
+            font-weight: 600;
+        }
+
+/* Responsive layout */
+@media (max-width: 768px) {
+    #PFCard .container1 .summary-list li {
+        font-size: 0.9rem;
+    }
+
+    #PFCard .container1 .summary-card {
+        padding: 1.25rem;
+    }
+}
+
+
+
+/* ============ CONTAINER 2 STYLES ============ */
+
+#PFCard #container2 .custom-card {
+    background-color: #FEF3EC;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== Small Table Styling ===== */
+#PFCard .container2 .small-table-wrapper {
+    max-height: 350px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #E45D27 #FEF3EC;
+    border-radius: 4px;
+    scroll-behavior: smooth;
+}
+
+    #PFCard .container2 .small-table-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #PFCard .container2 .small-table-wrapper::-webkit-scrollbar-track {
+        background: #FEF3EC;
+        border-radius: 10px;
+    }
+
+    #PFCard .container2 .small-table-wrapper::-webkit-scrollbar-thumb {
+        background: #E45D27;
+        border-radius: 10px;
+    }
+
+/* Sticky Header */
+#PFCard .container2 .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Table Body */
+#PFCard .container2 .small-table tbody td {
+    background-color: #FEF3EC;
+    font-size: 0.75rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+
+#PFCard .container2 .table-sm th,
+#PFCard .container2 .table-sm td {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    vertical-align: middle;
+    text-align: center;
+}
+
+
+/* Hover Effect */
+#PFCard .container2 table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+
+/* ========== ACTION MENU (SCOPED) ========== */
+#PFCard .container2 .action-menu {
+    position: relative;
+    width: 40px;
+    text-align: right;
+    background-color: #FEF3EC;
+}
+
+    #PFCard .container2 .action-menu .btn {
+        color: #E45D27;
+    }
+
+        #PFCard .container2 .action-menu .btn:hover {
+            color: #c44b1d;
+        }
+
+    #PFCard .container2 .action-menu .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    #PFCard .container2 .action-menu .dropdown-item:hover {
+        background-color: #FFE2D5;
+        color: #E45D27;
+    }
+
+
+
+/* Compact Toolbar */
+#PFCard .container2 .table-toolbar {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Themed Filter Buttons */
+#PFCard .container2 .filter-btn {
+    border-radius: 999px;
+    border: 1px solid #E45D27;
+    color: #E45D27;
+    background: transparent;
+    padding: 4px 14px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    transition: all 0.2s ease-in-out;
+}
+
+    #PFCard .container2 .filter-btn:hover,
+    #PFCard .container2 .filter-btn.active {
+        background-color: #E45D27;
+        color: #fff;
+    }
+
+/* Dropdown Buttons */
+#PFCard .container2 .btn-outline-primary {
+    border-color: #E45D27;
+    color: #E45D27;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    padding: 4px 14px;
+    transition: all 0.2s ease-in-out;
+}
+
+    #PFCard .container2 .btn-outline-primary:hover,
+    #PFCard .container2 .btn-outline-primary:focus,
+    #PFCard .container2 .btn-outline-primary.show {
+        background-color: #E45D27 !important;
+        color: #fff !important;
+        border-color: #E45D27 !important;
+        box-shadow: none !important;
+    }
+
+/* Search Field */
+#PFCard .container2 .table-toolbar .form-control-sm {
+    height: 30px;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    border-color: #E45D27;
+    padding: 0 10px;
+}
+
+/* Dropdown Menu */
+#PFCard .container2 .dropdown-menu {
+    font-size: 0.8rem;
+}
+
+/* Keep Table Inside Card */
+#PFCard .container2 .custom-card .table-responsive {
+    max-height: calc(100% - 50px);
+}
+
+
+
+/* ===== Table pagination ===== */
+
+#PFCard .container2 .table-pagination {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 8px;
+    margin-top: 6px;
+}
+
+    #PFCard .container2 .table-pagination button {
+        border-radius: 999px;
+        font-size: 0.75rem;
+        padding: 4px 12px;
+    }
+
+#PFCard .container2 #viewAllRows {
+    background-color: #E45D27;
+    color: #fff;
+    border: none;
+    transition: background 0.2s ease-in-out;
+}
+
+    #PFCard .container2 #viewAllRows:hover {
+        background-color: #c44b1d;
+    }
+
+
+/* ============ ESIC Section ============ */
+/* ============ CONTAINER 1 STYLES ============ */
+#ESICCard .container1 {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+    /* Custom card */
+    #ESICCard .container1 .custom-card {
+        background-color: #FBFBFB;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Summary main card */
+    #ESICCard .container1 .summary-card {
+        background-color: #FFF1EB;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    #ESICCard .container1 .summary-list li {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px dashed #f0c2b5;
+        padding: 6px 4px;
+    }
+
+    /* Payroll button */
+    #ESICCard .container1 #payroll-btn {
+        background-color: #E45D27;
+        border-radius: 999px;
+        color: #fff;
+        border: none;
+        padding: 6px 8px;
+        transition: background 0.2s ease-in-out;
+    }
+
+        #ESICCard .container1 #payroll-btn:hover {
+            background-color: #c44b1d;
+        }
+
+    #ESICCard .container1 .summary-card .btn {
+        color: #E45D27;
+        border-color: #E45D27;
+    }
+
+        #ESICCard .container1 .summary-card .btn:hover {
+            color: #fff;
+            background-color: #E45D27;
+            border-color: #E45D27;
+        }
+
+    #ESICCard .container1 .summary-card .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    #ESICCard .container1 .summary-card .dropdown-item:hover {
+        background-color: #FFE2D5;
+        color: #E45D27;
+    }
+
+    /* Override Bootstrap blue hover on dropdown items */
+    #ESICCard .container1 .summary-card .dropdown-menu .dropdown-item {
+        color: #333;
+        transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    }
+
+        /* Stronger hover selector — keeps the theme orange */
+        #ESICCard .container1 .summary-card .dropdown-menu .dropdown-item:hover,
+        #ESICCard .container1 .summary-card .dropdown-menu .dropdown-item:focus,
+        #ESICCard .container1 .summary-card .dropdown-menu .dropdown-item.active {
+            background-color: #FFE2D5 !important;
+            color: #E45D27 !important;
+        }
+
+    /* Prevent Bootstrap blue focus/active color on dropdown buttons */
+    #ESICCard .container1 .summary-card .btn-outline-primary:focus,
+    #ESICCard .container1 .summary-card .btn-outline-primary:active,
+    #ESICCard .container1 .summary-card .btn-outline-primary.show,
+    #ESICCard .container1 .summary-card .btn-outline-primary.dropdown-toggle.show,
+    #ESICCard .container1 .summary-card .btn-outline-primary:focus-visible {
+        background-color: #E45D27 !important;
+        border-color: #E45D27 !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+
+    /* Summary list layout */
+    #ESICCard .container1 .summary-list li {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 0.95rem;
+        color: #333;
+        gap: 4px;
+    }
+
+        #ESICCard .container1 .summary-list li span {
+            color: #000;
+        }
+
+        #ESICCard .container1 .summary-list li strong {
+            color: #000;
+            font-weight: 600;
+        }
+
+/* Responsive layout */
+@media (max-width: 768px) {
+    #ESICCard .container1 .summary-list li {
+        font-size: 0.9rem;
+    }
+
+    #ESICCard .container1 .summary-card {
+        padding: 1.25rem;
+    }
+}
+
+
+
+/* ============ CONTAINER 2 STYLES ============ */
+
+#ESICCard #container2 .custom-card {
+    background-color: #FEF3EC;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===== Small Table Styling ===== */
+#ESICCard .container2 .small-table-wrapper {
+    max-height: 350px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #E45D27 #FEF3EC;
+    border-radius: 4px;
+    scroll-behavior: smooth;
+}
+
+    #ESICCard .container2 .small-table-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #ESICCard .container2 .small-table-wrapper::-webkit-scrollbar-track {
+        background: #FEF3EC;
+        border-radius: 10px;
+    }
+
+    #ESICCard .container2 .small-table-wrapper::-webkit-scrollbar-thumb {
+        background: #E45D27;
+        border-radius: 10px;
+    }
+
+/* Sticky Header */
+#ESICCard .container2 .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Table Body */
+#ESICCard .container2 .small-table tbody td {
+    background-color: #FEF3EC;
+    font-size: 0.75rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+
+#ESICCard .container2 .table-sm th,
+#ESICCard .container2 .table-sm td {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    vertical-align: middle;
+    text-align: center;
+}
+
+
+/* Hover Effect */
+#ESICCard .container2 table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+
+/* ========== ACTION MENU (SCOPED) ========== */
+#ESICCard .container2 .action-menu {
+    position: relative;
+    width: 40px;
+    text-align: right;
+    background-color: #FEF3EC;
+}
+
+    #ESICCard .container2 .action-menu .btn {
+        color: #E45D27;
+    }
+
+        #ESICCard .container2 .action-menu .btn:hover {
+            color: #c44b1d;
+        }
+
+    #ESICCard .container2 .action-menu .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    #ESICCard .container2 .action-menu .dropdown-item:hover {
+        background-color: #FFE2D5;
+        color: #E45D27;
+    }
+
+/* Compact Toolbar */
+#ESICCard .container2 .table-toolbar {
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Themed Filter Buttons */
+#ESICCard .container2 .filter-btn {
+    border-radius: 999px;
+    border: 1px solid #E45D27;
+    color: #E45D27;
+    background: transparent;
+    padding: 4px 14px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    transition: all 0.2s ease-in-out;
+}
+
+    #ESICCard .container2 .filter-btn:hover,
+    #ESICCard .container2 .filter-btn.active {
+        background-color: #E45D27;
+        color: #fff;
+    }
+
+/* Dropdown Buttons */
+#ESICCard .container2 .btn-outline-primary {
+    border-color: #E45D27;
+    color: #E45D27;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    padding: 4px 14px;
+    transition: all 0.2s ease-in-out;
+}
+
+    #ESICCard .container2 .btn-outline-primary:hover,
+    #ESICCard .container2 .btn-outline-primary:focus,
+    #ESICCard .container2 .btn-outline-primary.show {
+        background-color: #E45D27 !important;
+        color: #fff !important;
+        border-color: #E45D27 !important;
+        box-shadow: none !important;
+    }
+
+/* Search Field */
+#ESICCard .container2 .table-toolbar .form-control-sm {
+    height: 30px;
+    font-size: 0.75rem;
+    border-radius: 999px;
+    border-color: #E45D27;
+    padding: 0 10px;
+}
+
+/* Dropdown Menu */
+#ESICCard .container2 .dropdown-menu {
+    font-size: 0.8rem;
+}
+
+/* Keep Table Inside Card */
+#ESICCard .container2 .custom-card .table-responsive {
+    max-height: calc(100% - 50px);
+}
+
+
+
+/* ===== Table pagination ===== */
+
+#ESICCard .container2 .table-pagination {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 8px;
+    margin-top: 6px;
+}
+
+    #ESICCard .container2 .table-pagination button {
+        border-radius: 999px;
+        font-size: 0.75rem;
+        padding: 4px 12px;
+    }
+
+#ESICCard .container2 #viewAllRows {
+    background-color: #E45D27;
+    color: #fff;
+    border: none;
+    transition: background 0.2s ease-in-out;
+}
+
+    #ESICCard .container2 #viewAllRows:hover {
+        background-color: #c44b1d;
+    }
+
+
+/* ================= ESIC Edit Modal ================= */
+
+.esic-edit-dialog {
+    max-width: 100%;
+    margin: 0;
+}
+
+.esic-edit-modal .modal-content {
+    border-radius: 12px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #FFF1EB;
+}
+
+.esic-edit-header {
+    gap: 12px;
+    background: #E45D27;
+}
+
+.esic-edit-body {
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+.esic-upload-page-card {
+    border-radius: 12px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.06);
+}
+
+.esic-upload-back {
+    background: #fff !important;
+    color: var(--primary);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+    .esic-upload-back i {
+        margin-right: 6px;
+    }
+
+.esic-edit-body .form-control {
+    background: #fff;
+    border: 1px solid rgba(34,34,34,0.08);
+    border-radius: 6px;
+    padding: .375rem .5rem;
+}

@@ -1,0 +1,93 @@
+﻿
+@{
+    ViewBag.Title = "checkout";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/LicenseRequestMasterController.js"></script>
+<div class="pagecontentbody">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+                </div>
+                <div class="col-sm-3 text-end">
+                    <a class="btn btn-dark" href="@Url.Action("licenseMasterBulkP","RetailSection")">Back</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <p class="mb-0 p-3">( {{Totallength}} items)</p>
+                            <div class="table-responsive nosearch" style="max-height: 420px;" ng-init="GetCheckout()">
+                                <table class="table table-bordred tableFixHead chekouttbl">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center"></th>
+                                            <th class="text-center">Store Code</th>
+                                            <th class="text-center">Ref Store Code</th>
+                                            <th class="text-center">License Name</th> 
+                                            <th class="text-center">Subtotal</th>
+                                            <th class="text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in CheckOutList">
+                                            <td class="text-center">
+                                                <img src="~/compliance/images/AsgaardSofa.png" />
+                                            </td>
+                                            <td class="text-center">
+                                                <b>{{x.StoreCode}}</b>
+                                            </td>
+                                            <td class="text-center">
+                                                <b>{{x.RefStoreCode}}</b>
+                                            </td> 
+                                            <td class="text-center">{{x.LicenceId}}</td> 
+                                            <td class="text-center">{{x.Amount}}</td>
+                                            <td class="text-center"><a ng-click="Deletecheckout(x.Id)"><i class="fa fa-trash-alt"></i></a></td>
+                                        </tr>
+                                        
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="mb-3">Order Summary</h5>
+                            <div class="row" style="min-height:150px;">
+                                <div class="col-6">Name</div>
+                                <div class="col-6 text-end">{{UserName}}</div>
+                                <div class="col-6">ContactNo</div>
+                                <div class="col-6 text-end">{{ContactNo}}</div>
+                                <div class="col-6">Email Id</div>
+                                <div class="col-6 text-end">{{EmailId}}</div>
+                               
+                            </div>
+                            <div class="row">
+                                <div class="col-12"><div class="spreator"></div></div>
+                            </div>
+                            <div class="row pt-3 pb-5">
+                                <div class="col-4"><b>Total</b></div>
+                                <div class="col-8 text-end">
+                                    <b class="text-danger">Rs. {{TotalAmount}}</b><br />
+                                    <small>(GST included if applicable)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-12 d-grid">
+                            <a    ng-click="InsertPaymentProcess()" class="btn btn-lg btn-warning">Check Out</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

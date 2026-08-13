@@ -1,0 +1,765 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+}
+
+
+<link href="~/Content/Masters/WorkerRegistration/style.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="~/Content/Masters/WorkerRegistration/script.js"></script>
+
+<link rel="stylesheet" href="~/CommonDashboard/Style.css">
+<script src="~/scripts/RetailJsLib/WorkerRegistrationController.js"></script>
+
+<style>
+    .cropper-view-box,
+    .cropper-face,
+    .cropper-crop-box {
+        border-radius: 50%;
+    }
+
+    .text-danger {
+        color: red;
+    }
+
+    #cropModal {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,.6);
+        z-index: 999999 !important;
+    }
+
+        #cropModal .modal-dialog {
+            z-index: 999999 !important;
+        }
+
+    .cropper-container {
+        z-index: 9999999 !important;
+    }
+</style>
+<div class="workerRegistration px-4 py-4">
+
+    <!-- Progress Card -->
+    <div class="workerRegistrationProgressCard">
+
+        <div class="workerRegistrationProgressLeft">
+            <h2>Complete Your Profile</h2>
+            <p>
+                Fill in the fields available to you. Locked fields will be
+                completed by your contractor or employer.
+            </p>
+        </div>
+
+        <div class="workerRegistrationProgressRight">
+
+            <div class="workerRegistrationProgressHeader">
+                <span>Completion Progress</span>
+                <strong>{{progress}}% </strong>
+            </div>
+
+            <div class="workerRegistrationProgressBar">
+                <div class="workerRegistrationProgressBar">
+                    <div style="height:100%;
+                background:var(--primary);
+                border-radius:20px;
+                transition:0.5s;"
+                         ng-style="{'width': progress + '%'}">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Tabs -->
+
+    <div class="workerRegistrationTabs">
+
+        <button class="workerRegistrationTab active"
+                data-target="workerDetails">
+            Worker Details
+        </button>
+
+        <button class="workerRegistrationTab"
+                data-target="contactDetails">
+            Contact & Address
+        </button>
+
+        <button class="workerRegistrationTab"
+                data-target="bankDetails">
+            Statutory & Bank Details
+        </button>
+
+        @*<button class="workerRegistrationTab"
+                    data-target="nomineeDetails">
+                Nominee Details
+            </button>*@
+
+        <button class="workerRegistrationTab"
+                data-target="documentDetails">
+            Documents
+        </button>
+
+        <button class="workerRegistrationTab"
+                data-target="jobHistoryDetails">
+            Job History
+        </button>
+
+    </div>
+
+    <!-- Tab Content -->
+
+    <div class="workerRegistrationFormCard">
+
+        <!-- Worker Details -->
+        <div class="workerRegistrationTabContent active"
+             id="workerDetails">
+
+            <div class="workerRegistrationGrid">
+
+
+
+                <div class="workerRegistrationField">
+                    <label>Ref Worker Code  <span class="text-danger">*</span></label>
+                    <input class="validateA" id="txtRefEmployeeCode" ng-model="RefEmployeeCode" name="RefEmployeeCode">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Worker Name  <span class="text-danger">*</span></label>
+                    <input class=" validateA" id="txtEmployeeName" ng-model="EmployeeName" name="EmployeeName" ng-disabled="true">
+                </div>
+
+
+
+                <div class="workerRegistrationField">
+                    <label>Designation  <span class="text-danger">*</span></label>
+                    <input class=" validateA" id="txtEmployeeDesignation" ng-model="EmployeeDesignation">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Department  <span class="text-danger">*</span></label>
+                    <input class=" validateA" id="txtEmployeeDepartment" ng-model="EmployeeDepartment">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Father/Husband Name  <span class="text-danger">*</span></label>
+                    <input class=" validateA" id="txtFatherHusbandName" ng-model="FatherHusbandName">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Gender  <span class="text-danger">*</span></label>
+                    <select class="validateA" ng-model="Gender">
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Marital Status  <span class="text-danger">*</span></label>
+                    <select class="validateA" ng-model="MaritalStatus">
+                        <option value="">Select</option>
+                        <option value="Married">Married</option>
+                        <option value="UnMarried">UnMarried</option>
+                    </select>
+                </div>
+
+
+
+                <div class="workerRegistrationField">
+                    <label>Date of Birth  <span class="text-danger">*</span></label>
+                    <input type="date" class=" validateA" id="txtDateofBirth" ng-model="DateofBirth">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Date of Joining  <span class="text-danger">*</span></label>
+                    <input type="date" class=" validateA" id="txtDOJ" ng-model="DOJ">
+                </div>
+
+
+
+
+                <div class="workerRegistrationField">
+                    <label>Blood Group  <span class="text-danger">*</span></label>
+                    <input class="validateA" id="txtBloodGroup" ng-model="BloodGroup">
+                </div>
+
+                <div class="workerRegistrationField">
+
+                    <label style="display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; text-align: left;">
+                        Worker Photo
+                    </label>
+                    <input type="file"
+                           onchange="angular.element(this).scope().openCropper(this)"
+                           style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Contact & Address -->
+        <div class="workerRegistrationTabContent"
+             id="contactDetails">
+
+            <div class="workerRegistrationGrid">
+
+                <div class="workerRegistrationField">
+                    <label>Present Address  <span class="text-danger">*</span></label>
+                    <input class=" validateA"
+                           id="txtPresentAddress"
+                           ng-model="PresentAddress">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Permanent Address  <span class="text-danger">*</span></label>
+                    <input class=" validateA"
+                           id="txtPermanentAddress"
+                           ng-model="PermanentAddress">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Worker Email ID  <span class="text-danger">*</span></label>
+                    <input type="email" class=" validateA" ng-model="EmployeeEmailID" ng-disabled="true">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Mobile Number  <span class="text-danger">*</span></label>
+                    <input type="text" class=" validateA" ng-model="MobileNumber" ng-disabled="true">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Alternative Mobile No.</label>
+                    <input type="text" ng-model="AlternativeMobileNumber">
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Bank -->
+        <div class="workerRegistrationTabContent"
+             id="bankDetails">
+
+            <div class="workerRegistrationGrid">
+                <div class="workerRegistrationField">
+                    <label>PAN Number</label>
+                    <input id="txtPANNumber"
+                           ng-model="PANNumber"
+                           maxlength="10"
+                           minlength="10"
+                           style="text-transform:uppercase;">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Aadhar Number</label>
+                    <input type="text"
+                           id="txtAdharCardNumber"
+                           ng-keypress="onlyNumbers($event)"
+                           ng-model="AdharCardNumber"
+                           numeric-only
+                           dynamic-length
+                           maxlength="12"
+                           minlength="12">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>UAN Number</label>
+                    <input id="txtPreviousUAN"
+                           ng-model="PreviousUAN">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>PF Account No.</label>
+                    <input id="txtPFAccount"
+                           ng-model="PFAccount">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Bank Account No.</label>
+                    <input id="txtBankAccountNumber"
+                           ng-model="BankAccountNumber"
+                           numeric-only>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Bank IFSC Code</label>
+                    <input id="txtBankIFSCCode"
+                           ng-model="BankIFSCCode">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Previous ESIC</label>
+                    <input id="txtPreviousESI"
+                           ng-model="PreviousESI">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Gross Salary</label>
+                    <input id="txtGrossSalary"
+                           ng-model="GrossSalary"
+                           numeric-only>
+                </div>
+
+
+            </div>
+
+        </div>
+
+        <!-- Nominee -->
+        <!--<div class="workerRegistrationTabContent"
+             id="nomineeDetails">
+
+            <div class="workerNomineeWrapper">-->
+        <!-- Gratuity -->
+        <!--<div class="workerNomineeSection">
+
+            <h5 class="workerNomineeTitle">
+                Gratuity Act Nominee
+            </h5>
+
+            <div class="workerNomineeGrid">
+
+                <div class="workerRegistrationField">
+                    <label>Nominee Name</label>
+                    <input id="txtNameofNominee"
+                           ng-model="NameofNominee">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Relation</label>
+                    <input id="txtRelationofNominee"
+                           ng-model="RelationofNominee">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>DOB</label>
+                    <input type="date"
+                           id="txtDOBofNominee"
+                           ng-model="DOBofNominee">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Address</label>
+                    <input id="txtAddressofNominee" ng-model="AddressofNominee">
+                </div>
+
+            </div>
+
+        </div>-->
+        <!-- PF -->
+        <!--<div class="workerNomineeSection">
+
+            <div class="workerNomineeHeader">
+
+                <h5 class="workerNomineeTitle">
+                    PF Nominee
+                </h5>
+
+                <div class="form-check workerNomineeCopy">
+
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="pfSame">
+
+                    <label class="form-check-label"
+                           for="pfSame">
+                        Same as Above
+                    </label>
+
+                </div>
+
+            </div>
+
+            <div class="workerNomineeGrid">
+
+                <div class="workerRegistrationField">
+                    <label>Nominee Name</label>
+                    <input type="text" value="Sudha Sharma">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Relation</label>
+                    <input type="text" value="Wife">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>DOB</label>
+                    <input type="text" value="11 Oct 1992">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Address</label>
+                    <input type="text"
+                           value="Sector 136, Noida, Uttar Pradesh">
+                </div>
+
+            </div>
+
+        </div>-->
+        <!-- ESIC -->
+        <!--<div class="workerNomineeSection">
+
+            <div class="workerNomineeHeader">
+
+                <h5 class="workerNomineeTitle">
+                    ESIC Nominee
+                </h5>
+
+                <div class="form-check workerNomineeCopy">
+
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="esicSame">
+
+                    <label class="form-check-label"
+                           for="esicSame">
+                        Same as Above
+                    </label>
+
+                </div>
+
+            </div>
+
+            <div class="workerNomineeGrid">
+
+                <div class="workerRegistrationField">
+                    <label>Nominee Name</label>
+                    <input type="text" value="Sudha Sharma">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Relation</label>
+                    <input type="text" value="Wife">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>DOB</label>
+                    <input type="text" value="11 Oct 1992">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Address</label>
+                    <input type="text"
+                           value="Sector 136, Noida, Uttar Pradesh">
+                </div>
+
+            </div>
+
+        </div>-->
+        <!-- Bonus -->
+        <!--<div class="workerNomineeSection">
+
+            <div class="workerNomineeHeader">
+
+                <h5 class="workerNomineeTitle">
+                    Bonus Nominee
+                </h5>
+
+                <div class="form-check workerNomineeCopy">
+
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="bonusSame">
+
+                    <label class="form-check-label"
+                           for="bonusSame">
+                        Same as Above
+                    </label>
+
+                </div>
+
+            </div>
+
+            <div class="workerNomineeGrid">
+
+                <div class="workerRegistrationField">
+                    <label>Nominee Name</label>
+                    <input type="text" value="Sudha Sharma">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Relation</label>
+                    <input type="text" value="Wife">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>DOB</label>
+                    <input type="text" value="11 Oct 1992">
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>Address</label>
+                    <input type="text"
+                           value="Sector 136, Noida, Uttar Pradesh">
+                </div>
+
+            </div>
+
+        </div>-->
+        <!-- Other -->
+        <!--<div class="workerNomineeSection">
+
+                    <div class="workerNomineeHeader">
+
+                        <h5 class="workerNomineeTitle">
+                            Other Nominee
+                        </h5>
+
+                        <div class="form-check workerNomineeCopy">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="otherSame">
+
+                            <label class="form-check-label"
+                                   for="otherSame">
+                                Same as Above
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="workerNomineeGrid">
+
+                        <div class="workerRegistrationField">
+                            <label>Nominee Name</label>
+                            <input type="text" value="Sudha Sharma">
+                        </div>
+
+                        <div class="workerRegistrationField">
+                            <label>Relation</label>
+                            <input type="text" value="Wife">
+                        </div>
+
+                        <div class="workerRegistrationField">
+                            <label>DOB</label>
+                            <input type="text" value="11 Oct 1992">
+                        </div>
+
+                        <div class="workerRegistrationField">
+                            <label>Address</label>
+                            <input type="text"
+                                   value="Sector 136, Noida, Uttar Pradesh">
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>-->
+        <!-- Documents -->
+        <div class="workerRegistrationTabContent"
+             id="documentDetails">
+
+            <div class="workerRegistrationGrid">
+
+
+                <div class="workerRegistrationField">
+                    <label>PAN Card</label>
+                    <input type="file"
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           id="fuPANCardFilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('PANCardFilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="PANCardFilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(PANCardFilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(PANCardFilePath,'PAN Card')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Aadhar Card(Front Side)</label>
+                    <input type="file"
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           id="fuAdhaarCard_FrontSide_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('AdhaarCard_FrontSide_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="AdhaarCard_FrontSide_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(AdhaarCard_FrontSide_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(AdhaarCard_FrontSide_FilePath,'AdhaarCard_FrontSide')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Aadhar Card(Back Side)</label>
+                    <input type="file"
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           id="fuAdhaarCard_BackSide_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('AdhaarCard_BackSide_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="AdhaarCard_BackSide_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(AdhaarCard_BackSide_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(AdhaarCard_BackSide_FilePath,'AdhaarCard_BackSide')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Cheque/Passbook Copy</label>
+                    <input type="file"
+                           accept=".pdf"
+                           id="fuCheque_Passbook_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('Cheque_Passbook_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="Cheque_Passbook_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(Cheque_Passbook_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(Cheque_Passbook_FilePath,'ChequePassbookCopy')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Educational Certificate</label>
+                    <input type="file"
+                           accept=".pdf"
+                           id="fuEducationCertificateFilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('EducationCertificateFilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="EducationCertificateFilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(EducationCertificateFilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(EducationCertificateFilePath,'Educational Certificate')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Experience Ceritificate</label>
+                    <input type="file"
+                           accept=".pdf"
+                           id="fuExperienceCertificateFilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('ExperienceCertificateFilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="ExperienceCertificateFilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(ExperienceCertificateFilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(ExperienceCertificateFilePath,'Experience Certificate')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Relieving Letter</label>
+                    <input type="file"
+                           accept=".pdf"
+                           id="fuRelievingLetterfFilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('RelievingLetterfFilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="RelievingLetterfFilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(RelievingLetterfFilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(RelievingLetterfFilePath,'Relieving Letter')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Payslips</label>
+                    <input type="file"
+                           accept=".pdf"
+                           id="fuPayslipsFilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('PayslipsFilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="PayslipsFilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(PayslipsFilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(PayslipsFilePath,'Payslips')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Photo</label>
+                    <input type="file"
+                           accept=".jpg,.jpeg,.png"
+                           id="fuPhotos_1_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('Photos_1_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="Photos_1_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(Photos_1_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(Photos_1_FilePath,'Photo-1')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+
+                <div class="workerRegistrationField">
+                    <label>TIC Card</label>
+                    <input type="file"
+                           accept=".jpg,.jpeg,.png"
+                           id="fuPhotos_3_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('Photos_3_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="Photos_3_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(Photos_3_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(Photos_3_FilePath,'Photo-3')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Signature</label>
+                    <input type="file"
+                           accept=".jpg,.jpeg,.png"
+                           id="fuPhotos_4_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('Photos_4_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="Photos_4_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(Photos_4_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(Photos_4_FilePath,'Photo-4')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Job History -->
+        <div class="workerRegistrationTabContent"
+             id="jobHistoryDetails">
+
+            <div class="workerRegistrationGrid">
+
+                <div class="workerRegistrationField">
+                    <label>Client Name</label>
+                    <input type="text" ng-model="CName">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Site Name</label>
+                    <input type="text" ng-model="SName">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Nature of Job</label>
+                    <input type="text" ng-model="NatureJob">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Type of Worker</label>
+                    <input type="text" ng-model="TypeWork">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Start Date</label>
+                    <input type="date" ng-model="Sdate">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>End Date</label>
+                    <input type="date" ng-model="endate">
+                </div>
+                <div class="workerRegistrationField">
+                    <label>Appointment Letter</label>
+                    <input type="file"
+                           accept=".jpg,.jpeg,.png"
+                           id="fuPhotos_2_FilePath{{$index}}"
+                           onchange="angular.element(this).scope().uploadFile('Photos_2_FilePath', this)" style=" border:1px solid #ccc;border-radius:4px;padding:5px;font-size:12px;">
+                    <div ng-if="Photos_2_FilePath" style="margin-top:5px;">
+                        <i class="bi bi-eye" ng-click="ViewFileC(Photos_2_FilePath)" style="cursor:pointer;margin-right:10px;"></i>
+                        <i class="bi bi-download" ng-click="DownloadFileC(Photos_2_FilePath,'Photo-2')" style="cursor:pointer;"></i>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <div id="cropModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%; background:rgba(0,0,0,0.7);z-index:9999999; justify-content:center;align-items:center;">
+
+        <div style="background:#fff;padding:10px;border-radius:10px;width:80%;text-align:center;">
+
+            <img id="cropImage" style="max-width:100%;max-height:300px;" />
+
+            <br><br>
+
+
+            <button class="workerRegistrationNextBtn" ng-click="closeCrop()">Cancel</button>
+            <button class="workerRegistrationNextBtn" ng-click="cropImageSave()">
+                Crop & Save
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+
+    <div class="workerRegistrationFooter" style=" display: flex;  gap: 15px;  margin-top: 15px;">
+        <button class="workerRegistrationNextBtn" ng-click="nextTab()">
+            Next
+        </button>
+
+        <button ng-click="SaveEmployee()"
+                style="border:none; border-radius:14px; background:var(--primary); color:white; font-size:16px; padding:6px 12px; font-weight:500;">
+            Submit
+        </button>
+    </div>
+</div>
+
+

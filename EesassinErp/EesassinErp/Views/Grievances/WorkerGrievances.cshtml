@@ -1,0 +1,302 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Grievances";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<link href="~/Content/Dashboards/WorkerGrievancesSupport/WorkerGrievanes/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/GrivancesController.js"></script>
+
+<div class="workerGrievances px-4 py-4">
+
+    <!-- Page Header -->
+    <div class="workerGrievancesHeader" ng-init="BindGrivances()">
+
+        <div>
+            <h3 class="supportPageTitle mb-1">
+                Grievances & Support
+            </h3>
+
+            <p class="supportPageSubTitle mb-0">
+                View all your submitted grievances and their progress
+            </p>
+        </div>
+
+        <div>
+
+            <a href="../Grievances/WorkerLodgeGrievance">
+                <button class="btn btn-sm add-btn"
+                        type="button">
+                    <i class="bi bi-plus me-1"></i>Lodge New Grievance
+                </button>
+            </a>
+        </div>
+
+    </div>
+
+
+    <!-- List View-->
+    <div id="supportListView">
+        <!-- GRIEVANCE CARD -->
+        <div class="supportTicketCard mb-2" ng-repeat="x in GrivancesList">
+
+            <!-- TOP -->
+            <div class="supportTicketTop">
+
+                <div class="supportTicketLeft">
+
+                    <div class="supportTicketIcon">
+                        <i class="bi bi-chat-left-text"></i>
+                    </div>
+
+                    <div class="supportTicketContent">
+
+                        <div class="supportTicketTitleRow">
+
+                            <h4 class="supportTicketTitle">
+                                {{x.Subject}}
+                            </h4>
+
+                            <div class="supportTicketBadges">
+
+
+                                <span class="supportBadge supportBadgeProgress">
+                                    {{x.Status}}
+                                </span>
+
+
+
+                            </div>
+
+                        </div>
+
+                        <p class="supportTicketDesc mb-0">
+                            {{x.AiText}}
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- INFO GRID -->
+            <div class="supportInfoGrid">
+
+                <div class="supportInfoItem">
+                    <label>Contractor</label>
+
+                    <div>
+                        <i class="bi bi-building"></i>
+                        <span>{{x.Contractor}}</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Site Location</label>
+
+                    <div>
+                        <i class="bi bi-geo-alt"></i>
+                        <span>    {{x.SiteName}}</span>
+                    </div>
+                </div>
+
+
+
+            </div>
+
+            <div class="supportEvidenceSection">
+
+                <div class="supportAudioBlock">
+
+                    <h6>Worker's Audio Recording</h6>
+
+                    <div class=" ">
+
+
+
+                        <div class="supportAudioInfo">
+
+                            <audio id="audioPlayer" ng-src="../DownloadMat/Uploads/Audio/{{x.AudioFileName}}"
+                                   controls
+                                   class="w-100 mt-3">
+                            </audio>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+                <div class="supportLetterBlock">
+
+                    <h6>Letter Image</h6>
+
+
+                    <div class="supportLetterImages" ng-if="x.Documents">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC('../DownloadMat/Uploads/GrevancesDocuments/' + x.Documents)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC('../DownloadMat/Uploads/GrevancesDocuments/' + x.Documents,'Letter Image')"></i>
+
+                    </div>
+
+                    @*<div class="supportLetterImages">
+                            <div class="supportLetterCount"
+                                 ng-if="x.Documents && x.Documents.split(',').length > 1">
+                                +{{ x.Documents.split(',').length}}
+                            </div>
+
+                        </div>*@
+
+                </div>
+
+                <div class="supportLetterBlock">
+                    <h6>Contractor Letter</h6>
+                    <div class="supportLetterImages" ng-if="x.Letter">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(x.Letter)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(x.Letter,'Contractor Letter')"></i>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="supportTicketFooter">
+
+                <div class="supportTicketMeta">
+
+                    <div>
+                        <i class="bi bi-clock"></i>
+                        Raised:  {{x.CreatedOn}}
+                    </div>
+
+                    <div>
+                        <i class="bi bi-activity"></i>
+                        Updated:  {{x.UpdateOn}}
+                    </div>
+
+                    <div>
+                        <i class="bi bi-person-workspace"></i>
+                        Assigned: {{x.Contractor}}
+                    </div>
+
+                </div>
+
+                <div class="supportTicketActions">
+                    <button class="supportBtn supportBtnLight"
+                            ng-click="Viewletter(x.Id)"
+                            ng-disabled="IsDownloading">
+
+                        <i ng-if="!IsDownloading" class="bi bi-eye"></i>
+
+                        <span ng-if="IsDownloading"
+                              class="spinner-border spinner-border-sm"
+                              role="status"
+                              aria-hidden="true"
+                              style="width:16px;height:16px;vertical-align:middle;"></span>
+
+                        {{ IsDownloading ? ' Please Wait...' : ' Download Letter' }}
+
+                    </button>
+
+                    <button class="supportBtn supportBtnLight"
+                            ng-click="Approveletter(x.Id)"
+                            ng-hide="x.approveletter == 1" hidden>
+                        <i class="bi bi-eye"></i>
+                        Generate Letter
+                    </button>
+                    <a href="../Grievances/WorkerGrievancesDetails?Id={{x.Id}}" style="text-decoration:none;">
+                        <button class="supportBtn supportBtnLight">
+                            <i class="bi bi-eye"></i>
+                            View Details
+                        </button>
+                    </a>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="text-center p-3" ng-if="!GrivancesList || GrivancesList.length == 0">
+            No Grievances Added
+        </div>
+    </div>
+
+    <!-- Hidden Letter Template -->
+    <div id="grievanceLetterTemplate"
+         style="display:none; width:794px; margin:0 auto; background:#ffffff; padding:50px; font-family:'Times New Roman', serif; font-size:16px; line-height:1.8; color:#000; box-sizing:border-box;">
+
+        <div style="margin-bottom:30px;">
+            <strong>To:</strong>
+        </div>
+
+        <div style="margin-bottom:8px;">
+            Contractor Name - {{Viewletterdetails.ContractorName}} ({{Viewletterdetails.contcode}})
+        </div>
+
+        <div style="margin-bottom:20px;">
+            Address - {{Viewletterdetails.ContractoAddress}}
+        </div>
+
+        <div style="margin-bottom:8px;">
+            Principal Employer Name -  {{Viewletterdetails.ClientName}}({{Viewletterdetails.Clientcode}})
+        </div>
+
+        <div style="margin-bottom:30px;">
+            Address - {{Viewletterdetails.ClientAddress}}
+        </div>
+
+        <div style="text-align:left; margin-bottom:30px;">
+            <strong>Date:</strong> {{Viewletterdetails.GeneratedOn}}
+        </div>
+
+        <div style="margin-bottom:25px;">
+            <strong>Subject:</strong> Request for Grievance Redressal Related to -  {{subject}}
+        </div>
+
+        <div style="margin-bottom:25px;">
+            Dear Sir/Ma'am,
+        </div>
+
+        <div style="margin-bottom:40px; text-align:justify; white-space:pre-wrap;">
+            {{Viewletterdetails.Details}} <!-- Grievances Detail -->
+        </div>
+
+        <div style="margin-bottom:50px;">
+            Sincerely,
+        </div>
+
+        <div>
+            <div style="margin-bottom:6px;">
+                <strong>{{Viewletterdetails.EmployeeName}}</strong><!-- Worker Name-->
+            </div>
+
+            <div style="margin-bottom:6px;">
+                {{Viewletterdetails.EmployeeDesignation}} <!-- Designation-->
+            </div>
+
+            <div style="margin-bottom:6px;">
+                Worker Code - {{Viewletterdetails.EmployeeCode}}
+            </div>
+
+            <div>
+                Contact No. - {{Viewletterdetails.MobileNumber}}
+            </div>
+        </div>
+
+    </div>
+
+</div>

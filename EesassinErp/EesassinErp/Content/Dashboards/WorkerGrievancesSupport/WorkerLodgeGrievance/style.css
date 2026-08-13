@@ -1,0 +1,305 @@
+﻿.workerLodgeGrievance {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #fff;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.workerLodgeGrievanceContainer {
+    max-width: 1600px;
+    margin: auto;
+}
+
+.workerLodgeGrievanceHeader h2 {
+    font-size: 26px;
+    color: var(--primary);
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.workerLodgeGrievanceHeader p {
+    color: #64748B;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.workerLodgeGrievanceRecorderCard,
+.workerLodgeGrievanceAiCard,
+.workerLodgeGrievanceGuideCard {
+    background: #FFFFFFCC;
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid var(--border);
+}
+
+.workerLodgeGrievanceRecorderCard {
+    text-align: center;
+}
+
+.workerLodgeGrievanceTimer {
+    font-size: 18px;
+    font-weight: 500;
+    /*color: var(--primary);*/
+    margin-bottom: 16px;
+}
+
+.workerLodgeGrievanceMicBtn {
+    width: 65px;
+    height: 65px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-size: 28px;
+    transition: .3s;
+}
+
+    .workerLodgeGrievanceMicBtn:hover {
+        background: var(--primary-dark);
+    }
+
+.workerLodgeGrievanceActionText {
+    margin-top: 16px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--primary);
+}
+
+.workerLodgeGrievanceMessage {
+    margin-top: 20px;
+    color: #64748B;
+    /*max-width: 500px;*/
+    font-size : 0.8rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.workerLodgeGrievanceUploadBtns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 26px;
+}
+
+.workerLodgeGrievanceUploadBtn {
+    border: 1px solid #CBD5E1;
+    background: #fff;
+    width: 300px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 500;
+    color: #444653;
+}
+
+.workerLodgeGrievanceAudioWrapper {
+    margin-top: 24px;
+}
+
+.workerLodgeGrievanceAudioCard {
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: left;
+}
+
+.workerLodgeGrievanceAudioInfo {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+    .workerLodgeGrievanceAudioInfo i {
+        font-size: 28px;
+        color: var(--primary);
+    }
+
+    .workerLodgeGrievanceAudioInfo h6 {
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .workerLodgeGrievanceAudioInfo span {
+        color: #64748B;
+        font-size: 12px;
+    }
+
+.workerLodgeGrievanceFooterActions {
+    margin-top: 24px;
+    display: flex;
+    justify-content: end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.workerLodgeGrievanceCancelBtn,
+.workerLodgeGrievanceSubmitBtn {
+    padding: 4px 12px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.workerLodgeGrievanceCancelBtn {
+    border: 1px solid #CBD5E1;
+    background: white;
+}
+
+.workerLodgeGrievanceSubmitBtn {
+    border: none;
+    color: white;
+    background: var(--primary);
+}
+
+.workerLodgeGrievanceAiCard {
+    margin-top: 20px;
+}
+
+.workerLodgeGrievanceAiHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+    .workerLodgeGrievanceAiHeader p {
+        margin: 0;
+        color: #64748B;
+        font-size : 0.8rem;
+    }
+
+.workerLodgeGrievanceProcessingBadge {
+    background: #FFF1EB;
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.workerLodgeGrievanceAiBody {
+    margin-top: 18px;
+    height: 220px;
+    overflow-y: auto;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.workerLodgeGrievanceSidebar {
+    position: sticky;
+    top: 20px;
+}
+
+.workerLodgeGrievanceGuideCard h5 {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.workerLodgeGrievanceGuideCard > p {
+    color: #64748B;
+    margin-bottom: 20px;
+}
+
+.workerLodgeGrievanceGuideList {
+    border: 1px solid #E2E8F0;
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.workerLodgeGrievanceGuideItem {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+    .workerLodgeGrievanceGuideItem:last-child {
+        margin-bottom: 0;
+    }
+
+.workerLodgeGrievanceGuideIcon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #D5E3FF;
+    border: 1px solid #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+    .workerLodgeGrievanceGuideIcon i {
+        color: var(--primary);
+    }
+
+.workerLodgeGrievanceGuideItem h6 {
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.workerLodgeGrievanceGuideItem p {
+    margin: 0;
+    color: #64748B;
+    font-size: 13px;
+}
+
+.workerLodgeGrievanceTipsCard {
+    margin-top: 20px;
+    border: 1px solid var(--border);
+    background: #f8f9fd;
+    border-radius: 16px;
+    padding: 18px;
+}
+
+.workerLodgeGrievanceTipsTitle {
+    color: var(--primary);
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.workerLodgeGrievanceTipsCard ul {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.workerLodgeGrievanceTipsCard li {
+    margin-bottom: 10px;
+}
+
+@media (max-width: 1199px) {
+    .workerLodgeGrievanceSidebar {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .workerLodgeGrievanceTimer {
+        font-size: 18px;
+    }
+
+    .workerLodgeGrievanceMicBtn {
+        width: 65px;
+        height: 65px;
+        font-size: 28px;
+    }
+}

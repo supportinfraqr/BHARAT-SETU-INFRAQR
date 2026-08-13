@@ -1,0 +1,4 @@
+﻿<select id="ddlFarmer" class="select2 form-control validate" ng-model="FarmerId" ng-init="BindFarmer();"   ng-change="BindFarm()">
+    <option value="">Select</option>
+    <option ng-repeat="x in FarmerList" value="{{x.FarmerId}}">{{x.Name}}</option>
+</select>

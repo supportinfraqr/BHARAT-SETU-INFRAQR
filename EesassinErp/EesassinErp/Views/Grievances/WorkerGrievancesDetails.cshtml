@@ -1,0 +1,240 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Grievances Details";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/WorkerGrievancesSupport/WorkerGrievanceDetails/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/GrivancesController.js"></script>
+
+<div class="workerGrievancesDetails px-4 py-4" ng-init="BindGrivancesDetail();BindTracking()">
+    <div ng-repeat="x in GrivancesDetailList">
+    <h2 class="workerGrievancesDetailsPageTitle" >
+        {{x.Subject}}
+    </h2>
+
+    <div class="workerGrievancesDetailsLayout">
+
+        <!-- LEFT SIDE -->
+        <div class="workerGrievancesDetailsLeft">
+
+            <!-- Worker Details -->
+            <div class="workerGrievancesDetailsCard">
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    WORKER & PROJECT DETAILS
+                </h6>
+
+                <div class="grievancesWorkerGrid">
+
+                    <div class="grievancesWorkerItem">
+                        <span>Name</span>
+                        <strong>{{x.EmployeeName}}</strong>
+                    </div>
+
+                    <div class="grievancesWorkerItem">
+                        <span>Site Location</span>
+                        <strong>{{x.SiteName}}</strong>
+                    </div>
+
+                    <div class="grievancesWorkerItem">
+                        <span>Contractor</span>
+                        <strong>{{x.Contractor}}</strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="workerGrievancesDetailsCard">
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    PROBLEM DESCRIPTION
+                </h6>
+
+                <p class="grievancesProblemText">
+                    {{x.AiText}}
+                </p>
+            </div>
+
+            <!-- Evidence -->
+            <div class="workerGrievancesDetailsCard">
+
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    EVIDENCE & ATTACHMENTS
+                </h6>
+
+                <div class="grievancesAudioPlayer">
+                    <audio id="audioPlayer" ng-src="../DownloadMat/Uploads/Audio/{{x.AudioFileName}}"
+                           controls
+                           class="w-100 mt-3">
+                    </audio>
+                    @*<button class="grievancesAudioPlayBtn">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+
+                    <div class="grievancesAudioContent">
+
+                        <div class="grievancesAudioName">
+                            Voice_Recording_Kumar.mp3
+                        </div>
+
+                        <div class="grievancesAudioProgress">
+                            <div class="grievancesAudioProgressFill"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="grievancesAudioTime">
+                        0:45 / 2:14
+                    </div>
+
+                    <button class="grievancesAudioVolumeBtn">
+                        <i class="bi bi-volume-up"></i>
+                    </button>*@
+
+                </div>
+
+                <div class="grievancesAttachmentsGrid">
+
+                    <div class="grievancesAttachmentCard" ng-repeat="doc in (x.Documents ? x.Documents.split(',') : [])">
+                        <img ng-src="../DownloadMat/Uploads/GrevancesDocuments/{{doc}}" alt="" />
+                    </div>
+
+
+
+
+
+                </div>
+
+            </div>
+
+            <!-- Add Action Button -->
+            @*<div class="grievancesActionBtnWrapper">
+
+                <button type="button"
+                        class="grievancesAddActionBtn"
+                        id="grievancesAddActionBtn">
+                    <i class="bi bi-plus"></i>
+                    Add Action
+                </button>
+
+            </div>*@
+
+            <!-- Action Card -->
+        <div class="workerGrievancesDetailsCard grievancesActionCard ">
+
+            <h6 class="workerGrievancesDetailsCardTitle">
+                ACTIONS TAKEN BY CONTRACTOR
+            </h6>
+
+            <textarea class="grievancesActionTextarea"
+                      placeholder="">{{x.VendorReaction}}</textarea>
+            <h6 class="workerGrievancesDetailsCardTitle">
+                ACTIONS TAKEN BY PRINCIPLE
+            </h6>
+            <textarea class="grievancesActionTextarea"
+                      placeholder="">{{x.ClientReaction}}</textarea>
+
+            <div class="grievancesActionFooter d-flex" ng-show="x.Status != 'Complete' && x.Status != 'ReOpen'">
+
+                <button class="grievancesSubmitBtn" ng-click="UpdateASMarked()">
+                    Mark as Resolved
+                </button>
+
+                <button class="grievancesSubmitBtn" ng-click="UpdateAsReOpen()">
+                    Request Re-opening
+                </button>
+                
+            </div>
+
+        </div>
+
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="workerGrievancesDetailsRight">
+
+            <!-- Trail -->
+            <div class="workerGrievancesDetailsCard grievancesStickyCard">
+
+                <h6 class="workerGrievancesDetailsCardTitle">
+                    GRIEVANCE TRAIL
+                </h6>
+
+                <div class="grievancesTrailBody">
+
+                    <div class="grievancesTimeline">
+
+                        <div class="grievancesTimelineItem completed">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>Grievance Raised</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    {{x.CreatedOn}}
+                                </span>
+
+                                <div class="grievancesBadge">
+                                    AUTO-LOGGED
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="grievancesTimelineItem completed">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                               <h5>Assigned to Grievance Redressal Community</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    {{x.CreatedOn}}
+                                </span>
+
+                                <p class="grievancesAssignedTo">
+                                    Assigned to:         {{x.Contractor}}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div ng-repeat="y in GrivancesTracking">
+                            <div class="grievancesTimelineItem completed">
+
+                                <div class="grievancesTimelineDot"></div>
+
+                                <div class="grievancesTimelineContent">
+                                    <span class="grievancesTimelineDate">
+                                        <h5>{{y.CStatus}}</h5>
+                                    </span>
+
+                                    <p class="grievancesAssignedTo">
+                                        {{y.CreatedOn}}
+                                    </p>
+
+                                </div>
+
+                            </div>
+ 
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+        </div>
+
+    </div>
+
+</div>
+</div>

@@ -1,0 +1,29 @@
+@media print {
+    @page {
+      margin: 2.5cm;   
+    }
+    div.row > div {
+      display: inline-block;  
+      border: solid 1px #ccc;
+      margin: 0.2cm;
+    }
+    div.row {
+      display: block;
+    }
+
+.table {
+    display: none;
+    border-spacing: 2px;
+width:100%;
+}
+.row {
+    display: table-row;
+}
+.row > div {
+    display: table-cell;
+    border: solid 1px #ccc;
+    padding: 2px;
+}
+
+}
+

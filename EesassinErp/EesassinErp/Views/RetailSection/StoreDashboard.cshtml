@@ -1,0 +1,895 @@
+﻿
+@{
+    ViewBag.Title = "StoreDashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+
+<link href="../StoreDashboard/css/custom_theme.css" rel='stylesheet' />
+<script src="~/scripts/RetailJsLib/StoreDashboardController.js?Ver=@ViewBag.Version"></script>
+<link href="../StoreDashboard/css/bootstrap.css" rel='stylesheet' />
+<link href="../StoreDashboard/css/all.css" rel="stylesheet" />
+<link href="../StoreDashboard/css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+<link href="../StoreDashboard/css/datepicker.min.css" rel='stylesheet' />
+<link href="../StoreDashboard/css/custom_theme.css" rel='stylesheet' />
+<link href="../StoreDashboard/css/colorTheme/default.css" rel='stylesheet' />
+<link href="../StoreDashboard/css/draggle.css" rel="stylesheet" />
+<link href="../StoreDashboard/css/responsive.css" rel='stylesheet' />
+<link href="../StoreDashboard/css/datepicker.css" rel="stylesheet" />
+<link href="../StoreDashboard/css/sweetalert2.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+    .valid {
+        text-align: center;
+        padding: 5px;
+        background-color: #5bb98d;
+        color: #fff;
+        border-radius: 2px;
+        font-size: 12px;
+    }
+
+    div.dt-buttons {
+        float: RIGHT !important;
+    }
+
+    input.form-control.form-control-sm {
+        border-radius: 17px !important;
+        width: 75% !important;
+        padding-left: 3em !important;
+        margin-right: 200px !important;
+    }
+
+    .form-control {
+        display: inline-flex !important;
+        width: 70%;
+    }
+    .Vaild {
+        text-align: center;
+        padding: 5px;
+        background-color: #30c384;
+        color: #fff;
+        border-radius: 2px;
+        font-size: 12px;
+    }
+    input.form-control.form-control-sm {
+        position: initial;
+    }
+</style>
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    td {
+        padding: 0;
+    }
+
+    input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 8px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+    }
+
+        input[placeholder="To"] {
+            border: none;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        input.datepicker-here {
+            border-radius: 0;
+        }
+</style>
+<script>
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+
+        // Select the div to export
+        const element = document.getElementById('exportdiv');
+
+        // Use html2canvas to render the div into a canvas
+        html2canvas(element, {
+            scale: 3,                  // Higher scale for better resolution
+            useCORS: true,             // Ensure cross-origin resources are loaded
+            scrollX: 0,                // Prevent scrolling artifacts
+            scrollY: 0
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+
+            // Adjust PDF size dynamically based on the canvas dimensions
+            const pdfWidth = canvas.width / 2;  // Divide by scale to maintain original size
+            const pdfHeight = canvas.height / 2;
+
+            // Create a new jsPDF instance
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            // Add image to PDF, applying margins (e.g., 10px)
+            const margin = 10;
+            pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth - 2 * margin, pdfHeight - 2 * margin);
+
+            // Save the PDF
+            pdf.save('StoreDashboard.pdf');
+        }).catch(error => {
+            console.error('Error exporting to PDF:', error);
+        });
+    }
+
+
+
+</script>
+<div class="pagecontentbody nobg">
+    <div class="pagebody" ID="exportdiv">
+        <div class="col-md-12 pageheader pb-2">
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="pagehedn">Location Dashboard</div>
+                </div>
+                <div class="col-sm-1 text-end">
+                    <a class="btn btn-pdf" onclick="exportToPDF();angular.element(document).scope().ManageLog('Download Pdf Location Dashboard')">PDF</a>
+                </div>
+                <div class="col-sm-4">
+                    <div class="filterinput">
+                        <i class="fa fa-calendar-alt"></i>
+                        <div class="dtinput">
+                            <label>Filter Period</label>
+                            <table>
+                                <tr>
+                                    <td style="width: 45%;"><input type="text" data-date-format='yyyy-mm-dd' id="StorestartDate" style="text-align:right !important" class="form-control filterdate datepicker-here" placeholder="Start Date"></td>
+                                    <td style="width: 1%;">-</td>
+                                    <td style="width: 45%;"><input type="text" data-date-format='yyyy-mm-dd' id="StoreendDate" style="text-align:right !important" class="form-control filterdate datepicker-here" placeholder="End Date"></td>
+                                    <td style="width: 9%;"><a style="background-color: #0da9dc; border-radius: 5px; border: 1px solid #0da9dc; color: #fff !important;font-size:small" ng-click="BindStoreStatus()">Go</a></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12"  ng-cloak>
+            <div class="row">
+                <div class="col-md-12 mb-3" ng-init="BindStoreStatus()">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="pbox gbox">
+                                        <div class="ptext">Active</div>
+                                        <div class="pnum">
+                                            <span>{{SActive}}</span>
+                                            <div class="squb"></div> <small>{{SActivePercentage}}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="pbox rbox">
+                                        <div class="ptext">Deactive</div>
+                                        <div class="pnum">
+                                            <span>{{SDeactive}}</span>
+                                            <div class="squb"></div> <small>{{SDeactivePercentage}}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="pbox bbox">
+                                        <div class="ptext">Upcoming</div>
+                                        <div class="pnum">
+                                            <span>{{SUpcoming}}</span>
+                                            <div class="squb"></div> <small>{{SUpcomingPercentage}}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="pbox ybox">
+                                        <div class="ptext">Total</div>
+                                        <div class="pnum">
+                                            <span>{{STotal}}</span>
+                                            <div class="squb"></div> <small>{{STotalPercentage}}%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2 upcomtask">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row mb-2" ng-init="BindUpcommingStatus()">
+                                <div class="col-md-6">
+                                    <div class="pagehedn">Upcoming Task</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="filterinput">
+                                        <i class="fa fa-calendar-alt"></i>
+                                        <div class="dtinput">
+                                            <label>Filter Period</label>
+                                            <table>
+                                                <tr>
+
+                                                    <td style="width: 45%;"><input data-date-format='yyyy-mm-dd' style="text-align:right !important" type="text" id="UpcomingstartDate" class="form-control filterdate datepicker-here" placeholder="Start Date"></td>
+                                                    <td style="width: 1%;">-</td>
+                                                    <td style="width: 45%;"><input data-date-format='yyyy-mm-dd' type="text" id="UpcomingendDate" style="text-align:right !important" class="form-control filterdate datepicker-here" placeholder="End Date"></td>
+                                                    <td style="width: 9%;"><a style="background-color: #0da9dc; border-radius: 5px; border: 1px solid #0da9dc; color: #fff !important;font-size:small" ng-click="BindUpcommingStatus()">Go</a></td>
+                                                </tr>
+                                            </table>
+
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="pbox bbox">
+                                        <div class="ptext">Upcoming</div>
+                                        <div class="pnum">
+                                            <span>{{Upcoming}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="pbox ybox">
+                                        <div class="ptext">
+                                            Upcoming License
+                                            <ul class="docdetl">
+                                                <li class="li1">Doc. Pending : {{Draft}}</li>
+                                                <li class="li1">Pending App : {{Submit}}</li>
+                                                <li class="li2">Applied : {{Applied}}</li>
+                                                <li class="li3">Issued : {{Issued}}</li>
+                                            </ul>
+
+                                        </div>
+                                        <div class="pnum">
+                                            <span>{{TL}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="pbox rbox">
+                                        <div class="ptext">Executed Document</div>
+                                        <div class="pnum">
+                                            <span>{{ExectedDocument}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="pbox gbox">
+                                        <div class="ptext">Active (Operational)</div>
+                                        <div class="pnum">
+                                            <span>{{UTA}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2 hotnhry">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12" ng-init="BindCircleGraphStatus()">
+                                    <div class="pagehedn">Hots And  Hurry  (NSO)</div>
+                                </div>
+
+                                <div class="col-md-4 text-center">
+                                    <div class="pie" id="pieChart">
+                                        <!-- Pie chart element will be initialized with the dynamic data-pie value -->
+                                    </div>
+                                    <div class="mb-4"><strong>Total Budgeted (No.) </strong></div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="pie" id="pieChart1">
+                                        <!-- Pie chart element will be initialized with the dynamic data-pie value -->
+                                    </div>
+                                    <div class="mb-4"><strong>Location Days</strong></div>
+                                </div>
+                                <div class="col-md-4 text-center">
+                                    <div class="pie" id="pieChart2">
+                                        <!-- Pie chart element will be initialized with the dynamic data-pie value -->
+                                    </div>
+                                    <div class="mb-4"><strong>Actual Location Days</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-2 stordoc">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <div class="pagehedn">Location Document</div>
+                                </div>
+                                <div class="col-sm-8 text-end" ng-init="BindRegion();BindStoreCode();BindState();">
+                                    <select id="ddlRegionId" class="cddl" ng-model="RegionId" ng-change="BindStoreDoc()">
+                                        <option value="">Region</option>
+                                        <option ng-repeat="x in RegionList" value="{{x.Id}}">{{x.Name}}</option>
+                                    </select>
+
+                                    <select id="ddlStateId" class="cddl" ng-model="StateId" ng-change="BindStoreDoc()">
+                                        <option value="">State</option>
+                                        <option ng-repeat="x in StateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                    </select>
+                                    <select id="ddlStoreCode" class="cddl" ng-model="StoreCode" ng-change="BindStoreDoc()">
+                                        <option value="">Location code</option>
+                                        <option ng-repeat="x in StoreCodeList" value="{{x.StoreCode}}">{{x.StoreCode}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12" ng-init="BindStoreDoc()">
+                                    <div id="main" style="width: 100%;height:300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2 dirwise">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <div id="ddlcont" class="ddlcont" ng-init="BindYear()">
+                                        <select class="cddl active" ng-model="Year" ng-change="BindPieChartRegion()">
+                                            <option value="">Select Year</option>
+                                            <option ng-repeat="x in YearList" value="{{x.EndYear}}">{{x.EndYear}}</option>
+
+                                        </select>
+                                        <select class="cddl" ng-model="Month" ng-change="BindPieChartRegion()">
+                                            <option value="">Select Month</option>
+                                            <option value="01">January</option>
+                                            <option value="02">February</option>
+                                            <option value="03">March</option>
+                                            <option value="04">April</option>
+                                            <option value="05">May</option>
+                                            <option value="06">June</option>
+                                            <option value="07">July</option>
+                                            <option value="08">August</option>
+                                            <option value="09">September</option>
+                                            <option value="10">October</option>
+                                            <option value="11">November</option>
+                                            <option value="12">December</option>
+                                        </select>
+                                        <select class="cddl" ng-model="Category" ng-change="BindPieChartRegion()">
+                                            <option value="">Select Category</option>
+                                            <option value='Store'>Location</option>
+                                            <option value='Warehouse'>Warehouse</option>
+                                            <option value='Factory'>Factory</option>
+
+                                        </select>
+                                        <select class="cddl" ng-model="Status" ng-change="BindPieChartRegion()">
+                                            <option value="">Select Status</option>
+                                            <option value='1'>Active</option>
+                                            <option value='0'>DeActive</option>
+                                            <option value='2'>Upcomming</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12" ng-init="BindPieChartRegion()">
+                                    <div id="pimain" style="width: 100%;height:310px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body dochilet">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive" ng-init="DocumentHighlights()">
+                                        <div class="pagehedn">Document Highlights</div>
+                                        <table id="dochilight" class="table table-bordred tableFixHead">
+                                            <thead class="bg-info">
+                                                <tr class="noborder">
+                                                    <th>Serial No.</th>
+                                                    <th>Location Code</th>
+                                                    <th>Document Name</th>
+                                                    <th>Period</th>
+                                                    <th>Days to Expire</th>
+                                                    <th style="width: 15%;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="noborder" ng-repeat="licenseMaster in DocumentHighlightsList">
+                                                    <td>{{ licenseMaster.SrNo }} </td>
+                                                    <td>{{ licenseMaster.StoreCode }}</td>
+                                                    <td>{{ licenseMaster.DocumentType }}</td>
+                                                    <td>{{ licenseMaster.ValidDate }}</td>
+                                                    <td>{{ licenseMaster.DayExpire }}</td>
+                                                    <td>
+                                                        <div ng-if="licenseMaster.ExpiryStatus=='Expired'" Class="expiredtxt">{{licenseMaster.ExpiryStatus}}</div>
+                                                        <div ng-if="licenseMaster.ExpiryStatus=='Expiring Soon'" Class="expiringtxt">{{licenseMaster.ExpiryStatus}}</div>
+                                                        <div ng-if="licenseMaster.ExpiryStatus=='Vaild'" Class="Vaild">{{licenseMaster.ExpiryStatus}}</div>
+                                                    </td>
+
+                                                </tr>
+
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="../StoreDashboard/js/jquery-min.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/bootstrap.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/jquery.nanoscroller.min.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/dataTables.bootstrap5.min.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/datepicker.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/datepicker.en.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/builder.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/beautifyhtml.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/dragble.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/sweetalert2.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/theme-script.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/datepicker.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/circularProgressBar.min.js"></script>
+<script type="text/javascript" src="../StoreDashboard/js/ProgressScript.js"></script>
+
+<!----------------For Data table ----------------->
+<link href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.css" rel="stylesheet" />
+<link href="https://cdn.datatables.net/buttons/3.1.2/css/buttons.dataTables.css" rel="stylesheet" />
+<script type="text/javascript" src="https://cdn.datatables.net/2.1.8/js/dataTables.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/3.1.2/js/dataTables.buttons.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.dataTables.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.html5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/3.1.2/js/buttons.print.min.js"></script>
+
+<!----------------End For Data table ----------------->
+<!-- InstanceBeginEditable name="for-javascript" -->
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script>
+    function storedoc(A, B, C, D, E, F, G) {
+        var chartDom = document.getElementById('main');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        option = {
+            xAxis: {
+                type: 'category',
+                axisLabel: { interval: 0, rotate: 25 },
+                data: [
+                    'Electricity Bill',
+                    'Lease / LOI',
+                    'Property Tax Receipt',
+                    'Fire NOC',
+                    'Pollution',
+                    'Ownership Docs',
+                    'Additional Doc Name'
+
+                ].map(function (str) {
+                    return str.replace(' ', '\n');
+                })
+            },
+            yAxis: {
+                type: 'value'
+            },
+            grid: {
+                left: 25,
+                top: 20,
+                right: 10,
+                bottom: 45
+            },
+            series: [
+                {
+                    data: [
+                        {
+                            value: A,
+                            itemStyle: { color: '#FF5B5BB2' }
+                        },
+                        {
+                            value: B,
+                            itemStyle: { color: '#3A8FFFB2' }
+                        },
+                        {
+                            value: C,
+                            itemStyle: { color: '#FF5B5BB2' }
+                        },
+                        {
+                            value: D,
+                            itemStyle: { color: '#00B074B2' }
+                        },
+                        {
+                            value: E,
+                            itemStyle: { color: '#00B074B2' }
+                        },
+                        {
+                            value: F,
+                            itemStyle: { color: '#00B074B2' }
+                        },
+                        {
+                            value: G,
+                            itemStyle: { color: '#00B074B2' }
+                        }
+
+                    ],
+                    type: 'bar',
+                    barWidth: '25px',
+                }
+            ]
+        };
+
+        option && myChart.setOption(option);
+
+
+    }
+    function PieChartRegion(East, West, North, South, Central) {
+
+        var chartDom1 = document.getElementById('pimain');
+        var myChart1 = echarts.init(chartDom1);
+        var option;
+
+        option = {
+            tooltip: {
+                trigger: 'item'
+            },
+            legend: {
+                top: '25%',
+                left: '5%',
+                orient: 'vertical'
+            },
+            series: [
+                {
+                    name: 'Store',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    padAngle: 3,
+                    itemStyle: {
+                        borderRadius: 8
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 25,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    labelLine: {
+                        show: false
+                    },
+                    label: {
+                        formatter: '{c}',
+                        position: 'inside'
+                    },
+                    data: [
+                        { value: East, name: 'East' },
+                        { value: West, name: 'West' },
+                        { value: North, name: 'North' },
+                        { value: South, name: 'South' },
+                        { value: Central, name: 'Central' }
+                    ]
+                }
+            ]
+        };
+
+        option && myChart1.setOption(option);
+    };
+
+</script>
+
+<script>
+    function myFunction(e) {
+        if (document.querySelector('#ddlcont select.active') !== null) {
+            document.querySelector('#ddlcont select.active').classList.remove('active');
+        }
+        e.target.className = "cddl active";
+    }
+</script>
+
+<script>
+    function FIRESMS() {
+        var CircularProgressBar = function () {
+            "use strict";
+            const t = {
+                colorSlice: "#00a1ff",
+                fontColor: "#000",
+                fontSize: "1.2rem",
+                fontWeight: 600,
+                lineargradient: !1,
+                number: !0,
+                round: !1,
+                fill: "none",
+                unit: "%",
+                rotation: -90,
+                size: 120,
+                stroke: 15
+            }
+                , e = t => {
+                    let { rotation: e, animationSmooth: n } = t;
+                    return `transform:rotate(${e}deg);transform-origin: 50% 50%;${n ? `transition: stroke-dashoffset ${n}` : ""}`
+                }
+                , n = t => ({
+                    "stroke-dasharray": t || "264"
+                })
+                , o = t => {
+                    let { round: e } = t;
+                    return {
+                        "stroke-linecap": e ? "round" : ""
+                    }
+                }
+                , r = t => ({
+                    "font-size": t.fontSize,
+                    "font-weight": t.fontWeight
+                })
+                , i = t => document.querySelector(t)
+                , s = (t, e) => {
+                    let { lineargradient: n, index: o, colorSlice: r } = e;
+                    t.setAttribute("stroke", n ? `url(#linear-${o})` : r)
+                }
+                , a = (t, e) => {
+                    for (const n in e)
+                        t?.setAttribute(n, e[n])
+                }
+                , c = t => document.createElementNS("http://www.w3.org/2000/svg", t)
+                , l = (t, e) => {
+                    const n = c("tspan");
+                    return n.classList.add(t),
+                        e && (n.textContent = e),
+                        n
+                }
+                , d = (t, e, n) => {
+                    const o = 264 - t / 100 * (n ? 2.64 * (100 - n) : 264);
+                    return e ? -o : o
+                }
+                , f = function (t, e, n) {
+                    return void 0 === n && (n = "beforeend"),
+                        t.insertAdjacentElement(n, e)
+                };
+            return class {
+                constructor(t, e) {
+                    void 0 === e && (e = {}),
+                        this.t = t,
+                        this.o = e;
+                    const n = document.querySelectorAll(`.${t}`)
+                        , o = [].slice.call(n);
+                    o.map(((t, n) => {
+                        const o = JSON.parse(t.getAttribute("data-pie"));
+                        t.setAttribute("data-pie-index", o.index || e.index || n + 1)
+                    }
+                    )),
+                        this.i = o
+                }
+                initial(t) {
+                    const e = t || this.i;
+                    Array.isArray(e) ? e.map((t => this.l(t))) : this.l(e)
+                }
+                h(t, d, h) {
+                    const u = this.t;
+                    h.number && f(t, ((t, e) => {
+                        const n = c("text");
+                        n.classList.add(`${e}-text-${t.index}`),
+                            f(n, l(`${e}-percent-${t.index}`)),
+                            f(n, l(`${e}-unit-${t.index}`, t.unit));
+                        const o = {
+                            x: "50%",
+                            y: "50%",
+                            fill: t.fontColor,
+                            "text-anchor": "middle",
+                            dy: t.textPosition || "0.35em",
+                            ...r(t)
+                        };
+                        return a(n, o),
+                            n
+                    }
+                    )(h, u));
+                    const $ = i(`.${u}-circle-${h.index}`)
+                        , m = {
+                            fill: "none",
+                            "stroke-width": h.stroke,
+                            "stroke-dashoffset": "264",
+                            ...n(),
+                            ...o(h)
+                        };
+                    a($, m),
+                        this.animationTo({
+                            ...h,
+                            element: $
+                        }, !0),
+                        $.setAttribute("style", e(h)),
+                        s($, h),
+                        d.setAttribute("style", `width:${h.size}px;height:${h.size}px;`)
+                }
+                animationTo(e, n) {
+                    void 0 === n && (n = !1);
+                    const o = this.t
+                        , c = JSON.parse(i(`[data-pie-index="${e.index}"]`).getAttribute("data-pie"))
+                        , l = i(`.${o}-circle-${e.index}`);
+                    if (!l)
+                        return;
+                    const f = n ? e : {
+                        ...t,
+                        ...c,
+                        ...e,
+                        ...this.o
+                    };
+                    if (n || s(l, f),
+                        !n && f.number) {
+                        const t = {
+                            fill: f.fontColor,
+                            ...r(f)
+                        }
+                            , e = i(`.${o}-text-${f.index}`);
+                        a(e, t)
+                    }
+                    const h = i(`.${o}-percent-${e.index}`);
+                    if (f.animationOff)
+                        return f.number && (h.textContent = `${f.percent}`),
+                            void l.setAttribute("stroke-dashoffset", d(f.percent, f.inverse));
+                    let u = JSON.parse(l.getAttribute("data-angel"));
+                    const $ = Math.round(e.percent);
+                    if (0 === $ && (f.number && (h.textContent = "0"),
+                        l.setAttribute("stroke-dashoffset", "264")),
+                        $ > 100 || $ < 0 || u === $)
+                        return;
+                    let m, p = n ? 0 : u;
+                    const g = 1e3 / (f.speed || 1e3);
+                    let x = performance.now();
+                    const k = t => {
+                        m = requestAnimationFrame(k);
+                        const e = t - x;
+                        e >= g - .1 && (x = t - e % g,
+                            p = p < f.percent ? p + 1 : p - 1),
+                            l.setAttribute("stroke-dashoffset", d(p, f.inverse, f.cut)),
+                            h && f.number && (h.textContent = `${p}`),
+                            l.setAttribute("data-angel", p),
+                            l.parentNode.setAttribute("aria-valuenow", p),
+                            p === $ && cancelAnimationFrame(m)
+                    }
+                        ;
+                    requestAnimationFrame(k)
+                }
+                l(e) {
+                    const n = e.getAttribute("data-pie-index")
+                        , o = JSON.parse(e.getAttribute("data-pie"))
+                        , r = {
+                            ...t,
+                            ...o,
+                            index: n,
+                            ...this.o
+                        }
+                        , i = c("svg")
+                        , s = {
+                            role: "progressbar",
+                            width: r.size,
+                            height: r.size,
+                            viewBox: "0 0 100 100",
+                            "aria-valuemin": "0",
+                            "aria-valuemax": "100"
+                        };
+                    a(i, s),
+                        r.colorCircle && i.appendChild(this.u(r)),
+                        r.lineargradient && i.appendChild((t => {
+                            let { index: e, lineargradient: n } = t;
+                            const o = c("defs")
+                                , r = c("linearGradient");
+                            r.id = `linear-${e}`;
+                            const i = [].slice.call(n);
+                            o.appendChild(r);
+                            let s = 0;
+                            return i.map((t => {
+                                const e = c("stop");
+                                a(e, {
+                                    offset: `${s}%`,
+                                    "stop-color": `${t}`
+                                }),
+                                    r.appendChild(e),
+                                    s += 100 / (i.length - 1)
+                            }
+                            )),
+                                o
+                        }
+                        )(r)),
+                        i.appendChild(this.u(r, "top")),
+                        e.appendChild(i),
+                        this.h(i, e, r)
+                }
+                u(t, r) {
+                    void 0 === r && (r = "bottom");
+                    const i = c("circle");
+                    let s = {};
+                    if (t.cut) {
+                        const r = 264 - 2.64 * (100 - t.cut);
+                        s = {
+                            "stroke-dashoffset": t.inverse ? -r : r,
+                            style: e(t),
+                            ...n(),
+                            ...o(t)
+                        }
+                    }
+                    const l = {
+                        fill: t.fill,
+                        stroke: t.colorCircle,
+                        "stroke-width": t.strokeBottom || t.stroke,
+                        ...s
+                    };
+                    t.strokeDasharray && Object.assign(l, {
+                        ...n(t.strokeDasharray)
+                    });
+                    const d = {
+                        cx: "50%",
+                        cy: "50%",
+                        r: 42,
+                        "shape-rendering": "geometricPrecision",
+                        ..."top" === r ? {
+                            class: `${this.t}-circle-${t.index}`
+                        } : l
+                    };
+                    return a(i, d),
+                        i
+                }
+            }
+        }();
+    }
+    //# sourceMappingURL=circularProgressBar.min.js.map
+    function firecode() {
+        const elements = [].slice.call(document.querySelectorAll(".pie"));
+        const circle = new CircularProgressBar("pie");
+
+        // Check if IntersectionObserver is supported
+        if ("IntersectionObserver" in window) {
+            const config = {
+                root: null,
+                rootMargin: "0px",
+                threshold: 0.75
+            };
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.map((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.75) {
+                        circle.initial(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, config);
+
+            elements.map((item) => {
+                observer.observe(item);
+            });
+        } else {
+            elements.map((element) => {
+                circle.initial(element);
+            });
+        }
+
+        // Start random animation every 3 seconds
+        setInterval(() => {
+            const typeFont = [100, 200, 300, 400, 500, 600, 700];
+            const colorHex = `#${Math.floor((Math.random() * 0xffffff) << 0).toString(16)}`;
+            const options = {
+                index: 17,
+                percent: Math.floor(Math.random() * 100 + 1),
+                colorSlice: colorHex,
+                fontColor: colorHex,
+                fontSize: `${Math.floor(Math.random() * (1.4 - 1 + 1) + 1)}rem`,
+                fontWeight: typeFont[Math.floor(Math.random() * typeFont.length)]
+            };
+            circle.animationTo(options);
+        }, 3000);
+    }
+</script>

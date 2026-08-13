@@ -1,0 +1,236 @@
+﻿
+<div id="printDiv" ng-init="GetReportHeaderUsingCategory('General Report');">
+    <table class="bill-box bill-box2 page-ba">
+        <tbody>
+            <tr>
+                <td>
+                    <div class="bill-box-top">
+                        <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+                        <div style="width: 100%;  ">
+                            <div class="invoice-t">
+                                <div ng-if="IExport">
+                                    I.E.C. No. <span ng-bind="IECNo"></span> &nbsp; <br /> <span style="float:left;">  L.U.T. No. <span ng-bind="LUTNo"></span> </span>
+                                </div>
+                            </div>
+                            <div class="invoice-t invoice text-center">
+                                <span ng-bind="I_Title"></span><br />
+                                <span class="small-t" id="SubTitle1" ng-model="I_SubTitle" >({{I_SubTitle}})</span>
+                                <span class="small-t" id="SubTitle2" ng-model="I_SubTitle2">({{I_SubTitle2}})</span>
+                                <span class="small-t" id="SubTitle3" ng-model="I_SubTitle3">({{I_SubTitle3}})</span>
+
+
+
+                            </div>
+                            <div class="invoice-t text-right"> CIN No. <span ng-bind="CINNo"></span> </div>
+                        </div>
+                        <div style="width: 100%;" ng-if="IExport">
+                            <div class="invoice-t2" style="text-align:center;">
+                                Supplyment for export with letter of without payment of intreregated tax.
+                            </div>
+                        </div>
+                        <div class="transportation">
+                            <div class="col-sm-2">
+                                <div class="gstin-left">
+                                    <p>GSTIN</p>
+                                    <p>Tax Is Payable On Reverse Charge(Yes/No)</p>
+                                    <p>Invoice Number</p>
+                                    <p>Invoice Date</p>
+                                    <p>State Code</p>
+                                </div>
+                                <div class="gstin-right">
+                                    <p ng-bind="CGSTN"></p>
+                                    <p ng-bind="I_RTaxation"></p>
+                                    <p ng-bind="I_No"></p>
+                                    <p ng-bind="I_Date| date:'dd/MMM/yyyy'"></p>
+                                    <p ng-bind="BranchStateCode"></p>
+                                </div>
+                            </div>
+                            <div class="col-sm-2" style="float:right; border-right:none;">
+                                <div class="gstin-left" style="width:32%;">
+                                    <p>Transportation Mode</p>
+                                    <p>Veh No.</p>
+                                    <p>Place of Supply</p>
+                                    <p>Bilty No.</p>
+                                    <p>Bilty Date</p>
+                                </div>
+                                <div class="gstin-right" style="width:68%;">
+                                    <p ng-bind="I_Transportation"></p>
+                                    <p ng-bind="IVehicleNo"></p>
+                                    <p ng-bind="PlaceOfSupply"></p>
+                                    <p ng-bind="IBiltyNo"></p>
+                                    <p ng-bind="IBiltyDate| date:'dd/MMM/yyyy'"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="details-receiver">
+                            <div class="col-sm-2">
+                                Details of Receiver (Billed to)
+                            </div>
+                            <div class="col-sm-2">
+                                Details of Consignee(Shipped to)
+                            </div>
+                        </div>
+
+                        <div class="transportation2">
+                            <div class="col-sm-2">
+                                <table>
+                                    <tr>
+                                        <td style="width: 97px;">Name</td>
+                                        <td ng-bind="BCustomer"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Address</td>
+                                        <td ng-bind="BAddress"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">State Code</td>
+                                        <td ng-bind="BState"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">GSTIN</td>
+                                        <td ng-bind="BGSTN"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">PAN No.</td>
+                                        <td ng-bind="BPANNo"></td>
+                                    </tr>
+
+                                </table>
+
+
+                            </div>
+                            <div class="col-sm-2" style="float:right; border-right:none;">
+
+                                <table>
+                                    <tr>
+                                        <td style="width: 97px;">Name</td>
+                                        <td ng-bind="SCustomer"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Address</td>
+                                        <td ng-bind="SAddress"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">State Code</td>
+                                        <td ng-bind="SState"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">GSTIN</td>
+                                        <td ng-bind="SGSTN"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">PAN No.</td>
+                                        <td ng-bind="SPANNo"></td>
+                                    </tr>
+
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bill-box-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:47px">Sr. No.</th>
+                                    <th>Description of Goods</th>
+                                    <th>HSN Code</th>
+                                    <th>No. Of Bags</th>
+                                    <th style="white-space: nowrap;">Qty <br /> (In Bags)</th>
+                                    <th style="white-space: nowrap;">Toal Qty <br /> (In Kg)</th>
+                                    <th style="white-space: nowrap;">Rate <br /> (Per Kg)</th>
+                                    <th>Taxable Value</th>
+                                    <th colspan="2" style="width:100px;text-align:center;">CGST<p style="border-top: solid 1px #000;padding-top: 0px;line-height: 24px;font-weight: 600;">Rate|Amount</p></th>
+                                    <th colspan="2" style="width:100px;text-align:center;">SGST<p style="border-top: solid 1px #000;padding-top: 0px;line-height: 24px;font-weight: 600;">Rate|Amount</p></th>
+                                    <th colspan="2" style="width:100px;text-align:center;">IGST<p style="border-top: solid 1px #000;padding-top: 0px;line-height: 24px;font-weight: 600;">Rate|Amount</p></th>
+                                    <th style="width:100px;vertical-align:middle; text-align:center;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody >
+                                <tr ng-repeat="DD in DetailData">
+                                    <td style="width:40px">{{DD.SrNo}}</td>
+                                    <td>{{DD.ItemDetail}}</td>
+                                    <td>{{DD.HSNCode}}</td>
+                                    <td style="text-align:right;">{{DD.IssueBags}}</td>
+                                    <td style="text-align:right;">{{DD.IssueBagsInKg}}</td>
+                                    <td style="text-align:right;">{{DD.TotalQty}}</td>
+                                    <td style="text-align:right;">{{ConvertToTwoDecimalPoint(DD.Rate)}}</td>
+                                    <td style="text-align:right;">{{ConvertToTwoDecimalPoint(DD.TaxableAmt)}}</td>
+                                    <td style="text-align:right;width:35px;border-right: 1px dotted !important;">{{DD.CRate}}</td>
+                                    <td style="text-align:right;border-left: 1px dotted !important;">{{ConvertToTwoDecimalPoint(DD.CAMT)}}</td>
+                                    <td style="text-align:right;width:35px;border-right: 1px dotted !important;">{{DD.SRate}}</td>
+                                    <td style="text-align:right;border-left: 1px dotted !important;">{{ConvertToTwoDecimalPoint(DD.SAMT)}}</td>
+                                    <td style="text-align:right;width:35px;border-right: 1px dotted !important;">{{DD.IRate}}</td>
+                                    <td style="text-align:right;border-left: 1px dotted !important;">{{ConvertToTwoDecimalPoint(DD.IAMT)}}</td>
+                                    <td style="text-align:right;">{{ConvertToTwoDecimalPoint(DD.Total)}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bill-box-top">
+                        <div class="invoice-value">
+                            <span>Invoice Value (In Words)</span> <span ng-bind="InWords"></span>
+                        </div>
+
+                        <div class="terms-conditions">
+
+                            <table class="TC-table">
+                                <tbody>
+                                    <tr>
+                                        <td  style="width:60%;vertical-align:bottom;">
+
+
+                                            <div class="terms-left">
+                                                <span>Terms & Conditions</span>
+                                                <ol style="">
+                                                    <li ng-repeat="TCD in TANDCData">
+                                                        <p>{{TCD.Term}}</p>
+                                                    </li>
+                                                </ol>
+                                            </div>
+                                        </td>
+                                        <td>
+
+                                            <div class="terms-right">
+                                                <div ng-repeat="BTD in BillTaxData">
+                                                    <div class="{{BTD.Class}}">
+                                                        <span>{{BTD.Head}}</span>
+                                                        <span>{{ConvertToTwoDecimalPoint(BTD.Amount)}}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                       <td></td>
+                                        <td>
+                                            <div class="terms-right">
+                                                <div class="for-company">
+                                                    For {{CompanyName}}
+                                                </div>
+                                                <div class="authorised">
+                                                    Authorised Signatory
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+
+
+
+
+

@@ -1,0 +1,270 @@
+﻿.lwfDashPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 84vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Top bar instructions */
+.lwfDashPage .top-bar .limit-instruction {
+    font-size: 0.9rem;
+    color: #6b4b2d;
+    background: transparent;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+/* Generate button (rounded pill) */
+.lwfDashPage .btn-generate {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+}
+
+.lwfDashPage .btn-generate:hover {
+    background: var(--primary-dark);
+    color: #fff;
+}
+
+.lwfDashPage .btn-generate:focus,
+.lwfDashPage .btn-generate:active {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    box-shadow: none;
+}
+
+.lwfDashPage .btn-generate:active {
+    transform: scale(0.98);
+}
+
+
+/* Section cards */
+.lwfDashPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .lwfDashPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        min-height: 320px;
+    }
+
+/* Table wrapper and hide scrollbar visually */
+.lwfDashPage .small-table-wrapper {
+    max-height: auto;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+}
+
+    .lwfDashPage .small-table-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+.lwfDashPage .small-table-wrapper {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* table header sticky */
+.lwfDashPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.lwfDashPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.lwfDashPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+.lwfDashPage .small-table tbody td .store-code-link {
+    text-decoration: none;
+}
+
+
+
+/* filter button */
+.lwfDashPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 12px;
+    font-weight: 400;
+    font-size: 0.8rem;
+}
+
+    .lwfDashPage .filter-btn.active,
+    .lwfDashPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.lwfDashPage .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.lwfDashPage .export-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 12px;
+    font-weight: 400;
+    font-size: 0.8rem;
+}
+
+    .lwfDashPage .export-btn:hover {
+        background: var(--primary-dark);
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .lwfDashPage .export-btn:focus,
+    .lwfDashPage .export-btn:active {
+        background: var(--primary);
+        color: #fff;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* Pagination area */
+.lwfDashPage .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .lwfDashPage .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: var(--card-bg);
+        color: var(--primary);
+        font-size:0.8rem;
+    }
+
+        .lwfDashPage .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.lwfDashPage #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .lwfDashPage #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+/* statuses */
+.lwfDashPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.lwfDashPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.lwfDashPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.lwfDashPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .lwfDashPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .lwfDashPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .lwfDashPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .lwfDashPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+/*Buttons*/
+.view-btn, .download-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .view-btn:hover, .download-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+

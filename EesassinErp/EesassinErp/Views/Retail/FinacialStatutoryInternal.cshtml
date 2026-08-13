@@ -1,0 +1,532 @@
+﻿ 
+
+@{
+    ViewBag.Title = "Finance Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/FinacialStatutoryController.js?Ver=@ViewBag.Version"></script>
+<link rel="stylesheet" href="~/ComplianceDashboard/css/style.css">
+<link rel="stylesheet" href="~/ComplianceDashboard/css/style.css">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<!-- AngularJS -->
+@*<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="~/scripts/angular.min.js"></script>*@
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script>
+    app.directive('fileModel', ['$parse', function ($parse) {
+        return {
+            restrict: 'A',
+            scope: {
+                fileModel: '=',
+                rowContext: '=' // passing the row object 
+            },
+            link: function (scope, element, attrs) {
+                element.bind('change', function () {
+                    scope.$parent.fileSelected(element[0].files, scope.rowContext);
+                });
+            }
+        };
+    }]);
+
+
+</script>
+
+<style>
+    .filters button {
+        padding: 8px 16px;
+        background: #6f42c1;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 3px !important;
+    }
+
+    .table th, .table td {
+        text-align: left;
+        padding: 4px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    input#Remark {
+        font-size: 10px;
+    }
+
+    .form-control {
+        padding: 0.075rem 0.25rem !important;
+    }
+
+    #complianceTable thead th {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 10;
+    }
+
+    .table > thead > tr > th, .table > tbody > tr > td {
+        font-size: 12px;
+    }
+    /* Styling the container */
+    .file-upload-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    /* Hide the default file input */
+    input[type="file"] {
+        display: none;
+    }
+
+    /* Style the label that looks like a button */
+    .file-upload-label {
+        display: inline-block;
+        background-color: #4CAF50;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+        /* Hover effect for the label */
+        .file-upload-label:hover {
+            background-color: #45a049;
+        }
+
+        /* Optional: Add some text or icon next to the label for better UX */
+        .file-upload-label:before {
+            content: "📄 ";
+        }
+
+    .compliance-summary5 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: -22px;
+        width: 100%;
+        height: 100% !important
+    }
+
+
+    tbody td {
+        height: 35px !important;
+        font-size: 12px !important;
+        vertical-align: middle !important;
+        padding: 4px 6px !important;
+    }
+</style>
+<style>
+    .search-row {
+        position: sticky;
+        top: 35px; /* Adjust based on the height of your header row */
+        background: #fff;
+        z-index: 10;
+    }
+
+    thead tr:last-child {
+        position: sticky;
+        top: 0;
+        background: #f1f1f1;
+        z-index: 11;
+    }
+
+    #complianceTable th,
+    #complianceTable td {
+        height: 40px;
+        vertical-align: middle;
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <!-- Overview Cards -->
+        <!-- Graphs and Statistics -->
+        <!-- Statutory Due Dates Summary -->
+        <section class="compliance-summary5" style="position:relative">
+
+            <div class="container">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" data-tab="statutory">Statutory Due Dates</div>
+                    @*<div class="tab" data-tab="internal">Internal Due Dates</div>*@
+                </div>
+
+                <!-- Statutory Content -->
+                <div class="content active" id="statutory">
+                    <!-- Filters -->
+
+
+                    <div class="filters">
+                        <div ng-init="BindFilter()">
+                            <select ng-model="State">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in SMasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                            </select>
+                            <select ng-model="Month">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in SMasterList  | unique:'Month'" value="{{x.Month}}"> {{x.Month}}  </option>
+                            </select>
+                            <select ng-model="Year">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in YearsList | orderBy: '-'" value="{{x}}"> {{x}}  </option>
+                            </select>
+                        </div>
+                        <button ng-click="BindSearch()">Search</button>
+                        <div style=" color: #fff; border: none; border-radius: 5px; background: #6f42c1; ">
+                            <a href="#" class="btn expbtn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="margin-top: 2px; color: #fff; background: #6f42c1; ">Export</a>
+                            <ul class="dropdown-menu escalul" aria-labelledby="escalbtnLink">
+                                <li><a ng-click="ExportTableToExcel();ManageLog('Export in Excel')" class="dropdown-item">Export in Excel</a></li>
+
+                                <li><a class="dropdown-item" ng-click="PrintTable();ManageLog('Export in PDF')">Export in PDF</a></li>
+                            </ul>
+                        </div>
+                         <!-- <button><a style="color: #fff;" href="../Retail/FinancialStatutorySetup?Financial Statutory Setup">Go to Setup</a></button>-->
+
+
+
+                    </div>
+
+
+                    <!-- Table -->
+                    <div style="max-height: 700px; overflow-y: auto;">
+                        <table id="complianceTable" class="table table-bordered table-striped display" ng-init="BindSearch()">
+                            <thead>
+                                <tr>
+                                    <th>SNo</th>
+                                    <th>Act Name</th>
+                                    <th>Compliance Name</th>
+                                    <th>Month</th>
+                                    <th>State Name</th>
+                                    <th>DueDate</th>
+                                    <th>Status</th>
+                                    <th>Actual Submission Date</th>
+                                    <th>Delay Days</th>
+                                    <th ng-if="IsExecuter=='Executer'">UploadFile</th>
+                                    <th>Upload Date</th>
+                                    <th class="no-print">Remark </th>
+                                    <TH>IsVerified</TH>
+                                    <th>View File</th>
+                                    <th class="no-print">Action</th>
+                                </tr>
+
+                            </thead>
+                            <tbody>
+
+                                <tr ng-repeat="row in complianceRows | filter:{Calendartype : 'Statutory'} | filter:search">
+                                    <td>{{row.SNo}}</td>
+                                    <td>{{row.Act}}</td>
+                                    <td>{{row.ComplianceName}}</td>
+                                    <td>{{row.Month}}</td>
+                                    <td>{{row.STATE_NM}}</td>
+                                    <td>{{row.DueDate}}</td>
+                                    <td>
+                                        <select class="form-control no-print" ng-model="row.CStatus" ng-disabled="IsExecuter!='Executer' || row.Flag=='1'">
+                                            <option value="">Select </option>
+                                            <option value="Complied">Complied </option>
+                                            <option value="Non Complied">Non Complied </option>
+                                            <option value="Delay complied">Delay complied </option>
+                                            <option value="Non-Applicable">Non-Applicable</option>
+                                        </select>
+                                        <p ng-show="false">{{row.CStatus}}</p>
+                                    </td>
+                                    <td>
+                                        <input date-input type="date" style="width:auto" class="form-control no-print" id="ActualSubmissionDate{{$index}}" ng-model="row.ActualSubmissionDate" ng-disabled="IsExecuter!='Executer'  || row.Flag=='1'">
+                                        <p ng-show="false">{{ row.ActualSubmissionDate | date:'yyyy-MM-dd' }}</p>
+                                    </td>
+                                    <td>{{row.DelayDays}}</td>
+                                    <td ng-if="IsExecuter=='Executer'">
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15  no-print">
+                                            <div class="input-box">
+                                                <div style="display: flex; align-items: center;">
+                                                    <button class="uploadbtn" ng-disabled="row.Flag=='1'"
+                                                            ng-click="SetValue(row,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">
+                                                        Choose File
+                                                    </button>
+
+                                                    <input type="file"
+                                                           id="fileupoad{{$index}}"
+                                                           file-model="row.UploadFile"
+                                                           ng-change="fileSelected(row.UploadFile, row)"
+                                                           ng-model="row.UploadFile" />
+
+
+                                                    <i class="fa fa-upload"
+                                                       style="color: green; margin-left: 10px;"
+                                                       ng-if="row.UploadFile"></i>
+                                                </div>
+
+
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p ng-show="false">
+                                            {{ row.UploadFile ? 'Uploaded' : 'Not Uploaded' }}
+                                        </p>
+                                    </td>
+
+                                    <td>{{row.CreateOn}}</td>
+                                    <td class="no-print">
+                                        <input ng-if="IsExecuter!='Executer'" ng-model="row.CRemark1" type="text" id="CRemark" style="font-size:10px" />
+                                        <input ng-if="IsExecuter=='Executer'" ng-model="row.VRemark1" type="text" id="VRemark" style="font-size:10px" ng-disabled="row.Flag=='1'" />
+                                        <p ng-if="IsExecuter=='Executer' && row.CRemark !='' ">
+                                            {{row.UserName}} (Reviewer) Remarks :
+                                            <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.CRemark,'Client Remark')"></i>
+                                        </p>
+                                        <p ng-if="IsExecuter!='Executer' && row.VRemark !=''">
+                                            {{row.UserName}} Executer Remark :
+                                            <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.VRemark,'Executer Remark')"></i>
+                                        </p>
+                                    </td>
+                                    <td class="no-print">
+
+
+                                        <select class="form-control" ng-model="row.IsVerified" ng-if="IsExecuter !='Executer'">
+                                            <option value="">Select</option>
+                                            <option value="Verified">Verified</option>
+                                            <option value="Clarify">Under Clarification</option>
+                                        </select>
+                                        <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Verified' && row.Flag=='1'" class="status completed">Verified</span>
+                                        <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Clarify' && IsExecuter=='Executer'" class="status pending">Under Clarification</span>
+                                    </td>
+                                    <td ng-show="false">
+                                        {{row.IsVerified}}
+                                    </td>
+                                    <td><a href="#" class="view" ng-show="row.openthis=='1'" ng-click="viewFile(row)">{{ row.openthis == '1' ? 'View' : '' }}</a> </td>
+                                    <td class="no-print">
+
+                                        <input ng-if="IsExecuter=='Executer' && row.Flag!='1'" type="button" value="Submit" ng-click="AfterverifyRecord(row )" />
+                                        <input ng-if="IsExecuter !='Executer' && row.IV =='' " type="button" value="Submit" ng-click="AfterverifyRecord(row )" />
+
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+
+                    </div>
+                    <table class="table table-bordered table-striped" style="font-size:10PX">
+                        <tfoot>
+                            <tr class="search-row">
+                                <th><input type="text" ng-model="search.Act" placeholder="Act" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.ComplianceName" placeholder="Compliance" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.STATE_NM" placeholder="State" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.DueDate" placeholder="Due Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+
+                                <th><input type="text" ng-model="search.ActualSubmissionDate" placeholder="Actual Submission Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.DelayDays" placeholder="Delay Days" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.CreateOn" placeholder="Uploaded Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                </div>
+
+                <!-- Icon in the table -->
+                <!-- Modal Structure -->
+                <div class="modal fade" id="remarkModal" tabindex="-1" role="dialog" aria-labelledby="remarkModalLabel">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="remarkModalLabel">{{HeaderRemark}}</h4>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close" ng-click="closeRemarkModal()">
+                                    &times;
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div ng-bind-html="selectedRemark"></div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Internal Content -->
+                <!--<div class="content" id="internal">-->
+                    <!-- Filters -->
+                    <!--<div class="filters">
+                        <div ng-init="BindFilter()">
+                            <select ng-model="State">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in SMasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                            </select>
+                            <select ng-model="Month">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                            </select>
+                            <select ng-model="Year">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in YearsList | orderBy: '-'" value="{{x}}"> {{x}}  </option>
+                            </select>
+                        </div>
+                        <button ng-click="BindSearch()">Search</button>
+                        <button ng-click="PrintTable1()">Export</button>
+                        <button><a style="color: #fff;" href="../Retail/StatutorySetup?Statutory Setup">Go to Setup</a></button>
+                    </div>
+                    <div style="max-height: 700px; overflow-y: auto;">
+                        <table id="complianceTable1" class="table table-bordered table-striped display" ng-init="BindSearch()">
+
+                            <thead>
+                                <tr>
+                                    <th>SNo</th>
+                                    <th>Act Name</th>
+                                    <th>Compliance Name</th>
+                                    <th>Registration No.</th>
+                                    <th>State Name</th>
+                                    <th>DueDate</th>
+                                    <th>Status</th>
+                                    <th>Actual Submission Date</th>
+                                    <th>Delay Days</th>
+                                    <th ng-if="IsExecuter=='Executer'">UploadFile</th>
+                                    <th>Upload Date</th>
+                                    <th class="no-print">Remark </th>
+                                    <TH>IsVerified</TH>
+                                    <th>View File</th>
+                                    <th class="no-print">Action</th>
+                                </tr>
+
+                            </thead>
+                            <tbody>
+
+                                <tr ng-repeat="row in complianceRows | filter:{Calendartype : 'Internal'} | filter:search">
+                                    <td>{{row.SNo}}</td>
+                                    <td>{{row.Act}}</td>
+                                    <td>{{row.ComplianceName}}</td>
+                                    <td>{{row.RegistrationNumber}}</td>
+                                    <td>{{row.STATE_NM}}</td>
+                                    <td>{{row.DueDate}}</td>
+                                    <td>
+                                        <select class="form-control no-print" ng-model="row.CStatus" ng-disabled="IsExecuter!='Executer' || row.Flag=='1'">
+                                            <option value="">Select </option>
+                                            <option value="Complied">Complied </option>
+                                            <option value="Non Complied">Non Complied </option>
+                                            <option value="Delay complied">Delay complied </option>
+                                            <option value="Non-Applicable">Non-Applicable</option>
+                                        </select>
+                                        <p ng-show="false">{{row.CStatus}}</p>
+                                    </td>
+                                    <td>
+                                        <input date-input type="date" style="width:auto" class="form-control no-print" id="ActualSubmissionDate{{$index}}" ng-model="row.ActualSubmissionDate" ng-disabled="IsExecuter!='Executer'  || row.Flag=='1'">
+                                        <p ng-show="false">{{ row.ActualSubmissionDate | date:'yyyy-MM-dd' }}</p>
+                                    </td>
+                                    <td>{{row.DelayDays}}</td>
+                                    <td ng-if="IsExecuter=='Executer'">
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15  no-print">
+                                            <div class="input-box">
+                                                <div style="display: flex; align-items: center;">
+                                                    <button class="uploadbtn" ng-disabled="row.Flag=='1'"
+                                                            ng-click="SetValue(row,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">
+                                                        Choose File
+                                                    </button>
+
+                                                    <input type="file"
+                                                           id="fileupoad{{$index}}"
+                                                           file-model="row.UploadFile"
+                                                           ng-change="fileSelected(row.UploadFile, row)"
+                                                           ng-model="row.UploadFile" />
+
+
+                                                    <i class="fa fa-upload"
+                                                       style="color: green; margin-left: 10px;"
+                                                       ng-if="row.UploadFile"></i>
+                                                </div>
+
+
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p ng-show="false">
+                                            {{ row.UploadFile ? 'Uploaded' : 'Not Uploaded' }}
+                                        </p>
+                                    </td>
+
+                                    <td>{{row.CreateOn}}</td>
+                                    <td class="no-print">
+                                        <input ng-if="IsExecuter!='Executer'" ng-model="row.CRemark1" type="text" id="CRemark" style="font-size:10px" />
+                                        <input ng-if="IsExecuter=='Executer'" ng-model="row.VRemark1" type="text" id="VRemark" style="font-size:10px" ng-disabled="row.Flag=='1'" />
+                                        <p ng-if="IsExecuter=='Executer' && row.CRemark !='' ">
+                                            {{row.UserName}} (Reviewer) Remarks :
+                                            <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.CRemark,'Client Remark')"></i>
+                                        </p>
+                                        <p ng-if="IsExecuter!='Executer' && row.VRemark !=''">
+                                            {{row.UserName}} Executer Remark :
+                                            <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.VRemark,'Executer Remark')"></i>
+                                        </p>
+                                    </td>
+                                    <td class="no-print">
+
+
+                                        <select class="form-control" ng-model="row.IsVerified" ng-if="IsExecuter !='Executer'">
+                                            <option value="">Select</option>
+                                            <option value="Verified">Verified</option>
+                                            <option value="Clarify">Under Clarification</option>
+                                        </select>
+                                        <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Verified' && row.Flag=='1'" class="status completed">Verified</span>
+                                        <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Clarify' && IsExecuter=='Executer'" class="status pending">Under Clarification</span>
+                                    </td>
+                                    <td ng-show="false">
+                                        {{row.IsVerified}}
+                                    </td>
+                                    <td><a href="#" class="view" ng-show="row.openthis=='1'" ng-click="viewFile(row)">{{ row.openthis == '1' ? 'View' : '' }}</a> </td>
+                                    <td class="no-print">
+
+                                        <input ng-if="IsExecuter=='Executer' && row.Flag!='1'" type="button" value="Submit" ng-click="AfterverifyRecord(row )" />
+                                        <input ng-if="IsExecuter !='Executer' && row.IV =='' " type="button" value="Submit" ng-click="AfterverifyRecord(row )" />
+
+                                    </td>
+                                </tr>
+
+                            </tbody>
+
+
+                        </table>
+                    </div>
+                    <table class="table table-bordered table-striped" style="font-size:10PX">
+                        <tfoot>
+                            <tr class="search-row">
+                                <th><input type="text" ng-model="search.Act" placeholder="Act" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.ComplianceName" placeholder="Compliance" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.STATE_NM" placeholder="State" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.DueDate" placeholder="Due Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+
+                                <th><input type="text" ng-model="search.ActualSubmissionDate" placeholder="Actual Submission Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.DelayDays" placeholder="Delay Days" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.CreateOn" placeholder="Uploaded Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>-->
+            </div>
+
+        </section>
+        <br>
+
+    </main>
+</div>
+<script>
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+        });
+    });
+</script>

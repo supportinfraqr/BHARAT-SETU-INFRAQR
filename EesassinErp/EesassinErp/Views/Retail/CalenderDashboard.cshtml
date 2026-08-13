@@ -1,0 +1,354 @@
+﻿<!DOCTYPE html>
+<html ng-app="myApp" ng-controller="myController">
+<head>
+    <meta charset="UTF-8">
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Calender Dashboard</title>
+    <link href="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css" rel="stylesheet" />
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js?Ver=@ViewBag.Version")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/moment.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js?Ver=@ViewBag.Version")"></script>
+
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    <script src="~/scripts/managebyuser.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="~/calenderDahboard/css/style.css?Ver=@ViewBag.Version" rel="stylesheet" />
+    <script src="~/calenderDahboard/Script/script.js?Ver=@ViewBag.Version"></script>
+    <script src="~/scripts/RetailJsLib/ComplianceDashboardController.js?Ver=@ViewBag.Version"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">  <!-- Font Awesome -->
+
+    <style>
+      
+
+        .content {
+            width: 77%;
+            /*   max-width: 1208px;*/
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+
+        .compliance-row {
+            display: flex;
+            flex-wrap: wrap; /* Allows wrapping to the next row */
+            gap: 50px; /* Adds space between spans */
+            justify-content: flex-start; /* Aligns to the left by default */
+        }
+
+        .row-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100%;
+            justify-content: flex-start; /* Aligns remaining elements to the left */
+        }
+
+            .row-wrapper span {
+                width: calc(25% - 10px); /* Ensures 4 spans per row (25% each) */
+                min-width: 100px; /* Optional: Prevents shrinking too much */
+                padding: 5px;
+                text-align: center;
+                background-color: #f0f0f0;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+                .row-wrapper span:last-child {
+                    /* This ensures the last item doesn't stretch unnecessarily */
+                    margin-right: 0 !important;
+                }
+    </style>
+    <style>
+        .refresh-btn {
+            font-size: 16px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+            .refresh-btn:hover {
+                background-color: #218838;
+            }
+
+            .refresh-btn i {
+                margin-right: 5px;
+            }
+
+        th, td {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .active {
+            background-color: yellow;
+        }
+
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            background-color: red;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .back-btn {
+            font-size: 24px;
+            color: #007bff; /* Blue color for the icon */
+            text-decoration: none;
+            /* margin-bottom: 20px;*/
+            display: inline-block;
+            cursor: pointer;
+        }
+
+            .back-btn:hover {
+                color: #0056b3; /* Darker blue when hovering */
+            }
+    </style>
+    <script>
+        $(document).ready(function () {
+            const calendarHeader = $('#calendar-header');
+            const calendarTable = $('#calendar-table');
+            let currentDate = new Date();
+            let currentMonth = currentDate.getMonth();
+            let currentYear = currentDate.getFullYear();
+            let events = {};  // Store event dates in this object
+
+            const daysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
+
+            // Render the calendar
+            const renderCalendar = () => {
+                // Update calendar header with month & year
+
+                alert(currentMonth);
+                alert(currentYear);
+                calendarHeader.text(new Date(currentYear, currentMonth).toLocaleString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                }));
+
+                const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                const totalDays = daysInMonth(currentMonth, currentYear);
+
+                let tableHTML = `
+                            <tr>
+                                <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+                            </tr>
+                            <tr>
+                        `;
+
+                // Empty <td> for days before the first day of the month
+                for (let i = 0; i < firstDay; i++) {
+                    tableHTML += "<td></td>";
+                }
+
+                // Add days to the calendar
+                for (let day = 1; day <= totalDays; day++) {
+                    let today = new Date();
+                    let isActive = (day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear());
+
+                    let eventKey = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    let hasEvent = events[eventKey];
+
+                    tableHTML += `<td class="${isActive ? 'active' : ''}" data-date="${eventKey}">
+                                ${day} ${hasEvent ? '<div class="event-dot"></div>' : ''}
+                            </td>`;
+
+                    if ((firstDay + day) % 7 === 0) {
+                        tableHTML += "</tr><tr>"; // New row for a new week
+                    }
+                }
+
+                tableHTML += "</tr>"; // Close the last row
+                calendarTable.html(tableHTML);
+
+                // Make Dates Clickable
+                $("#calendar-table td[data-date]").on("click", function () {
+                    /*    alert(`Selected Date: ${$(this).data("date")}`);*/
+
+                    const selectedDate = $(this).data("date");
+                    /*  alert(`Selected Date: ${selectedDate}`);*/
+                    angular.element($("#calendar-table")).scope().$apply(function () {
+                        // Call the BindCalenderdetail function and pass the selectedDate to it
+                        angular.element($("#calendar-table")).scope().BindCalenderOnclickdetail(selectedDate);
+                    });
+                });
+            };
+
+            // Fetch events dynamically
+            const bindEvent = function () {
+                var url = [];
+                url = window.location.href.slice(window.location.href.indexOf('?') + 1).split('%');
+                var type = url[0].split('|');
+                type = type[0];
+                var collectionobj = {};
+                collectionobj.Action = 13;
+                collectionobj.UserId = LoginId;  // Assuming LoginId is available
+                collectionobj.Industry = type
+                $.ajax({
+                    url: "../Retail/SearchClientDashboard",
+                    type: "POST",
+                    data: JSON.stringify({ obj: collectionobj }),
+                    contentType: "application/json",
+                    success: function (response) {
+                        debugger;
+                        // Log the response to check its structure
+                      alert(response);
+
+                        // Check if response is a string, if yes, parse it
+                        if (typeof response === 'string') {
+                            response = JSON.parse(response);
+                        }
+
+                        if (response && response.Result) {
+                            // Log the Result to see its structure
+                            console.log(response.Result);
+
+                            events = {}; // Reset events before adding new ones
+
+                            // Loop through each object in response.Result and access the date field
+                            response.Result.forEach(event => {
+                                const eventDate = event.date;  // Access the 'date' field
+                                if (typeof eventDate === "string" && eventDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                    events[eventDate] = true;  // Mark the date as having an event
+                                } else {
+                                    console.warn("Invalid date format:", eventDate);
+                                }
+                            });
+                            renderCalendar();  // Re-render the calendar with the updated events
+                        } else {
+                            console.error("No events found in the response.");
+                        }
+                    },
+                    error: function (error) {
+                        console.error("Error fetching events:", error);
+                    }
+                });
+            };
+
+            // Navigate to the previous month
+            $('#prev-month').on('click', function () {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                renderCalendar();  // Re-render after updating month
+            });
+
+            // Navigate to the next month
+            $('#next-month').on('click', function () {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                renderCalendar();  // Re-render after updating month
+            });
+
+            // Initial render
+            bindEvent(); // Fetch events data dynamically
+        });
+    </script>
+
+
+
+
+
+</head>
+<body>
+    <div class="container" ng-init="LoadData()">
+        <!-- Sidebar -->
+
+        <div class="sidebar">
+
+            <div class="calendar-header">
+
+                <div class="legend-item">
+                    <div class="circle" style="background-color: red;"></div>
+                    <div class="circle" style="background-color: yellow;"></div>
+                    <div class="circle" style="background-color: rgb(112, 161, 39);"></div>
+                </div>
+                <div class="nav-arrows">
+                    <button id="prev-month">&lt;</button>
+                    <button id="next-month">&gt;</button>
+                </div>
+            </div>
+            <div class="container" ng-init="bindevent()">
+                <!-- Sidebar -->
+
+                <div class="calendar" >
+                    <header id="calendar-header" style="color: red;"></header>
+                    <table id="calendar-table"></table>
+
+                </div>
+                <div class="Compliance" ng-init="BindCalender()">Compliance Due Date</div>
+                <div class="legend">
+
+
+                    <div class="legend-item" ng-repeat="x in CalenderList" ng-click="getdetail(x.State)"> 
+                        <div> 
+                            <table><tr><td> <p class="circle" style="background-color: rgb(255, 98, 0);"></p></td><td>{{x.StateName}}</td></tr></table>
+                            <span style="color: rgb(78, 76, 76) ;font-size: small; padding: 10px;">Total Document - {{x.TotalDocuments}}</span><br>
+                            <span style="color: rgb(78, 76, 76) ;font-size: small; padding: 10px;">Submitted Document- {{x.TotalClientDocuments}}</span> 
+                        </div>
+                    </div>
+
+
+                    <!-- Add more legend items -->
+                </div>
+            </div>
+
+        </div>
+        <!-- Main Content -->
+        <div class="content" ng-init="BindCalenderdetail()">
+            
+            <table><tr><td><a href="javascript:history.back()" id="back-btn" class="back-btn">
+    <i class="fa fa-arrow-left"></i>
+
+</a></td><td><h1 style="margin-top: 5%; ">Compliance Data State Wise [ {{type}} ]</h1></td></tr></table>
+            <input type="text" class="search-bar" ng-model="searchText" placeholder="Type to search" />
+            <button id="refresh-btn" class="refresh-btn" ng-click="BindCalenderdetail()">
+                <i class="fa fa-refresh"></i> Refresh
+            </button>
+            <div class="compliance-data" ng-repeat="(stateName, complianceList) in filteredGroupedCalenderDetail ">
+                <br />
+                <strong style=" font-size: 16px;">{{stateName}}</strong>
+
+                <div class="compliance-row">
+                    <span style="font-size: 12px;" ng-repeat="compliance in complianceList| filter:searchText">
+                        <strong> Compliance Name :</strong>  {{compliance.ComplianceName}} <strong>  Act Name :</strong>{{compliance.Act}} <br />
+                         <strong>DueDate :</strong> {{compliance.DueDate}}<strong>  Status :</strong>{{compliance.Status}}
+                    </span>
+                </div> 
+                <div class="no-results" ng-show="!(complianceList | filter: { ComplianceName: searchText }).length">
+                    No results found.
+
+                </div>
+
+            </div>
+            
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,330 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Lodge Grievance";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+<script src="~/Content/Dashboards/WorkerGrievancesSupport/WorkerLodgeGrievance/script.js"></script>
+<link href="~/Content/Dashboards/WorkerGrievancesSupport/WorkerLodgeGrievance/style.css" rel="stylesheet" />
+<style>
+    #btnSave:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+</style>
+
+<div class="workerLodgeGrievance px-4 py-4">
+    <div class="workerLodgeGrievanceContainer">
+
+        <!-- Page Header -->
+        <div class="workerLodgeGrievanceHeader mb-4">
+            <h2>Lodge a Grievance</h2>
+            <p>Record your grievance and let AI assist in creating a detailed complaint.</p>
+        </div>
+        
+        <div class="row g-4">
+
+            <!-- Left Section -->
+            <div class="col-xl-8">
+
+                <!-- Recorder Card -->
+                <div class="workerLodgeGrievanceRecorderCard">
+                    <select id="ddlLanguage" class="form-control" style=" width: 23%; ">
+
+                        <option value="en-IN">Default Language English</option>
+                        <option value="hi-IN">Hindi</option>
+
+                        <option value="as-IN">Assamese</option>
+                        <option value="bn-IN">Bengali</option>
+                        <option value="brx-IN">Bodo</option>
+                        <option value="doi-IN">Dogri</option>
+                        <option value="gu-IN">Gujarati</option>
+                        <option value="kn-IN">Kannada</option>
+                        <option value="ks-IN">Kashmiri</option>
+                        <option value="kok-IN">Konkani</option>
+                        <option value="mai-IN">Maithili</option>
+                        <option value="ml-IN">Malayalam</option>
+                        <option value="mni-IN">Manipuri</option>
+                        <option value="mr-IN">Marathi</option>
+                        <option value="ne-IN">Nepali</option>
+                        <option value="or-IN">Odia</option>
+                        <option value="pa-IN">Punjabi</option>
+                        <option value="sa-IN">Sanskrit</option>
+                        <option value="sat-IN">Santali</option>
+                        <option value="sd-IN">Sindhi</option>
+                        <option value="ta-IN">Tamil</option>
+                        <option value="te-IN">Telugu</option>
+                        <option value="ur-IN">Urdu</option>
+
+                    </select>
+                    <!-- Timer -->
+                    <div class="workerLodgeGrievanceTimer" id="grievanceTimer">
+                        00:00:00
+                    </div>
+
+                    <!-- Mic Button -->
+                    <div class="text-center">
+                        <button type="button"
+                                id="recordBtn"
+                                class="workerLodgeGrievanceMicBtn">
+                            <i class="bi bi-mic-fill" id="recordIcon"></i>
+                        </button>
+                    </div>
+
+                    <!-- Action Text -->
+                    <div class="workerLodgeGrievanceActionText"
+                         id="recordActionText">
+
+                        CLICK TO START RECORDING
+
+                    </div>
+
+                    <!-- Info Message -->
+                    <div class="workerLodgeGrievanceMessage"
+                         id="recordingMessage">
+                    </div>
+                    <div class="workerLodgeGrievanceAiCard d-none"
+                         id="aiCard">
+
+                        <div class="workerLodgeGrievanceAiHeader">
+
+                            <div>
+                                <h5 style="margin-bottom:0">
+                                    Live AI Transcription
+                                </h5>
+
+                                <p>
+                                    Generated from your recording
+                                </p>
+                            </div>
+
+                            <span class="workerLodgeGrievanceProcessingBadge" id="listening">
+                                Listening...
+                            </span>
+
+                        </div>
+
+                        <div class="workerLodgeGrievanceAiBody">
+
+                            <input id="Subject" class="form-control" value="General Worker Grievance"
+                                   placeholder="Subject" />
+
+
+                            <textarea id="aiText"
+                                      class="form-control"
+                                      rows="8"
+                                      placeholder="Your speech will appear here..."></textarea>
+
+                        </div>
+
+                    </div>
+                    <!-- Audio Preview -->
+                    <div class="workerLodgeGrievanceAudioWrapper" id="audioPreviewWrapper">
+
+                        <div class="workerLodgeGrievanceAudioCard">
+
+                            <div class="workerLodgeGrievanceAudioInfo">
+                                <i class="bi bi-file-earmark-music"></i>
+                                <div>
+
+                                    <h6>Recorded Audio</h6>
+
+                                    <span>
+                                        Click Play to listen
+                                    </span>
+                                </div>
+                            </div>
+
+                            <audio id="audioPlayer"
+                                   controls
+                                   class="w-100 mt-3">
+                            </audio>
+
+
+                        </div>
+
+                    </div>
+
+                    <!-- Upload Buttons -->
+                    <div class="workerLodgeGrievanceUploadBtns">
+
+                        @*<button class="workerLodgeGrievanceUploadBtn">
+                            <i class="bi bi-upload"></i>
+                            Upload Audio
+                        </button>*@
+
+                        <button type="button"
+                                id="btnUploadLetter"
+                                class="workerLodgeGrievanceUploadBtn">
+                            <i class="bi bi-card-image"></i>
+                            Upload Letter Image
+                        </button>
+
+                        <input type="file"
+                               id="fileLetter"
+                               multiple
+                               accept=".jpg,.jpeg,.png"
+                               accept=".jpg,.jpeg,.png"
+                               style="display:none;" />
+
+                        <div id="uploadedFilesList" class="mt-3"></div>
+
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="workerLodgeGrievanceFooterActions d-none"
+                         id="footerActions">
+
+                        <a href="../Grievances/WorkerGrievances" class="workerLodgeGrievanceCancelBtn"
+                                id="cancelBtn">
+                            Cancel
+                        </a>
+
+                        <button class="workerLodgeGrievanceSubmitBtn" id="btnSave">
+                            <span id="btnSaveText">Submit Grievance</span>
+                            <span id="btnSaveLoader" class="d-none">
+                                <i class="fa fa-spinner fa-spin"></i> Please Wait...
+                            </span>
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- AI Card -->
+                <div class="workerLodgeGrievanceAiCard d-none"
+                     id="aiCard">
+
+                    <div class="workerLodgeGrievanceAiHeader">
+
+                        <div>
+                            <h5 style="margin-bottom:0; ">Live AI Transcription (Formal Letter Format)</h5>
+                            <p>
+                                Generated from your recording
+                            </p>
+                        </div>
+
+                        <span class="workerLodgeGrievanceProcessingBadge">
+                            Processing...
+                        </span>
+
+                    </div>
+
+                    <div class="workerLodgeGrievanceAiBody">
+
+                        <p id="aiText">
+                            [Awaiting voice input...]
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="col-xl-4">
+
+                <div class="workerLodgeGrievanceSidebar">
+
+                    <!-- Recording Guide -->
+                    <div class="workerLodgeGrievanceGuideCard">
+
+                        <h5>Recording Guide</h5>
+
+                        <p>
+                            Cover these steps to submit your grievance
+                        </p>
+
+                        <div class="workerLodgeGrievanceGuideList">
+
+                            <div class="workerLodgeGrievanceGuideItem">
+
+                                <div class="workerLodgeGrievanceGuideIcon">
+                                    <i class="bi bi-person"></i>
+                                </div>
+
+                                <div>
+                                    <h6>Worker Info</h6>
+                                    <p>
+                                        State your name, age, position,
+                                        and employee ID
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="workerLodgeGrievanceGuideItem">
+
+                                <div class="workerLodgeGrievanceGuideIcon">
+                                    <i class="bi bi-briefcase"></i>
+                                </div>
+
+                                <div>
+                                    <h6>Contractor Name</h6>
+                                    <p>
+                                        State the name of your contractor company
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="workerLodgeGrievanceGuideItem">
+
+                                <div class="workerLodgeGrievanceGuideIcon">
+                                    <i class="bi bi-building"></i>
+                                </div>
+
+                                <div>
+                                    <h6>Employer Name</h6>
+                                    <p>
+                                        State the name of your employing organization
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div class="workerLodgeGrievanceGuideItem">
+
+                                <div class="workerLodgeGrievanceGuideIcon">
+                                    <i class="bi bi-geo-alt"></i>
+                                </div>
+
+                                <div>
+                                    <h6>Site Details</h6>
+                                    <p>
+                                        Describe site location and complaint in detail
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Tips -->
+                    <div class="workerLodgeGrievanceTipsCard">
+
+                        <div class="workerLodgeGrievanceTipsTitle">
+                            <i class="bi bi-info-circle-fill"></i>
+                            Recording Tips
+                        </div>
+
+                        <ul>
+                            <li>Speak clearly and at a moderate pace</li>
+                            <li>Find a quiet environment</li>
+                            <li>Complete each step sequentially</li>
+                        </ul>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

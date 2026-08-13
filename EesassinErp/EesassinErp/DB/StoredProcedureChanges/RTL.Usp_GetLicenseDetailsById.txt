@@ -1,0 +1,113 @@
+/****** Object:  StoredProcedure [RTL].[Usp_GetLicenseDetailsById]    Script Date: 04-10-2024 12:43:19 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ 
+ 
+ALTER PROCEDURE [RTL].[Usp_GetLicenseDetailsById]
+@PartyId	int	=null,
+@StoreCode VARCHAR(50) = null,
+@Result VARCHAR(50)=''  OUTPUT   
+AS
+BEGIN
+
+     IF(@StoreCode IS NULL)
+	 BEGIN
+	        if(@PartyId=1)
+			Begin
+			SET NOCOUNT ON	  
+
+					SELECT   ROW_NUMBER() OVER (
+					ORDER BY ValidityEndDate
+					) SrNo, LR.Id ,SM.Id StoreId,
+					SM.StoreCode +' ['+ RefStoreCode + '] ' StoreCode,  LR.LicenseNumber,
+					LM.LicenseName,
+					CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+				--	CASE WHEN ISNULL(LRR.Id,0) > 0 THEN 'Renewed' ELSE 'Fresh' END As LicenseType,
+					--SM.DaysOfExpire,  
+					ValidityStartDate ,
+					format(ValidityEndDate,'MM/dd/yyyy') ValidityEndDate,
+					DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) DaysOfExpire,
+					CASE
+				    WHEN  convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103)  THEN 'Expired'
+					WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' 
+					ELSE 'Vaild' 
+					END AS ExpiryStatus  
+					FROM 
+					[RTL].LicenceRequest LR
+					INNER JOIN [RTL].StoreLicences SL
+					ON  LR. StoreLicenceId = SL.Id
+					INNER JOIN [RTL].StoreMaster SM
+					ON SM.ID = SL.StoreId
+					INNER JOIN [RTL].LicenseMaster LM
+					ON LM.LicenseId = SL.LicenseId
+					LEFT JOIN [RTL].LicenceRequestRenewal LRR
+					ON LRR.LicenceRequestId = LR.Id
+					AND LRR.IsActive = 1      
+					 where DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire 
+					   and LStatus in (1,3) and ValidityEndDate<>''
+					 
+			eND
+			ELSE
+			Begin
+		 
+
+					SELECT   ROW_NUMBER() OVER (
+					ORDER BY ValidityEndDate
+					) SrNo, LR.Id ,SM.Id StoreId,
+						SM.StoreCode +' ['+ RefStoreCode + '] ' StoreCode,  LR.LicenseNumber,
+						LM.LicenseName,
+						CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+						--	CASE WHEN ISNULL(LRR.Id,0) > 0 THEN 'Renewed' ELSE 'Fresh' END As LicenseType,
+						--SM.DaysOfExpire, 
+						ValidityStartDate , 	format(ValidityEndDate,'MM/dd/yyyy') ValidityEndDate ,
+						DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) DaysOfExpire,
+						CASE
+					  WHEN  convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103)  THEN 'Expired'
+						WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' 
+						ELSE 'Vaild' 
+						END AS ExpiryStatus  
+						FROM 
+						[RTL].LicenceRequest LR
+						INNER JOIN [RTL].StoreLicences SL
+						ON  LR. StoreLicenceId = SL.Id
+						INNER JOIN [RTL].StoreMaster SM
+						ON SM.ID = SL.StoreId
+						INNER JOIN [RTL].LicenseMaster LM
+						ON LM.LicenseId = SL.LicenseId
+						LEFT JOIN [RTL].LicenceRequestRenewal LRR
+						ON LRR.LicenceRequestId = LR.Id
+						AND LRR.IsActive = 1      
+						INNER JOIN RTL.StoreMapping AS SMS WITH (NOLOCK) ON SMS.StoreId =SM.Id 
+					    and SMS.PartyId in (select Distinct MapId from Logintable where LoginId=@PartyId)	 
+						WHERE DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire 
+						and LStatus in (1,3)  and ValidityEndDate<>''
+
+			End
+	 END
+	 ELSE
+	 BEGIN
+      DECLARE @StoreId int
+	  SET @StoreId = (SELECT Id FROM RTL.StoreMaster WHERE StoreCode = @StoreCode)
+     
+	  SET NOCOUNT ON	  
+	  SELECT DISTINCT  SM.StoreCode,LM.LicenseId,LM.LicenseName,LR.LicenseNumber,CONVERT(NVARCHAR(10), LR.ValidityStartDate, 120) AS ValidityStartDate,
+	  CONVERT(NVARCHAR(10), LR.ValidityEndDate, 120) AS ValidityEndDate,
+      SM.DaysOfExpire,
+      CASE
+        WHEN DATEDIFF(DAY, GETDATE(), CONVERT(DATE, LR.ValidityEndDate, 23)) <= SM.DaysOfExpire THEN 'expire soon'
+        ELSE 'not expire soon'
+      END AS ExpiryStatus
+	  FROM RTL.LicenseMaster AS LM WITH (NOLOCK)
+	  INNER JOIN RTL.LicenseDetailsMaster AS LDM WITH (NOLOCK)
+	  ON LDM.LicenseId = LM.LicenseId
+	  INNER JOIN RTL.StoreLicences AS SL WITH (NOLOCK)  ON SL.LicenseId = LM.LicenseId 
+	  INNER JOIN RTL.LicenceRequest AS LR WITH (NOLOCK) ON LR.StoreLicenceId=SL.Id
+	  INNER JOIN RTL.StoreMaster AS SM WITH (NOLOCK) ON SM.Id=@StoreId
+	   WHERE LDM.PartyTypeId = 4
+	   END 
+END 
+ 
+
+  

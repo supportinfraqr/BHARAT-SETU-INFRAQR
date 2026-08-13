@@ -1,0 +1,710 @@
+﻿.principleEmployerGatePass {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 20px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+    /*=========================================================
+    PAGE HEADER
+=========================================================*/
+
+    .principleEmployerGatePass .page-title {
+        font-size: 24px;
+        font-weight: 500;
+        color: var(--primary);
+        margin: 0;
+    }
+
+    .principleEmployerGatePass .pegp-header {
+        gap: 20px;
+    }
+
+    /*=========================================================
+    PERMANENT / TEMPORARY TABS
+=========================================================*/
+
+    .principleEmployerGatePass .gpTypeTabs {
+        background: #F5F5F5;
+        border: 1px solid #D7DCE5;
+        border-radius: 12px;
+        padding: 6px;
+        overflow: hidden;
+    }
+
+        .principleEmployerGatePass .gpTypeTabs .nav-link {
+            border: 0;
+            color: #555;
+            padding: 8px 16px;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: .25s;
+            background: transparent;
+            text-transform: uppercase;
+            font-size: .86rem;
+            letter-spacing: .5px;
+        }
+
+            .principleEmployerGatePass .gpTypeTabs .nav-link.active {
+                background: var(--primary);
+                color: #fff;
+            }
+
+            .principleEmployerGatePass .gpTypeTabs .nav-link:hover:not(.active) {
+                background: rgba(2,43,94,.08);
+            }
+
+    /*=========================================================
+    SUMMARY CARDS
+=========================================================*/
+
+    .principleEmployerGatePass .gpSummaryCard {
+        background: var(--card-bg);
+        border-radius: 14px;
+        padding: 12px 16px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border-left: 5px solid #022B5E;
+        transition: 0.2s ease;
+    }
+
+        /*.principleEmployerGatePass .gpSummaryCard::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 8px;
+            height: 100%;
+            background: var(--primary);
+        }*/
+
+    .principleEmployerGatePass .cardContent {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 25px;
+        height: 100%;
+    }
+
+    .principleEmployerGatePass .cardLabel {
+        margin: 0;
+        color: var(--primary);
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .principleEmployerGatePass .cardValue {
+        margin-top: 14px;
+        margin-bottom: 0;
+        font-size: 36px;
+        font-weight: 500;
+        color: var(--primary);
+        line-height: 1;
+    }
+
+    .principleEmployerGatePass .summaryIcon {
+        width: 50px;
+        height: 50px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .principleEmployerGatePass .summaryIcon i {
+            font-size: 1.4rem;
+        }
+
+        .principleEmployerGatePass .summaryIcon.pending {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+        }
+
+        .principleEmployerGatePass .summaryIcon.approved {
+            background: rgba(22, 163, 74, 0.1);
+            color: green;
+        }
+
+        .principleEmployerGatePass .summaryIcon.rejected {
+            background: #FFDAD7;
+            color: #A10000;
+        }
+
+    /*=========================================================
+    TABLE CARD
+=========================================================*/
+
+    .principleEmployerGatePass .gpTableCard {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #CBD5E1;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,.05);
+    }
+
+    .principleEmployerGatePass .gpTableToolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 18px;
+        border-bottom: 1px solid #D9E1EC;
+        flex-wrap: wrap;
+    }
+
+    .principleEmployerGatePass .statusFilter {
+        padding: 8px 16px;
+        width: 170px;
+        font-size: 14px;
+        border-radius: 8px;
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .principleEmployerGatePass .toolbarButtons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    /*=========================================================
+    BUTTONS
+=========================================================*/
+
+    .principleEmployerGatePass .approveBtn,
+    .principleEmployerGatePass .rejectBtn {
+        padding: 6px 12px;
+        font-size: 14px;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .principleEmployerGatePass .approveBtn {
+        background: var(--primary);
+        border: 1px solid var(--primary);
+        color: #fff;
+    }
+
+        .principleEmployerGatePass .approveBtn:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+
+    .principleEmployerGatePass .rejectBtn {
+        background: #fff;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+    }
+
+        .principleEmployerGatePass .rejectBtn:hover {
+            background: #F4F8FD;
+        }
+
+    /*=========================================================
+    TABLE
+=========================================================*/
+
+    .principleEmployerGatePass .gpTable {
+        margin-bottom: 0;
+        min-width: 900px;
+    }
+
+        .principleEmployerGatePass .gpTable thead th {
+            background: #F5F8FE;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 18px;
+            border-bottom: 1px solid #D9E1EC;
+            white-space: nowrap;
+        }
+
+        .principleEmployerGatePass .gpTable tbody td {
+            padding:18px;
+            vertical-align: middle;
+            border-top: 1px solid #EEF2F7;
+        }
+
+        .principleEmployerGatePass .gpTable tbody tr:hover {
+            background: #FAFCFF;
+        }
+
+        .principleEmployerGatePass .gpTable tbody td strong{
+            font-weight: 500;
+        }
+
+
+            /*=========================================================
+    WORKER COUNT
+=========================================================*/
+
+            .principleEmployerGatePass .workerCountTag {
+        display: inline-flex;
+        align-items: center;
+        background: #F2ECEB;
+        border-radius: 10px;
+        padding: 5px 10px;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    /*=========================================================
+    STATUS BADGES
+=========================================================*/
+
+    .principleEmployerGatePass .statusBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 7px 16px;
+        font-size: .88rem;
+        font-weight: 500;
+    }
+
+        .principleEmployerGatePass .statusBadge .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .principleEmployerGatePass .statusBadge.pending {
+            background: #FFDCD2;
+            color: #5A220E;
+        }
+
+            .principleEmployerGatePass .statusBadge.pending .dot {
+                background: #67220D;
+            }
+
+        .principleEmployerGatePass .statusBadge.approved {
+            background: #C8F6B9;
+            color: #005D18;
+        }
+
+            .principleEmployerGatePass .statusBadge.approved .dot {
+                background: #005D18;
+            }
+
+    /*=========================================================
+    ACTION BUTTON
+=========================================================*/
+
+    .principleEmployerGatePass .iconBtn {
+        width: 42px;
+        height: 42px;
+        border: 0;
+        background: transparent;
+        border-radius: 50%;
+        transition: .25s;
+    }
+
+        .principleEmployerGatePass .iconBtn i {
+            font-size: 1.3rem;
+            color: #444;
+        }
+
+        .principleEmployerGatePass .iconBtn:hover {
+            background: #EDF4FC;
+        }
+
+    /*=========================================================
+    FOOTER
+=========================================================*/
+
+    .principleEmployerGatePass .gpTableFooter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 18px;
+        border-top: 1px solid #D9E1EC;
+        flex-wrap: wrap;
+        color: #4B5563;
+        font-size: .95rem;
+    }
+
+    /*=========================================================
+    PAGINATION
+=========================================================*/
+
+    .principleEmployerGatePass .pagination {
+        gap: 6px;
+    }
+
+    .principleEmployerGatePass .page-link {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6B7280;
+        font-weight: 500;
+        box-shadow: none;
+    }
+
+    .principleEmployerGatePass .page-item.active .page-link {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .principleEmployerGatePass .page-link:hover {
+        background: #EDF4FC;
+        color: var(--primary);
+    }
+
+/*=========================================================
+    RESPONSIVE (PAGE)
+=========================================================*/
+
+@media (max-width:991px) {
+
+    .principleEmployerGatePass .page-title {
+        font-size: 1.7rem;
+    }
+
+    .principleEmployerGatePass .pegp-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .principleEmployerGatePass .gpTableToolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .principleEmployerGatePass .toolbarButtons {
+        width: 100%;
+    }
+
+    .principleEmployerGatePass .approveBtn,
+    .principleEmployerGatePass .rejectBtn {
+        flex: 1;
+    }
+}
+
+@media (max-width:576px) {
+
+    .principleEmployerGatePass .gpSummaryCard {
+        padding: 20px;
+        min-height: 130px;
+    }
+
+    .principleEmployerGatePass .cardLabel {
+        font-size: 1rem;
+    }
+
+    .principleEmployerGatePass .cardValue {
+        font-size: 2.3rem;
+    }
+
+    .principleEmployerGatePass .gpTypeTabs {
+        width: 100%;
+    }
+
+        .principleEmployerGatePass .gpTypeTabs .nav-link {
+            min-width: unset;
+            width: 100%;
+        }
+}
+
+
+/*=========================================================
+    FULLSCREEN MODAL
+=========================================================*/
+
+.principleEmployerGatePass .workerListModal {
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+    background: #fff;
+}
+
+    .principleEmployerGatePass .workerListModal .modal-header {
+        background: var(--primary);
+        color: #fff;
+        border: 0;
+        padding: 18px 28px;
+    }
+
+    .principleEmployerGatePass .workerListModal .modal-title {
+        font-size: 1.4rem;
+        font-weight: 500;
+    }
+
+    .principleEmployerGatePass .workerListModal .btn-close {
+        opacity: 1;
+        box-shadow: none;
+    }
+
+/*=========================================================
+    MODAL TOOLBAR
+=========================================================*/
+
+.principleEmployerGatePass .workerToolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 20px 24px;
+    background: #fff;
+    flex-wrap: wrap;
+}
+
+.principleEmployerGatePass .toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.principleEmployerGatePass .siteFilter {
+    width: 170px;
+    /*height: 44px;*/
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+/*=========================================================
+    WORKER TABLE
+=========================================================*/
+
+.principleEmployerGatePass .workerTable {
+    margin: 0;
+    min-width: 1500px;
+    background: #fff;
+}
+
+    .principleEmployerGatePass .workerTable thead th {
+        background: #f8f9fd;
+        color: var(--primary);
+        font-size: .95rem;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 16px;
+        border-bottom: 1px solid #D9E1EC;
+    }
+
+    .principleEmployerGatePass .workerTable tbody td {
+        padding: 18px 16px;
+        vertical-align: middle;
+        white-space: nowrap;
+        border-top: 1px solid #EDF2F7;
+    }
+
+    .principleEmployerGatePass .workerTable tbody tr:hover {
+        background: #F9FBFD;
+    }
+
+/*=========================================================
+    WORKER INFO
+=========================================================*/
+
+.principleEmployerGatePass .workerInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.principleEmployerGatePass .workerName {
+    font-size: .96rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+.principleEmployerGatePass .workerId {
+    margin-top: 4px;
+    font-size: .82rem;
+    color: #6B7280;
+}
+
+/*=========================================================
+    VERIFY STATUS
+=========================================================*/
+
+.principleEmployerGatePass .verifyStatus {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 70px;
+}
+
+    .principleEmployerGatePass .verifyStatus i {
+        font-size: 1.2rem;
+    }
+
+    .principleEmployerGatePass .verifyStatus small {
+        font-size: .68rem;
+        font-weight: 500;
+        letter-spacing: .4px;
+    }
+
+    .principleEmployerGatePass .verifyStatus.done i,
+    .principleEmployerGatePass .verifyStatus.done small {
+        color: #16A34A;
+    }
+
+    .principleEmployerGatePass .verifyStatus.verified i,
+    .principleEmployerGatePass .verifyStatus.verified small {
+        color: #15803D;
+    }
+
+    .principleEmployerGatePass .verifyStatus.pending i,
+    .principleEmployerGatePass .verifyStatus.pending small {
+        color: #D97706;
+    }
+
+/*=========================================================
+    ACTION BUTTONS
+=========================================================*/
+
+.principleEmployerGatePass .tableActionBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 0;
+    transition: .25s;
+    margin: 0 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .principleEmployerGatePass .tableActionBtn i {
+        font-size: 1rem;
+    }
+
+    .principleEmployerGatePass .tableActionBtn.approve {
+        background: #DCFCE7;
+        color: #15803D;
+    }
+
+        .principleEmployerGatePass .tableActionBtn.approve:hover {
+            background: #BBF7D0;
+        }
+
+    .principleEmployerGatePass .tableActionBtn.reject {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+        .principleEmployerGatePass .tableActionBtn.reject:hover {
+            background: #FECACA;
+        }
+
+/*=========================================================
+    CHECKBOXES
+=========================================================*/
+
+.principleEmployerGatePass .form-check-input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+    .principleEmployerGatePass .form-check-input:checked {
+        background-color: var(--primary);
+        border-color: var(--primary);
+    }
+
+/*=========================================================
+    SCROLLBAR
+=========================================================*/
+
+.principleEmployerGatePass .table-responsive::-webkit-scrollbar {
+    height: 10px;
+}
+
+.principleEmployerGatePass .table-responsive::-webkit-scrollbar-track {
+    background: #ECECEC;
+    border-radius: 20px;
+}
+
+.principleEmployerGatePass .table-responsive::-webkit-scrollbar-thumb {
+    background: #B6C2D2;
+    border-radius: 20px;
+}
+
+    .principleEmployerGatePass .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #8FA3BD;
+    }
+
+/*=========================================================
+    MODAL RESPONSIVE
+=========================================================*/
+
+@media (max-width: 1200px) {
+
+    .principleEmployerGatePass .workerToolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .principleEmployerGatePass .toolbarRight {
+        width: 100%;
+    }
+
+        .principleEmployerGatePass .toolbarRight .approveBtn,
+        .principleEmployerGatePass .toolbarRight .rejectBtn {
+            flex: 1;
+        }
+
+    .principleEmployerGatePass .siteFilter {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .principleEmployerGatePass .workerListModal .modal-header {
+        padding: 16px 18px;
+    }
+
+    .principleEmployerGatePass .workerToolbar {
+        padding: 16px;
+    }
+
+    .principleEmployerGatePass .workerTable {
+        min-width: 1350px;
+    }
+}
+
+@media (max-width: 576px) {
+
+    .principleEmployerGatePass .toolbarRight {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+        .principleEmployerGatePass .toolbarRight .btn,
+        .principleEmployerGatePass .toolbarRight .siteFilter {
+            width: 100%;
+        }
+
+    .principleEmployerGatePass .workerTable thead th,
+    .principleEmployerGatePass .workerTable tbody td {
+        padding: 14px 12px;
+    }
+
+    .principleEmployerGatePass .workerName {
+        font-size: .9rem;
+    }
+
+    .principleEmployerGatePass .workerId {
+        font-size: .75rem;
+    }
+}

@@ -1,0 +1,466 @@
+﻿@{
+    ViewBag.Title = "Compliance Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<link rel="stylesheet" href="~/ComplianceDashboard/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="~/ComplianceDashboard/script/script.js" defer></script>
+
+<script src="~/scripts/RetailJsLib/StatutoryController.js?Ver=@ViewBag.Version"></script>
+<script src="~/scripts/RetailJsLib/ComplianceDashboardController.js?Ver=@ViewBag.Version"></script>
+<style>
+    ::-webkit-scrollbar {
+        display: none;
+    }
+    div#statutory {
+        overflow: scroll;
+        height: 351px;
+    }
+    .table th, .table td {
+        text-align: left;
+          padding: 5px !important;
+        border-bottom: 1px solid #ddd;
+    }
+    div#internal {
+        height: 351px;
+        overflow: scroll;
+    }
+    ::-webkit-scrollbar {
+        display: none;
+    }
+    .cardB {
+        display: block; /* Ensures the div behaves as a block */
+        height: 307px;
+        overflow-y: auto;
+    }
+    .cardB {
+        flex-grow: 1;
+        min-height: 0; /* Prevents overflow issues inside flexbox */
+    }
+    .recontainer {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    canvas#riskMatrixChart {
+        display: block;
+        box-sizing: border-box;
+         height: 100%;
+           width: 100%
+    }
+    .view-all1 {
+        float: right;
+    }
+    .view-all1 {
+        display: block;
+       
+        padding: 15px;
+        color: #dc3545;
+        text-decoration: none;
+        font-weight: bold;
+    }
+</style>
+<div class="dashboard-container">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <!-- Overview Cards -->
+        <section class="compliance-summary" ng-init="BindTiles()">
+
+            <div class="applicable-act">
+                <section class="compliance-tables">
+                    <section class="overview-cards">
+                        <div class="card">
+                            
+                            Total Compliance<br><strong ng-if="TotalCompliance !=0">100%</strong>
+                            <strong ng-if="TotalCompliance ==0">0%</strong>
+                            <div class="inner-box">
+                                {{ TotalCompliance }}
+                            </div>
+
+                        </div>
+                        <div class="card1">
+                            Total Location<br><strong ng-if="StoreCount !=0">100%</strong>
+                            <strong ng-if="StoreCount ==0">0%</strong>
+                            <div class="inner-box1">
+                                {{StoreCount}}
+                            </div>
+
+                        </div>
+                        <div class="card2">
+                            Complied<br><strong>{{CompliedPer}}%</strong>
+                                        <div class="inner-box2">
+                                            {{Complied}}
+                                        </div>
+                        </div>
+                        <div class="card3">
+                            Not Complied<br><strong>{{NotCompliedPer}}%</strong>
+                                            <div class="inner-box3">
+                                                {{REMAINDOC}}
+                                            </div>
+                        </div>
+
+                    </section>
+                </section>
+            </div>
+        </section>
+        <br>
+
+
+
+        <!-- Graphs and Statistics -->
+        <section class="statistics"  ng-init="Bindcompliancepie()">
+            <div class="calendar-summary">
+                <h3>Calendar Compliance Summary</h3>
+                <div class="chart-container"  id="chartContainer">
+                    <canvas id="calendarChart" style="margin-left: 19%;"></canvas>
+                   
+                </div>
+            </div>
+            <div class="compliance-risk" style="width: 100%;" ng-init="Bindceriticality()">
+                <h3>Compliance Risk Matrix</h3>
+                <div class="chart-container">
+                    <canvas id="riskMatrixChart" style="height:100%"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Statutory Due Dates Summary -->
+        <section class="compliance-summary5" style="position:relative">
+
+            <div class="recontainer">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" data-tab="statutory">Statutory Compliance</div>
+                    @*<div class="tab" data-tab="internal">Internal Compliance</div>*@
+                </div>
+
+                <!-- Statutory Content -->
+                <div class="content active" id="statutory">
+                    <!-- Filters -->
+
+
+                    <div class="filters">
+                        <div ng-init="BindFilter()">
+                            <select ng-model="State">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in MasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                            </select>
+                            <select ng-model="Month">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                            </select>
+                            <select ng-model="Year">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in YearsList | orderBy: '-'" value="{{x}}"> {{x}}  </option>
+                            </select>
+                        </div>
+                        <button ng-click="BindSearch()">Search</button>
+                    </div>
+                    <a href="../retail/Ncalenderdashboard?Statutory" class="view-all1" style="width:10%;float:right">View All</a>
+
+
+                    <!-- Table -->
+                    <table class="table" ng-init="BindSearch()">
+                        <thead>
+                            <tr>
+                                <th>Act Name</th>
+                                <th>Compliance Name</th>
+                                <th>State Name</th>
+                                <th>Due Date</th>
+                                <th>Actual Submission Date</th>
+                                <th>Delay Days</th>
+                                <th>Status</th>
+                                <th>Download File</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr ng-repeat="row in complianceRows | filter:{Calendartype : 'Statutory'}">
+                                <td>{{row.Act}}</td>
+                                <td>{{row.ComplianceName}}</td>
+                                <td>{{row.STATE_NM}}</td>
+                                <td>{{row.DueDate}}</td>
+                                <td>{{row.ActualSubmissionDate}}</td>
+                                <td>{{row.DelayDays}}</td>
+                                <td>
+                                    <span ng-show="row.CStatus=='Complied'" class="status completed">Complied</span>
+                                    <span ng-show="row.CStatus=='Non Complied'" class="status pending">Non Complied</span>
+                                    <span ng-show="row.CStatus==''" class="status pending">Pending</span>
+                                    <span ng-show="row.CStatus=='Delay complied'" class="status delayed">Delay Complied</span>
+                                    <span ng-show="row.CStatus=='Non-Applicable'" class="status delayed">Non-Applicable</span>
+
+                                </td>
+
+                                <td><a href="#" class="view" ng-show="row.openthis=='1'" ng-click="viewFile(row.UploadFile)">Download</a></td>
+                            </tr>
+                        </tbody>
+
+                    </table>
+
+
+                    <!-- View All Link -->
+                    <a href="../retail/Ncalenderdashboard?Statutory" class="view-all " style="width:10%;float:right">View All</a>
+                </div>
+
+                <!-- Internal Content -->
+                    <!--<div class="content" id="internal">-->
+                        <!-- Filters -->
+                        <!--<div class="filters">
+                            <div ng-init="BindFilter()">
+                                <select ng-model="State">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in MasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                                </select>
+                                <select ng-model="Month">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                                </select>
+                                <select ng-model="Year">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in YearsList | orderBy: '-'" value="{{x}}"> {{x}}  </option>
+                                </select>
+                            </div>
+                            <button ng-click="BindSearch()">Search</button>
+
+                        </div>
+                        <a href="../retail/Ncalenderdashboard?Internal" class="view-all1" style="width:10%;float:right">View All</a>-->
+
+                        <!-- Table -->
+
+                        <!--<table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Act Name</th>
+                                    <th>Compliance Name</th>
+                                    <th>State Name</th>
+                                    <th>Due Date</th>
+                                    <th>Actual Submission Date</th>
+                                    <th>Delay Days</th>
+                                    <th>Status</th>
+                                    <th>Download File</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="row in complianceRows | filter:{Calendartype : 'Internal'}">
+                                    <td>{{row.Act}}</td>
+                                    <td>{{row.ComplianceName}}</td>
+                                    <td>{{row.STATE_NM}}</td>
+                                    <td>{{row.DueDate}}</td>
+                                    <td>{{row.ActualSubmissionDate}}</td>
+                                    <td>{{row.DelayDays}}</td>
+                                    <td>
+                                        <span ng-show="row.CStatus=='Complied'" class="status completed">Complied</span>
+                                        <span ng-show="row.CStatus=='Non Complied'" class="status pending">Non Complied</span>
+                                        <span ng-show="row.CStatus==''" class="status pending">Pending</span>
+                                        <span ng-show="row.CStatus=='Delay complied'" class="status delayed">Delay Complied</span>
+                                        <span ng-show="row.CStatus=='Non-Applicable'" class="status delayed">Non-Applicable</span>
+
+
+                                    </td>
+
+                                    <td><a href="#" class="view" ng-show="row.openthis=='1'" ng-click="viewFile(row.UploadFile)">Download</a></td>
+                                </tr>
+                            </tbody>
+
+                        </table>-->
+
+                        <!-- View All Link -->
+                        <!--<a href="../retail/Ncalenderdashboard?Internal" class="view-all" style="width:10%;float:right">View All</a>
+                    </div>-->
+            </div>
+
+        </section>
+        <br>
+
+        <!-- Compliance Summary -->
+        <section class="containerA" ng-init="BingDisplayedGrapgh()" style="position:relative">
+            <div class="cardA">
+                <h5>Abstract & Notice of Display</h5>
+                <div class="chart">
+                    <canvas id="donutChart"></canvas>
+                    <div class="percentage-label female">
+                        <span><img src="~/ComplianceDashboard/img/male.png" alt="Description of the image" style="width: 100%; height: auto;" /></span>{{NotDisplayedPercentage}}%
+                    </div>
+                    <div class="percentage-label male">
+                        <span><img src="~/ComplianceDashboard/img/female.png" alt="Description of the image" style="width: 100%; height: auto;" /></span>{{DisplayedPercentage}}%
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="color-box displayed"></span>
+                        <span>Displayed</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-box not-displayed"></span>
+                        <span>Not Displayed</span>
+                    </div>
+                </div>
+            </div>
+            <div class="cardB " ng-init="BindComplianceIndustry()">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">Applicable Act ({{Industry}})</h5>
+                    <input type="text" ng-model="searchText" placeholder="Search..." class="form-control w-25 ms-3" />
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Applicable Act</th>
+                            <th>State Name</th>
+                            <th>Overview</th>
+                            <th>File</th>
+
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr ng-repeat="x in IndustryComplianceList | filter:searchText">
+                            <td>{{x.Act}}</td>
+                            <td>{{x.STATE_NM}}</td>
+                            <td><a ng-show="x.openthis!= 0" data-bs-toggle="modal" ng-click="SetCompliance(x.Act,x.STATE_NM,x.ActOverview,x.Industry)" data-bs-target="#LicenseFormop" class="compliance"> View Overview</a></td>
+                            <td><a ng-show="x.IsopenAct !=0" href="{{x.ActFile}}" download>ActFile</a><br /><a ng-show="x.IsopenRule !=0" href="{{x.RuleFile}}" download>RuleFile</a></td>
+
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+    </main>
+    
+</div>
+
+<div class="modal fade" id="LicenseFormop" tabindex="-1" aria-labelledby="LicenseFormopModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modalbr" style="margin-left: -68px; width: 900px; margin-top: -3%; ">
+            <div class="modal-header licencefrmhed">
+                <div class="row" style="width:100% !important">
+                    <div class="col-md-1">
+                        <a href="#" class="btnarrow" data-bs-dismiss="modal" id="closemodalLicenseForm" aria-label="Close"><i class="fa fa-arrow-left"></i></a>
+                    </div>
+                    <div class="col-md-7 text-center">
+                        <img src="https://retail.ezcompliance.in/Login/image/ezfulllogo%203.png" style="FLOAT: LEFT; width: 35%;"> <br /> <br />
+                    </div>
+                    <div class="col-md-12 text-center">
+                        <h3 class="modal-title mt-2 " id="requestFormModalLabel" style="background-color: #a20867;">
+                            Act Overview
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="table-responsive" style="background-color: #f3e3ec;">
+                            <table class="table table-hover bgw" style="border-color: #f3e3ec !important;">
+                                <tr> 
+                                    <td>
+                                        <strong>Act Name:</strong> {{Act}}
+                                    </td>
+                                    <td>
+                                        <strong>State Name:</strong> {{StateName}}
+
+                                    </td>
+                                    <td>
+                                        <strong>Industry :</strong> {{Industry}}
+                                    </td>
+                                </tr>
+                                
+                             
+                                <tr> 
+                                    <td>
+                                        <a class="btn btn-primary">Overview</a>
+                                    </td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="table-responsive" style="max-width: 100%;">
+                            <table class="table table-hover bgw" style="background-color: #f3e3ec;">
+                                <tr> 
+                                    <td colspan="3">
+                                        <iframe id="dvDetailIframe" style="width: 100%; height: calc(85vh - 250px); border: none;"></iframe>
+
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        function Bindcompliancepie() {
+            var collectionobj = {
+                Action: 6,
+                UserId: LoginId
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "../Retail/SearchClientDashboard",
+                contentType: "application/json",
+                data: JSON.stringify({ obj: collectionobj }),
+                success: function (response) {
+                    debugger;
+                    response = JSON.parse(response);
+                    if (!response.Result || !response.Result || response.Result.length === 0) {
+                        /*console.error("❌ Invalid API response:", response);*/
+                        return;
+                    }
+
+                    var complete = Number(response.Result[0].CompletePercentage) || 0;
+                    var pending = Number(response.Result[0].PendingPercentage) || 0;
+                    var delayed = Number(response.Result[0].DelayedPercentage) || 0;
+
+                  /*  console.log("📊 API Data -> Complete:", complete, "Pending:", pending, "Delayed:", delayed);*/
+
+                    // Ensure chart updates **after DOM is ready**
+                    updateChart(complete, pending, delayed);
+                },
+                error: function (xhr, status, error) {
+                    console.error("❌ API request failed:", error);
+                }
+            });
+        }
+
+        function updateChart(complete, pending, delayed) {
+            var ctx = $("#calendarChart");
+
+            if (!ctx.length) {
+                console.error("❌ Canvas element not found!");
+                return;
+            }
+
+            // Destroy existing chart instance if any
+            if (window.myPieChart) {
+                window.myPieChart.destroy();
+            }
+
+            // Create new Chart
+            window.myPieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Complied', 'Pending', 'Delay Complied'],
+                    datasets: [{
+                        data: [complete, pending, delayed],
+                        backgroundColor: ['#2FBFDE', '#6463D6', '#F99C30']
+                    }]
+                }
+            });
+
+            console.log("✅ Chart updated successfully!");
+        }
+
+        // Run function after DOM is ready
+        Bindcompliancepie();
+    });
+</script>

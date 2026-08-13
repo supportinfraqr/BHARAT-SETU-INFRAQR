@@ -1,0 +1,990 @@
+﻿
+<div id="printDiv" ng-init="GetReportHeaderUsingCategory('General Report');">
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th {
+            background-color: #dddddd;
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+    </style>
+    <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+    <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 ">
+       
+
+
+        <fieldset class="fieldset">
+            <legend class="legend"> Details</legend>
+            <div class="datatable-responsive table-responsive advance-btn-table">
+                <table class="table table-in-input-box compact table-bordered nowrap dataTable t-mgtb-n">
+                    <thead>
+                        <tr>
+                            <th class="Sno">DC No.</th>
+                            <th>Date</th>
+                            <th>Farmer Name</th>
+                            <th class="Sno">Farm</th>
+                            <th>Batch No</th>
+                            <th>Buyer Name</th>
+                            <th class="Sno">Vehicle No</th>
+                            <th>Supervisior</th>
+                            <th>Total Bird</th> 
+                        </tr> 
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{DCNo}}</td>
+                            <td>{{DCDate}}</td>
+                            <td>{{FarmerName}}</td>
+                            <td>{{FarmCode}}</td>
+                            <td>{{BatchNo}}</td>
+                            <td>{{BuyerName}}</td>
+                            <td>{{VehicleNo}}</td>
+                            <td>{{SupervisiorName}}</td>
+                            <td>{{TotalBird}}</td> 
+                        </tr>
+                    </tbody></table>
+                <table class="table table-in-input-box compact table-bordered nowrap dataTable t-mgtb-n">
+                    <thead>
+                        <tr>
+                            <th class="Sno">Lifting Start Time</th>
+                            <th>Lifting End Time</th>
+                            <th>Vehicle Out Time</th>
+                            <th class="Sno">Total Weight</th>
+                            <th>Average Weight/Bird</th>
+                            <th>Rate Per Kg</th> 
+                            <th>Balance Bird</th>
+                            <th>Balance Feed Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{LiftingStartTime}}</td>
+                            <td>{{LiftingEndTime}}</td>
+                            <td>{{VehicleOutTime}}</td>
+                            <td>{{TotalWeight}}</td>
+                            <td>{{AverageWeight}}</td>
+                            <td>{{RatePerKg}}</td>
+                            <td>{{BalanceBird}}</td>
+                            <td>{{BalanceFeedStock}}</td> 
+                        </tr>
+                    </tbody>
+                </table>
+                <br />
+                        <table class="table table-in-input-box compact table-bordered nowrap dataTable t-mgtb-n">
+                            <thead>
+                                <tr>
+                                    <th class="Sno">Sr.No.</th>
+                                    <th>No of Birds</th>
+                                    <th>Weight (Kgs.)</th>
+                                    <th class="Sno">Sr.No.</th>
+                                    <th>No of Birds</th>
+                                    <th>Weight (Kgs.)</th>
+                                    <th class="Sno">Sr.No.</th>
+                                    <th>No of Birds</th>
+                                    <th>Weight (Kgs.)</th>
+
+                                </tr>
+
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno1" ng-bind="1">1</label>
+                                    </td>
+                                    <td>
+                                       {{NOB1}}
+                                    </td>
+                                    <td>
+                                   {{Weight1}}
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno2" ng-bind="2">2</label>
+                                    </td>
+                                    <td>
+                                       {{NOB2}}
+                                    </td>
+                                    <td>
+                                       {{Weight2}}
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno3" ng-bind="3">3</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB3" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight3" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno4" ng-bind="4">4</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB4" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight4" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno5" ng-bind="5">5</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB5" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight5" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno6" ng-bind="6">6</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB6" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight6" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno7" ng-bind="7">7</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB7" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight7" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno8" ng-bind="8">8</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB8" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight8" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno9" ng-bind="9">9</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB9" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight9" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno10" ng-bind="10">10</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB10" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight10" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno11" ng-bind="11">11</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB11" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight11" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno12" ng-bind="12">12</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB12" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight12" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno13" ng-bind="13">13</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB13" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight13" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno14" ng-bind="14">14</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB14" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight14" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno15" ng-bind="15">15</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB15" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight15" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno16" ng-bind="16">16</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB16" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight16" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno17" ng-bind="17">17</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB17" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight17" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno18" ng-bind="18">18</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB18" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight18" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno19" ng-bind="19">19</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB19" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight19" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno20" ng-bind="20">20</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB20" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight20" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno21" ng-bind="21">21</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB21" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight21" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno22" ng-bind="22">22</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB22" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight22" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno23" ng-bind="23">23</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB23" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight23" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno24" ng-bind="24">24</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB24" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight24" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno25" ng-bind="25">25</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB25" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight25" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno26" ng-bind="26">26</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB26" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight26" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno27" ng-bind="27">27</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB27" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight27" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno28" ng-bind="28">28</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB28" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight28" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno29" ng-bind="29">29</label>
+                                    </td>
+
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB29" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight29" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno30" ng-bind="30">30</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB30" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight30" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno31" ng-bind="31">31</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB31" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight31" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno32" ng-bind="32">32</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB32" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight32" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno33" ng-bind="33">33</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB33" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight33" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno34" ng-bind="34">34</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB34" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight34" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno35" ng-bind="35">35</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB35" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight35" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno36" ng-bind="36">36</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB36" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight36" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno37" ng-bind="37">37</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB37" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight37" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno38" ng-bind="38">38</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB38" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight38" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno39" ng-bind="39">39</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB39" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight39" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno40" ng-bind="40">40</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB40" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight40" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno41" ng-bind="41">41</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB41" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight41" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno42" ng-bind="42">42</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB42" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight42" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno43" ng-bind="43">43</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB43" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight43" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno44" ng-bind="44">44</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB44" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight44" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno45" ng-bind="45">45</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB45" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight45" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno46" ng-bind="46">46</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB46" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight46" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno47" ng-bind="47">47</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB47" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight47" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno48" ng-bind="48">48</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB48" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight48" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno49" ng-bind="49">49</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB49" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight49" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno50" ng-bind="50">50</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB50" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight50" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno51" ng-bind="51">51</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB51" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight51" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno52" ng-bind="52">52</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB52" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight52" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno53" ng-bind="53">53</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB53" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight53" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno54" ng-bind="54">54</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB54" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight54" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno55" ng-bind="55">55</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB55" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight55" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno56" ng-bind="56">56</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB56" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight56" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno57" ng-bind="57">57</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB57" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight57" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno58" ng-bind="58">58</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB58" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight58" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno59" ng-bind="59">59</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB59" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight59" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno60" ng-bind="60">60</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB60" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight60" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno61" ng-bind="61">61</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB61" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight61" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno62" ng-bind="62">62</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB62" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight62" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno63" ng-bind="63">63</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB63" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight63" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno64" ng-bind="64">64</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB64" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight64" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno65" ng-bind="65">65</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB65" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight65" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno66" ng-bind="66">66</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB66" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight66" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno67" ng-bind="67">67</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB67" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight67" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno68" ng-bind="68">68</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB68" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight68" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno69" ng-bind="69">69</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB69" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight69" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno70" ng-bind="70">70</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB70" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight70" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno71" ng-bind="71">71</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB71" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight71" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno72" ng-bind="72">72</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB72" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight72" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno73" ng-bind="73">73</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB73" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight73" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno74" ng-bind="74">74</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB74" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight74" />
+                                    </td>
+                                    <td>
+                                        <label style="width:40px !important;" ng-model="Sno75" ng-bind="75">75</label>
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="NOB75" />
+                                    </td>
+                                    <td>
+                                        <input style="width:100% !important;height:24px" type="text" class="form-control text-right clear " placeholder=""
+                                               ng-model="Weight75" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                <table>
+                    <tr style="width:33% !important"><td style="width:33% !important">Farmer</td><td style="width:33% !important">Buyer's Signature</td><td>Full Signature of Lifiting Supervision</td></tr>
+                    
+                </table>
+</div>
+        </fieldset>
+    </div>
+</div>
+
+
+
+
+
+
+

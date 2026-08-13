@@ -1,0 +1,705 @@
+﻿.vendorAdminPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 83vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.add-btn, .save-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .save-btn:hover,
+    .add-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.cancel-btn {
+    border-radius: 999px;
+    color: var(--primary);
+    background: transparent;
+    border: 1px solid var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .cancel-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* ===== Fix Add Party button click blink ===== */
+
+.vendorAdminPage .add-btn {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    /* prevent white flash on click */
+    .vendorAdminPage .add-btn:active,
+    .vendorAdminPage .add-btn:focus,
+    .vendorAdminPage .add-btn:focus-visible {
+        background: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+/* remove mobile tap highlight */
+.vendorAdminPage .add-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Toggle pill - single capsule container */
+.vendorAdminPage .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .vendorAdminPage .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 4px 8px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+        /* active pill */
+        .vendorAdminPage .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+        }
+
+        /* ensure focus ring for accessibility (subtle) */
+        .vendorAdminPage .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+/* Section cards */
+.vendorAdminPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .vendorAdminPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* min-height: 320px;*/
+    }
+
+    .vendorAdminPage .section-card h4 {
+        color: var(--primary);
+    }
+
+
+/* KPI CARDS */
+.vendorAdminPage .kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+.vendorAdminPage .kpi-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .vendorAdminPage .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.vendorAdminPage .kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.vendorAdminPage .kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+/* Table wrapper and hide scrollbar visually */
+.vendorAdminPage .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .vendorAdminPage .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.vendorAdminPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.vendorAdminPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.vendorAdminPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* action menu */
+
+.vendorAdminPage .action-menu .btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .vendorAdminPage .action-menu .btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.vendorAdminPage .table-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .vendorAdminPage .table-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* statuses */
+.vendorAdminPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.vendorAdminPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.vendorAdminPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.vendorAdminPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+
+/* filter button */
+.vendorAdminPage .filter-btn,
+.vendorAdminPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .vendorAdminPage .filter-btn.active,
+    .vendorAdminPage .filter-btn:hover,
+    .vendorAdminPage .filter-btn.active,
+    .vendorAdminPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.vendorAdminPage .table-toolbar .form-control-sm {
+    height: 34px;
+    border-radius: 999px 0 0 999px;
+    border-right: none;
+    border-color: var(--primary);
+}
+
+/* Search button */
+.vendorAdminPage .input-group .btn {
+    /* border-radius: 0 999px 999px 0;
+    border-left: none;*/
+}
+
+/* Export button (rounded) */
+.vendorAdminPage .export-btn, .search-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .vendorAdminPage .export-btn:hover,
+    .vendorAdminPage .search-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+/* ================= Add Party Modal ================= */
+
+.vendorAdminPage .vendorAdminModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.vendorAdminPage .vendorAdminModal .modal-title {
+    font-weight: 400;
+}
+
+.vendorAdminPage .vendorAdminModal .modal-body {
+    background: var(--card-bg);
+}
+
+.vendorAdminPage .vendorAdminModal .form-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #444;
+}
+
+    .vendorAdminPage .vendorAdminModal .form-label span {
+        color: #E45D27;
+    }
+
+.vendorAdminPage .vendorAdminModal .form-control-sm,
+.vendorAdminPage .vendorAdminModal .form-select-sm {
+    font-size: 0.78rem;
+    border-radius: 6px;
+}
+
+.vendorAdminPage .vendorAdminModal .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}
+
+
+/*==============Overview================*/
+
+/* ADMIN OVERVIEW  */
+.vendorAdminPage #overview .adminOverview .card-body {
+    padding: 24px;
+}
+
+/* Header  */
+.vendorAdminPage #overview .adminOverview-header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+/* Org Info */
+.vendorAdminPage #overview .adminOverview-org {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* Org Logo : Universal Fit  */
+.vendorAdminPage #overview .adminOverview-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px; /* works for all shapes */
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* important */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+    .vendorAdminPage #overview .adminOverview-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain; /* KEY: no crop, no stretch */
+        display: block;
+    }
+
+
+.vendorAdminPage #overview .adminOverview-orgInfo h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.vendorAdminPage #overview .adminOverview-orgInfo a, p {
+    font-size: 13px;
+    color: #555;
+    text-decoration: none;
+}
+
+/* Meta Info */
+.vendorAdminPage #overview .adminOverview-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px 24px;
+}
+
+.vendorAdminPage #overview .meta-item label {
+    font-size: 12px;
+    color: #777;
+    display: block;
+}
+
+.vendorAdminPage #overview .meta-item span {
+    font-weight: 500;
+}
+
+/* Right Wrapper */
+.vendorAdminPage #overview .adminOverview-right {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+/* Attention Card */
+.vendorAdminPage #overview .adminOverview-alert {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #fff6f1;
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    padding: 12px 14px;
+    max-width: 300px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+    /* Icon */
+    .vendorAdminPage #overview .adminOverview-alert .alert-icon {
+        color: red;
+        font-size: 16px;
+        margin-top: 2px;
+    }
+
+    /* Content */
+    .vendorAdminPage #overview .adminOverview-alert h6 {
+        margin: 0;
+        color: red !important;
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .vendorAdminPage #overview .adminOverview-alert p {
+        font-size: 12px;
+        color: #666;
+        margin: 4px 0 8px;
+        line-height: 1.4;
+    }
+
+    .vendorAdminPage #overview .adminOverview-alert .renew-btn {
+        background-color: #fff;
+        color: red;
+        border: 1px solid red;
+        border-radius: 999px;
+        font-weight: 400;
+        padding: 1px 6px;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+    }
+
+        .vendorAdminPage #overview .adminOverview-alert .renew-btn:hover {
+            background: red;
+            color: #fff;
+        }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .vendorAdminPage #overview .adminOverview-right {
+        width: 100%;
+    }
+
+    .vendorAdminPage #overview .adminOverview-alert {
+        max-width: 100%;
+    }
+}
+
+
+/* Edit Button */
+.vendorAdminPage #overview .adminOverview-edit {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: none;
+    background: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    cursor: pointer;
+}
+
+    .vendorAdminPage #overview .adminOverview-edit i {
+        color: var(--primary);
+    }
+
+/* KPI Cards  */
+.vendorAdminPage #overview .adminOverview-kpis {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.vendorAdminPage #overview .kpiCard {
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    border-left: 4px solid var(--primary);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+    .vendorAdminPage #overview .kpiCard:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .vendorAdminPage #overview .kpiCard i {
+        font-size: 26px;
+        color: var(--primary);
+    }
+
+    .vendorAdminPage #overview .kpiCard h6 {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .vendorAdminPage #overview .kpiCard span {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+/* Responsive  */
+@media (max-width: 992px) {
+    .vendorAdminPage #overview .adminOverview-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .vendorAdminPage #overview .adminOverview-meta {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .vendorAdminPage #overview .adminOverview-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .vendorAdminPage #overview .adminOverview-header {
+        padding-top: 32px;
+    }
+}
+
+/* USER ANALYTICS  */
+.vendorAdminPage #overview .adminUserAnalytics .card-body {
+    padding: 20px;
+}
+
+/* Header */
+.vendorAdminPage #overview .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+    .vendorAdminPage #overview .analytics-header h5 {
+        margin: 0;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+.vendorAdminPage #overview #overview .card-head {
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.vendorAdminPage #overview .analytics-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .vendorAdminPage #overview .analytics-actions a {
+        font-size: 13px;
+        text-decoration: none;
+        color: var(--primary);
+    }
+
+/* Chart wrapper */
+.vendorAdminPage #overview .chartWrap {
+    height: 260px;
+}
+
+/* Donut */
+.vendorAdminPage #overview .donutWrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 16px;
+}
+
+.vendorAdminPage #overview .donutCenter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+    .vendorAdminPage #overview .donutCenter span {
+        font-size: 12px;
+        color: #777;
+    }
+
+    .vendorAdminPage #overview .donutCenter strong {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+/* User stats */
+.vendorAdminPage #overview .userStats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 12px;
+}
+
+    .vendorAdminPage #overview .userStats div {
+        text-align: center;
+    }
+
+    .vendorAdminPage #overview .userStats strong {
+        display: block;
+        font-size: 18px;
+    }
+
+    .vendorAdminPage #overview .userStats small {
+        font-size: 12px;
+        color: #777;
+    }
+
+.vendorAdminPage #overview .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+    .vendorAdminPage #overview .dot.active {
+        background: var(--primary);
+    }
+
+    .vendorAdminPage #overview .dot.inactive {
+        background: #ccc;
+    }
+
+    .vendorAdminPage #overview .dot.total {
+        background: #999;
+    }
+
+/* Responsive */
+@media (max-width: 991px) {
+    .vendorAdminPage #overview .chartWrap {
+        height: 220px;
+    }
+}
+
+.vendorAdminPage .admin-dd-select {
+    border-radius: 10px;
+    border: 1px solid var(--primary);
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background-color: #fff;
+    box-shadow: none;
+}
+
+.vendorAdminPage .admin-dd-label {
+    font-size: 0.75rem;
+}

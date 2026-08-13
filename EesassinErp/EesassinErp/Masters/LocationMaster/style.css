@@ -1,0 +1,1824 @@
+﻿/* style.css - scoped to .locationMasterPage */
+.locationMasterPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 85vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px; 
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+    /* Top bar instructions */
+    .locationMasterPage .top-bar .limit-instruction {
+        font-size: 0.9rem;
+        color: #6b4b2d;
+        background: transparent;
+        padding: 6px 8px;
+        border-radius: 6px;
+    }
+
+    /* New Location button (rounded pill) */
+    .locationMasterPage .btn-new-location {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-weight: 400;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+/* New Location modal scoped styling */
+.lm-newlocation-topbar {
+    background: #E45D27;
+    color: #fff;
+    border-radius: .35rem .35rem 0 0;
+    padding: 0.9rem 1rem;
+}
+
+.lm-newlocation-card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: none;
+}
+
+.lm-newlocation-body {
+    background: #FFF8F3;
+}
+
+/* table styling to match orange theme + compact look */
+.arch-newlocation-docs thead th {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 4;
+}
+
+.arch-newlocation-docs td {
+    background-color: #fff;
+    font-size: 0.85rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px;
+}
+
+.arch-newlocation-docs tbody tr:hover td {
+    background-color: #FFF0E6;
+}
+
+.doc-choose-btn, #cancelNewLocationBtn, #saveNewLocationBtn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 6px;
+    padding: 4px 8px;
+    border: 0;
+}
+
+    .doc-choose-btn:hover, #cancelNewLocationBtn:hover, #saveNewLocationBtn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+#cancelNewLocationBtn, #saveNewLocationBtn{
+
+}
+
+/* Make modal inputs compact */
+.modal .form-control, .modal .form-select {
+    padding: .375rem .5rem;
+    border-radius: .35rem;
+    font-size: .9rem;
+}
+
+/* small responsive fix */
+@media (max-width: 768px) {
+    .modal-dialog.modal-xl {
+        max-width: 95%;
+    }
+}
+
+        /* remove dark blink only (keeps focus outline accessible via subtle shadow) */
+        .locationMasterPage .btn-new-location:focus,
+        .locationMasterPage .btn-new-location:active,
+        .locationMasterPage .export-btn:focus,
+        .locationMasterPage .export-btn:active,
+        .locationMasterPage .filter-btn:focus,
+        .locationMasterPage .btn-pill:focus {
+            outline: none;
+        }
+
+        /* visual hover states */
+        .locationMasterPage .btn-new-location:hover {
+            background: var(--primary-dark);
+        }
+
+    /* Toggle pill - single capsule container */
+    .locationMasterPage .toggle-pill {
+        display: inline-flex;
+        border-radius: 999px;
+        background: rgba(0,0,0,0.03);
+        padding: 4px;
+        overflow: hidden;
+        gap: 4px;
+        align-items: center;
+    }
+
+        /* inner buttons: make them visually full-pill, no borders, equal width */
+        .locationMasterPage .toggle-pill .btn-pill {
+            background: transparent;
+            border: 0;
+            padding: 8px 18px;
+            margin: 0;
+            font-weight: 400;
+            color: #333;
+            border-radius: 999px;
+            transition: background .15s ease, color .15s ease, transform .06s ease;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+            /* active pill */
+            .locationMasterPage .toggle-pill .btn-pill.active {
+                background: var(--primary);
+                color: #fff;
+                box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+            }
+
+            /* ensure focus ring for accessibility (subtle) */
+            .locationMasterPage .toggle-pill .btn-pill:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+            }
+
+    /* Section cards */
+    .locationMasterPage .section-card {
+        background: transparent;
+        border: none;
+    }
+
+        .locationMasterPage .section-card .card-body {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            min-height: 320px;
+        }
+
+    /* Table wrapper and hide scrollbar visually */
+    .locationMasterPage .small-table-wrapper {
+        max-height: auto;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scroll-behavior: smooth;
+    }
+
+        .locationMasterPage .small-table-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+    .locationMasterPage .small-table-wrapper {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* table header sticky */
+    .locationMasterPage .small-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: #F37437;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+    /* table body */
+    .locationMasterPage .small-table tbody td {
+        background-color: var(--card-bg);
+        font-size: 0.78rem;
+        vertical-align: middle;
+        text-align: center;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    /* hover */
+    .locationMasterPage .small-table tbody tr:hover td {
+        background-color: #FFE8D9;
+    }
+
+    .locationMasterPage .small-table tbody td .store-code-link{
+        text-decoration: none;
+    }
+
+    /* action menu */
+    .locationMasterPage .action-menu {
+        position: relative;
+        width: 48px;
+        text-align: right;
+        background-color: var(--card-bg);
+    }
+
+        .locationMasterPage .action-menu .btn {
+            color: var(--primary);
+        }
+
+        .locationMasterPage .action-menu .dropdown-menu {
+            min-width: 120px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+    /* filter button */
+    .locationMasterPage .filter-btn {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        .locationMasterPage .filter-btn.active,
+        .locationMasterPage .filter-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* small inputs */
+    .locationMasterPage .table-toolbar .form-control-sm {
+        height: 36px;
+        border-radius: 999px;
+        border-color: var(--primary);
+    }
+
+    /* Export button (rounded) */
+    .locationMasterPage .export-btn {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+        .locationMasterPage .export-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+        .locationMasterPage .export-btn:focus,
+        .locationMasterPage .export-btn:active {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+    /* Pagination area */
+    .locationMasterPage .table-pagination {
+        border-top: 1px solid rgba(0,0,0,0.04);
+        padding-top: 8px;
+        margin-top: 8px;
+    }
+
+        .locationMasterPage .table-pagination .btn {
+            border-radius: 999px;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border: 1px solid var(--primary);
+            background: #fff;
+            color: var(--primary);
+        }
+
+            .locationMasterPage .table-pagination .btn:hover {
+                background: var(--primary);
+                color: #fff;
+                border-color: var(--primary);
+            }
+
+    .locationMasterPage #viewAllRows {
+        background-color: var(--primary);
+        color: #fff;
+        border: none;
+    }
+
+        .locationMasterPage #viewAllRows:hover {
+            background-color: var(--primary-dark);
+        }
+
+    /* statuses */
+    .locationMasterPage .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+    }
+
+    .locationMasterPage .status-active {
+        background: #dff6e9;
+        color: #197a3a;
+    }
+
+    .locationMasterPage .status-upcoming {
+        background: #ffeedf;
+        color: #d06a1e;
+    }
+
+    .locationMasterPage .status-disabled {
+        background: #ffe9ee;
+        color: #c43a5b;
+    }
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .locationMasterPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .locationMasterPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .locationMasterPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .locationMasterPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+
+/* ================= Request Form modal styles (scoped) ================= */
+.locationMasterPage .lm-request-modal .modal-dialog {
+    max-width: 50%;
+}
+/* approx 50% width centered */
+.locationMasterPage .lm-request-modal .modal-content {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* modal header */
+.locationMasterPage .lm-modal-header {
+    display: flex;
+    align-items: center;
+    background-color:transparent;
+    color: #E45D27;
+    padding: 14px 16px;
+    position: relative;
+}
+
+/* back button (left) */
+.locationMasterPage .lm-back-btn {
+    background: transparent;
+    border: 0;
+    color: #E45D27;
+    font-size: 1.25rem;
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    transition: transform .18s ease, background .18s ease;
+}
+
+    .locationMasterPage .lm-back-btn:hover {
+        transform: translateX(-4px);
+        background: #f7e3d6;
+    }
+
+/* center title */
+.locationMasterPage .lm-modal-header .modal-title {
+    text-align: center;
+    margin: 0 12px;
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+/* profile completion circle (right) */
+.locationMasterPage .lm-profile-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 999px;
+    border: 6px solid rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #E45D27;
+    font-weight: 700;
+}
+
+.locationMasterPage .lm-profile-percent {
+    font-size: 0.95rem;
+}
+
+/* modal body table */
+.locationMasterPage .lm-request-table-wrap {
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+
+
+/* request table styles */
+.locationMasterPage .lm-request-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 6px;
+}
+
+.locationMasterPage .lm-request-table tbody td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px 6px;
+    background-color: var(--card-bg);
+}
+
+    .locationMasterPage .lm-request-table tbody tr:hover td{
+        background-color: #FFE8D9;
+    }
+
+/* license links clickable */
+.locationMasterPage .lm-request-table .lm-license-link {
+    color: var(--primary);
+    font-weight: 400;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+    .locationMasterPage .lm-request-table .lm-license-link:hover {
+        color: var(--primary-dark);
+    }
+
+/* approve / upload / genlink buttons */
+.locationMasterPage .lm-approve-btn {
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border: none;
+    background: var(--primary) !important;
+    color: #fff !important;
+}
+
+.locationMasterPage .lm-upload-btn,
+.locationMasterPage .lm-genlink-btn {
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border: none;
+    background: var(--primary) !important;
+    color: #fff !important;
+}
+
+    /* hidden by default; JS toggles .d-none */
+    .locationMasterPage .lm-upload-btn.d-none,
+    .locationMasterPage .lm-genlink-btn.d-none {
+        display: none !important;
+    }
+
+/* generated link display */
+.locationMasterPage .lm-generated-link {
+    font-size: 0.85rem;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: var(--primary) !important;
+    color: #fff !important;
+    word-break: break-all;
+}
+
+/* small view button */
+.locationMasterPage .lm-view-btn {
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+}
+
+.locationMasterPage .modal-footer button {
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: var(--primary) !important;
+    color: #fff !important;
+}
+/* responsive tweaks for modal on small screens */
+@media (max-width: 992px) {
+    .locationMasterPage .lm-request-modal .modal-dialog {
+        max-width: 95%;
+    }
+
+    .locationMasterPage .lm-profile-circle {
+        width: 52px;
+        height: 52px;
+    }
+
+    .locationMasterPage .lm-request-table thead th {
+        font-size: 0.85rem;
+    }
+}
+
+/* ================= License Overview Modal(scoped) ================= */
+.locationMasterPage #lmLicenseOverviewModal .lm-license-modal {
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+
+/* Header */
+.locationMasterPage #lmLicenseOverviewModal .lm-license-header {
+    padding: 12px 16px;
+    background: var(--card-bg);
+    border-bottom: 1px solid #eee;          
+}
+
+.locationMasterPage #lmLicenseOverviewModal .lm-back-btn {
+    border: none;
+    background: transparent;
+    font-size: 1.2rem;
+    color: var(--primary);
+}
+    .locationMasterPage #lmLicenseOverviewModal .lm-back-btn:hover {
+        transform: translateX(-4px);
+        background: #f7e3d6;  /*dark shade of card color*/
+    }
+
+/* Logo */
+.locationMasterPage #lmLicenseOverviewModal .lm-logo-box {
+    height: 42px;
+    width: 160px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Title bar */
+.locationMasterPage #lmLicenseOverviewModal .lm-license-title {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+    padding: 10px;
+    font-size: 1rem;
+}
+
+/* Body */
+.locationMasterPage #lmLicenseOverviewModal .lm-license-body {
+    max-height: 65vh;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+/* Meta info */
+.locationMasterPage #lmLicenseOverviewModal .lm-meta-item label {
+    font-weight: 600;
+    display: block;
+    font-size: 0.78rem;
+    color: #555;
+}
+
+.locationMasterPage #lmLicenseOverviewModal .lm-meta-item span,
+.locationMasterPage #lmLicenseOverviewModal .lm-meta-item a {
+    font-size: 0.8rem;
+}
+
+.locationMasterPage #lmLicenseOverviewModal .lm-app-link {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Summary button */
+.locationMasterPage #lmLicenseOverviewModal .lm-summary-btn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.75rem;
+}
+
+    .locationMasterPage #lmLicenseOverviewModal .lm-summary-btn:hover {
+        background: var(--primary-dark);
+    }
+
+/* Content */
+.locationMasterPage #lmLicenseOverviewModal .lm-license-content {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.locationMasterPage #lmLicenseOverviewModal .lm-section-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.locationMasterPage #lmLicenseOverviewModal .lm-sub-title {
+    font-weight: 600;
+    margin-top: 12px;
+    font-size: 0.85rem;
+}
+
+.lm-license-content {
+    max-height: 45vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding-right: 8px;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    position: relative;
+}
+
+    .lm-license-content * {
+        max-width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    .lm-license-content table {
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .lm-license-content td,
+    .lm-license-content th {
+        word-break: break-word;
+        white-space: normal;
+    }
+
+    .lm-license-content img,
+    .lm-license-content iframe,
+    .lm-license-content video {
+        max-width: 100%;
+        height: auto;
+        display: block;
+    }
+
+
+/* ================= Upload Page styles (scoped) ================= */
+.locationMasterPage .lm-upload-page-card {
+    background: #FFF1EB;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+}
+
+.locationMasterPage .uploadModalDialog {
+    max-width: 95% !important;
+    font-size: 1rem;
+}
+
+/* top buttons */
+.locationMasterPage .lm-upload-back {
+    background: var(--primary) !important;
+    color: #fff;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+
+.locationMasterPage #lmSaveDraft {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+
+.locationMasterPage #lmSubmitUpload {
+    background: var(--primary) !important;
+    color: #fff;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+}
+
+/* info row */
+.locationMasterPage .lm-info-row {
+    font-weight: 400;
+    font-size:1rem;
+}
+
+/* form inputs - match existing styling */
+.locationMasterPage .lm-page-input {
+    background: #fff;
+    border: 1px solid rgba(34,34,34,0.08);
+    border-radius: 6px;
+    padding: .375rem .5rem;
+}
+
+/* Upload card */
+.locationMasterPage .lm-upload-card {
+    background: transparent;
+}
+
+.locationMasterPage .lm-upload-label {
+    font-weight: 400;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+/* dashed drop area */
+.locationMasterPage .lm-upload-drop {
+    border: 2px dashed rgba(0,0,0,0.12);
+    border-radius: 10px;
+    padding: 30px 12px;
+    transition: all .18s ease;
+    background: #fff;
+}
+
+    .locationMasterPage .lm-upload-drop:hover {
+        border-color: var(--primary);
+        box-shadow: 0 6px 18px rgba(228,93,39,0.06);
+        cursor: pointer;
+    }
+
+/* inner center block */
+.locationMasterPage .lm-upload-inner {
+    padding: 8px;
+}
+
+/* preview image */
+.locationMasterPage .lm-preview img {
+    max-height: 160px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+/* responsive */
+@media (max-width: 992px) {
+    .locationMasterPage .lm-upload-page-card {
+        padding: 12px;
+    }
+
+    .locationMasterPage .lm-upload-drop {
+        padding: 20px;
+    }
+}
+
+
+
+/* =================License Copy Slide-in modal================= */
+
+.licenseCopyModalWrap .modal-dialog {
+    width: 25%;
+    max-width: 420px;
+    height: 100vh;
+    position: fixed;
+    right: -30%; /* start off-screen */
+    top: 0;
+    margin: 0;
+    transform: translateX(0);
+    transition: right 0.35s ease-in-out;
+}
+
+.licenseCopyModalWrap.show .modal-dialog {
+    right: 0;
+}
+
+.licenseCopyModalWrap .modal-dialog .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+    .licenseCopyModalWrap .modal-dialog .modal-header .btn-close {
+        filter: invert(1) brightness(8);
+    }
+
+/* Slide-out effect */
+.modal-dialog-slideout {
+    margin: 0;
+}
+
+/* Circular Progress */
+.licenseCopyModalWrap .progress-container {
+    position: relative;
+    display: inline-block;
+}
+
+.licenseCopyModalWrap .circle-svg {
+    transform: rotate(-90deg);
+}
+
+.licenseCopyModalWrap .bg-circle {
+    stroke: #f5d9b0;
+    stroke-width: 12;
+    fill: none;
+}
+
+.licenseCopyModalWrap .fg-circle {
+    stroke: #FD670B;
+    stroke-width: 12;
+    fill: none;
+    stroke-linecap: round;
+    stroke-dasharray: 377; /* 2*pi*60 */
+    stroke-dashoffset: 372; /* default 1% */
+    transition: stroke-dashoffset .4s;
+}
+
+.licenseCopyModalWrap .progress-text {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+}
+
+    .licenseCopyModalWrap .progress-text .title {
+        font-size: 13px;
+        color: #000;
+    }
+
+    .licenseCopyModalWrap .progress-text .percent {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+/* Bullet list */
+.licenseCopyModalWrap .doc-list li {
+    margin-bottom: 6px;
+}
+
+    .licenseCopyModalWrap .doc-list li a {
+        text-decoration: none;
+        color: black;
+    }
+
+        .licenseCopyModalWrap .doc-list li a:hover {
+            color: #FD670B;
+        }
+
+/* Button */
+.licenseCopyModalWrap .btn-orange {
+    background: #FD670B;
+    color: white;
+}
+
+    .licenseCopyModalWrap .btn-orange:hover {
+        background: #e75b08;
+    }
+
+/* Footer fixed spacing */
+.licenseCopyModalWrap .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: white;
+}
+
+
+/* =================View More modal================= */
+
+.locationMasterPage .lm-viewmore-dialog {
+    max-width: 100%;
+    margin: 0;
+}
+
+.locationMasterPage .lm-viewmore-modal .modal-content {
+    border-radius: 12px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* body should scroll independently */
+.locationMasterPage .lm-viewmore-body {
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+/* keep header & footer fixed visually */
+.locationMasterPage .lm-viewmore-modal .modal-header {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    height: auto !important;
+    min-height: 1px !important;
+}
+/* not using bootstrap header block */
+.locationMasterPage .lm-upload-page-card {
+    background: #FFF1EB;
+    border-radius: 12px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.06);
+}
+
+/* match upload page buttons */
+.locationMasterPage .lm-upload-back {
+    background: #fff !important;
+    color: var(--primary);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+
+    .locationMasterPage .lm-upload-back i {
+        margin-right: 6px;
+    }
+
+/* inputs & table */
+.locationMasterPage .lm-viewmore-body .form-control {
+    background: #fff;
+    border: 1px solid rgba(34,34,34,0.08);
+    border-radius: 6px;
+    padding: .375rem .5rem;
+}
+
+.locationMasterPage .lm-docs-table thead th {
+    background: #fde8f2;
+    color: #6b1b4a;
+    font-weight: 700;
+    text-align: center;
+}
+
+.locationMasterPage .lm-docs-table tbody td {
+    vertical-align: middle;
+    padding: .5rem .75rem;
+}
+
+/* small responsive fixes */
+@media (max-width: 992px) {
+    .locationMasterPage .lm-viewmore-modal .modal-dialog {
+        max-width: 100%;
+    }
+
+    .locationMasterPage .lm-viewmore-body {
+        padding: 16px;
+    }
+}
+
+/* ================= Manage Project (scoped) ================= */
+.locationMasterPage .lm-project-card {
+    background: #FFF1EB;
+    border-radius: 12px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ---------- HEADER ---------- */
+.locationMasterPage .lm-project-topbar {
+    gap: 12px;
+    background: #E45D27;
+    color: #fff;
+    border-radius: 12px 12px 0 0;
+    padding: 16px 20px;
+}
+
+.locationMasterPage .lm-project-sub {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9rem;
+}
+
+
+
+/* ---------- BODY WRAPPER ---------- */
+.locationMasterPage .lm-project-body {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    padding: 18px 14px 80px; /* fixed spacing & bottom margin for sticky footer */
+}
+
+/* ---------- INNER CARDS ---------- */
+.locationMasterPage .pm-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    padding: 16px;
+}
+
+/* checklist items */
+.locationMasterPage .pm-checklist .list-group-item {
+    border: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    padding: 12px;
+}
+
+/* inline form inputs */
+.locationMasterPage .pm-inline-input {
+    width: 140px;
+    display: inline-block;
+    margin-left: 6px;
+}
+
+/* ---------- Overview Section ---------- */
+.locationMasterPage .manageProjectModal-ov {
+    background: transparent;
+}
+
+.locationMasterPage .mp-ov-header h5 {
+    font-weight: 500;
+}
+
+.locationMasterPage .mp-ov-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    height: 100%;
+}
+
+.locationMasterPage .mp-ov-card-top {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #E45D27;
+    margin-bottom: 6px;
+}
+
+.locationMasterPage .mp-ov-card-body {
+    font-size: 0.95rem;
+}
+
+.locationMasterPage .mp-big {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.locationMasterPage #mpStage {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.locationMasterPage .mp-ov-sub {
+    color: #777;
+    font-size: 0.875rem;
+}
+
+/* avatar */
+.locationMasterPage .mp-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #E45D27;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+}
+
+/* risk circle */
+.locationMasterPage .mp-risk-ring svg {
+    width: 46px;
+    height: 46px;
+}
+
+/* small utility */
+.locationMasterPage .pm-status-badge {
+    font-weight: 400;
+    color: #c00;
+}
+
+
+/* ---------- Document Table ---------- */
+.locationMasterPage .pm-doc-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+.locationMasterPage .pm-doc-table td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.locationMasterPage .pm-doc-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* Buttons */
+#pmAddChecklist, #pmCalcProgress, #pmOpenVersionHistory, #pmAddRow {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+    #pmAddChecklist:hover, #pmCalcProgress:hover, #pmOpenVersionHistory:hover, .pm-upload-btn:hover, .pm-view-btn:hover, #pmAddRow:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+#pmDownloadChecklist, #pmCancelProject, #pmSaveDraftBtn, #pmSubmitApprovalBtn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+    #pmDownloadChecklist:hover, #pmCancelProject:hover, #pmSaveDraftBtn:hover, #pmSubmitApprovalBtn:hover {
+        background: var(--primary-dark);
+    }
+
+.pm-upload-btn, .pm-view-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+#pmInstructionText {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding-bottom: 12px;
+}
+
+    /* ---------- MODAL FOOTER ---------- */
+    .locationMasterPage .lm-project-footer {
+        background: #FFF1EB;
+        position: sticky;
+        bottom: 0;
+        padding: 12px 20px;
+        z-index: 5;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 -3px 10px rgba(0,0,0,0.05);
+    }
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 992px) {
+    .locationMasterPage .lm-project-dialog .modal-content {
+        border-radius: 12px;
+    }
+
+    .locationMasterPage .pm-inline-input {
+        width: 100%;
+        display: block;
+        margin: 6px 0 0;
+    }
+}
+
+/* ================= Architect Modal (scoped, updated) ================= */
+.locationMasterPage {
+    --primary: #E45D27;
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+}
+
+    /* core card */
+    .locationMasterPage .lm-architect-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        display: flex;
+        flex-direction: column;
+        min-height: 72vh;
+    }
+
+    /* topbar */
+    .locationMasterPage .lm-architect-topbar {
+        gap: 12px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 12px 12px 0 0;
+        padding: 12px 18px;
+    }
+
+    .locationMasterPage .lm-architect-title {
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .locationMasterPage .lm-architect-sub {
+        color: rgba(255,255,255,0.95);
+        font-size: 0.9rem;
+    }
+
+    /* body area */
+    .locationMasterPage .lm-architect-body {
+        flex: 1 1 auto;
+        padding-bottom: 80px; /* footer */
+    }
+
+    /* inner cards */
+    .locationMasterPage .arch-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        min-height: 220px;
+    }
+
+    /* activities list */
+    .locationMasterPage .arch-activities {
+        max-height: 420px;
+        overflow: auto;
+    }
+
+    .locationMasterPage .activity-item {
+        border: 0;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
+        text-align: left;
+        background: transparent;
+        transition: background .12s, transform .12s;
+        border-radius: 8px;
+    }
+
+        .locationMasterPage .activity-item:hover {
+            background: rgba(228,93,39,0.03);
+            transform: translateY(-1px);
+        }
+
+        .locationMasterPage .activity-item.active {
+            background: linear-gradient(90deg, rgba(228,93,39,0.06), rgba(255,255,255,0.02));
+            border-left: 4px solid var(--primary);
+        }
+
+    /* contractor area scroll */
+    .locationMasterPage .arch-contractor-scroll-wrap {
+        max-height: 420px;
+        overflow: auto;
+    }
+
+    /* gallery */
+    .locationMasterPage .arch-gallery {
+        min-height: 140px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        align-items: start;
+        max-height: 360px;
+        overflow: auto;
+    }
+
+    .locationMasterPage .arch-thumb {
+        background: #fff;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        text-align: center;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+        .locationMasterPage .arch-thumb img {
+            width: 100%;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        .locationMasterPage .arch-thumb .meta {
+            font-size: .78rem;
+            color: #555;
+        }
+
+    /* compliance alert */
+    .locationMasterPage .arch-alert {
+        border-left: 6px solid var(--primary-dark);
+        background: #FFF4F0;
+        color: #3a1b12;
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .locationMasterPage .arch-alert-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 6px;
+    }
+
+    /* controls */
+    .locationMasterPage .arch-card .form-control-sm {
+        padding: .375rem .5rem;
+        border-radius: 6px;
+    }
+
+    /* footer */
+    .locationMasterPage .lm-architect-footer {
+        background: transparent;
+        position: sticky;
+        bottom: 0;
+        z-index: 6;
+    }
+
+/* Buttons */
+#archRefreshActivities, #archAddIssue, #archResolveAll, #archAddActivity, #addSubActivityRow {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    #archRefreshActivities:hover, #archAddIssue:hover, #archResolveAll:hover, #archAddActivity:hover, #addSubActivityRow:hover{
+        background: var(--primary);
+        color: #fff;
+    }
+
+#archCancelBtn, #archSaveDraftBtn, #archSubmitBtn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    #archCancelBtn:hover, #archSaveDraftBtn:hover, #archSubmitBtn:hover {
+        background: var(--primary-dark);
+    }
+
+
+/* responsive */
+@media (max-width: 992px) {
+    .locationMasterPage .arch-gallery {
+        grid-template-columns: repeat(2,1fr);
+    }
+
+    .locationMasterPage .arch-activities, .locationMasterPage .arch-contractor-scroll-wrap {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .locationMasterPage .lm-architect-dialog .modal-content {
+        border-radius: 12px;
+    }
+}
+
+/* --------------------------------------------- */
+/*   ARCHITECT MODAL — ACTIVITY DETAILS TABLE     */
+/*   Matches look of pm-doc-table styling        */
+/* --------------------------------------------- */
+
+.locationMasterPage #activityDetailsTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background-color: #F37437 !important; /* same as pm-doc-table */
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+    border-bottom: none;
+}
+
+/* Body cells */
+.locationMasterPage #activityDetailsTable td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px 10px;
+    white-space: nowrap;
+    border-top: 1px solid #f0d5c5;
+}
+
+/* Hover effect – same as PM modal */
+.locationMasterPage #activityDetailsTable tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* Scroll wrapper — same as original but with smooth scroll */
+.locationMasterPage .activity-details-scroll-wrap {
+    max-height: 420px;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
+/* Input fields inside table */
+.locationMasterPage .activity-subinput {
+    width: 100%;
+    padding: .28rem .5rem;
+    border-radius: 6px;
+    font-size: .85rem;
+    border: 1px solid #d7c1b5;
+    background: #fff;
+}
+
+/* Action buttons column */
+.locationMasterPage #activityDetailsTable .btn-sm {
+    padding: 2px 6px;
+    font-size: 0.75rem;
+}
+
+
+/* keep arch-card heights consistent */
+.locationMasterPage .arch-card.h-100 {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* small responsive for activity-details */
+@media (max-width: 992px) {
+    .locationMasterPage .activity-details-scroll-wrap, .locationMasterPage .arch-contractor-scroll-wrap {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .locationMasterPage .arch-gallery {
+        grid-template-columns: repeat(2,1fr);
+    }
+}
+
+
+
+
+
+
+/* ================= Import Card Styling ================= */
+.locationMasterPage .lm-import-box {
+    background: #FFF1EB; /* soft theme BG */
+    border: 1px solid rgba(34,34,34,0.08);
+    border-radius: 12px;
+    padding: 18px;
+}
+
+/* File input */
+.locationMasterPage #locationImportFile {
+    border-radius: 10px;
+    border: 1px solid rgba(34,34,34,0.12);
+    background: #fff;
+    padding: 8px 12px;
+}
+
+/* Save Button (Primary) */
+.locationMasterPage .lm-import-save-btn {
+    background: #E45D27 !important; /* primary */
+    color: #fff !important;
+    border: none;
+    border-radius: 8px;
+    font-weight:400;
+    padding: 6px 10px;
+    transition: 0.25s ease;
+}
+
+    .locationMasterPage .lm-import-save-btn:hover {
+        background: #C44C1F !important; /* darker primary */
+    }
+
+/* Cancel button */
+.locationMasterPage .lm-cancel-btn {
+    background: #ffffff;
+    color: #E45D27;
+    border: 1px solid #E45D27;
+    border-radius: 8px;
+    font-weight: 400;
+    padding: 6px 10px;
+    transition: 0.25s ease;
+}
+
+    .locationMasterPage .lm-cancel-btn:hover {
+        background: #FFE4D6;
+    }
+
+/* Download Template */
+.locationMasterPage #lmDownloadTemplate {
+    background: var(--primary) !important;
+    color: #fff !important ;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-weight: 400;
+    text-decoration: none;
+}
+
+    .locationMasterPage #lmDownloadTemplate a {
+        color: #fff !important;
+        text-decoration: none;
+    }
+
+    .locationMasterPage #lmDownloadTemplate:hover {
+        background: var(--primary-dark);
+    }
+
+/* File preview */
+.locationMasterPage #importFilePreview {
+    background: #fff;
+    border: 1px dashed #E45D27;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #6B1B4A;
+}
+
+    .locationMasterPage #importFilePreview.selected {
+        background: #FFF1EB;
+        border-color: #C44C1F;
+    }
+
+    .locationMasterPage #importFilePreview strong {
+        color: #E45D27;
+    }
+
+.locationMasterPage #wrapper {
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    position: relative;
+    scrollbar-width: none;
+}
+
+
+/* KPI CARDS */
+.lm-kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    transition: 0.2s ease;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .lm-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.lm-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.lm-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+
+
+/* ================= Compliance Document (scoped) ================= */
+.locationMasterPage .lm-compDoc-card {
+    background: #FFF1EB;
+    border-radius: 12px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.locationMasterPage .lm-compDoc-body {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ---------- HEADER ---------- */
+.locationMasterPage .lm-compDoc-topbar {
+    gap: 12px;
+    background: #E45D27;
+    color: #fff;
+    border-radius: 12px 12px 0 0;
+    padding: 16px 20px;
+}
+
+/* ---------- BODY WRAPPER ---------- */
+.locationMasterPage .lm-compDoc-body {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    padding: 18px 14px;
+}
+
+/* KPI CARDS */
+#lmCompDocModal .lmCompDocModal-kpi-row,
+#complianceDocCard .lmCompDocModal-kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+#lmCompDocModal .lmCompDocModal-kpi-card,
+#complianceDocCard .lmCompDocModal-kpi-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    #lmCompDocModal .lmCompDocModal-kpi-card:hover,
+    #complianceDocCard .lmCompDocModal-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+#lmCompDocModal .lmCompDocModal-kpi-title,
+#complianceDocCard .lmCompDocModal-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+#lmCompDocModal .lmCompDocModal-kpi-value,
+#complianceDocCard .lmCompDocModal-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+
+/* Table Buttons*/
+
+#lmCompDocModal .btn-upload, .btn-view, .btn-submit,
+#complianceDocCard .btn-upload, .btn-view, .btn-submit {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    #lmCompDocModal .btn-upload:hover, .btn-view:hover, .btn-submit:hover,
+    #complianceDocCard .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+#lmCompDocModal .btn-darkOrange,
+#complianceDocCard .btn-darkOrange {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    #lmCompDocModal .btn-darkOrange:hover,
+    #complianceDocCard .btn-darkOrange:hover {
+        background: var(--primary-dark);
+    }
+
+/*  Disable Bootstrap scrolling */
+.locationMasterPage #lmCompDocModal .table-responsive,
+.locationMasterPage #complianceDocCard .table-responsive {
+    overflow: visible !important;
+}
+
+/*  Single scroll container */
+.locationMasterPage #lmCompDocModal .small-table-wrapper,
+.locationMasterPage #complianceDocCard .small-table-wrapper {
+    flex: 1 1 auto;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+.locationMasterPage #lmCompDocModal .small-table thead th,
+.locationMasterPage #complianceDocCard .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: #F37437;
+}
+
+.locationMasterPage #lmCompDocModal .small-table-wrapper,
+.locationMasterPage #complianceDocCard .small-table-wrapper {
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.08);
+}
+
+    .locationMasterPage #lmCompDocModal .small-table-wrapper::after,
+    .locationMasterPage #complianceDocCard .small-table-wrapper::after {
+        content: "";
+        position: sticky;
+        bottom: 0;
+        height: 12px;
+        background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.08));
+        pointer-events: none;
+    }
+
+
+/* Multiselect dropdown (scoped)  */
+#lmCompDocModal .lm-multiselect .dropdown-menu,
+#complianceDocCard .lm-multiselect .dropdown-menu {
+    max-height: 220px;
+    overflow-y: auto;
+    min-width: 220px;
+}
+
+#lmCompDocModal .lm-multiselect .dropdown-item,
+#complianceDocCard .lm-multiselect .dropdown-item {
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+#lmCompDocModal .lm-multiselect input[type="checkbox"],
+#complianceDocCard .lm-multiselect input[type="checkbox"] {
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+#lmCompDocModal .lm-multiselect .form-select,
+#complianceDocCard .lm-multiselect .form-select {
+    cursor: pointer;
+    background-image: none; /* removes native arrow clash */
+}
+/* ===== Multiselect dropdown button fix ===== */
+#lmCompDocModal .lm-multiselect-btn,
+#complianceDocCard .lm-multiselect-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 32px;
+    cursor: pointer;
+    position: relative;
+}
+
+#lmCompDocModal .lm-multiselect-caret,
+#complianceDocCard .lm-multiselect-caret {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #6c757d; /* Bootstrap arrow color */
+}
+
+#lmCompDocModal .lm-multiselect-btn:focus,
+#complianceDocCard .lm-multiselect-btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(228,93,39,0.25);
+}
+
+
+/* Common upload block */
+#lmCompDocModal .common-upload-wrapper,
+#complianceDocCard .common-upload-wrapper {
+    padding: 10px 12px;
+    background: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}

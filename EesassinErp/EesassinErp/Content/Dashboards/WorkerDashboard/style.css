@@ -1,0 +1,586 @@
+﻿.workerDashboard {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F8F9FC;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+.workerDashboard {
+    --text-light: #6F7682;
+    --success-bg: #DDF6E4;
+    --success-text: #229A48;
+    --danger-bg: #FFE2E0;
+    --danger-text: #E24C4B;
+    --warning-bg: #FFF1D6;
+    --warning-text: #F0A400;
+}
+
+* {
+    scrollbar-width: thin;
+}
+
+
+/* ========================= */
+/* GRID LAYOUT */
+/* ========================= */
+
+.workerDashboardRow {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.workerDashboardRowTop {
+    grid-template-columns: 2fr 1.3fr 1.3fr;
+}
+
+.workerDashboardRowEqual {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.workerDashboardRowBottom {
+    grid-template-columns: 2fr 1.15fr 1fr;
+}
+
+
+/* ========================= */
+/* CARD */
+/* ========================= */
+
+.workerCard {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px;
+    overflow: hidden;
+    min-width: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.workerCardHeader {
+    margin-bottom: 14px;
+}
+
+    .workerCardHeader h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+.workerHeaderBetween {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+/* ========================= */
+/* PROFILE CARD */
+/* ========================= */
+
+.workerProfileHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.workerProfileLeft {
+    display: flex;
+    gap: 14px;
+}
+
+.workerProfileImage {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+    .workerProfileImage img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.workerProfileTitleWrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+    .workerProfileTitleWrap h2 {
+        font-size: 1.6rem;
+        color: var(--primary);
+        font-weight: 500;
+        margin: 0;
+    }
+
+.workerWorkerId {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.workerProfileBody {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.workerInfoGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 24px;
+}
+
+.workerInfoItem {
+    font-size: 0.8rem;
+}
+
+    .workerInfoItem span {
+        color: var(--text-light);
+    }
+
+    .workerInfoItem strong {
+        font-weight: 500;
+    }
+
+.workerQrBox {
+    width: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    color: #222;
+}
+
+
+/* ========================= */
+/* COMMON INFO ROWS */
+/* ========================= */
+
+.workerInfoRows {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.workerInfoRow {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+    .workerInfoRow span {
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    .workerInfoRow strong {
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+
+/* ========================= */
+/* VERIFICATION */
+/* ========================= */
+
+.workerVerificationList {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.workerVerificationItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+
+/* ========================= */
+/* BADGES */
+/* ========================= */
+
+.workerBadge {
+    padding: 2px 12px;
+    border-radius: 999px;
+    font-size: 0.72rem !important;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+.workerBadgeSuccess {
+    background: var(--success-bg) !important;
+    color: var(--success-text) !important;
+}
+
+.workerBadgeDanger {
+    background: var(--danger-bg);
+    color: var(--danger-text);
+}
+
+.workerBadgeWarning {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+}
+
+
+/* ========================= */
+/* REQUEST CARD */
+/* ========================= */
+
+.workerCardSubText {
+    color: var(--text-light);
+    margin-top: -8px;
+    margin-bottom: 18px;
+    font-size: 0.9rem;
+}
+
+.workerRequestCard {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.workerRequestTop {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.workerRequestIcon {
+    width: 48px;
+    height: 48px;
+    background: #D5E3FF;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.workerRequestTop h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+.workerRequestTop p {
+    margin: 2px 0 0;
+    color: var(--text-light);
+    font-size: 0.8rem;
+}
+
+.workerRequestActions {
+    display: flex;
+    gap: 12px;
+}
+
+
+/* ========================= */
+/* BUTTONS */
+/* ========================= */
+
+.workerBtn {
+    border: none;
+    outline: none;
+    border-radius: 10px;
+    padding: 4px 12px;
+    font-weight: 500;
+    font-size: 0.8rem;
+    transition: 0.2s ease;
+}
+
+.workerBtnSuccess {
+    background: #E2F6E8;
+    color: #228C46;
+}
+
+.workerBtnDanger {
+    background: transparent;
+    border: 1px solid #E24C4B;
+    color: #E24C4B;
+}
+
+.workerBtnLight {
+    background: #fff;
+    border: 1px solid var(--border);
+    color: #222;
+}
+
+    .workerBtnLight:hover {
+        background: #f9fafb;
+        border-color: #bdb8b4;
+    }
+
+    .workerBtnLight i {
+        font-size: 14px;
+        transition: 0.2s ease;
+    }
+
+    .workerBtnLight:hover i {
+        transform: translateX(3px);
+    }
+
+
+/* ========================= */
+/* TABLE */
+/* ========================= */
+
+.workerTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .workerTable thead th {
+        background: #F8F9FC;
+        padding: 4px 6px;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .workerTable tbody td {
+        padding: 4px 6px;
+        border-bottom: 1px solid #F0F0F0;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+
+/* ========================= */
+/* SCROLLABLE AREAS */
+/* ========================= */
+
+.workerScrollableCard {
+    display: flex;
+    flex-direction: column;
+}
+
+.workerScrollBody {
+    max-height: 235px;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding-right: 4px;
+}
+
+
+/* ========================= */
+/* ALERTS */
+/* ========================= */
+
+.workerAlertList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.workerAlertItem {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+    .workerAlertItem h4 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .workerAlertItem p {
+        margin: 2px 0 0;
+        color: var(--text-light);
+        font-size: 0.75rem;
+    }
+
+
+/* ========================= */
+/* CONTACTS */
+/* ========================= */
+
+.workerContactList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.workerContactItem {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+    .workerContactItem h4 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .workerContactItem p {
+        margin: 2px 0 0;
+        color: var(--text-light);
+        font-size: 0.75rem;
+    }
+
+    .workerContactItem strong {
+        font-weight: 400;
+        font-size: 0.9rem;
+    }
+
+
+/* ========================= */
+/* WAGE TABLE */
+/* ========================= */
+
+.workerWageCard {
+    padding-bottom: 10px;
+}
+
+.workerWageTableWrap {
+    max-height: 330px;
+    overflow: auto;
+}
+
+.workerTextSuccess {
+    color: #16A34A;
+    font-weight: 700;
+}
+
+.workerTableActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workerActionBtn {
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    color: #333;
+}
+
+.workerTableFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 18px;
+    color: #667085;
+}
+
+
+/* ========================= */
+/* ICON BUTTON */
+/* ========================= */
+
+.workerIconBtn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+}
+
+
+/* ========================= */
+/* SCROLLBAR */
+/* ========================= */
+
+.workerDashboard *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.workerDashboard *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.workerDashboard *::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.18);
+    border-radius: 20px;
+}
+
+
+/* ========================= */
+/* RESPONSIVE */
+/* ========================= */
+
+@media (max-width: 1400px) {
+
+    .workerDashboardRowEqual {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .workerDashboardRowTop,
+    .workerDashboardRowBottom {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .workerDashboard {
+        padding: 14px !important;
+    }
+
+    .workerDashboardRowEqual {
+        grid-template-columns: 1fr;
+    }
+
+    .workerInfoGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .workerProfileBody {
+        flex-direction: column;
+    }
+
+    .workerInfoRow {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .workerTableFooter {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}

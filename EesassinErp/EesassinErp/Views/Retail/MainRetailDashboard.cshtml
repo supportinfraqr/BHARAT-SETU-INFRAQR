@@ -1,0 +1,86 @@
+﻿@{
+    ViewBag.Title = "Group & Subsidiary Mapping";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+
+<script src="~/Scripts/RetailJsLib/SubsidiaryController.js?Ver=@ViewBag.Version"></script>
+
+<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+    <div class="collapse in" id="collapseinputbox">
+        <form id="user-form">
+            <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 ">
+                <fieldset class="fieldset">
+                    <legend class="legend">Mapping</legend>
+                    <div class="datatable-responsive table-responsive advance-btn-table">
+                       
+                        <table class="table table-in-input-box compact table-bordered nowrap dataTable t-mgtb-n" ng-init="AddListSet()">
+                            <thead>
+                                <tr>
+                                    <th class="srno">Sr.No.</th>
+                                    <th class="text-right">Select Party of Group</th>
+                                    <th class="text-right">Select User of Group</th>
+                                    <th class="text-right">Select Party of Subsidiary</th>
+                                    <th class="text-right">Select User of Subsidiary</th>
+
+
+                                    <th class="text-center">+/-</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="obj in   ListSet" repeat-done>
+                                    <td>
+                                        <label ng-model="ListSet[$index].Srno" ng-bind="ListSet[$index].Srno=$index+1"></label>
+                                    </td>
+                                  
+                                    <td class="text-right">
+                                        <select id="ddlGroupParty{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-init="BindGroup()" ng-change="BindGroupUser($index)" ng-model="ListSet[$index].GroupId">
+                                            <option value="">Select Group Party</option>
+                                            <option ng-repeat="x in  AllGroupPartyList" value="{{x.Id}}">{{x.Name}}</option>
+                                        </select>
+                                    </td>
+
+                                    <td class="text-right">
+                                       
+                                        <select id="ddlGroupUser{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-change="SaveAfterValidate();BindSubsidiaryparty($index)" ng-model="ListSet[$index].GroupUserId">
+                                            <option value="">Select Group User</option>
+                                            <option ng-repeat="x in  AllGroupUserList[$index]" value="{{x.Id}}">{{x.Name}}</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-right">
+
+                                        <select id="ddlSubsidiary{{$index}}" autocomplete='address-level2' class="select2 form-control validate"  ng-change="SaveAfterValidate();BindSubsidiaryUser($index)" ng-model="ListSet[$index].SubcidiaryId">
+                                            <option value="">Select Subsidiary Party</option>
+                                            <option ng-repeat="x in SubsidiarypartyList[$index]" value="{{x.Id}}">{{x.Name}}</option>
+                                        </select>
+
+                                    </td>
+                                    <td class="text-right">
+                                        <select id="ddlSubsidiaryUser{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-change="SaveAfterValidate();" ng-init="BindAuditor()" ng-model="ListSet[$index].SubcidiaryUserId">
+                                            <option value="">Select Subsidiary User</option>
+                                            <option ng-repeat="x in SubsidiaryUserList[$index]" value="{{x.Id}}">{{x.Name}}</option>
+                                        </select>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <input type="button" value="+" class="btn btn-default2" ng-click="SaveAfterValidate();AddListSet()" data-toggle="tooltip" data-placement="top" title="Add Row"
+                                               ng-if="ListSet[$index].Srno==ListSet.length" />
+                                        <input type="button" class="btn btn-default2" id="btnRemoveCourses" value="-" ng-click="RemoveListSet($index);"
+                                               ng-if="ListSet.length>1" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                @Html.Partial("ActionView")
+            </div>
+
+        </form>
+    </div>
+</div>
+@Html.Partial("SearchAngularJs")

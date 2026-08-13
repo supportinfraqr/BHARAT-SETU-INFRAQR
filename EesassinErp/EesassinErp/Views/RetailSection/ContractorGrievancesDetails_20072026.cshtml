@@ -1,0 +1,298 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Grievances Details";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/ContractorGrievances/ContractorGrievancesDetails/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/GrivancesController.js"></script>
+<script>
+    $(document).ready(function () {
+
+        $("#grievancesAddActionBtn").on("click", function () {
+
+            $(".grievancesActionCard").removeClass("d-none");
+
+        });
+
+    });
+</script> 
+<div class="contractorGrievancesDetails px-4 py-4" ng-init="BindGrivancesDetail();BindTracking()">
+
+    <div ng-repeat="x in GrivancesDetailList">
+        <h2 class="contractorGrievancesDetailsPageTitle">
+            {{x.Subject}}
+        </h2>
+
+        <div class="contractorGrievancesDetailsLayout">
+
+            <!-- LEFT SIDE -->
+            <div class="contractorGrievancesDetailsLeft">
+
+                <!-- Worker Details -->
+                <div class="contractorGrievancesDetailsCard">
+                    <h6 class="contractorGrievancesDetailsCardTitle">
+                        WORKER & PROJECT DETAILS
+                    </h6>
+
+                    <div class="grievancesWorkerGrid">
+
+                        <div class="grievancesWorkerItem">
+                            <span>Name</span>
+                            <strong>{{x.EmployeeName}}</strong>
+                        </div>
+
+                        <div class="grievancesWorkerItem">
+                            <span>Site Location</span>
+                            <strong>{{x.SiteName}}</strong>
+                        </div>
+
+                        <div class="grievancesWorkerItem">
+                            <span>Contractor</span>
+                            <strong>{{x.Contractor}}</strong>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="contractorGrievancesDetailsCard">
+                    <h6 class="contractorGrievancesDetailsCardTitle">
+                        PROBLEM DESCRIPTION
+                    </h6>
+
+                    <p class="grievancesProblemText">
+                        {{x.AiText}}
+                    </p>
+                </div>
+
+                <!-- Evidence -->
+                <div class="contractorGrievancesDetailsCard">
+
+                    <h6 class="contractorGrievancesDetailsCardTitle">
+                        EVIDENCE & ATTACHMENTS
+                    </h6>
+
+                    <div class="grievancesAudioPlayer">
+
+                        <audio id="audioPlayer" ng-src="../DownloadMat/Uploads/Audio/{{x.AudioFileName}}"
+                               controls
+                               class="w-100 mt-3">
+                        </audio>
+
+                    </div>
+
+                    <div class="grievancesAttachmentsGrid">
+
+                        <div class="grievancesAttachmentCard" ng-repeat="doc in (x.Documents ? x.Documents.split(',') : [])">
+                            <img ng-src="../DownloadMat/Uploads/GrevancesDocuments/{{doc}}" alt="" />
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Action Card -->
+                <div class="contractorGrievancesDetailsCard grievancesActionCard" ng-if="loginType==2">
+
+                    <h6 class="contractorGrievancesDetailsCardTitle">
+                        ACTIONS TAKEN BY CONTRACTOR
+                    </h6>
+
+                    <textarea class="grievancesActionTextarea" id="VendorReaction"
+                              placeholder="List the actions taken to resolve the grievances..."></textarea>
+
+                    <div class="grievancesActionFooter">
+
+                        <button class="grievancesSubmitBtn" ng-click="Reaction()">
+                            Submit
+                        </button>
+
+                    </div>
+
+                </div>
+                <div class="contractorGrievancesDetailsCard grievancesActionCard" ng-if="loginType==5">
+
+                    <h6 class="contractorGrievancesDetailsCardTitle">
+                        ACTIONS TAKEN BY PRINCIPLE EMPLOYEE
+                    </h6>
+
+                    <textarea class="grievancesActionTextarea" id="ClientReaction"
+                              placeholder="List the actions taken to resolve the grievances..."></textarea>
+
+                    <div class="grievancesActionFooter">
+
+                        <button class="grievancesSubmitBtn" ng-click="ClientReaction()">
+                            Submit
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- RIGHT SIDE -->
+            <div class="contractorGrievancesDetailsRight">
+
+                <!-- Trail -->
+                <div class="contractorGrievancesDetailsCard grievancesStickyCard">
+
+                    <h6 class="contractorGrievancesDetailsCardTitle">
+                        GRIEVANCE TRAIL
+                    </h6>
+
+                    <div class="grievancesTrailBody">
+
+                        <div class="grievancesTimeline">
+
+                            <div class="grievancesTimelineItem completed">
+
+                                <div class="grievancesTimelineDot"></div>
+
+                                <div class="grievancesTimelineContent">
+
+                                    <h5>Grievance Raised</h5>
+
+                                    <span class="grievancesTimelineDate">
+                                        {{x.CreatedOn}}
+                                    </span>
+
+                                    <div class="grievancesBadge">
+                                        AUTO-LOGGED
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="grievancesTimelineItem completed">
+
+                                <div class="grievancesTimelineDot"></div>
+
+                                <div class="grievancesTimelineContent">
+
+                                    <h5>Assigned to Safety Officer</h5>
+
+                                    <span class="grievancesTimelineDate">
+                                        {{x.CreatedOn}}
+                                    </span>
+
+                                    <p class="grievancesAssignedTo">
+                                        Assigned to:      {{x.Contractor}}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            <div ng-repeat="y in GrivancesTracking">
+                                <div class="grievancesTimelineItem completed">
+
+                                    <div class="grievancesTimelineDot"></div>
+
+                                    <div class="grievancesTimelineContent">
+                                        <span class="grievancesTimelineDate">
+                                            <h5>{{y.CStatus}}</h5>
+                                        </span>
+
+                                        <p class="grievancesAssignedTo">
+                                            {{y.CreatedOn}}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Discussion -->
+                <div class="contractorGrievancesDetailsCard grievancesStickyCard" ng-init="BindCommunication()">
+
+                    <div class="grievancesDiscussionHeader">
+
+                        <h6 class="contractorGrievancesDetailsCardTitle mb-0">
+                            COMMITTEE DISCUSSION
+                        </h6>
+
+                        <span class="grievancesPrivateBadge">
+                            PRIVATE
+                        </span>
+
+                    </div>
+                    {{x.Subject}}
+
+                <div class="grievancesDiscussionBody">
+
+                    <div ng-repeat="x in Communication">
+
+                        <!-- Current User Message -->
+                        <div class="grievancesMessageWrapper "
+                             ng-if="x.Sender == MapId">
+
+                            <div class="grievancesMessageSender text-end">
+                                {{x.SenderName}}
+                            </div>
+
+                            <div class="grievancesReceivedMessage">
+                                {{x.CommunicationText}}
+                            </div>
+
+                            <div class="grievancesMessageTime text-end">
+                                {{x.CreatedOn}}
+                            </div>
+
+                        </div>
+                       
+                        <!-- Other User Message -->
+                        <div class="grievancesMessageWrapper grievancesSentWrapper"
+                             ng-if="x.Sender != LoginId">
+
+                            <div class="grievancesMessageSender">
+                                {{x.SenderName}}
+                            </div>
+
+                            <div class="grievancesSentMessage">
+                                {{x.CommunicationText}}
+                            </div>
+
+                            <div class="grievancesMessageTime">
+                                {{x.CreatedOn}}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>                                                               
+                    
+                    
+                    <div class="grievancesDiscussionFooter">
+                        <input type="text" id="message"
+                               placeholder="Add a comment..."
+                               class="grievancesCommentInput">
+
+                        <button class="grievancesSendBtn" ng-click="BindCommunication()">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>  
+                      
+
+                    
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>

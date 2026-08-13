@@ -1,0 +1,10 @@
+.vs/
+.git_backup/
+.env
+.env.*
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo

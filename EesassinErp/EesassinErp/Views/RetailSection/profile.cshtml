@@ -1,0 +1,158 @@
+﻿
+@{
+    ViewBag.Title = "profile";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/RetailOneTimeDocumentController.js?Ver=@ViewBag.Version"></script>
+<div class="pagecontentbody" ng-init="CountPercetageDoc()">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader pb-2">
+            <div class="row">
+                <div class="col-md-9">
+                </div>
+                @*<div class="col-sm-3 text-end">
+                    <a class="btn btn-primary">Save</a>
+                </div>*@
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="profilhed">
+                                      
+                                        <img id="CandidatePhoto" src="~/compliance/images/profile2.jpg"  ng-src="{{Photo}}"  style="width: 120px;height:120px; " /> 
+
+                                        <div class="upload-btn-wrapper">  
+                                            <button class="duploadbtn">{{UserName}}</button>
+                                        </div> 
+                                    </div>
+                                </div>
+                            </div>
+                             
+ 
+                            <div class="row px-5">
+                                <div class="col-md-12 mb-3">
+                                    <strong class="text-warning">Profile Detail</strong>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group">
+                                        <label>Party Name</label>
+                                        @Html.TextBox("txtParty", "", new { @ng_model = "Name", @ng_disabled = "true", @class = "form-control form-control-lg validate clear", @placeholder = "" })
+
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group">
+                                        <label>UserName</label>
+                                        @Html.TextBox("PartyUserName", "", new {@ng_model= "UserName", @ng_disabled = "true", @class = "form-control form-control-lg  clear validate", @placeholder = "" })
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group">
+                                        <label>Contact No.</label>
+                                        @Html.TextBox("txtContactNo", "", new { @ng_model = "ContactNo", @ng_disabled = "true", @class = "form-control form-control-lg  clear validate", @placeholder = "" })
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group">
+                                        <label>Email Id</label>
+                                        @Html.TextBox("txtEmailId", "", new { @ng_model = "REmailId", @ng_disabled = "true", @class = "form-control form-control-lg  clear validate", @placeholder = "" })
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <strong class="text-warning">Profile Photo</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="file" id="fuCandidatePhoto" onchange="angular.element(this).scope().showphoto(this, '#AlbumIcon')" ng-model="Photo">
+
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="button" value="Update" ng-click="UploadPhoto()" class="btn btn-warning btn-lg" />
+                                </div>
+                                <div class="col-md-12 mt-4 mb-3">
+                                    <strong class="text-warning">Change Password</strong>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <div class="form-group">
+                                        <label>Current Password</label>
+                                        @Html.TextBox("txtCurrentPasscode", "", new { @type = "password", @ng_blur = "checkPassCode()", @class = "form-control form-control-lg validate clear", @placeholder = "" })
+                                         
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group">
+                                        <label>New Password</label>
+                                        @Html.TextBox("txtNewPasscode", "", new { @type = "password", @ng_disabled = "mySwitch", @class = "form-control form-control-lg validate clear", @placeholder = "" })
+                                         
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group">
+                                        <label>Confirm Password</label>
+                                        @Html.TextBox("txtReTypePasscode", "", new { @ng_KeyUp = "checkReType()", @ng_disabled = "mySwitch", @class = "form-control form-control-lg  clear validate", @placeholder = "" })
+                                     </div>
+                                </div>
+                            <div class="mb-5 pb-5">
+                            <a  ng-click="ChangePassword()" class="btn btn-warning btn-lg">Update</a>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4"   >
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="col-md-12 text-center">
+                                <div class="py-5 mt-5 profilprog">
+                                    <div class="progress" data-percentage="{{ProfilePercentage}}">
+                                        <span class="progress-left">
+                                            <span class="progress-bar"></span>
+                                        </span>
+                                        <span class="progress-right">
+                                            <span class="progress-bar"></span>
+                                        </span>
+                                        <div class="progress-value">
+                                            <div class="text-center">
+                                                {{ProfilePercentage}}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pb-5">
+                                    <h4 class="mb-2 text-warning">Profile Completion</h4>
+                                </div>
+                                <div class="btn-group mb-5 pb-5" role="group">
+                                    <a class="btn btn-warning btn-lg" ng-href="../RetailSection/Documents">
+                                        One Time Document
+                                    </a>
+                                    <a ng-show="SSETUP_Flag==1" class="btn btn-warning btn-lg" ng-href="../Retail/StatutorySetup?Statutory Setup">
+                                        Statutory Setup
+                                    </a>
+                                </div>
+                                <div class="btn-group mb-5 " role="group">
+                                    <a ng-show="SECRETUP_Flag==1" class="btn btn-warning btn-lg" ng-href="../Retail/SecretarialStatutorySetup?Secretarial Setup">
+                                        Secretarial Setup
+                                    </a>
+                                    <a ng-show="FINAETUP_Flag==1" class="btn btn-warning btn-lg" ng-href="../Retail/FinancialStatutorySetup?Finance Setup">
+                                        Finance Setup
+                                    </a>
+                                </div>
+                                <div class="btn-group mb-5 " role="group">
+                                    <a ng-show="Entity_Flag==1" class="btn btn-warning btn-lg" ng-href="../Retail/Enitfy?Entity Detail">
+                                        Entity Details
+                                    </a>
+                                  
+                                </div>
+                            </div>
+                             
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

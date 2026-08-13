@@ -1,0 +1,2183 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Contractor Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+ 
+<link href="~/Content/Dashboards/ContractorDashboard/style.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="~/Content/Dashboards/ContractorDashboard/script.js"></script>
+<script src="~/scripts/RetailJsLib/ContractorDashboardController.js"></script>
+
+
+<div class="contractorDashboard px-4 py-2" ng-init="BindTiles()">
+    <div class="contractorDashboardHeader d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <p class="contractorWelcomeText mb-1" hidden>
+                Welcome back,{{UserName}}
+            </p>
+            <div class="d-flex flex-column gap-2 flex-wrap">
+                <h6 class="contractorCompanyName mb-1" style="font-size:1.7rem">{{DashboardDetail.PartyName}}  <span style="font-size:1.3rem;font-weight:500;">( {{DashboardDetail.PartyCode}})</span></h6>
+            </div>
+        </div>
+        <div class="contractorStatusBadge active">
+            Active
+        </div>
+    </div>
+    <!-- ===================================================== -->
+    <!-- TOP STATS -->
+    <!-- ===================================================== -->
+    <!--  KPI Cards  -->
+    <div class="row g-3 mb-4">
+        <!-- CARD -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="contractorStatCard" style="background: #F3F8FF">
+                <div class="contractorStatIcon blue">
+                    <i class="bi bi-people"></i>
+                </div>
+                <div>
+                    <h3>{{DashboardDetail.WorkerCount || '0'}}</h3>
+                    <p style="color: #155DFC">Total Workers</p>
+                </div>
+            </div>
+        </div>
+        <!-- CARD -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="contractorStatCard" style="background: #F9F4FF">
+                <div class="contractorStatIcon purple">
+                    <i class="bi bi-buildings"></i>
+                </div>
+                <div>
+                    <h3>{{DashboardDetail.SiteCount || '0'}}</h3>
+                    <p style="color: purple">Total Sites</p>
+                </div>
+            </div>
+        </div>
+        <!-- CARD -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="contractorStatCard" style="background: #F3F5FF">
+                <div class="contractorStatIcon blue">
+                    <i class="bi bi-file-earmark-check"></i>
+                </div>
+                <div>
+                    <h3>0</h3>
+                    <p style="color: #003BB2">Active Licenses</p>
+                </div>
+            </div>
+        </div>
+        <!-- CARD -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="contractorStatCard" style="background: #F3FFF7">
+                <div class="contractorStatIcon green">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div>
+                    <h3>0%</h3>
+                    <p style="color: green">Compliance Score</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="contractorDashboardRowOne" ng-init="BindPrincipleDetail(DashboardDetail.PartyCode)">
+        <div class="contractorRowOneLeft">
+            <div class="contractorDashboardCard h-100">
+                <div class="contractorCardHeader">
+                    <h5>Principle Employer</h5>
+                    <button class="contractorArrowBtn">
+                        <i class="bi bi-arrow-up-right-circle"></i>
+                    </button>
+                </div>
+                <div class="contractorInfoGrid">
+                    <div class="contractorInfoRow">
+                        <span>Principle Employer</span>
+                        <strong>{{client.Contractorname || '-'}}</strong>
+                    </div>
+                    <div class="contractorInfoRow">
+                        <span>Employer Code</span>
+                        <strong>{{client.EmployerCode || '-'}}</strong>
+                    </div>
+                    <div class="contractorInfoRow">
+                        <span>Industry</span>
+                        <strong>{{client.Industry || '-'}}</strong>
+                    </div>
+                    <div class="contractorInfoRow">
+                        <span>Email ID</span>
+                        <strong>{{client.EmailId || '-'}}</strong>
+                    </div>
+                    <div class="contractorInfoRow">
+                        <span>LIN No</span>
+                        <strong>{{client.LIN || '-'}}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================= -->
+        <!-- SITE DETAILS -->
+        <!-- ================================================= -->
+
+        <div class="contractorRowOneMiddle" ng-init="">
+            <div class="contractorDashboardCard h-100">
+                <div class="contractorCardHeader">
+                    <h5>Site Details</h5>
+                    <button class="contractorArrowBtn">
+                        <i class="bi bi-arrow-up-right-circle"></i>
+                    </button>
+                </div>
+                <div class="contractorTableWrapper">
+                    <table class="table contractorTable mb-0">
+                        <thead>
+                            <tr>
+                                <th>Sr No.</th>
+                                <th>Site Name</th>
+                                <th>Site Code</th>
+                                <th>No. of Workers</th>
+                                <th>Compliance Score</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            <tr ng-repeat="s in SiteList">
+                                <td>{{$index+1}}</td>
+                                <td>{{s.SiteName}}</td>
+                                <td>{{s.SiteCode}}</td>
+                                <td>{{s.EmployeeCount}}</td>
+                                <td>{{s.CompliancePercentage}} %</td>
+                            </tr>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================================================= -->
+        <!-- WORKER HIGHLIGHTS -->
+        <!-- ================================================= -->
+
+        <div class="contractorRowOneRight">
+
+            <div class="contractorDashboardCard h-100">
+
+                <div class="contractorCardHeader">
+
+                    <h5>Worker Highlights</h5>
+
+                    <button class="contractorArrowBtn"
+                            type="button"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#workerHighlightsPanel"
+                            aria-controls="workerHighlightsPanel">
+
+                        <i class="bi bi-arrow-up-right-circle"></i>
+
+                    </button>
+
+                </div>
+
+                <div class="contractorHighlightsGrid" ng-init="BindRequestWorker()">
+
+                    <!-- CARD -->
+                    <div class="contractorWorkerCard accepted" ng-repeat="x in RequestWorker" ng-class="x.Status==pending then pending else accepted"> 
+                        <div>
+                            <h6>{{x.EmployeeName}}</h6>
+                            <p>{{x.EmployeeCode}}</p>
+                        </div>
+                        <span class="contractorStatusPill"
+                              ng-class="x.Status == 'Accepted' ? 'text-success' : 'text-danger'">
+                            {{x.Status}}
+                        </span>
+                    </div>
+
+                     @*CARD 
+                    <div class="contractorWorkerCard pending" ng-repeat="x in RequestWorker | filter:Status:'Pending'">
+                        <div>
+                            <h6>{{x.EmployeeName}}</h6>
+                            <p>{{x.EmployeeCode}}</p>
+                        </div>
+                        <span class="contractorStatusPill">
+                            {{x.Status}}
+                        </span>
+                    </div>*@
+
+                    <!-- CARD -->
+                    @*<div class="contractorWorkerCard accepted">
+
+                        <div>
+                            <h6>Rajveer Singh</h6>
+                            <p>WK-00232026</p>
+                        </div>
+
+                        <span class="contractorStatusPill success">
+                            Accepted
+                        </span>
+
+                    </div>
+
+                    <div class="contractorWorkerCard pending">
+
+                        <div>
+                            <h6>Rajveer Singh</h6>
+                            <p>WK-00232026</p>
+                        </div>
+
+                        <span class="contractorStatusPill warning">
+                            Pending
+                        </span>
+
+                    </div>
+
+                    <div class="contractorWorkerCard rejected">
+
+                        <div>
+                            <h6>Rajveer Singh</h6>
+                            <p>WK-00232026</p>
+                        </div>
+
+                        <span class="contractorStatusPill danger">
+                            Rejected
+                        </span>
+
+                    </div>*@
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- MIDDLE SECTION -->
+    <!-- ===================================================== -->
+
+    <div class="contractorMiddleSection">
+
+        <!-- ================================================= -->
+        <!-- LEFT SIDE(MIDDLE SECTION) -->
+        <!-- ================================================= -->
+
+        <div class="contractorMiddleLeft">
+
+            <!-- ============================================= -->
+            <!-- TOP ROW(MIDDLE SECTION) -->
+            <!-- ============================================= -->
+
+            <div class="contractorMiddleTop">
+
+                <!-- ========================================= -->
+                <!-- COMPLIANCE SUBMISSION LIST -->
+                <!-- ========================================= -->
+
+                <div class="contractorMiddleTopLeft" ng-init="BindControl()">
+
+                    <div class="contractorDashboardCard h-100">
+
+                        <div class="contractorCardHeader">
+
+                            <h5>Compliance Submission List</h5>
+
+                            <button class="contractorArrowBtn">
+                                <i class="bi bi-arrow-up-right-circle"></i>
+                            </button>
+
+                        </div>
+
+                        <div class="contractorTableWrapper contractorMediumTable">
+
+                            <table class="table contractorTable mb-0">
+
+                                <thead>
+
+                                    <tr>
+                                        <th>S.No.</th>
+                                        <th>Unique No.</th>
+                                        <th>Site Code</th>
+                                        <th>Location</th>
+                                        <th>Status</th>
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    <tr ng-repeat="x in InvoiceList">
+                                        <td>{{$index+1}}</td>
+                                        <td>{{x.InvoiceNo}}</td>
+                                        <td>{{x.SiteCode}}</td>
+                                        <td>{{x.Location}}</td>
+                                        <td>
+                                            <span class="contractorStatusPill" ng-class="w.Status == 'Complete' ? 'success' : 'danger'">
+                                                {{x.Status}}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ========================================= -->
+                <!-- WORKER VERIFIED DOCUMENTS -->
+                <!-- ========================================= -->
+
+                <div class="contractorMiddleTopRight">
+
+                    <div class="contractorDashboardCard contractorDocumentsCard h-100">
+
+                        <div class="contractorCardHeader">
+
+                            <h5>Worker Verified Documents</h5>
+
+                            <button class="contractorArrowBtn">
+                                <i class="bi bi-arrow-up-right-circle"></i>
+                            </button>
+
+                        </div>
+
+                        <div class="contractorDocumentsList">
+
+                            <!-- ITEM -->
+                            <div class="contractorDocumentItem">
+
+                                <div class="contractorDocumentTop">
+                                    <span>Aadhaar</span>
+                                    <strong>0%</strong>
+                                </div>
+
+                                <div class="contractorDocumentProgress">
+                                    <div class="progress-bar" style="width:98%"></div>
+                                </div>
+
+                            </div>
+
+                            <!-- ITEM -->
+                            <div class="contractorDocumentItem">
+
+                                <div class="contractorDocumentTop">
+                                    <span>PAN</span>
+                                    <strong>0%</strong>
+                                </div>
+
+                                <div class="contractorDocumentProgress">
+                                    <div class="progress-bar" style="width:94%"></div>
+                                </div>
+
+                            </div>
+
+                            <!-- ITEM -->
+                            <div class="contractorDocumentItem">
+
+                                <div class="contractorDocumentTop">
+                                    <span>UAN</span>
+                                    <strong>0%</strong>
+                                </div>
+
+                                <div class="contractorDocumentProgress">
+                                    <div class="progress-bar" style="width:92%"></div>
+                                </div>
+
+                            </div>
+
+                            <!-- ITEM -->
+                            <div class="contractorDocumentItem">
+
+                                <div class="contractorDocumentTop">
+                                    <span>ESIC IP</span>
+                                    <strong>0%</strong>
+                                </div>
+
+                                <div class="contractorDocumentProgress">
+                                    <div class="progress-bar" style="width:88%"></div>
+                                </div>
+
+                            </div>
+
+                            <!-- ITEM -->
+                            <div class="contractorDocumentItem">
+
+                                <div class="contractorDocumentTop">
+                                    <span>Police Verification</span>
+                                    <strong>0%</strong>
+                                </div>
+
+                                <div class="contractorDocumentProgress">
+                                    <div class="progress-bar" style="width:78%"></div>
+                                </div>
+
+                            </div>
+
+                            <!-- ITEM -->
+                            <div class="contractorDocumentItem">
+
+                                <div class="contractorDocumentTop">
+                                    <span>Bank Verification</span>
+                                    <strong>0%</strong>
+                                </div>
+
+                                <div class="contractorDocumentProgress">
+                                    <div class="progress-bar" style="width:81%"></div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================================= -->
+            <!-- BOTTOM ROW(MIDDLE SECTION) -->
+            <!-- ============================================= -->
+
+            <div class="contractorMiddleBottom">
+
+                <!-- ========================================= -->
+                <!-- WORKER COMPLIANCE OVERVIEW -->
+                <!-- ========================================= -->
+
+                <div class="contractorMiddleBottomLeft">
+
+                    <div class="contractorDashboardCard h-100">
+
+                        <div class="contractorCardHeader">
+
+                            <h5>Worker Compliance Overview</h5>
+
+                            <button class="contractorArrowBtn">
+                                <i class="bi bi-arrow-up-right-circle"></i>
+                            </button>
+
+                        </div>
+
+                        <div class="contractorTableWrapper contractorMediumTable">
+
+                            <table class="table contractorTable mb-0">
+
+                                <thead>
+
+                                    <tr>
+                                        <th>Worker ID</th>
+                                        <th>Worker Name</th>
+                                        <th>Site</th>
+                                        <th>Gate Pass</th>
+                                        <th>Medical Exam</th>
+                                        <th>Health & Safety</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="w in WorkerSiteList">
+                                        <td>{{w.EmployeeCode}}</td>
+                                        <td>{{w.EmployeeName}}</td>
+                                        <td>{{w.SiteName}}</td>
+                                        <td>
+                                            <span class="contractorStatusPill" ng-class="w.GatePassStatus == 'Valid' ? 'success' : 'danger'">
+                                                {{w.GatePassStatus}}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="contractorStatusPill" ng-class="w.MedicalStatusResult == 'Done' ? 'success' : 'danger'">
+                                                {{w.MedicalStatusResult}}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="contractorStatusPill" ng-class="w.FitnessStatus == 'Done' ? 'success' : 'danger'">
+                                                {{w.FitnessStatus}}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                        <div class="contractorCardFooter">
+
+                            <button class="contractorViewAllBtn">
+                                View All
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ========================================= -->
+                <!-- WORKFORCE GROWTH TREND -->
+                <!-- ========================================= -->
+
+                <div class="contractorMiddleBottomRight">
+
+                    <div class="contractorDashboardCard h-100">
+
+                        <div class="contractorCardHeader">
+
+                            <h5>Workforce Growth Trend</h5>
+
+                            <button class="contractorArrowBtn">
+                                <i class="bi bi-arrow-up-right-circle"></i>
+                            </button>
+
+                        </div>
+
+                        <div class="contractorChartTop">
+
+                            <div class="contractorChartToggle">
+
+                                <button class="active">
+                                    6 Months
+                                </button>
+
+                                <button>
+                                    1 Year
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <div class="flex-grow-1 d-flex align-items-center">
+
+                            <canvas id="workforceChart"></canvas>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================================================= -->
+        <!-- RIGHT SIDE(MIDDLE SECTION) -->
+        <!-- ================================================= -->
+
+        <div class="contractorMiddleRight">
+
+            <div class="contractorDashboardCard h-100">
+
+                <div class="contractorCardHeader">
+
+                    <h5>Recent Activities</h5>
+
+                    <button class="contractorArrowBtn">
+                        <i class="bi bi-arrow-up-right-circle"></i>
+                    </button>
+
+                </div>
+
+                <!--<div class="contractorActivitiesList">-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                    <h6>Monthly Compliance Filing</h6>
+
+                    <p>
+                        Form V submitted successfully for Aug 2024
+                    </p>
+
+                    <span>3 hours ago</span>
+
+                </div>-->
+                <!-- ITEM -->
+                <!--<div class="contractorActivityItem">
+
+                        <h6>Monthly Compliance Filing</h6>
+
+                        <p>
+                            Form V submitted successfully for Aug 2024
+                        </p>
+
+                        <span>3 hours ago</span>
+
+                    </div>
+
+                </div>-->
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- LAST ROW -->
+    <!-- ===================================================== -->
+
+    <div class="contractorBottomSection">
+
+        <!-- ================================================= -->
+        <!-- COMPLIANCE HISTORY -->
+        <!-- ================================================= -->
+
+        <div class="contractorBottomLeft">
+
+            <div class="contractorDashboardCard h-100">
+
+                <!-- HEADER -->
+                <div class="contractorCardHeader">
+
+                    <h5>Compliance History</h5>
+
+                    <button class="contractorArrowBtn">
+                        <i class="bi bi-arrow-up-right-circle"></i>
+                    </button>
+
+                </div>
+
+                <!-- TABLE -->
+                <div class="contractorTableWrapper contractorHistoryTableWrapper">
+
+                    <table class="table contractorTable contractorHistoryTable mb-0">
+
+                        <thead>
+
+                            <tr>
+                                <th>Site ID</th>
+                                <th>Total Workers</th>
+                                <th>Salary Paid</th>
+                                <th>Date of Payment</th>
+                                <th>PF Deposited</th>
+                                <th>Date of Deposit (PF)</th>
+                                <th>ESIC Deposited</th>
+                                <th>Date of Deposit (ESIC)</th>
+                                <th>Action</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            @*
+                            <tr>
+                                <td>SIGI0526DL01</td>
+                                <td>421</td>
+                                <td>421</td>
+                                <td>07/05/2026</td>
+                                <td>421</td>
+                                <td>07/05/2026</td>
+                                <td>421</td>
+                                <td>07/05/2026</td>
+
+                                <td>
+                                    <button class="contractorTableActionBtn">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>*@
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <!-- FOOTER -->
+                <div class="contractorCardFooter">
+
+                    <button class="contractorViewAllBtn">
+                        View All
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ================================================= -->
+        <!-- EXPIRY ALERTS -->
+        <!-- ================================================= -->
+
+        <div class="contractorBottomRight">
+
+            <div class="contractorDashboardCard h-100">
+
+                <!-- HEADER -->
+                <div class="contractorCardHeader">
+
+                    <h5>Expiry Alerts</h5>
+
+                    <button class="contractorArrowBtn">
+                        <i class="bi bi-arrow-up-right-circle"></i>
+                    </button>
+
+                </div>
+
+                <!-- ALERT LIST -->
+                <!--<div class="contractorExpiryList">-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem danger">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem orange">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem warning">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem success">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem warning">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem success">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem warning">
+
+                    <div class="contractorExpiryLeft">
+
+                        <div class="contractorExpiryIcon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div>
+
+                            <h6>Compliance Registration</h6>
+
+                            <p>Expires in 8 month 24 days</p>
+
+                        </div>
+
+                    </div>
+
+                    <button class="contractorExpiryArrow">
+                        <i class="bi bi-arrow-down"></i>
+                    </button>
+
+                </div>-->
+                <!-- ALERT -->
+                <!--<div class="contractorExpiryItem success">
+
+                        <div class="contractorExpiryLeft">
+
+                            <div class="contractorExpiryIcon">
+                                <i class="bi bi-exclamation-circle"></i>
+                            </div>
+
+                            <div>
+
+                                <h6>Compliance Registration</h6>
+
+                                <p>Expires in 8 month 24 days</p>
+
+                            </div>
+
+                        </div>
+
+                        <button class="contractorExpiryArrow">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+
+                    </div>
+
+                </div>-->
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================================
+         Contractor Worker Highlights Offcanvas
+    ========================================================== -->
+    <div class="offcanvas offcanvas-end contractorWorkerPanel"
+         tabindex="-1"
+         id="workerHighlightsPanel"
+         aria-labelledby="workerHighlightsPanelLabel">
+
+        <!-- ================= Header ================= -->
+        <div class="offcanvas-header contractorWorkerHeader">
+
+            <h4 class="offcanvas-title contractorWorkerTitle"
+                id="workerHighlightsPanelLabel">
+
+                Worker Highlights
+
+            </h4>
+
+            <button type="button"
+                    class="btn-close btn-close-white contractorWorkerCloseBtn"
+                    data-bs-dismiss="offcanvas"
+                    aria-label="Close">
+            </button>
+
+        </div>
+
+        <!-- ================= Body ================= -->
+        <div class="offcanvas-body contractorWorkerBody">
+
+            <!-- ==========================================
+                 Onboarding Progress
+            =========================================== -->
+
+            <div class="contractorWorkerProgressCard">
+
+                <div class="contractorWorkerProgressLabel">
+                    ONBOARDING PROGRESS
+                </div>
+
+                <div class="contractorWorkerProgressValue">
+
+                    <span>92%</span>
+
+                    Complete
+
+                </div>
+
+            </div>
+
+            <!-- ==========================================
+                 Toolbar
+            =========================================== -->
+
+            <div class="contractorWorkerToolbar">
+
+                <!-- Left -->
+
+                <div class="contractorWorkerToolbarTitle">
+
+                    CONSENT MANAGEMENT
+
+                </div>
+
+                <!-- Right -->
+
+                <div class="contractorWorkerToolbarActions">
+
+                    <!-- Search -->
+
+                    <div class="contractorWorkerSearch">
+
+                        <i class="bi bi-search"></i>
+
+                        <input type="text"
+                               placeholder="">
+
+                    </div>
+
+                    <!-- Export -->
+
+                    <button class="contractorWorkerExportBtn">
+
+                        Export
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- ==========================================
+                 Table Container
+            =========================================== -->
+
+            <div class="contractorWorkerTableWrapper">
+
+                <!-- Consent Table -->
+
+                <div class="contractorWorkerTableContainer">
+
+                    <table class="contractorWorkerTable">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+
+                                    <div class="contractorWorkerCheckboxWrap">
+
+                                        <input type="checkbox"
+                                               id="contractorSelectAll">
+
+                                    </div>
+
+                                </th>
+
+                                <th>Worker Name</th>
+
+                                <th>Status</th>
+
+                                <th class="text-center">Actions</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Vaibhav</td>
+
+                                <td>
+                                    <span class="contractorWorkerBadge contractorWorkerAccepted">
+                                        ACCEPTED
+                                    </span>
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerSuccessBtn">
+
+                                        <i class="bi bi-check-circle"></i>
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Vansh</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerRejected">
+
+                                        REJECTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerResendBtn">
+
+                                        Resend
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Aadarsh</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerPending">
+
+                                        PENDING
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerResendBtn">
+
+                                        Resend
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Kumar</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerRejected">
+
+                                        REJECTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerResendBtn">
+
+                                        Resend
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Vaibhav</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerAccepted">
+
+                                        ACCEPTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerSuccessBtn">
+
+                                        <i class="bi bi-check-circle"></i>
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Vaibhav</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerAccepted">
+
+                                        ACCEPTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerSuccessBtn">
+
+                                        <i class="bi bi-check-circle"></i>
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Vaibhav</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerAccepted">
+
+                                        ACCEPTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerSuccessBtn">
+
+                                        <i class="bi bi-check-circle"></i>
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Kumar</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerRejected">
+
+                                        REJECTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerResendBtn">
+
+                                        Resend
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Aadarsh</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerPending">
+
+                                        PENDING
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerResendBtn">
+
+                                        Resend
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Vaibhav</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerAccepted">
+
+                                        ACCEPTED
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerSuccessBtn">
+
+                                        <i class="bi bi-check-circle"></i>
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <input type="checkbox" class="contractorWorkerCheckbox">
+                                </td>
+
+                                <td>Aadarsh</td>
+
+                                <td>
+
+                                    <span class="contractorWorkerBadge contractorWorkerPending">
+
+                                        PENDING
+
+                                    </span>
+
+                                </td>
+
+                                <td class="text-center">
+
+                                    <button class="contractorWorkerResendBtn">
+
+                                        Resend
+
+                                    </button>
+
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!--Footer-->
+
+        <div class="contractorWorkerFooter">
+
+            <div class="contractorWorkerFooterInner">
+
+                <button class="contractorWorkerCloseFooterBtn"
+                        data-bs-dismiss="offcanvas">
+
+                    Close
+
+                </button>
+
+                <button class="contractorWorkerPrimaryBtn">
+
+                    Resend
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+<!--<div class="contractorDashboard px-4 py-2">-->
+<!-- TOP HEADER -->
+<!--<div class="contractorDashboardHeader d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+
+    <div>
+        <p class="contractorWelcomeText mb-1">
+            Welcome back, Rasesh Singe
+        </p>
+
+        <h1 class="contractorCompanyName mb-1">
+            Shree Security Services
+        </h1>
+
+        <p class="contractorCompanyCode mb-0">
+            SS0526DL1
+        </p>
+    </div>
+
+    <div class="contractorStatusBadge active">
+        Active
+    </div>
+
+</div>-->
+<!-- TOP STATS -->
+<!--<div class="row g-3 mb-4">
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="contractorStatCard" style="background: #F3F8FF">
+
+            <div class="contractorStatIcon blue">
+                <i class="bi bi-people"></i>
+            </div>
+
+            <div>
+                <h3>2500</h3>
+                <p style="color: #155DFC">Total Workers</p>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="contractorStatCard" style="background: #F9F4FF">
+
+            <div class="contractorStatIcon purple">
+                <i class="bi bi-buildings"></i>
+            </div>
+
+            <div>
+                <h3>05</h3>
+                <p style="color: purple">Total Sites</p>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="contractorStatCard" style="background: #F3F5FF">
+
+            <div class="contractorStatIcon blue">
+                <i class="bi bi-card-checklist"></i>
+            </div>
+
+            <div>
+                <h3>54</h3>
+                <p style="color: #003BB2">Active Licenses</p>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="contractorStatCard" style="background: #F3FFF7">
+
+            <div class="contractorStatIcon green">
+                <i class="bi bi-shield-check"></i>
+            </div>
+
+            <div>
+                <h3>91%</h3>
+                <p style="color: green">Compliance Score</p>
+            </div>
+
+        </div>
+    </div>
+
+</div>-->
+<!-- ROW 1 -->
+<!--<div class="row g-3 mb-4">-->
+<!-- PRINCIPLE EMPLOYEE -->
+<!--<div class="col-12 col-lg-4">
+
+    <div class="contractorDashboardCard contractorInfoCard">
+
+        <div class="contractorCardHeader">
+
+            <h5>Principle Employee</h5>
+
+            <button class="contractorArrowBtn">
+                <i class="bi bi-arrow-up-right-circle"></i>
+            </button>
+
+        </div>
+
+        <div class="contractorInfoGrid">
+
+            <div class="contractorInfoRow">
+                <span>Principle Employer</span>
+                <strong>ABC Manufacturing Pvt Lmt</strong>
+            </div>
+
+            <div class="contractorInfoRow">
+                <span>Factory Location</span>
+                <strong>Noida Sector 136</strong>
+            </div>
+
+            <div class="contractorInfoRow">
+                <span>Reporting Manager</span>
+                <strong>Rakesh Mehta</strong>
+            </div>
+
+            <div class="contractorInfoRow">
+                <span>Manager Contact</span>
+                <strong>+91 97XXXXXXX</strong>
+            </div>
+
+            <div class="contractorInfoRow">
+                <span>Site Code</span>
+                <strong>SIGI0526DL01</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>-->
+<!-- SITE DETAILS -->
+<!--<div class="col-12 col-lg-4">
+
+    <div class="contractorDashboardCard contractorTableCard">
+
+        <div class="contractorCardHeader">
+
+            <h5>Site Details</h5>
+
+            <button class="contractorArrowBtn">
+                <i class="bi bi-arrow-up-right-circle"></i>
+            </button>
+
+        </div>
+
+        <div class="contractorTableWrapper">
+
+            <table class="table contractorTable mb-0">
+
+                <thead>
+                    <tr>
+                        <th>Sr No.</th>
+                        <th>Site Name</th>
+                        <th>Site Code</th>
+                        <th>No. of Workers</th>
+                        <th>Compliance Score</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr>
+                        <td>1.</td>
+                        <td>Delhi</td>
+                        <td>SIGI0526DL01</td>
+                        <td>421</td>
+                        <td>98%</td>
+                    </tr>
+
+                    <tr>
+                        <td>2.</td>
+                        <td>Mumbai</td>
+                        <td>SIGI0526DL01</td>
+                        <td>850</td>
+                        <td>94%</td>
+                    </tr>
+
+                    <tr>
+                        <td>3.</td>
+                        <td>Noida</td>
+                        <td>SIGI0526DL01</td>
+                        <td>690</td>
+                        <td>92%</td>
+                    </tr>
+
+                    <tr>
+                        <td>4.</td>
+                        <td>Delhi</td>
+                        <td>SIGI0526DL01</td>
+                        <td>1100</td>
+                        <td>89%</td>
+                    </tr>
+
+                    <tr>
+                        <td>5.</td>
+                        <td>Delhi</td>
+                        <td>SIGI0526DL01</td>
+                        <td>758</td>
+                        <td>94%</td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>-->
+<!-- WORKER HIGHLIGHTS -->
+<!--<div class="col-12 col-lg-4">
+
+        <div class="contractorDashboardCard contractorHighlightsCard">
+
+            <div class="contractorCardHeader">
+
+                <h5>Worker Highlights</h5>
+
+                <button class="contractorArrowBtn">
+                    <i class="bi bi-arrow-up-right-circle"></i>
+                </button>
+
+            </div>
+
+            <div class="contractorHighlightsGrid">
+
+                <div class="contractorWorkerCard accepted">
+
+                    <div>
+                        <h6>Rajveer Singh</h6>
+                        <p>WK-00232026</p>
+                    </div>
+
+                    <span class="contractorStatusPill success">
+                        Accepted
+                    </span>
+
+                </div>
+
+                <div class="contractorWorkerCard pending">
+
+                    <div>
+                        <h6>Rajveer Singh</h6>
+                        <p>WK-00232026</p>
+                    </div>
+
+                    <span class="contractorStatusPill warning">
+                        Pending
+                    </span>
+
+                </div>
+
+                <div class="contractorWorkerCard accepted">
+
+                    <div>
+                        <h6>Rajveer Singh</h6>
+                        <p>WK-00232026</p>
+                    </div>
+
+                    <span class="contractorStatusPill success">
+                        Accepted
+                    </span>
+
+                </div>
+
+                <div class="contractorWorkerCard pending">
+
+                    <div>
+                        <h6>Rajveer Singh</h6>
+                        <p>WK-00232026</p>
+                    </div>
+
+                    <span class="contractorStatusPill warning">
+                        Pending
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>-->
+<!-- ROW 2 -->
+<!--<div class="row g-3 mb-4">-->
+<!-- COMPLIANCE SUBMISSION LIST -->
+<!--<div class="col-12 col-xl-6">
+
+    <div class="contractorDashboardCard contractorTableSectionCard">
+
+        <div class="contractorCardHeader">
+
+            <h5>Compliance Submission List</h5>
+
+            <button class="contractorArrowBtn">
+                <i class="bi bi-arrow-up-right-circle"></i>
+            </button>
+
+        </div>
+
+        <div class="contractorTableWrapper contractorMediumTable">
+
+            <table class="table contractorTable mb-0">
+
+                <thead>
+                    <tr>
+                        <th>S.No.</th>
+                        <th>Unique No.</th>
+                        <th>Site ID</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr>
+                        <td>01.</td>
+                        <td>845656545</td>
+                        <td>SIGI0526DL01</td>
+                        <td>Delhi</td>
+                        <td>
+                            <span class="contractorStatusPill success">
+                                Submitted
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>02.</td>
+                        <td>845656545</td>
+                        <td>SIGI0526DL01</td>
+                        <td>Mumbai</td>
+                        <td>
+                            <span class="contractorStatusPill warning">
+                                Pending
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>03.</td>
+                        <td>845656545</td>
+                        <td>SIGI0526DL01</td>
+                        <td>Delhi</td>
+                        <td>
+                            <span class="contractorStatusPill success">
+                                Submitted
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>04.</td>
+                        <td>845656545</td>
+                        <td>SIGI0526DL01</td>
+                        <td>Delhi</td>
+                        <td>
+                            <span class="contractorStatusPill success">
+                                Submitted
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>05.</td>
+                        <td>845656545</td>
+                        <td>SIGI0526DL01</td>
+                        <td>Delhi</td>
+                        <td>
+                            <span class="contractorStatusPill success">
+                                Submitted
+                            </span>
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>-->
+<!-- WORKER VERIFIED DOCUMENTS -->
+<!--<div class="col-12 col-md-6 col-xl-3">
+
+    <div class="contractorDashboardCard contractorDocumentsCard">
+
+        <div class="contractorCardHeader">
+
+            <h5>Worker Verified Documents</h5>
+
+            <button class="contractorArrowBtn">
+                <i class="bi bi-arrow-up-right-circle"></i>
+            </button>
+
+        </div>
+
+        <div class="contractorDocumentsList">-->
+<!-- ITEM -->
+<!--<div class="contractorDocumentItem">
+
+    <div class="contractorDocumentTop">
+
+        <span>Aadhar</span>
+        <strong>98%</strong>
+
+    </div>
+
+    <div class="progress contractorDocumentProgress">
+        <div class="progress-bar"
+             role="progressbar"
+             style="width: 98%">
+        </div>
+    </div>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorDocumentItem">
+
+    <div class="contractorDocumentTop">
+
+        <span>PAN</span>
+        <strong>94%</strong>
+
+    </div>
+
+    <div class="progress contractorDocumentProgress">
+        <div class="progress-bar"
+             role="progressbar"
+             style="width: 94%">
+        </div>
+    </div>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorDocumentItem">
+
+    <div class="contractorDocumentTop">
+
+        <span>UAN</span>
+        <strong>92%</strong>
+
+    </div>
+
+    <div class="progress contractorDocumentProgress">
+        <div class="progress-bar"
+             role="progressbar"
+             style="width: 92%">
+        </div>
+    </div>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorDocumentItem">
+
+    <div class="contractorDocumentTop">
+
+        <span>ESIC IP</span>
+        <strong>88%</strong>
+
+    </div>
+
+    <div class="progress contractorDocumentProgress">
+        <div class="progress-bar"
+             role="progressbar"
+             style="width: 88%">
+        </div>
+    </div>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorDocumentItem">
+
+    <div class="contractorDocumentTop">
+
+        <span>Police Verification</span>
+        <strong>78%</strong>
+
+    </div>
+
+    <div class="progress contractorDocumentProgress">
+        <div class="progress-bar"
+             role="progressbar"
+             style="width: 78%">
+        </div>
+    </div>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorDocumentItem">
+
+                <div class="contractorDocumentTop">
+
+                    <span>Bank Verification</span>
+                    <strong>81%</strong>
+
+                </div>
+
+                <div class="progress contractorDocumentProgress">
+                    <div class="progress-bar"
+                         role="progressbar"
+                         style="width: 81%">
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>-->
+<!-- RECENT ACTIVITIES -->
+<!--<div class="col-12 col-md-6 col-xl-3">
+
+    <div class="contractorDashboardCard contractorActivitiesCard">
+
+        <div class="contractorCardHeader">
+
+            <h5>Recent Activities</h5>
+
+            <button class="contractorArrowBtn">
+                <i class="bi bi-arrow-up-right-circle"></i>
+            </button>
+
+        </div>
+
+        <div class="contractorActivitiesList">-->
+<!-- ITEM -->
+<!--<div class="contractorActivityItem">
+
+    <h6>
+        Monthly Compliance Filing
+    </h6>
+
+    <p>
+        Form V submitted successfully for Aug 2024
+    </p>
+
+    <span>
+        3 hours ago
+    </span>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorActivityItem">
+
+    <h6>
+        Monthly Compliance Filing
+    </h6>
+
+    <p>
+        Form V submitted successfully for Aug 2024
+    </p>
+
+    <span>
+        3 hours ago
+    </span>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorActivityItem">
+
+    <h6>
+        Monthly Compliance Filing
+    </h6>
+
+    <p>
+        Form V submitted successfully for Aug 2024
+    </p>
+
+    <span>
+        3 hours ago
+    </span>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorActivityItem">
+
+    <h6>
+        Monthly Compliance Filing
+    </h6>
+
+    <p>
+        Form V submitted successfully for Aug 2024
+    </p>
+
+    <span>
+        3 hours ago
+    </span>
+
+</div>-->
+<!-- ITEM -->
+<!--<div class="contractorActivityItem">
+
+                        <h6>
+                            Monthly Compliance Filing
+                        </h6>
+
+                        <p>
+                            Form V submitted successfully for Aug 2024
+                        </p>
+
+                        <span>
+                            3 hours ago
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>-->

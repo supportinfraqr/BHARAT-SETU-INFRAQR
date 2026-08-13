@@ -1,0 +1,138 @@
+﻿@{
+    ViewBag.Title = "Store Prefix";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/RetailStorePrefixController.js"></script>
+<style>
+    .input-box {
+        position: relative;
+    }
+
+    .form-control {
+        width: 100%;
+        height: 34px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 5px;
+        font-size: 14px;
+        color: #333;
+        background-color: #fff;
+        cursor: pointer;
+        outline: none;
+    }
+
+        .form-control[multiple] {
+            height: auto;
+        }
+
+            .form-control[multiple] option[selected] {
+                background-color: #007bff;
+                color: #fff;
+            }
+
+            .form-control[multiple] option:hover {
+                background-color: #f5f5f5;
+            }
+</style>
+
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Store Prefix</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Store Prefix</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Party Type<span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="BindModuleTypeList()">
+                                                <select id="ddlModuleType" autocomplete='address-level2' class="select2 form-control validate" ng-model="PartyTypeId" >
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in AllModuleTypeList" value="{{x.Id}}">{{x.Module_Type}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Prefix<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input id="txtPrefix" type="text" class="form-control clear validate" ng-model="Prefix" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Suffix<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input id="txtSuffix" type="text" class="form-control clear validate" ng-model="Suffix" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Start Date<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input id="txtStartDate" type="date" class="form-control clear validate" ng-model="StartDate" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">End Date</label>
+                                            <div class="input-box">
+                                                <input id="txtEndDate" type="date" class="form-control clear" ng-model="EndDate" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>

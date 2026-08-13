@@ -1,0 +1,1066 @@
+﻿* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+/* NAVBAR */
+.navbar {
+    height: 66px;
+    background: #FFF1EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.logo {
+    height: 48px;
+}
+
+/* Center buttons */
+.nav-center {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.dropbtn {
+    border: 1px solid #E45D27;
+    color: #E45D27;
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+    .dropbtn:hover {
+        background: #E45D27;
+        color: #fff;
+    }
+
+.arrow {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.3s;
+}
+
+/* Rotate arrow on open */
+.dropdown.show .arrow {
+    transform: rotate(180deg);
+}
+
+/* Right icons */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#user-switch-icon {
+    width: 30px;
+    height: 30px;
+}
+
+    .icon:hover {
+        transform: scale(1.1);
+    }
+
+
+/* ================== USER SWITCH DROPDOWN ================== */
+.navbar .dropdown #userSwitchDropdown {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+    .navbar .dropdown #userSwitchDropdown:hover {
+        transform: scale(1.1);
+    }
+
+/* Tooltip-like hover text */
+.navbar #userSwitchDropdown[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #E45D27;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0.95;
+}
+
+/* Match dropdown design to others */
+.navbar .dropdown-menu {
+    font-size: 0.85rem;
+    border-radius: 8px;
+}
+
+    .navbar .dropdown-menu .dropdown-item:hover {
+        background-color: #FFE0D1;
+        color: #E45D27;
+    }
+
+
+
+/* SEARCH FIELD */
+.search-wrapper {
+    position: relative;
+}
+
+#search-field {
+    display: inline-block;
+    visibility: hidden;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 0;
+    padding: 5px 10px;
+    border: 1px solid #E45D27;
+    border-radius: 20px;
+    outline: none;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+    #search-field.show {
+        width: 180px;
+        opacity: 1;
+        visibility: visible;
+    }
+
+/* Profile */
+.profile-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #E45D27;
+    background: transparent;
+    padding: 0;
+}
+
+    .profile-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+/* STATUS BAR */
+.status-bar {
+    height: 40px;
+    background: linear-gradient(to right, #FD670B 80%, #E24309);
+    color: white;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16A34A;
+}
+
+.login-btn {
+    background: white;
+    color: #E24309;
+    border: 1px solid white;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Dropdown items hover */
+.dropdown-menu a:hover {
+    background: #FFE2D5;
+    color: #E45D27;
+}
+
+
+/*-----DASHBOARD--------*/
+
+
+.dashboard {
+    background: #FFF1EB;
+}
+
+
+
+
+
+/* ============ CONTAINER 1 STYLES ============ */
+.container1 {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+    /* Custom card style */
+    .container1 .custom-card {
+        background-color: #FBFBFB;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Metric cards inside Compliance Overview */
+    .container1 .metric-card {
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        color: #fff;
+        font-size: 0.875rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Calendar Card Adjustments */
+    .container1 .custom-card h3 {
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin: 0;
+    }
+
+    /* Ensure calendar fills neatly */
+    .container1 .custom-card.p-0 {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    /* Small font for metric labels */
+    .container1 .metric-card span.small {
+        font-size: 0.75rem;
+    }
+
+    /* Visually styled calendar tweaks */
+    .container1 .calendar-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    /* Highlight current date */
+    .container1 .bg-orange {
+        background-color: #F37437 !important;
+    }
+
+    /* Keep date numbers centered */
+    .container1 .calendar-body .d-grid div {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 20px;
+    }
+
+    /* Dates circle hover */
+    .container1 .calendar-body div div:hover {
+        background-color: #F37437;
+        color: #fff;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    /* Hover brighten effect for arrows */
+    .container1 .hover-brighten:hover {
+        opacity: 1 !important;
+        transform: scale(1.1);
+        transition: all 0.2s ease;
+    }
+
+    /* Align icons nicely */
+    .container1 .calendar-header i {
+        font-size: 1rem;
+    }
+
+    /* ===== Small Table Styling ===== */
+    .container1 .small-table-wrapper {
+        max-height: 250px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #E45D27 #FEF3EC;
+        border-radius: 4px;
+        scroll-behavior: smooth;
+    }
+
+        .container1 .small-table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .container1 .small-table-wrapper::-webkit-scrollbar-track {
+            background: #FEF3EC;
+            border-radius: 10px;
+        }
+
+        .container1 .small-table-wrapper::-webkit-scrollbar-thumb {
+            background: #E45D27;
+            border-radius: 10px;
+        }
+
+    /* Sticky Header */
+    .container1 .small-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: #F37437;
+        color: #fff;
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    /* Table Body */
+    .container1 .small-table tbody td {
+        background-color: #FEF3EC;
+        font-size: 0.75rem;
+        vertical-align: middle;
+        text-align: center;
+        padding: 6px 8px;
+        white-space: nowrap;
+    }
+
+    .container1 .table-sm th,
+    .container1 .table-sm td {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    /* Compact Toolbar */
+    .container1 .table-toolbar {
+        margin-bottom: 6px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* Themed Filter Buttons */
+    .container1 .filter-btn {
+        border-radius: 999px;
+        border: 1px solid #E45D27;
+        color: #E45D27;
+        background: transparent;
+        padding: 4px 14px;
+        font-weight: 500;
+        font-size: 0.75rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .container1 .filter-btn:hover,
+        .container1 .filter-btn.active {
+            background-color: #E45D27;
+            color: #fff;
+        }
+
+    /* Dropdown Buttons */
+    .container1 .btn-outline-primary {
+        border-color: #E45D27;
+        color: #E45D27;
+        font-size: 0.75rem;
+        border-radius: 999px;
+        padding: 4px 14px;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .container1 .btn-outline-primary:focus,
+        .container1 .btn-outline-primary:active,
+        .container1 .btn-outline-primary.show,
+        .container1 .btn-outline-primary:active:focus {
+            background-color: #E45D27 !important;
+            color: #fff !important;
+            border-color: #E45D27 !important;
+            box-shadow: none !important;
+        }
+
+        .container1 .btn-outline-primary:hover {
+            background-color: #E45D27;
+            color: #fff;
+            border-color: #E45D27;
+        }
+
+    /* Search Field */
+    .container1 .table-toolbar .form-control-sm {
+        height: 30px;
+        font-size: 0.75rem;
+        border-radius: 999px;
+        padding: 0 10px;
+        width: 160px;
+    }
+
+    /* Dropdown Menu */
+    .container1 .dropdown-menu {
+        font-size: 0.8rem;
+    }
+
+    /* Keep Table Inside Card */
+    .container1 .custom-card .table-responsive {
+        max-height: calc(100% - 50px);
+    }
+
+
+
+    /* ===== RIGHT SECTION STYLING ===== */
+    .container1 .right-card {
+        background-color: #FEF3EC;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+        /* Header */
+        .container1 .right-card .rc-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid #E45D27;
+            border-radius: 6px;
+            padding: 6px 10px;
+            height: 42px;
+            background: transparent;
+            margin-bottom: 12px;
+        }
+
+        .container1 .right-card .rc-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #E45D27;
+            text-align: center;
+            flex: 1;
+            margin: 0 6px;
+        }
+
+        /* Arrow Buttons */
+        .container1 .right-card .rc-arrow {
+            background: transparent;
+            border: none;
+            color: #E45D27;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+            .container1 .right-card .rc-arrow:hover {
+                transform: scale(1.1);
+                transition: all 0.2s ease;
+            }
+
+        /* Toolbar Buttons Row */
+        .container1 .right-card .rc-toolbar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f2d3c4;
+        }
+
+        /* Filter Row */
+        .container1 .right-card .rc-filters {
+            background: #FBFBFB;
+            padding: 4px 6px;
+            border: 1px solid #f2d3c4;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .container1 .right-card .border-orange {
+            border-color: #E45D27 !important;
+            box-shadow: none;
+        }
+
+            .container1 .right-card .border-orange:focus {
+                border-color: #c74e20 !important;
+                box-shadow: 0 0 0 0.15rem rgba(228, 93, 39, 0.25);
+            }
+
+
+        /* Toolbar Buttons */
+        .container1 .right-card .rc-filter {
+            border-radius: 999px;
+            border: 1px solid #E45D27;
+            color: #E45D27;
+            background: transparent;
+            padding: 6px 14px;
+            font-weight: 500;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+            .container1 .right-card .rc-filter:hover,
+            .container1 .right-card .rc-filter.rc-active {
+                background: #E45D27;
+                color: #fff;
+            }
+
+        /* Table Wrapper */
+        .container1 .right-card .rc-table-wrapper {
+            flex-grow: 1;
+            flex-shrink: 1;
+            flex-basis: 0;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #E45D27 #FEF3EC;
+            scroll-behavior: smooth;
+            border-radius: 8px;
+            border: 1px solid #F6D4C3;
+        }
+
+        .container1 .right-card .rc-table {
+            margin-bottom: 0 !important;
+        }
+
+        /* Table Header */
+        .container1 .right-card .rc-table thead th {
+            background-color: #E45D27;
+            color: #fff;
+            font-weight: 500;
+            font-size: 0.78rem;
+            text-align: center;
+            vertical-align: middle;
+            padding: 6px 8px;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        /* Table Body */
+        .container1 .right-card .rc-table tbody td {
+            background-color: #FEF3EC;
+            font-size: 0.78rem;
+            text-align: center;
+            vertical-align: middle;
+            padding: 8px 10px;
+            white-space: nowrap;
+        }
+
+        /* Hover Effect */
+        .container1 .right-card .rc-table tbody tr:hover td {
+            background-color: #FFE8D9;
+        }
+
+        /* Status Badges */
+        .container1 .right-card .rc-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+            .container1 .right-card .rc-badge.rc-success {
+                background-color: #DFF5E1;
+                color: #3F9142;
+            }
+
+            .container1 .right-card .rc-badge.rc-warning {
+                background-color: #FFF4E1;
+                color: #C97A13;
+            }
+
+            .container1 .right-card .rc-badge.rc-danger {
+                background-color: #FFE2E2;
+                color: #D0312D;
+            }
+
+        /* Scrollbar */
+        .container1 .right-card .rc-table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .container1 .right-card .rc-table-wrapper::-webkit-scrollbar-track {
+            background: #FEF3EC;
+            border-radius: 10px;
+        }
+
+        .container1 .right-card .rc-table-wrapper::-webkit-scrollbar-thumb {
+            background: #E45D27;
+            border-radius: 10px;
+        }
+
+
+/* ========= Container 1 Dynamic Compliance Styles ======== */
+#container1 .thead-orange th {
+    background-color: #FFEFE6 !important;
+    color: #E45D27;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3d5c2;
+}
+
+#container1 table tbody td {
+    font-size: 0.78rem;
+    background-color: #FEF3EC;
+    border-top: 1px solid #f6d2bc;
+    color: #333;
+}
+
+#container1 table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+#container1 .btn-orange,
+#container1 .btn-outline-orange {
+    border-radius: 999px;
+}
+
+
+
+
+
+
+
+
+
+/* ========== Container 2 Styles ========== */
+
+#container2 .custom-card {
+    background-color: #FEF3EC;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    height: 320px;
+    display: flex;
+    flex-direction: column;
+}
+
+.border-orange {
+    border-color: #E45D27 !important;
+}
+
+#container2 .text-orange {
+    color: #E45D27;
+}
+
+#container2 .arrow-btn {
+    color: #E45D27;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: transform .2s, color .2s;
+}
+
+    #container2 .arrow-btn:hover {
+        color: #c44b1d;
+        transform: rotate(15deg) scale(1.1);
+    }
+
+/* Buttons */
+#container2 .btn-orange {
+    background-color: #E45D27;
+    color: #fff;
+    border: 1px solid #E45D27;
+    border-radius: 999px;
+}
+
+    #container2 .btn-orange:hover {
+        background-color: #d9531f;
+    }
+
+#container2 .btn-outline-orange {
+    border: 1px solid #E45D27;
+    color: #E45D27;
+    border-radius: 999px;
+}
+
+    #container2 .btn-outline-orange:hover,
+    #container2 .btn-outline-orange:focus,
+    #container2 .btn-outline-orange.show {
+        background-color: #E45D27;
+        color: #fff;
+    }
+
+/* Table */
+#container2 .container2-thead th {
+    background-color: #E45D27;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-align: center;
+    padding: 6px 8px;
+}
+
+#container2 .container2-thead.sticky-top th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+#container2 .container2-table-wrapper {
+    max-height: 180px;
+    overflow-y: auto;
+    border-radius: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #E45D27 #FFEFE6;
+}
+
+    /* Scrollbar */
+    #container2 .container2-table-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #container2 .container2-table-wrapper::-webkit-scrollbar-thumb {
+        background: #E45D27;
+        border-radius: 10px;
+    }
+
+    #container2 .container2-table-wrapper::-webkit-scrollbar-track {
+        background: #FFEFE6;
+    }
+
+#container2 .container2-tbody td {
+    background-color: #FEF3EC;
+    font-size: 0.78rem;
+    border-top: 1px solid #f6d2bc;
+    padding: 8px 10px;
+}
+
+#container2 .container2-tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* Chart */
+#container2 .chart-wrapper {
+    flex-grow: 1;
+    min-height: 200px;
+    overflow: hidden;
+}
+
+/* Dropdown Overflow Fix */
+#container2 .container2-dropdowns {
+    position: relative;
+    z-index: 10;
+}
+
+.dropdown-menu.show {
+    z-index: 9999 !important;
+}
+
+
+
+
+
+/* ========== Container 3 Styles ========== */
+#container3 .custom-card {
+    background-color: #FEF3EC;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    height: 250px;
+}
+
+/* Text */
+#container3 .text-orange {
+    color: #E45D27 !important;
+}
+
+#container3 .arrow-btn {
+    color: #E45D27;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: transform .2s, color .2s;
+}
+
+ #container3 .arrow-btn:hover {
+        color: #c44b1d;
+        transform: rotate(15deg) scale(1.1);
+    }
+
+/* Table Headers */
+#container3 .thead-orange th {
+    background-color: #FFEFE6 !important;
+    color: #E45D27;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3d5c2;
+}
+
+/* Scrollable Table Wrappers (Applicable Act & Document Expiry) */
+#container3 .table-wrapper {
+    max-height: 160px;
+    overflow-y: auto;
+    border-radius: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #E45D27 #FFEFE6;
+}
+
+    /* WebKit Scrollbar */
+    #container3 .table-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #container3 .table-wrapper::-webkit-scrollbar-thumb {
+        background: #E45D27;
+        border-radius: 10px;
+    }
+
+    #container3 .table-wrapper::-webkit-scrollbar-track {
+        background: #FFEFE6;
+    }
+
+/* Table Body */
+#container3 table tbody td {
+    font-size: 0.78rem;
+    background-color: #FEF3EC;
+    border-top: 1px solid #f6d2bc;
+    color: #333;
+}
+
+#container3 table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* Mini Cards */
+#container3 .mini-card {
+    height: 50px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Orange Background */
+#container3 .bg-orange {
+    background-color: #E45D27 !important;
+}
+
+
+
+
+/* ================= CONTAINER 4 ================= */
+#container4 .custom-card {
+    height: 560px;
+    background-color: #FEF3EC;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Text & Arrow */
+#container4 .text-orange {
+    color: #E45D27 !important;
+}
+
+#container4 .arrow-btn {
+    color: #E45D27;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: transform .2s, color .2s;
+}
+
+    #container4 .arrow-btn:hover {
+        color: #c44b1d;
+        transform: rotate(15deg) scale(1.1);
+    }
+
+/* Backgrounds */
+#container4 .card,
+#container4 .col-left,
+#container4 .col-right,
+#container4 .container4-right {
+    background-color: #FBFBFB !important;
+    border: none;
+}
+
+/* Table Styling */
+#container4 .thead-orange th {
+    background-color: #FFEFE6;
+    color: #E45D27;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 6px 8px;
+}
+
+#container4 table tbody td {
+    font-size: 0.78rem;
+    background-color: #FEF3EC;
+    color: #333;
+    border-top: 1px solid #f3d5c2;
+}
+
+#container4 table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* Scrollable Notices & Inspections Table */
+#container4 .table-wrapper {
+    border-radius: 6px;
+    overflow-y: auto;
+    max-height: 180px;
+    scrollbar-width: thin;
+    scrollbar-color: #E45D27 #FFEFE6;
+}
+    /* WebKit Scrollbar */
+    #container4 .table-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #container4 .table-wrapper::-webkit-scrollbar-thumb {
+        background-color: #E45D27;
+        border-radius: 10px;
+    }
+
+    #container4 .table-wrapper::-webkit-scrollbar-track {
+        background: #FFEFE6;
+    }
+
+/* Mini-Card Grid */
+#container4 .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+#container4 .mini-card {
+    border-radius: 8px;
+    color: #fff;
+    height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 0.78rem;
+}
+
+/* Mini-Card Colors (same palette as Container 3) */
+#container4 .bg-light-orange {
+    background: #F8B195;
+}
+
+#container4 .bg-light-green {
+    background: #F67280;
+}
+
+#container4 .bg-light-yellow {
+    background: #C06C84;
+}
+
+#container4 .bg-light-blue {
+    background: #6C5B7B;
+}
+
+#container4 .bg-light-red {
+    background: #355C7D;
+}
+
+#container4 .bg-light-purple {
+    background: #F6704B;
+}
+
+/* Make Case Status Scrollable if Rows Increase */
+#container4 .case-status-wrapper {
+    border-radius: 6px;
+    overflow-y: auto;
+    max-height: 170px;
+    scrollbar-width: thin;
+    scrollbar-color: #E45D27 #FFEFE6;
+}
+
+    #container4 .case-status-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #container4 .case-status-wrapper::-webkit-scrollbar-thumb {
+        background-color: #E45D27;
+        border-radius: 10px;
+    }
+
+    #container4 .case-status-wrapper::-webkit-scrollbar-track {
+        background: #FFEFE6;
+    }
+
+/* Progress Bars */
+#container4 .progress {
+    background-color: #fbe3d2;
+    border-radius: 8px;
+}
+
+#container4 .progress-bar.bg-orange {
+    background-color: #E45D27 !important;
+}
+
+/* Legend Dots */
+#container4 .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Layout Balancing */
+#container4 .upper-wrapper,
+#container4 .lower-wrapper {
+    flex: 1;
+    min-height: 0;
+}
+    /* Equal Width for Lower Left Components */
+    #container4 .lower-wrapper > .card {
+        flex: 1 1 0 !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+/* Charts */
+#container4 canvas {
+    width: 90% !important;
+    height: 90% !important;
+    display: block;
+}
+
+/* Responsive Tweaks */
+@media (max-width: 992px) {
+    #container4 .upper-wrapper,
+    #container4 .lower-wrapper {
+        flex-direction: column !important;
+    }
+
+    #container4 .mini-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

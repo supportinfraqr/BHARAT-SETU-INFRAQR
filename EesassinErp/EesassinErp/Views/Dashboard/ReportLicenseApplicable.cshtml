@@ -1,0 +1,97 @@
+﻿
+
+@{
+    ViewBag.Title = "License Applicable";
+    ViewBag.TitleList = "License Applicable";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/scripts/RetailJsLib/LicenseApplicableController.js"></script> 
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">License Applicable Permission</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Retail</span></a></li>
+                <li class="active"><span>License Applicable Applicable</span></li>
+            </ol>
+        </div>
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding "> 
+                                <div id="dvpanel2" class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+
+                                    <div class="col-md-12 col-sm-12 col-xs-12" ng-init="BindLicense()">
+                                        <div class="datatable-responsive table-responsive advance-btn-table">
+                                            <table class="table compact table-hover table-striped table-bordered nowrap dataTable" ng-model="SetUser">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="srno">Sr.No.</th>
+                                                        <th>UserName</th>
+
+                                                        <th>StoreCode</th>
+                                                        <th>RefStoreCode</th>
+                                                        <th>LicenseName</th>  
+                                                        <th class="status-c-w text-center">
+                                                            Action
+                                                            <div class="onoffswitch" style="display:none">
+                                                                <input type="checkbox" name="onoffswitch" ng-init="forcheck" class="onoffswitch-checkbox" id="myonoffswiktch" ng-model="all" ng-click="ConfirmUpdation()" checked>
+                                                                <label class="onoffswitch-label" for="myonoffswiktch">
+                                                                    <span class="onoffswitch-inner"></span>
+                                                                    <span class="onoffswitch-switch"></span>
+                                                                </label>
+                                                            </div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody> 
+                                                    <tr ng-repeat="x in UserDetails">
+                                                        <td>{{x.SrNo}} </td>
+                                                        <td>{{x.UserName}}</td>
+                                                        <td>{{x.StoreCode}}</td>
+                                                        <td>{{x.RefStoreCode}}</td>
+                                                        <td>{{x.LicenseName}}</td>
+                                                        <td class="text-center">
+                                                            <button ng-click="ActiveConfirmbox(x.Id)">Approved To Client</button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>
+
+

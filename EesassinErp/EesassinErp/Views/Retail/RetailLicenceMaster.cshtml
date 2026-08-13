@@ -1,0 +1,181 @@
+﻿@{
+    ViewBag.Title = "Retail License Master";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/ckeditor/ckeditor.js"></script>
+<script src="~/Content/ckfinder/ckfinder.js"></script>
+<script src="~/Scripts/myjslib/authorization.js?Ver=@ViewBag.Version"></script>
+
+<script src="~/scripts/RetailJsLib/LicenseMasterController.js?Ver=@ViewBag.Version"></script>
+<style>
+    .dropdown-menu
+    {
+        display:block !important;
+    }
+</style>
+<style>
+    .input-box {
+        position: relative;
+    }
+
+    .form-control {
+        width: 100%;
+        height: 34px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 5px;
+        font-size: 14px;
+        color: #333;
+        background-color: #fff;
+        cursor: pointer;
+        outline: none;
+    }
+
+        .form-control[multiple] {
+            height: auto;
+        }
+
+            .form-control[multiple] option[selected] {
+                background-color: #007bff;
+                color: #fff;
+            }
+
+            .form-control[multiple] option:hover {
+                background-color: #f5f5f5;
+            }
+</style>
+
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Retail License Master</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Retail License Master</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">License Name<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtLicenseName", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "LicenseName" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="AllState()">
+                                            <label class="control-label">State <span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="AllState()">
+                                                <!-- Dropdown Container -->
+                                                <div class="dropdown-container select2 form-control">
+                                                    <button class="dropdown-button" ng-click="toggleDropdown()">
+                                                        Select States
+
+                                                        <span class="dropdown-arrow" ng-class="{'arrow-up': dropdownOpen, 'arrow-down': !dropdownOpen}">&#9660;</span>
+                                                    </button>
+                                                  
+                                                    <div class="dropdown-menu " style=" overflow: scroll; height: 200px;" ng-show="dropdownOpen">
+                                                        <div ng-repeat="x in AllStateList" class="dropdown-item">
+                                                            <label>
+                                                                <input type="checkbox" ng-model="selectedStates[x.SATE_CODE]" ng-change="updateStateSelection(x)" />
+                                                                {{x.STATE_NM}}
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Act<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtAct", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "Act" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="DefaultBind()">
+                                            <label class="control-label">Application Link<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtApplicationLink", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "ApplicationLink" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Summary<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextArea("txtHeaderTemplate", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "HeaderTemplate", @name = "txtHeaderTemplate", @id = "txtHeaderTemplate", @rows = "10", @cols = "80" })
+                                                <script>$(document).ready(function () { CKEDITOR.replace('txtHeaderTemplate'); });</script>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            <button id="btnSave" type="button" value="Save" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="saveButton"
+                                                    ng-model="Save" ng-init="Save='Save'" ng-click="SaveRecordLicence()">
+                                                <span class="triangle-box" title="Save"></span>
+                                                <span id="btnSavetxt" ng-bind="Save">Save</span>
+                                            </button>
+                                            <button id="btnSearch" type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search" name="searchButton" data-toggle="collapse"
+                                                    data-target="#CollapseSearchTableList" aria-expanded="false" aria-controls="CollapseSearchTableList"
+                                                    ng-model="Search" ng-click="SearchRecordLicence()" ng-disabled="disableSearch" ng-show="visibleSearch">
+                                                <span class="triangle-box" title="Search"></span>
+                                                <span>Search </span>
+                                            </button>
+                                            <button id="btnPrint" type="button" value="Print" class="btn2 btn-common btn-3 btn-3d pe-7s-print"
+                                                    name="printButton" ng-model="Print" ng-disabled="disablePrint" ng-click="PrintRecord()" disabled
+                                                    ng-show="visiblePrint">
+                                                <span class="triangle-box" title="Print"></span>
+                                                <span>Print </span>
+                                            </button>
+
+                                            <button id="btnClear" type="button" value="Clear" class="btn2 btn-common btn-3 btn-3d pe-7s-refresh-2"
+                                                    name="clearButton" ng-model="Clear" ng-disabled="disableClear" ng-click="ClearControl()"
+                                                    ng-show="visibleClear">
+                                                <span class="triangle-box" title="Clear"></span>
+                                                <span>Clear </span>
+                                            </button>
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>

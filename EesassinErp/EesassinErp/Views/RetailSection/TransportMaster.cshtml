@@ -1,0 +1,466 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Transport Master Master";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="~/Masters/NewEmployeeMaster/script.js"></script>
+<link href="~/Masters/NewEmployeeMaster/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/TransportController.js"></script>
+<script>
+
+    $(document).ready(function () {
+        $('.ddfile').change(function () {
+            //console.log(this.files);
+            var f = this.files;
+            var el = $(this).parent();
+            if (f.length > 1) {
+                console.log(this.files, 1);
+                el.text('Sorry, multiple files are not allowed');
+                return;
+            }
+            // el.removeClass('focus');
+            el.html(f[0].name + '<br>' +
+                '<span class="sml">' +
+                'type: ' + f[0].type + ', ' +
+                Math.round(f[0].size / 1024) + ' KB</span>');
+        });
+
+        $('input[type=file]').on('focus', function () {
+            $(this).parent().addClass('focus');
+        });
+
+        $('input[type=file]').on('blur', function () {
+            $(this).parent().removeClass('focus');
+        });
+
+    });
+</script>
+<script>
+    function printDiv() {
+        var divName = "tbl_exporttable_to_xls";
+
+        var printContents = document.getElementById(divName).innerHTML;
+        var originalContents = document.body.innerHTML;
+
+        document.body.innerHTML = printContents;
+
+        window.print();
+
+        document.body.innerHTML = originalContents;
+    }</script>
+<div class="employeeMasterPage px-4 py-2">
+    <!-- Top bar: instruction left + Bulk Download button right -->
+    <div class="d-flex align-items-center justify-content-between mb-3 top-bar">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            @*<div class="limit-instruction">Location Employee Limit: <strong>600</strong></div>
+                <div class="limit-instruction">Created: <strong>250</strong></div>
+                <div class="limit-instruction">Left: <strong>350</strong></div>*@
+        </div>
+        <div class="d-flex align-items-center gap-2"  >
+            <!-- New Employee (rounded pill) -->
+            <button class="btn btn-sm btn-newEmployee" id="btnNewEmployee" type="button" data-bs-toggle="modal" data-bs-target="#newEmployeeModal" ng-click="ResetForm();ManageLog('click on New Employee button')">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Add BusRoute</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= New Employee Modal ================= -->
+    <div class="modal fade" id="newEmployeeModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content employee-modal">
+                <!-- Header -->
+                <div class="modal-header employee-modal-header">
+                    <h6 class="modal-title">Bus Route</h6>
+                    <button type="button" class="btn-close btn-close-white" ng-click="opensomething()" data-bs-dismiss="modal"></button>
+                </div>
+                <!-- Body -->
+                <div class="modal-body employee-modal-body">
+                    <form>
+                        <!-- Employee Details  -->
+                        <h6 class="section-title">Route Details</h6>
+                        <div class="row g-3">
+                            <div class="col-lg-3 col-md-6" ng-if="RouteID">
+                                <label class="form-label">Route ID</label>
+                                <input class="form-control form-control-sm"
+                                       id="txtEmployeeCode"
+                                       ng-model="RouteID"
+                                       disabled>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Route Name</label>
+                                <input class="form-control form-control-sm" id="txtRouteName" ng-model="RouteName">
+                            </div>
+
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Company Name</label>
+                                <input class="form-control form-control-sm" id="txtCompanyName" ng-model="CompanyName">
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Location / Plant Name   <span class="text-danger">*</span></label>
+                                <input class="form-control form-control-sm validate" id="txtLocation" ng-model="Location">
+                            </div>
+
+
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Route Start Location <span class="text-danger">*</span></label>
+                                <input class="form-control form-control-sm validate" id="txtRouteStartLocation" ng-model="RouteStartLocation">
+                            </div>
+
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Route End Location</label>
+                                <input class="form-control form-control-sm" id="txtRouteEndLocation" ng-model="RouteEndLocation">
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select form-select-sm validate"
+                                        ng-model="Status">
+                                    <option value="">Select</option>
+                                    <option value="Deactive">Deactive</option>
+                                    <option value="Active">Active</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Contact  -->
+                        <hr>
+                        <h6 class="section-title">Bus Details</h6>
+                        <div class="row g-3">
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Bus Number</label>
+                                <input class="form-control form-control-sm" id="txtBusNumber" ng-model="BusNumber">
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Bus Registration Number</label>
+                                <input class="form-control form-control-sm" id="txtRCNO" ng-model="RCNO" >
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Seating Capacity<span class="text-danger">*</span></label>
+                                <input class="form-control form-control-sm validate" id="txtSeatingCapacity" ng-model="SeatingCapacity"  >
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Bus Type</label>
+                                <select class="form-select form-select-sm validate"  ng-model="BusType">
+                                    <option value="">Select</option>
+                                    <option value="AC">AC</option>
+                                    <option value="Non-AC">Non-AC</option> 
+                                    <option value="Mini">Mini</option>
+                                    <option value="Shuttle">Shuttle</option>
+                                </select>
+                            </div>
+                        </div> 
+                        <hr>
+                        <h6 class="section-title">Driver Details</h6>
+                        <div class="row g-3">
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label"> Driver Name</label>
+                                <input class="form-control form-control-sm" id="txtDriverName" ng-model="DriverName">
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Driver Contact Number </label>
+                                <input class="form-control form-control-sm" id="txtDriverContactNumber" ng-model="DriverContactNumber" onblur="validatePhoneNo('#txtDriverContactNumber')" numeric-only dynamic-length maxlength="10" minlength="10">
+                            </div>
+                            <div class="col-lg-3 col-md-6"><label class="form-label">Address</label><input class="form-control form-control-sm" id="txtDriverAddress" ng-model="DriverAddress"></div>
+
+                            <div class="col-lg-3 col-md-6"><label class="form-label"> Driver License Number </label><input class="form-control form-control-sm" id="txtLicenseNumber" ng-model="LicenseNumber"></div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">License Copy</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+                                        <input type="file" class="upload-input"
+                                               accept=".pdf"
+                                               id="LicenseCopy" onchange="angular.element(this).scope().showFileName(this, 'LicenseCopy')" ng-model="LicenseCopy">
+                                        <span class="file-name">
+                                            {{ LicenseCopyName || 'No file chosen' }}
+                                        </span>
+                                    </div>
+                                    <div class="upload-actions" ng-if="LicenseCopy">
+                                        <i class="bi bi-eye upload-icon"
+                                           title="View"
+                                           ng-click="ViewFileC(LicenseCopy)"></i>
+                                        <i class="bi bi-download upload-icon"
+                                           title="Download"
+                                           ng-click="DownloadFileC(LicenseCopy,'Driver_LicenseCopy')"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Driver Aadhar Card Copy</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+                                        <input type="file" class="upload-input"
+                                               accept=".pdf,.jpg,.jpeg,.png"
+                                               id="AadharCardCopy"  onchange="angular.element(this).scope().showFileName(this, 'AadharCardCopy')" ng-model="AadharCardCopy">
+                                        <span class="file-name">
+                                            {{ AadharCardCopyName || 'No file chosen' }}
+                                        </span>
+
+
+                                      
+                                    </div>
+                                    <div class="upload-actions" ng-if="AadharCardCopy">
+                                        <i class="bi bi-eye upload-icon"
+                                           title="View"
+                                           ng-click="ViewFileC(AadharCardCopy)"></i>
+                                        <i class="bi bi-download upload-icon"
+                                           title="Download"
+                                           ng-click="DownloadFileC(AadharCardCopy,'AadharCardCopy')"></i>
+                                    </div>
+                                </div>
+                            </div>  <hr>  
+                            <div class="col-lg-3 col-md-6"><label class="form-label">Conductor Name</label><input class="form-control form-control-sm" id="txtConductorName" ng-model="ConductorName"></div>
+                            <div class="col-lg-3 col-md-6"><label class="form-label">Conductor Contact Number </label><input class="form-control form-control-sm" id="txtConductorContact" 
+                                                                                                                             ng-model="ConductorContact" numeric-only dynamic-length maxlength="10" minlength="10"></div>
+
+                            <div class="col-lg-3 col-md-6"><label class="form-label">Address</label><input class="form-control form-control-sm" id="txtConductorAddress" ng-model="ConductorAddress" ></div>
+
+
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Conductor Aadhaar Card</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+                                        <input type="file" class="upload-input" accept=".pdf,.jpg,.jpeg,.png" id="ConductorAadhaarCard"   onchange="angular.element(this).scope().showFileName(this, 'ConductorAadhaarCard')" ng-model="ConductorAadhaarCard">
+                                        <span class="file-name"> {{ ConductorAadhaarCardName || 'No file chosen' }} </span>
+                                    </div>
+                                    
+                                    <div class="upload-actions" ng-if="ConductorAadhaarCard">
+                                        <i class="bi bi-eye upload-icon"
+                                           title="View"
+                                           ng-click="ViewFileC(ConductorAadhaarCard)"></i>
+                                        <i class="bi bi-download upload-icon"
+                                           title="Download"
+                                           ng-click="DownloadFileC(ConductorAadhaarCard,'ConductorAadhaarCard')"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        </div>
+
+                        <!-- Nominee  -->
+                        <hr>
+                       
+                        <h6 class="section-title">Upload Documents</h6>
+                        <div class="row g-3">
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label"> Bus RC (Registration Certificate)</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+                                        <input type="file" class="upload-input" accept=".pdf" id="BusRC" onchange="angular.element(this).scope().showFileName(this, 'BusRC')" ng-model="BusRC">
+                                        <span class="file-name">
+                                            {{ BusRCName || 'No file chosen' }}
+                                        </span>
+
+
+
+                                    </div>
+                                    <div class="upload-actions" ng-if="BusRC">
+                                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(BusRC)"></i>
+                                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(BusRC,'Bus_RC')"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Educational Certificate -->
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label"> Pollution Certificate (PUC)</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+                                        <input type="file" class="upload-input" accept=".pdf" id="PollutionCertificate" ng-model="PollutionCertificate" onchange="angular.element(this).scope().showFileName(this, 'PollutionCertificate')">
+                                        <span class="file-name">{{ PollutionCertificateName || 'No file chosen' }} </span>
+                                    </div>
+                                    <div class="upload-actions" ng-if="PollutionCertificate">
+                                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(PollutionCertificate)"></i>
+                                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(PollutionCertificate,'Pollution_Certificate')"></i>
+                                    </div>
+
+
+
+                                </div>
+                            </div>
+                            <!-- Experience Certificate -->
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">Fitness Certificate</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+
+                                        <input type="file" class="upload-input" accept=".pdf" id="FitnessCertificate" onchange="angular.element(this).scope().showFileName(this, 'FitnessCertificate')" ng-model="FitnessCertificate">
+                                        <span class="file-name">
+                                            {{ FitnessCertificateName || 'No file chosen' }}
+                                        </span>
+                                    </div>
+                                    <div class="upload-actions" ng-if="FitnessCertificate">
+                                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(FitnessCertificate)"></i>
+                                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(FitnessCertificate,'Fitness_Certificate')"></i>
+                                    </div>
+                                </div>
+
+
+
+                            </div>
+
+                            <!-- Relieving Letter -->
+                            <div class="col-lg-3 col-md-6">
+                                <label class="form-label">   Insurance Copy</label>
+                                <div class="upload-field">
+                                    <div class="upload-input-wrap">
+                                        <input type="file" class="upload-input" accept=".pdf" id="InsuranceCopy"  onchange="angular.element(this).scope().showFileName(this, 'InsuranceCopy')" ng-model="InsuranceCopy">
+                                        <span class="file-name">
+                                            {{ InsuranceCopyName || 'No file chosen' }}
+                                        </span>
+                                    </div>
+                                    <div class="upload-actions" ng-if="InsuranceCopy">
+                                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(InsuranceCopy)"></i>
+                                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(InsuranceCopy,'InsuranceCopy')"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                           
+
+                        </div>
+
+                     
+                    </form>
+                </div>
+                <!-- Footer -->
+                <div class="modal-footer employee-modal-footer" >
+                    <button class="btn cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn import-save-btn" 
+                            ng-click="SaveRouteMaster();ManageLog('Submit Route')">
+                        Submit
+                    </button>
+                     
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Capsule Toggle (single capsule container) -->
+   
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- VIEW CARD (default visible) -->
+        <div id="viewCard" class="card section-card active">
+            <div class="card-body p-3 h-100 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                {{ SelectedPartyName || 'Select Party' }}
+                            </button>
+
+                            <ul class="dropdown-menu">
+                                <li ng-repeat="p in BusRouteList">
+                                    <a class="dropdown-item" href="javascript:void(0)"
+                                       ng-click="filterByParty(p.RouteName)">
+                                        {{ p.RouteName }}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                       
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="estSearch" type="text" ng-model="SearchEmp" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" style="border-color: #E45D27" id="estSearchBtn" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                          
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown">
+                                    Export
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="TExportToCSV()">
+                                            CSV
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="TExportToPDF(); $event.preventDefault(); ManageLog('Export PDF')">
+                                            PDF
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="" ng-click="TExportToPrint(); $event.preventDefault(); ManageLog('Export Print')">
+                                            Print
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table id="example" class="table table-sm mb-0 small-table" ng-init="GetTransport()">
+                            <thead>
+                                <tr>
+                                    <th>Sr.No</th>
+                                    <th>Route ID</th>
+                                    <th>Route Name</th>
+                                    <th>Start Location</th>
+                                    <th>End Location</th>
+                                    <th>Bus Number</th>
+                                    <th>Status</th> 
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                              
+                                <tr ng-repeat="x in TransportList | filter: SearchEmp | filter: { RouteName: SelectedPartyName }">
+                                    <td>{{$index + 1}}</td>
+                                    <td>{{ x.RouteID }}</td>
+                                    <td>{{ x.RouteName }}</td>
+                                    <td>{{ x.RouteStartLocation }}</td>
+                                    <td>{{ x.RouteEndLocation }}</td>
+                                    <td>{{ x.BusNumber }}</td>
+                                    <td>{{ x.Status }}</td>
+                                    
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#newEmployeeModal" ng-click="setTransportData(x.Id)">
+                                                    View More
+                                                </a>
+                                            </li>
+
+
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="PaginationWrap">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm" id="Prev" type="button">Previous</button>
+                            <button class="btn btn-sm" id="Next" type="button">Next</button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="PageInfo" style="font-size:0.85rem;color:#555;"></div>
+                            <button class="btn btn-sm btn-primary" id="viewAllRows" type="button">View All Rows</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+ 
+         
+
+        
+
+
+         
+
+    </div>
+</div>

@@ -1,0 +1,1030 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Litigation Master";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<title>Dashboard</title>
+
+
+<link href="../Litigation Management/style.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="~/scripts/RetailJsLib/LitigationManagementcontroller.js"></script>
+<style>
+    .day-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+</style>
+
+<style>
+    .container {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27; /* theme accent */
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        --background: #FFF1EB;
+        --color: #223;
+    }
+
+    .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        max-height: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .progress-fill {
+        height: 10px;
+        background-color: green; /* or use color1, etc. */
+        transition: width 0.5s ease;
+    }
+
+    .tab.active {
+        background: var(--primary);
+        color: white;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        z-index: 999999;
+    }
+
+    .item1 {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.9em;
+    }
+
+    .stage {
+        color: #333333c7;
+        font-size: 0.75em !important;
+    }
+
+    .year-list {
+        display: none;
+        border: 1px solid #ccc;
+        margin-top: 5px;
+        padding: 5px;
+        width: 100px;
+        background: white;
+        position: absolute;
+    }
+
+        .year-list div {
+            cursor: pointer;
+            padding: 5px;
+        }
+
+            .year-list div:hover {
+                background-color: #f0f0f0;
+            }
+
+
+    /* Button Styling */
+    .month-btn {
+        background-color: #fff0d9;
+        border: 1px solid #f7b23a;
+        color: #f7b23a;
+        padding: 6px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    /* Dropdown List Styling */
+    .month-list {
+        display: none;
+        position: absolute;
+        background-color: white;
+        border: 1px solid #ddd;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        margin-top: 5px;
+        width: 200px;
+        border-radius: 5px;
+        z-index: 1;
+    }
+
+        .month-list div {
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+            .month-list div:hover {
+                background-color: #f1f1f1;
+            }
+
+
+    .simple-date-picker {
+        position: relative;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+        .simple-date-picker input[type="date"] {
+            padding: 5px 10px;
+            margin-left: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+    .calendar-icon {
+        font-size: 18px;
+    }
+
+    .simple-date-picker1 {
+        position: relative;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+        .simple-date-picker1 input[type="date"] {
+            padding: 5px 10px;
+            margin-left: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+    .calendar-icon {
+        font-size: 18px;
+    }
+
+    /* Overall container */
+    .uic-controls {
+        position: relative;
+        width: 300px;
+    }
+
+    /* Dropdown Button */
+    .uic-btn-dropdown {
+        width: 100%;
+        padding: 7px;
+        font-size: 16px;
+        background-color: var(--card-bg) !important;
+        color: #223;
+        border: 1px solid #E3C48F;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-left: -24%;
+    }
+
+        .uic-btn-dropdown:hover {
+            background-color: #ffE8D9 !important;
+            color: var(--primary) !important;
+        }
+
+    .dropdown-icon {
+        font-size: 18px;
+        margin-left: auto;
+        transition: transform 0.3s ease;
+    }
+
+    .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        max-height: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+        /*.dropdown-menu li {
+            padding: 3px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }*/
+
+            .dropdown-menu li:hover {
+                background-color: #f1f1f1;
+            }
+
+    /* Date picker (just in case you want it as well) */
+    .simple-date-picker1 {
+        margin-top: 20px;
+    }
+
+    /* Styling for the calendar icon */
+    .calendar-icon {
+        margin-right: 10px;
+    }
+
+
+    select {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        outline: none;
+        cursor: pointer;
+    }
+
+        select:focus {
+            border-color: #5b9bd5;
+        }
+
+    label {
+        margin-right: 10px;
+    }
+
+    #barChart .bar {
+        height: 250% !important; /* Increase the height by 50% */
+    }
+
+    .table-wrapper {
+        min-height: 449px; /* Yahaan apne hisaab se height badha sakte hain */
+        max-height: 449px;
+        /*overflow-y: auto;*/ /* Scroll enable ho jaayega agar content bada hoga */
+    }
+
+
+
+
+
+    /* Parent container ka height fix karo */
+    .trend-container1 {
+        display: flex;
+        flex-direction: column;
+        max-height: 400px;
+        overflow: hidden;
+    }
+
+    /* Bar Chart ka height fix karo */
+    .bar-chart {
+        max-height: 400px; /* Maximum height fix kiya */
+        visibility: hidden; /* Load time pe hide rahe */
+        opacity: 0; /* Transition ke liye */
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    /* Jab page load ho jaaye, visible kar do */
+    body.loaded .bar-chart {
+        visibility: visible;
+        opacity: 1;
+    }
+    /* Remove extra margin from the main container */
+    .trend-container1 {
+        margin-top: 0px !important;
+        padding-top: 5px; /* Sirf 5px ka gap diya for clean look */
+    }
+
+
+    .create-case-btn {
+        top: 10px;
+        right: 10px; /* Changed from left to right */
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        margin: 1%;
+        margin-left: 90%;
+    }
+
+        .create-case-btn:hover {
+            background-color: #45a049;
+        }
+</style>
+<div class="container px-4 py-2" style="position: absolute;">
+
+    <!-- Top bar: instruction left + New Location button right -->
+    <div class="d-flex align-items-center justify-content-between mb-3 top-bar" ng-init="Limit()" ng-show="SMF_EditFlag==1">
+        <h4 style="color:var(--primary)">Litigation Dashboard</h4>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- New Case (rounded pill) -->
+            <a class=" btn-newCase" style="text-align:right; margin-top: 1%; margin-bottom: 1%;" onclick="window.location.href='/RetailSection/LitigationMaster?Litigation%20Master#'"><i class="bi bi-plus-lg" aria-hidden="true"></i>&nbsp;&nbsp;New Case</a>
+        </div>
+    </div>
+
+    
+    <div class="main-content">
+        <div class="main-row">
+            <div class="tiles-section" ng-init="BindTitles();BindMonthlyFilingchart();Bindcircle();BindCaseStatus();BindCalender();BindCaseDetail()">
+                <div class="tile1">
+                    <div class="dots" ng-click="Binddetailtiles(13)">⋮</div>
+
+                    <h2>Total Case</h2>
+                    <div class="value" style="font-size:260%">{{TotalCases}} <span> {{StageOnePercent}}%</span></div>
+
+                </div>
+
+                <div class="tile2">
+                    <div class="dots" ng-click="Binddetailtiles(14)">⋮</div>
+                    <h2>Total Pleading</h2>
+                    <div class="value" style="font-size:260%">{{PleadingsTotal}} <span> {{PleadingsPercent}}%</span></div>
+
+
+
+                </div>
+
+
+                <div class="tile4">
+                    <div class="dots" ng-click="Binddetailtiles(15)">⋮</div>
+                    <h2>Order & judgments</h2>
+                    <div class="value" style="font-size:260%">{{OrdersTotal}} <span>{{OrdersPercent}}%</span></div>
+
+
+                </div>
+
+                <div class="tile3">
+                    <div class="dots" ng-click="Binddetailtiles(16)">⋮</div>
+                    <h2>Total Hearing    </h2>
+                    <div class="value" style="font-size:260%">{{HearingsTotal}} <span> {{HearingsPercent}}%</span></div>
+
+
+
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="graph-section">
+                <div class="monthly-trend-container">
+                    <div class="trend-container1">
+                        <div class="trend-header">
+                            <h2>Monthly Filing Trend</h2>
+                            @*<button class="year-btn">Select Year</button>*@
+                            @*<button class="year-btn" onclick="toggleYearList()">Select Year</button>
+
+                                <div id="yearList" class="year-list">
+                                    <div onclick="selectYear(2025)">2025</div>
+                                    <div onclick="selectYear(2024)">2024</div>
+                                    <div onclick="selectYear(2023)">2023</div>
+                                    <div onclick="selectYear(2022)">2022</div>
+                                </div>*@
+                        </div>
+                        <div class="legend">
+                            <div><span class="dot green"></span> Case Filing</div>
+                            <div><span class="dot orange"></span> Pleading</div>
+                            <div><span class="dot blue"></span> Hearing</div>
+                            <div><span class="dot red"></span> Order & Judgment</div>
+                        </div>
+
+                        <div class="bar-chart" id="barChart"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Second Row -->
+        <div class="bottom-row" style="display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch;">
+            <!-- Pie Chart -->
+            <div class="bottom-widget" style="flex: 1; height: 449px;">
+                <h3 style="color: var(--primary)">Case Overview</h3>
+                <!--<div class="selectors">-->
+                @*<button>Select Year</button>
+                    <button>Select Month</button>*@
+
+                <!--<div>
+                        <label for="monthSelect">Select Month:</label>
+                        <select id="monthSelect"></select>
+                    </div>
+
+                    <div>
+                        <label for="yearSelect">Select Year:</label>
+                        <select id="yearSelect"></select>
+                    </div>
+
+
+                </div>-->
+                <div class="chart">
+                    <canvas id="myChart" width="280" height="280"></canvas>
+                    <div class="legend">
+                        <div class="item1">
+                            <span class="dot" style="background-color: #FF6B6B;"></span>
+                            <div>{{CaseFiling}}</div>
+                            <div class="stage">Case Filing<br>Stage 1</div>
+                        </div>
+                        <div class="item1">
+                            <span class="dot" style="background-color: #FF9F68;"></span>
+                            <div>{{Pleadings}}</div>
+                            <div class="stage">Pleadings<br>Stage 2</div>
+                        </div>
+                        <div class="item1">
+                            <span class="dot" style="background-color: #4D96FF;"> </span>
+                            <div>{{Hearing}}</div>
+                            <div class="stage">Hearing<br>Stage 3</div>
+                        </div>
+                        <div class="item1">
+                            <span class="dot" style="background-color: #C780FA;"></span>
+                            <div>{{Orders}}</div>
+                            <div class="stage">Orders &<br>Judgments<br>Stage 4</div>
+                        </div>
+                        <div class="item1">
+                            <span class="dot" style="background-color: #6EDCD9;"></span>
+                            <div>{{Appeal}}</div>
+                            <div class="stage">Appeal<br>Stage 5</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-widget" style="flex: 1; height:449px;">
+
+                <h3 style="color: var(--primary)">Case Status</h3>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Case Initiation</span><span class="value"> {{CaseInitiation}}</span>
+                    </div>
+                    @*<div class="progress-bar">
+                        <div class="progress-fill color1">
+                            </div>
+                        </div>*@
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Preliminary Processing</span><span class="value">{{PreliminaryProcessing}}    </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Admission of the case</span><span class="value"> {{AdmissionOfCase}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Appearance &amp; Pleadings</span><span class="value"> {{AppearancePleadings}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Framing of Issues / Charges</span><span class="value"> {{FramingOfIssues}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Evidence Stage</span><span class="value"> {{EvidenceStage}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Final Arguments</span><span class="value"> {{FinalArguments}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Judgment/Final Order</span><span class="value"> {{JudgmentFinalOrder}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-title">
+                        <span>Post-Judgment Proceedings</span><span class="value"> {{PostJudgment}}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill color1" ng-style="{'width': CaseInitiation + '%'}"></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Calendar -->
+            <div class="bottom-widget" style="flex: 1; height:1013px;">
+                <div class="calendar-container1">
+                    <div class="calendar-header"><h4>Litigation Calendar</h4></div>
+                    <div class="calendar-date" id="selected-date"></div>
+
+                    <div class="calendar">
+                        <div class="calendar-nav">
+                            <button onclick="changeMonth(-1)">&#8592;</button>
+                            <span id="month-year"></span>
+                            <button onclick="changeMonth(1)">&#8594;</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th></tr>
+                            </thead>
+                            <tbody id="calendar-body"></tbody>
+                        </table>
+                    </div>
+
+
+
+                    <div class="search-filter">
+
+
+                        <input type="text" id="search-input1" ng-model="searchTextCal" placeholder="Search for cases...">
+                        <button ng-click="clearcal()">🔧</button>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('open')">Open Case</div>
+                        <div class="tab" onclick="switchTab('close')">Close Case</div>
+                    </div>
+
+                    <!-- Open Cases -->
+                    <div class="case-list" id="open-case-list">
+                        <div class="case-item" ng-repeat="y in DetailList | filter:{ APS: 1 } | filter:searchTextCal">
+                            🔶<span class="case-id">{{y.CaseCode}}</span>
+                            <span class="case-code">{{y.CaseNo}}</span>
+                            <span class="case-date">{{y.FilingDate}}</span>
+
+                        </div>
+                    </div>
+
+                    <!-- Close Cases -->
+                    <div class="case-list" id="close-case-list" style="display: none;">
+                        <div class="case-item" ng-repeat="u in DetailList | filter:onlyAPSZero | filter:searchTextCal">
+                            ✅<span class="case-id">{{u.CaseCode}}</span>
+                            <span class="case-code">{{u.CaseNo}}</span>
+                            <span class="case-date">{{u.FilingDate}}</span>
+
+                        </div>
+                    </div>
+                </div>
+
+
+
+            </div>
+        </div>
+
+
+
+
+
+
+        <!-- Final Row: Data Table with Extra Space -->
+        <div class="dashboard-bottom-row1">
+            <!-- Data Table Section -->
+            <div class="dashboard-tile table-tile" style=" max-width: 100%; ">
+                <!-- Adjust the flex value and added max-width -->
+                <h3 style="color: var(--primary)">Case Details</h3>
+                <div class="header-controls">
+                    <input type="text" id="search-input1" ng-model="searchText" placeholder="Search for cases...">
+                    <div>
+                        @*<button onclick="alert('View All clicked')">View All</button>*@
+                        @*<button ng-click="Getpdf()">Go to Report</button>*@
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table style="width: 100%;">
+                        <!-- Ensuring table width is 100% of its container -->
+                        <thead>
+                            <tr>
+                                <th>Case Code</th>
+                                <th>Case Title</th>
+                                <th>Case Type</th>
+                                <th>Case Number</th>
+                                <th>Date of Hearing</th>
+                                <th>Pleading Type</th>
+                                <th>Filing Date</th>
+                                <th> Execution  Status</th>
+                                <th>  </th>
+                            </tr>
+                        </thead>
+                        <tbody style=" max-height: 400px; overflow-y: scroll; scrollbar-width: thin;">
+                            <tr ng-repeat="x in CaseDetailList | filter:searchText">
+                                <td>{{x.CaseCode}}</td>
+                                <td>{{x.CaseTitle}}</td>
+                                <td>{{x.CaseType}}</td>
+                                <td>{{x.CaseNo}}</td>
+                                <td>{{x.HearingDate}}</td>
+                                <td>{{x.PleadingsType}}</td>
+                                <td>{{x.FilingDate}}</td>
+                                <td>
+                                    <p style="margin:0" ng-show="{{x.ExecutionStatus}}==Yes">
+                                        {{x.ExecutionStatus}}
+                                    </p><p style="margin:0" ng-show="{{x.ExecutionStatus}}=='No'">
+                                        ⚠️{{x.ExecutionStatus}}
+                                    </p>
+                                </td>
+
+                                <td class="more-options" onclick="togglePopup(event)">
+                                    <div class="popup-menu">
+                                        <div><a href="../RetailSection/Litigationmaster?LitigationMaster"></a>View More</div>
+                                    </div>
+                                </td>
+                            </tr>
+
+
+
+                        </tbody>
+                    </table>
+                    <div id="no-results-message" style="display: none; text-align: center; padding: 10px; color: #888;">
+                        No matching results found.
+                    </div>
+                </div>
+            </div>
+
+
+
+        </div>
+
+
+
+
+        <!-- Additional Row: Pie Chart + Line-Bar Chart -->
+        <div class="dashboard-bottom-row">
+            <!-- Pie Chart Section -->
+            <div class="dashboard-tile chart-tile">
+
+                <div class="card-header" ng-init="BindAdvocate()">
+                    <h3>Advocate Performance</h3>
+                    @*<div class="simple-date-picker" onclick="toggleSimpleCalendar()">
+                            <span class="calendar-icon">📅</span>
+                            <input type="date" id="simpleCalendarInput" onchange="handleSimpleDateChange()" />
+                        </div>*@
+                </div>
+                <div class="advocate-donut-chart">
+                    <svg width="100%" height="100%" viewBox="0 0 36 36">
+                        <circle class="bg-ring" cx="18" cy="18" r="16" fill="none" stroke="#f1f1f1" stroke-width="4" />
+                        <circle id="inhouseArc" cx="18" cy="18" r="16" fill="none" stroke="#f4b63f" stroke-width="4" stroke-dasharray="0 100" />
+                        <circle id="externalArc" cx="18" cy="18" r="16" fill="none" stroke="#d63d70" stroke-width="4" stroke-dasharray="0 100" stroke-dashoffset="0" />
+                    </svg>
+                    <div class="donut-center">
+                        <h3 id="totalCount">{{ATotal}}</h3>
+                        <p>Advocate/Legal Counsel</p>
+                    </div>
+                    <div class="label-top" id="inhouseLabel">{{InHousePercentage}}%</div>
+                    <div class="label-bottom" id="externalLabel">{{ExternalPercentage}}%</div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="footer-item">
+                        <div class="footer-value" id="inhouseCount">{{InHouseCount}}</div>
+                        <div class="footer-label">In-house</div>
+                    </div>
+                    <div class="footer-item">
+                        <div class="footer-value" id="externalCount">{{ExternalCount}}</div>
+                        <div class="footer-label">External</div>
+                    </div>
+                </div>
+
+
+
+            </div>
+
+
+
+            <!-- Line-Bar Chart Section -->
+            <div class="dashboard-tile chart-tile">
+
+                <div class="uic-header-row" ng-init="BindCaseTypeMonth();BindCasetype()">
+                    <h2 class="uic-title-text">Case Type Distribution</h2>
+                    <div class="uic-controls">
+
+                        <select style="height: 17%; width: 100%; font-size: 12px;" ng-model="CaseType" ng-change="BindCaseTypeMonth()">
+                            <option value="">Select CaseType</option>
+                            <option ng-repeat="x in CaseTypeLIST" value="{{x.CaseType}}">{{x.CaseType}}</option>
+                        </select>
+                        @*<button class="uic-btn-dropdown" id="caseTypeButton">
+                                Select Case Type
+                                <span class="dropdown-icon">▼</span>
+                            </button>*@
+                        <!--<ul class="dropdown-menu" id="dropdownMenu">
+                        <!-- Dynamic options will appear here -->
+                        <!--</ul>
+                        <div class="uic-date-box1">-->
+                        @*<span class="uic-date-icon">📅</span>
+                            <span class="uic-date-text">07 May 2025</span>*@
+                        @*<div class="simple-date-picker1" onclick="toggleSimpleCalendar('simpleCalendarInput2')">
+                                    <span class="calendar-icon">📅</span>
+                                    <input type="date" id="simpleCalendarInput2" onchange="handleSimpleDateChange('simpleCalendarInput2')" />
+                                </div>
+
+                            </div>-->*@
+                    </div>
+                </div>
+                <canvas id="uic-bar-chart"></canvas>
+            </div>
+
+
+
+
+
+        </div>
+
+
+
+
+
+
+        <!-- New Row: Pie Chart and Line-Bar Graph -->
+        <div class="dashboard-bottom-row" ng-init="BindStatewise();BindState()">
+            <!-- Pie Chart Section -->
+            <div class="dashboard-tile line-bar-chart-tile">
+                <div class="chart-container">
+                    <div class="select-state" style="display: flex !important; justify-content: space-between !important; ">
+                        <h3>State-Wise Case Distribution</h3>
+                        <select style="height: 17%; width: 30%; font-size: 12px;" ng-model="State" ng-change="BindStatewise()">
+                            <option value="">Select State</option>
+                            <option ng-repeat="x in statelist" value="{{x.STATE_ID}}">{{x.STATE_NAME}}</option>
+                        </select>
+
+                    </div>
+                    <canvas id="caseChart"></canvas>
+                </div>
+
+            </div>
+
+            <!-- Line-Bar Chart Section -->
+            <div class="dashboard-tile line-bar-chart-tile" ng-init="BindHearing()">
+                <div class='card1'>
+                    <div class='header1'>
+                        <h3>Real-Time Case Tracker</h3>
+                        @*<div class='date'>
+                                <span>📅</span>
+                                <input type="date" id="currentDate" value="" style="border: red; background: transparent; color: #E3A867;" />
+                            </div>*@
+                    </div>
+
+                    <div id='chart'></div>
+                </div>
+            </div>
+
+
+            <!-- Popup Modal -->
+            <div class="modal" id="popupModal">
+                <div class="modal-content">
+                    <span class="close-btn" onclick="closeModal()">×</span>
+                    <h3>Case Details</h3>
+                    <table style="font-size:12px">
+                        <thead>
+                            <tr>
+                                <th>Case Code</th>
+                                <th>Case Title</th>
+                                <th>Case Type</th>
+                                <th>Case Number</th>
+                                <th>Date of Hearing</th>
+                                <th>Pleading Type</th>
+                                <th>Execution Status</th>
+                                @*<th></th>*@
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Sample Row -->
+                            <tr ng-repeat="x in  ListDetail">
+                                <td>{{x.CaseCode}}</td>
+                                <td>{{x.CaseTitle}}</td>
+                                <td>{{x.CaseType}}</td>
+                                <td>{{x.CaseNo}}</td>
+                                <td>{{x.HearingDate}}</td>
+                                <td>{{x.PleadingsType}}</td>
+                                <td>{{x.ExecutionStatus}}</td>
+                                @*<td class="more-options" onclick="togglePopup(event)">
+                                        ⋮
+                                        <div class="popup-menu">
+                                            <div>View More</div>
+                                            <div>Case Copy</div>
+                                        </div>
+                                    </td>*@
+                            </tr>
+
+
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const monthYearEl = document.getElementById('month-year');
+    const calendarBody = document.getElementById('calendar-body');
+    const selectedDate = document.getElementById('selected-date');
+    const caseList = document.getElementById('case-list');
+    let currentDate = new Date();
+    let eventMap = {}; // Global for storing events
+
+    function formatDate(year, month, day) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const monthName = firstDay.toLocaleString('default', { month: 'long' });
+        monthYearEl.textContent = `${monthName} ${year}`;
+
+        let startDay = firstDay.getDay();
+        if (startDay === 0) startDay = 7; // Sunday last
+
+        let day = 1;
+        let rows = '';
+        for (let i = 0; i < 6; i++) {
+            let row = '<tr>';
+            for (let j = 1; j <= 7; j++) {
+                if ((i === 0 && j < startDay) || day > lastDay.getDate()) {
+                    row += '<td></td>';
+                } else {
+                    const dateStr = formatDate(year, month + 1, day);
+                    const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+                    const hasEvent = eventMap[dateStr];
+                    const eventDot = hasEvent ? '<div class="event">•</div>' : '';
+
+                    row += `<td class="${isToday ? 'selected' : ''}" onclick="selectDate(${year}, ${month + 1}, ${day})">
+                            <div class="day-cell">${day}${eventDot}</div>
+                        </td>`;
+                    day++;
+                }
+            }
+            row += '</tr>';
+            rows += row;
+        }
+
+        calendarBody.innerHTML = rows;
+        updateSelectedDate();
+    }
+
+    function selectDate(year, month, day) {
+        const formattedDate = formatDate(year, month, day);
+
+
+        // Update AngularJS scope safely
+        if (window.angular && window.angular.element) {
+            const scope = angular.element(document.querySelector('[ng-controller]')).scope();
+            scope.$apply(() => {
+                scope.searchTextCal = formattedDate;
+            });
+        }
+
+        // Highlight selected
+        document.querySelectorAll('#calendar-body td').forEach(td => td.classList.remove('selected'));
+        const td = Array.from(document.querySelectorAll('#calendar-body td')).find(td =>
+            td.textContent.trim() === String(day)
+        );
+        if (td) td.classList.add('selected');
+
+        // Update date object
+        currentDate = new Date(year, month - 1, day);
+        updateSelectedDate();
+
+        // Show cases if any
+        const events = eventMap[formattedDate];
+        if (events && events.length) {
+            if (events[0].CaseNumber == '1') {
+                switchTab('open')
+            }
+            else {
+                switchTab('close')
+            }
+
+        }
+    }
+
+
+    function updateSelectedDate() {
+        const dateStr = currentDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        selectedDate.textContent = dateStr;
+    }
+
+    function changeMonth(offset) {
+        currentDate.setMonth(currentDate.getMonth() + offset);
+        renderCalendar();
+    }
+
+    // Call this from AngularJS when data is fetched
+    function loadEventData(eventList) {
+        eventMap = {};
+
+        eventList.forEach(item => {
+            const dt = new Date(item.FilingDate);
+            const dateStr = formatDate(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+
+            if (!eventMap[dateStr]) {
+                eventMap[dateStr] = [];
+            }
+
+            eventMap[dateStr].push({
+                CaseNumber: item.CaseNumber
+
+            });
+        });
+
+        renderCalendar();
+    }
+
+    // Initial render
+    renderCalendar();
+</script>
+
+
+<script>
+    function switchTab(tab) {
+        // Toggle tab button styles
+        const tabs = document.querySelectorAll('.tabs .tab');
+        tabs.forEach(t => t.classList.remove('active'));
+
+        if (tab === 'open') {
+            tabs[0].classList.add('active');
+            document.getElementById('open-case-list').style.display = 'block';
+            document.getElementById('close-case-list').style.display = 'none';
+        } else {
+            tabs[1].classList.add('active');
+            document.getElementById('open-case-list').style.display = 'none';
+            document.getElementById('close-case-list').style.display = 'block';
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx3 = document.getElementById('caseChart').getContext('2d');
+        caseChart = new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Number of Cases',
+                    data: [],
+                    backgroundColor: '#00bfa5',
+                    borderRadius: 4,
+                    barThickness: 30
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Cases'
+                        },
+                        ticks: { stepSize: 10 }
+                    },
+                    x: {
+                        ticks: { maxRotation: 35, minRotation: 35 }
+                    }
+                }
+            }
+        });
+    });
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    const modal = document.getElementById('popupModal');
+
+    window.addEventListener('load', function () {
+        document.body.classList.add('loaded');
+    });
+
+
+</script>
+
+
+
+<link href="~/compliance/css/all.css" rel="stylesheet" />
+<link href="~/compliance/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.min.css" rel="stylesheet" />
+<link href="~/compliance/css/custom_theme.css" rel="stylesheet" />
+<link href="~/compliance/css/colorTheme/default.css" rel="stylesheet" />
+<link href="~/compliance/css/draggle.css" rel="stylesheet" />
+<link href="~/compliance/css/responsive.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

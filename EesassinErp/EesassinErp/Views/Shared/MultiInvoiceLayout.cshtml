@@ -1,0 +1,375 @@
+﻿ 
+<div id="printDiv" ng-init="GetReportHeaderUsingCategory('General Report');">
+    <table class="bill-box bill-box2 page-ba">
+        <tbody>
+            <tr ng-repeat="id in InvoicesData" >
+                <td>
+                    <div class="bill-box-top">
+                        <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+                        <div style="width: 100%;  ">
+                            <div class="invoice-t">
+                                <div >
+                                    Invoice Date. <span ng-bind="id.InvoiceDate"></span> 
+                                </div>
+                            </div>
+                            <div class="invoice-t invoice text-center">
+                                <span ng-bind="id.I_Title"></span><br />
+                                <span class="small-t">({{id.SubTitle}} Customer Copy)</span>
+                            </div>
+                            <div class="invoice-t text-right">Invoice No. <span ng-bind="id.SaudaNo"></span> </div>
+                          
+                        </div>
+                         
+
+                        
+
+                        <div class="details-receiver">
+                            <div class="col-sm-2">
+                                Details of Supplier 
+                            </div>
+                            <div class="col-sm-2">
+                                Details of Transporter
+                            </div>
+                        </div>
+
+                        <div class="transportation2">
+                            <div class="col-sm-2">
+                                <table>
+                                    <tr>
+                                        <td style="width: 97px;">Supplier Type</td>
+                                        <td ng-bind="id.SupplierType"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Name</td>
+                                        <td ng-bind="id.SupplierName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Address</td>
+                                        <td ng-bind="id.SupplierAddress"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Contact No</td>
+                                        <td ng-bind="id.SupplierContactNo"></td>
+                                    </tr>
+                                     
+                                    <tr>
+                                        <td style="width: 97px;">GSTIN / UIN</td>
+                                        <td ng-bind="id.GSTINUIN"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Challan No</td>
+                                        <td ng-bind="id.ChallanNo"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Challan Date</td>
+                                        <td ng-bind="id.ChallanDate"></td>
+                                    </tr>
+                                </table>
+
+
+                            </div>
+                            <div class="col-sm-2" style="float:right; border-right:none;">
+
+                                <table>
+                                  
+                                    <tr>
+                                        <td style="width: 97px;">Transport Name</td>
+                                        <td ng-bind="id.TransportName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Vehicle No</td>
+                                        <td ng-bind="id.VehicleNo"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Driver Name</td>
+                                        <td ng-bind="id.DriverName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Transporter Address</td>
+                                        <td ng-bind="id.TransporterAddress"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Contact No</td>
+                                        <td ng-bind="id.TransporterContactNo"></td>
+                                    </tr>
+
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bill-box-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:47px">Sr. No.</th>
+                                    <th>Goods Type</th>
+                                    <th>Unit</th> 
+                                    <th style="white-space: nowrap;">Toal Qty <br /> (In Kg)</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">Rate <br /> (Per Kg)</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">Discount </th>
+                                 
+                                    <th style="white-space: nowrap;" ng-if="IsShow">GST/CGST/SGST/OTHER</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">TAX PER.</th>
+                                     <th style="width:100px;vertical-align:middle; text-align:center;" ng-if="IsShow">Total</th>
+                                </tr>
+                            </thead> 
+                            <tbody >
+                                <tr ng-repeat="DD in DetailData">
+                                    <td style="width:40px" ng-if="DD.SNO!=99">{{DD.SNO}}</td> 
+
+                                    <td style="width:40px" ng-if="DD.SNO==99"></td> 
+                                    <td>{{DD.SupplierType}}</td>
+                                    <td>{{DD.Unit}}</td> 
+                                    <td style="text-align:right;">{{DD.LSTotalQuantity}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Rate)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Discount)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{DD.TaxType}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.GST)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Amount)}}</td> 
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table>
+                            <tr><td>Discount:</td><td>{{TotalDiscount}}</td></tr>
+                            <tr><td>Total Amount After  Tax/Discount:</td><td>{{GrAmount}}</td></tr>
+                         
+                         
+                        </table>
+                    </div>
+                    <div class="bill-box-top">
+                        <div class="invoice-value">
+                            <span>Invoice Value (In Words)</span> <span ng-bind="InWords"></span>
+                        </div>
+
+                        <div class="terms-conditions">
+
+                            <table class="TC-table">
+                                <tbody>
+                                    <tr>
+                                        <td  style="width:60%;vertical-align:bottom;">
+
+                                               <div class="terms-left">
+                                                <span>Remark</span> 
+                                                {{Remark}} 
+                                            </div>
+                                            <div class="terms-left">
+                                                <span>{{Term}}</span> 
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="terms-right">
+                                                <div class="for-company">
+                                                    For {{BranchName}}
+                                                </div>
+                                                <div class="authorised">
+                                                    Authorised Signatory
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="bill-box bill-box2 page-ba" ng-if="PrintingCount==2">
+        <tbody>
+            <tr ng-repeat="id in InvoicesData">
+                <td>
+                    <div class="bill-box-top">
+                        <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+                        <div style="width: 100%;  ">
+                            <div class="invoice-t">
+                                <div>
+                                    Invoice Date. <span ng-bind="id.InvoiceDate"></span>
+                                </div>
+                            </div>
+                            <div class="invoice-t invoice text-center">
+                                <span ng-bind="id.I_Title"></span><br />
+                                <span class="small-t">({{id.SubTitle}} Office Copy)</span>
+                            </div>
+                            <div class="invoice-t text-right">Invoice No. <span ng-bind="id.SaudaNo"></span> </div>
+
+                        </div>
+
+
+
+
+                        <div class="details-receiver">
+                            <div class="col-sm-2">
+                                Details of Supplier
+                            </div>
+                            <div class="col-sm-2">
+                                Details of Transporter
+                            </div>
+                        </div>
+
+                        <div class="transportation2">
+                            <div class="col-sm-2">
+                                <table>
+                                    <tr>
+                                        <td style="width: 97px;">Supplier Type</td>
+                                        <td ng-bind="id.SupplierType"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Name</td>
+                                        <td ng-bind="id.SupplierName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Address</td>
+                                        <td ng-bind="id.SupplierAddress"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Contact No</td>
+                                        <td ng-bind="id.SupplierContactNo"></td>
+                                    </tr>
+
+                                    <tr>
+                                        <td style="width: 97px;">GSTIN / UIN</td>
+                                        <td ng-bind="id.GSTINUIN"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Challan No</td>
+                                        <td ng-bind="id.ChallanNo"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Challan Date</td>
+                                        <td ng-bind="id.ChallanDate"></td>
+                                    </tr>
+                                </table>
+
+
+                            </div>
+                            <div class="col-sm-2" style="float:right; border-right:none;">
+
+                                <table>
+
+                                    <tr>
+                                        <td style="width: 97px;">Transport Name</td>
+                                        <td ng-bind="id.TransportName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Vehicle No</td>
+                                        <td ng-bind="id.VehicleNo"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Driver Name</td>
+                                        <td ng-bind="id.DriverName"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Transporter Address</td>
+                                        <td ng-bind="id.TransporterAddress"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 97px;">Contact No</td>
+                                        <td ng-bind="id.TransporterContactNo"></td>
+                                    </tr>
+
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bill-box-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:47px">Sr. No.</th>
+                                    <th>Goods Type</th>
+                                    <th>Unit</th>
+                                    <th style="white-space: nowrap;">Toal Qty <br /> (In Kg)</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">Rate <br /> (Per Kg)</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">Discount </th>
+
+                                    <th style="white-space: nowrap;" ng-if="IsShow">GST/CGST/SGST/OTHER</th>
+                                    <th style="white-space: nowrap;" ng-if="IsShow">TAX PER.</th>
+                                    <th style="width:100px;vertical-align:middle; text-align:center;" ng-if="IsShow">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="DD in DetailData">
+                                    <td style="width:40px" ng-if="DD.SNO!=99">{{DD.SNO}}</td>
+
+                                    <td style="width:40px" ng-if="DD.SNO==99"></td>
+                                    <td>{{DD.SupplierType}}</td>
+                                    <td>{{DD.Unit}}</td>
+                                    <td style="text-align:right;">{{DD.LSTotalQuantity}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Rate)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Discount)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{DD.TaxType}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.GST)}}</td>
+                                    <td style="text-align:right;" ng-if="IsShow">{{ConvertToTwoDecimalPoint(DD.Amount)}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table>
+                            <tr><td>Discount:</td><td>{{TotalDiscount}}</td></tr>
+                            <tr><td>Total Amount After  Tax/Discount:</td><td>{{GrAmount}}</td></tr>
+
+
+                        </table>
+                    </div>
+                    <div class="bill-box-top">
+                        <div class="invoice-value">
+                            <span>Invoice Value (In Words)</span> <span ng-bind="InWords"></span>
+                        </div>
+
+                        <div class="terms-conditions">
+
+                            <table class="TC-table">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:60%;vertical-align:bottom;">
+
+                                            <div class="terms-left">
+                                                <span>Remark</span>
+                                                {{Remark}}
+                                            </div>
+                                            <div class="terms-left">
+                                                <span>{{Term}}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="terms-right">
+                                                <div class="for-company">
+                                                    For {{BranchName}}
+                                                </div>
+                                                <div class="authorised">
+                                                    Authorised Signatory
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+
+
+<style>
+    th.ng-hide { 
+    display: none;
+}
+td.ng-hide { 
+    display: none;
+}
+</style>
+
+

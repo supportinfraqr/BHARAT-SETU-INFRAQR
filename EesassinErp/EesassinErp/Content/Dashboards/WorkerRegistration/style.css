@@ -1,0 +1,263 @@
+﻿*{
+    box-sizing : border-box;
+    padding : 0;
+    margin : 0;
+}
+
+.workerRegistration {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27;
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #1E293B;
+    min-height: 100vh;
+    padding : 24px;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Progress */
+
+.workerRegistrationProgressCard {
+    background: #fff;
+    border: 1px solid var(--primary);
+    border-radius: 18px;
+    padding: 22px;
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.workerRegistrationProgressLeft h2 {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.workerRegistrationProgressLeft p {
+    margin: 0;
+    font-size : 16px;
+    color: #64748B;
+}
+
+.workerRegistrationProgressRight {
+    min-width: 310px;
+    align-self: center;
+}
+
+.workerRegistrationProgressHeader {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.workerRegistrationProgressBar {
+    height: 10px;
+    background: #D9E1F2;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.workerRegistrationProgressFill {
+    width: 20%;
+    height: 100%;
+    background: var(--primary);
+    border-radius: 20px;
+}
+
+/* Tabs */
+
+.workerRegistrationTabs {
+    background: #fff;
+    display: inline-flex;
+    gap: 10px;
+    padding: 6px;
+    border-radius: 50px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.workerRegistrationTab {
+    border: none;
+    background: transparent;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 500;
+}
+
+    .workerRegistrationTab.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* Form Card */
+
+.workerRegistrationFormCard {
+    background: #fff;
+    border-radius: 24px;
+    padding: 35px;
+}
+
+.workerRegistrationGrid {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 28px 50px;
+}
+
+.workerRegistrationField {
+    display: flex;
+    flex-direction: column;
+}
+
+    .workerRegistrationField label {
+        font-size: 15px;
+        margin-bottom: 8px;
+        color: #64748B;
+    }
+
+    .workerRegistrationField input,
+    .workerRegistrationField select {
+        border: 1px solid #D6D6D6;
+        border-radius: 8px;
+        padding: 8px 14px;
+        background: #fff;
+    }
+
+.workerRegistrationTabContent {
+    display: none;
+}
+
+    .workerRegistrationTabContent.active {
+        display: block;
+    }
+
+/* Footer */
+
+.workerRegistrationFooter {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.workerRegistrationNextBtn {
+    border: none;
+    border-radius: 14px;
+    background: var(--primary);
+    color: white;
+    font-size: 16px;
+    padding : 6px 12px;
+    font-weight: 500;
+}
+
+/* Tablet */
+
+@media(max-width:1200px) {
+
+    .workerRegistrationGrid {
+        grid-template-columns: repeat(2,1fr);
+    }
+}
+
+/* Mobile */
+
+@media(max-width:768px) {
+
+    .workerRegistrationProgressCard {
+        flex-direction: column;
+    }
+
+    .workerRegistrationProgressRight {
+        min-width: 100%;
+    }
+
+    .workerRegistrationGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .workerRegistrationTabs {
+        display: flex;
+        width: 100%;
+        overflow: auto;
+        flex-wrap: nowrap;
+    }
+}
+
+
+/* Nominee */
+
+.workerNomineeWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.workerNomineeSection {
+    width: 100%;
+}
+
+.workerNomineeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.workerNomineeTitle {
+    margin: 0 0 14px;
+    font-size: 20px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.workerNomineeHeader .workerNomineeTitle {
+    margin-bottom: 0;
+}
+
+.workerNomineeGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px 40px;
+}
+
+.workerNomineeCopy {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .workerNomineeCopy .form-check-input {
+        margin-top: 0;
+    }
+
+@media (max-width: 1200px) {
+
+    .workerNomineeGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+
+    .workerNomineeHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .workerNomineeGrid {
+        grid-template-columns: 1fr;
+    }
+}

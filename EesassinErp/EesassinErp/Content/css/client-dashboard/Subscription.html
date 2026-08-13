@@ -1,0 +1,827 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription</title>
+
+
+
+    <!--Replace with your tailwind.css once created-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <!--<link rel="stylesheet" href="https://allyoucan.cloud/cdn/icofont/1.0.1/icofont.css" integrity="sha384-jbCTJB16Q17718YM9U22iJkhuGbS0Gd2LjaWb4YJEZToOPmnKDjySVa323U+W7Fv" crossorigin="anonymous">-->
+    <link rel="stylesheet" href="../css/custom.css">
+    <link rel="stylesheet" href="../css/media.css">
+    <link rel="stylesheet" href="../css/icofont.css">
+    <link rel="stylesheet" href="../css//style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+
+<script src="../myjs/main.js"></script>
+<script src="../myjs/bootstrap.min.js"></script>
+<script src="../myjs/vendor/jquery-1.12.4.min.js"></script>
+    <script src="../myjs/myapp.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var settings121 = {
+                "url": (APIURLPath + "UserSubscription/GetSubPlanList"),
+                "method": "POST",
+                "timeout": 0,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "data": JSON.stringify({
+                    "ActionType": 26
+                }),
+            };
+            $.ajax(settings121).done(function (response) {
+                if (response.length > 0) {
+                    $('#plandtls').html('');
+                    $('#subamt').html('');
+                    $('#hidsubid').val(0);
+                    $('#ulliahigh').html('');
+                    for (var i = 0; i < response.length; i++) {
+                        if (response[i].TY == 1) {
+                            $('#plandtls').html(response[i].SUBSCRIPTION_TITLE);
+                            $('#subamt').html(response[i].Amount);
+                            $('#hidsubid').val(response[i].SUBSCRIPTION_ID);
+                        } else {
+                            $('#ulliahigh').append('<li>' + response[i].SUBSCRIPTION_TITLE + '</li>');
+                        }
+                    }
+                } else {
+                    $('#plandtls').html('');
+                    $('#subamt').html('');
+                    $('#hidsubid').val(0);
+                    $('#ulliahigh').html('');
+                }
+            });
+
+            var settings1212 = {
+                "url": (APIURLPath + "UserSubscription/GetCountryList"),
+                "method": "POST",
+                "timeout": 0,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "data": JSON.stringify({
+                    "ActionType": 27
+                }),
+            };
+            $.ajax(settings1212).done(function (response) {
+                $("#ddlcountry").empty();
+                if (response.length > 0) {
+                    $("#ddlcountry").append('<option value="0">---Select Country---</option>');
+                    $("#ddlcountry").append('<option value="' + response[0].CountryId + '">' + response[0].CountryName + '</option>');
+                    $("#ddlcountry").val(1).change();
+                } else {
+                    $("#ddlcountry").append('<option value="0">---Select Country---</option>');
+                }
+            });
+        });
+        function getotpEmail() {
+            if ($("#txtEmailID").val() != "") {
+                var settings = {
+                    "url": (APIURLPath + "UserSubscription/SetSendEmailOTP"),
+                    "method": "POST",
+                    "timeout": 0,
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "data": JSON.stringify({
+                        "EmailId": $("#txtEmailID").val()
+                    }),
+                };
+                $.ajax(settings).done(function (response) {
+                    if (response == 'Send OTP') {
+                        alert('Email OTP Send Successfully. Please check email.');
+                    } else {
+                        alert(response);
+                    }
+                });
+            } else {
+                $("#txtEmailID").focus();
+                alert('Please enter email id.');
+            }
+        }
+        function getotpEmailVerify() {
+            if ($("#txtEmailID").val() != "" && $("#txtemotp").val() != "") {
+                var settings1 = {
+                    "url": (APIURLPath + "UserSubscription/GetEmailOTPVerify"),
+                    "method": "POST",
+                    "timeout": 0,
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "data": JSON.stringify({
+                        "EmailId": $("#txtEmailID").val(),
+                        "EmailOtp": $("#txtemotp").val(),
+                    }),
+                };
+                $.ajax(settings1).done(function (response) {
+                    if (response == 'Your Email OTP Verify Successfully.') {
+                        alert(response);
+                        $("#apppeicon").removeClass("displayn");
+                        return true;
+                    } else {
+                        alert(response);
+                        $("#apppeicon").addClass("displayn");
+                    }
+                });
+            } else {
+                $("#txtEmailID").focus();
+                alert('Please enter email id.');
+            }
+        }
+        function getotpMobile() {
+            var settings3 = {
+                "url": (APIURLPath + "UserSubscription/SetSendMobileOTP"),
+                "method": "POST",
+                "timeout": 0,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "data": JSON.stringify({
+                    "EmailId": $("#txtMobile").val()
+                }),
+            };
+            $.ajax(settings3).done(function (response) {
+                if (response != null) {
+
+                } else {
+
+                }
+            });
+        }
+        function setvalpro() {
+            if (validation()) {
+                if ($("#chkcheck").prop('checked')) {
+                    var settings4 = {
+                        "url": (APIURLPath + "UserSubscription/UserSubscriptionNew"),
+                        "method": "POST",
+                        "timeout": 0,
+                        "headers": {
+                            "Content-Type": "application/json"
+                        },
+                        "data": JSON.stringify({
+                            "ActionType": 24,
+                            "MobileNo": $("#txtMobile").val(),
+                            "MobileOtp": $("#txtmobotp").val(),
+                            "EmailId": $("#txtEmailID").val(),
+                            "EmailOtp": $("#txtemotp").val(),
+                            "CompanyId": 1,
+                            "OrganizationId": 1,
+                            "Name": $("#txtusername").val(),
+                            "Status": 0,
+                            "AttributeContext": "string",
+                            "Uaddress": $("#txtaddress").val(),
+                            "CityId": $("#ddlcity").val(),
+                            "StateId": $("#ddlstate").val(),
+                            "CountryId": $("#ddlcountry").val(),
+                            "PinCode": 226001,
+                            "Gstnno": $("#txtgstno").val(),
+                            "RegComName": $("#txtregistcomname").val(),
+                        }),
+                    };
+                    $.ajax(settings4).done(function (response) {
+                        if (response == 1) {
+                            clear();
+                            alert('User Creation Details Done. Please Check Your Email ID.');
+                        }
+                        //window.location = "Subscription/Payment.html";
+                        //self.location = "Payment.html";
+                    });
+                } else {
+                    $("#chkcheck").focus();
+                    alert('Please checked the I agree terms and conditions.');
+                }
+            }
+        }
+        function validation() {
+            if ($("#txtusername").val() == "") {
+                $("#txtusername").focus();
+                alert('Please enter user name.');
+            } else if ($("#txtaddress").val() == "") {
+                $("#txtaddress").focus();
+                alert('Please enter address.');
+            }
+            //else if ($("#ddlcountry").val() == "0") {
+            //    $("#ddlcountry").focus();
+            //    alert('Please select country.');
+            //} else if ($("#ddlstate").val() == "0") {
+            //    $("#ddlstate").focus();
+            //    alert('Please select stste.');
+            //} else if ($("#ddlcity").val() == "0") {
+            //    $("#ddlcity").focus();
+            //    alert('Please select city.');
+            //}
+            else if ($("#txtgstno").val() == "") {
+                $("#txtgstno").focus();
+                alert('Please enter GST no.');
+            } else if ($("#txtregistcomname").val() == "") {
+                $("#txtregistcomname").focus();
+                alert('Please enter registered company name.');
+            } else if ($("#txtEmailID").val() == "") {
+                $("#txtEmailID").focus();
+                alert('Please enter email id.');
+            } else if ($("#txtemotp").val() == "") {
+                $("#txtemotp").focus();
+                alert('Please enter email otp.');
+            } else {
+                return true;
+            }
+        }
+        function clear() {
+            $("#txtusername").val('');
+            $("#txtaddress").val('');
+            $("#ddlcountry").val(0);
+            $("#ddlstate").val(0);
+            $("#ddlcity").val(0);
+            $("#txtgstno").val('');
+            $("#txtregistcomname").val('');
+            $("#txtEmailID").val('');
+            $("#txtemotp").val('');
+            $("#txtMobile").val('');
+            $("#txtmobotp").val('');
+            $("#chkcheck").prop('checked', false);
+        }
+
+        function getpincode() {
+            if ($("#txtpincode").val().length == 6) {
+                var settings1112 = {
+                    "url": (APIURLPath + "UserSubscription/GetPinCodeList"),
+                    "method": "POST",
+                    "timeout": 0,
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "data": JSON.stringify({
+                        "PinCode": $("#txtpincode").val()
+                    }),
+                };
+                $.ajax(settings1112).done(function (responsest) {
+                    if (responsest.length > 0) { 
+                        //if (responsest.length == 2) {
+                        //    if (responsest[1].ty == 2) {
+                        //        $("#ddlstate").val(responsest[1].val).change(); 
+                        //    }
+                        //    if (responsest[0].ty == 1) {
+                        //        $("#ddlcity").val(responsest[0].val).change(); 
+                        //    }
+                        //} else {
+                            $("#ddlcity").empty();
+                            $("#ddlstate").empty();
+                            for (var i = 0; i < responsest.length; i++) {
+                                if (responsest[i].ty == 1) {
+                                    $("#ddlcity").append('<option value="' + responsest[i].val + '">' + responsest[i].txt + '</option>');
+                                    //
+                                } else if (responsest[i].ty == 2) {
+                                    $("#ddlstate").append('<option value="' + responsest[i].val + '">' + responsest[i].txt + '</option>'); 
+                                }
+                            }
+                        //}
+                    }
+                });
+            }
+        }
+        function getstate() {
+            var settings1321 = {
+                "url": (APIURLPath + "UserSubscription/GetStateList"),
+                "method": "POST",
+                "timeout": 0,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "data": JSON.stringify({
+                    "CountryId": $("#ddlcountry").val()
+                }),
+            };
+            $.ajax(settings1321).done(function (responsest) {
+                $("#ddlstate").empty();
+                if (responsest.length > 0) {
+                    $("#ddlstate").append('<option value="0">---Select State---</option>');
+                    for (var i = 0; i < responsest.length; i++) {
+                        $("#ddlstate").append('<option value="' + responsest[i].SATE_CODE + '">' + responsest[i].STATE_NM + '</option>');
+                    }
+                } else {
+                    $("#ddlstate").append('<option value="0">---Select State---</option>');
+                }
+            });
+        }
+        function getcity() {
+            var settings98987 = {
+                "url": (APIURLPath + "UserSubscription/GetCityList"),
+                "method": "POST",
+                "timeout": 0,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "data": JSON.stringify({
+                    "CityId": 0,
+                    "StateId": $("#ddlstate").val(),
+                    "CountryId": $("#ddlcountry").val(),
+                }),
+            };
+            $.ajax(settings98987).done(function (responsest) {
+                $("#ddlcity").empty();
+                if (responsest.length > 0) {
+                    $("#ddlcity").append('<option value="0">---Select City---</option>');
+                    for (var i = 0; i < responsest.length; i++) {
+                        $("#ddlcity").append('<option value="' + responsest[i].CITY_CODE + '">' + responsest[i].CITY_NAME + '</option>');
+                    }
+                } else {
+                    $("#ddlcity").append('<option value="0">---Select City---</option>');
+                }
+            });
+        }
+    </script>
+
+    <style>
+        .approve {
+            float: left;
+            width: 100%;
+        }
+
+            .approve a {
+                font-size: 12px;
+                color: #1ABCE9;
+            }
+
+        .tick {
+            font-size: 12px;
+            color: #1ABCE9;
+            float: right;
+            text-align: right;
+        }
+
+        .input {
+            background-color: transparent !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-top: none !important;
+            border-bottom: 2px solid #d4d4d4;
+        }
+
+        select {
+            background-color: transparent !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-top: none !important;
+            border-bottom: 2px solid #d4d4d4;
+        }
+
+        input[type=checkbox], input[type=radio] {
+            width: 10%;
+        }
+
+        .displayn {
+            display: none;
+        }
+    </style>
+</head>
+
+<body style="background:url(../image/subscription-bg.jpg); background-size:cover;">
+    <header class="header">
+        <div class="container small-container">
+            <div class="row mb-0">
+                <nav class="navbar navbar-expand-lg navbar-light mb-0 py-3 px-5">
+                    <a href="../index.html"> <img src="../image/logo.png" alt="logo" class="img-fluid"></a>
+                    <button class="navbar-toggler header-tooggle" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse header-nav pr-0" id="navbarSupportedContent">
+                        <ul class="nav justify-content-end align-items-center">
+                            <li class="nav-item">
+                                <a class="nav-link" href="#abtuss" style="font-weight:bold">About us</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#service_section" style="font-weight:bold">Services</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="Subscription/Subscription.html" style="font-weight:bold">Subscription</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link login" href="https://www.testeesassin.in/Login/Login" style="font-weight:bold">Login</a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+  
+    
+       <div class="containerCss">
+            <div class="row divBoxSh">
+                <div class="col l7 s12 padding0" style="background:url(../image/left-bg.jpg)">
+                    <h3 class="firstSecHead">Get The Latest Tech News & Reviews.</h3>
+                    <div class="videoSec">
+                       
+                          <video controls autoplay class="w100 videoS">
+  <source src="movie.mp4" type="video/mp4">
+                            <source src="movie.ogg" type="video/ogg">
+  Your browser does not support HTML video.
+</video>
+                    </div>
+                   
+                    <div class="diagonal-box">
+                        <div class="row priceRow">
+                <div class="col l3 sm3 priceCol planFeatures">
+                    <div class="plan">
+                        <div class="plan-info">
+                            <p class="groupHeading">Features</p>
+                          <ul class="list-group">
+                            <li class="list-group-item">Customers</li>
+                            <li class="list-group-item">Users</li>
+                            <li class="list-group-item">Automation</li>
+                            <li class="list-group-item">Hosted Payment</li>
+                            <li class="list-group-item">Multi Currency</li>
+                            <li class="list-group-item">automatic</li>
+                            <li class="list-group-item">Multiple-payment</li>
+                            <li class="list-group-item">Offline</li>
+                            <li class="list-group-item">REST API</li>
+                            <li class="list-group-item">Subscription</li>
+                            <li class="list-group-item">Email</li>
+                          </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col l3 sm3 priceCol">
+                    <div class="plan">
+                        <div class="plan-header gray">
+                          <div>
+                            <span class="label">Basic</span>
+                            <div class="figure">
+                              <span class="amount">&#8377; 49</span> 
+                              <p class="text">&#8377; 59 month-to-month</p>            
+                            </div>
+                          </div>
+                          <center>
+                            <button class="btn w100 waves-effect waves-light teal padding0" type="button" name="action">UPGRADE</button>
+                        </center>
+                        </div>
+                        <div class="plan-info">
+                          <ul class="list-group">
+                            <li class="list-group-item">500 Customers</li>
+                            <li class="list-group-item">3 Users</li>
+                            <li class="list-group-item"  title="3 Automation Workflows/Module">Workflows/Module</li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-remove fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-remove fa-lg"></i></li>
+                          </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col l3 sm3 priceCol">
+                    <div class="plan">
+                        <div class="plan-header gray">
+                          <div>
+                            <span class="label">Standard</span>
+                            <div class="figure">
+                              <span class="amount">&#8377; 49</span> 
+                              <p class="text">&#8377; 59 month-to-month</p>            
+                            </div>
+                          </div>
+                          <center>
+                            <button class="btn w100 waves-effect waves-light teal padding0" type="button" name="action">UPGRADE</button>
+                        </center>
+                        </div>
+                        <div class="plan-info">
+                          <ul class="list-group">
+                            <li class="list-group-item">500 Customers</li>
+                            <li class="list-group-item">3 Users</li>
+                            <li class="list-group-item"  title="3 Automation Workflows/Module">Workflows/Module</li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-remove fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-remove fa-lg"></i></li>
+                          </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col l3 sm3 priceCol">
+                    <div class="plan">
+                        <div class="plan-header gray">
+                          <div>
+                            <span class="label">Professional</span>
+                            <div class="figure">
+                              <span class="amount">&#8377; 49</span> 
+                              <p class="text">&#8377; 59 month-to-month</p>            
+                            </div>
+                          </div>
+                          <center>
+                            <button class="btn w100 waves-effect waves-light teal padding0" type="button" name="action">UPGRADE</button>
+                        </center>
+                        </div>
+                        <div class="plan-info">
+                          <ul class="list-group">
+                            <li class="list-group-item">500 Customers</li>
+                            <li class="list-group-item">3 Users</li>
+                            <li class="list-group-item"  title="3 Automation Workflows/Module">Workflows/Module</li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-check fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-remove fa-lg"></i></li>
+                            <li class="list-group-item"><i class="fa fa-remove fa-lg"></i></li>
+                          </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                    </div>
+
+
+
+                    <!-- ====================== -->
+                  
+
+
+
+
+                    <!-- ======================== -->
+                    
+                    <!-- ======================== -->
+
+
+
+
+
+
+
+
+
+
+
+
+                </div>
+                <div class="col l5 s12 righSec">
+                    <p class="formHead">Subscription Details</p>
+                    
+
+                    <!-- =============================================== -->
+                    <div id="register" class="col s12">
+                        <form class="col s12">
+                    <div class="mb-6 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!--<label class="mb-2" for="application-link">
+                              User Name*
+                            </label>-->
+                            <input class="validate textStyle" id="txtusername" type="text" placeholder="User Name">
+                        </div>
+                    </div>
+                        <!-- <label class="mb-2" for="title">
+                          Address*
+                        </label>-->
+
+                        <div class="mb-6 -mx-3 md:flex">
+                            <div class="px-3 md:w-full">
+                                <!--<label class="mb-2" for="location">
+                                  GST No*
+                                </label>-->
+                                <div>
+                                    <input class="validate textStyle" id="txtaddress" type="text" placeholder="Address">
+                                </div>
+                            </div>
+                             </div>
+                             <div class="mb-6 -mx-3 md:flex">
+                            <div class="px-3 md:w-full">
+                                <!--<label class="mb-2" for="job-type">
+                                  Registered company name*
+                                </label>-->
+                                <div>
+                                    <input type="number" onchange="getpincode();" id="txtpincode" maxlength="6" class="validate textStyle" placeholder="Pincode">
+
+                                    <!--<input type="text"  class="w-full px-4 py-3 mb-3 text-black bg-gray-200 input" placeholder="City">-->
+                                </div>
+                            </div>
+                             </div>
+                       
+                    <div class="mb-6 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!-- <label class="mb-2" for="location">
+                              City*
+                            </label>-->
+                            <div>
+                                <select id="ddlcountry" onchange="getstate();" class="w-full px-4 py-2 mb-3 text-black bg-gray-200 border border-gray-200 rounded">
+                                    <option value="0">---Select Country---</option>
+                                </select>
+
+                            </div>
+                        </div>
+                        </div>
+                        <div class="mb-6 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!-- <label class="mb-2" for="job-type">
+                              State*
+                            </label>-->
+                            <div>
+                                <!--<input type="text" class="w-full px-4 py-3 mb-3 text-black bg-gray-200 input" placeholder="State">-->
+                                <select id="ddlstate" onchange="getcity();" class="w-full px-4 py-2 mb-3 text-black bg-gray-200 border border-gray-200 rounded">
+                                    <option value="0">---Select State---</option>
+                                </select>
+                            </div>
+                        </div>
+                        </div>
+                         <div class="mb-6 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!-- <label class="mb-2" for="department">
+                              Country*
+                            </label>-->
+                            <div>
+                                <!--<input type="text" class="w-full px-4 py-3 mb-3 text-black bg-gray-200 input" placeholder="Country">-->
+                                <select id="ddlcity" class="w-full px-4 py-2 mb-3 text-black bg-gray-200 border border-gray-200 rounded">
+                                    <option value="0">---Select City---</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                         <div class="mb-6 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!--<label class="mb-2" for="location">
+                              GST No*
+                            </label>-->
+                            <div>
+                                <input type="text" id="txtgstno" maxlength="16" class="validate textStyle" placeholder="GST No">
+                            </div>
+                        </div>
+                        </div>
+                        
+                         <div class="mb-6 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!--<label class="mb-2" for="job-type">
+                              Registered company name*
+                            </label>-->
+                            <div>
+                                <input type="text" id="txtregistcomname" class="validate textStyle" placeholder="Registered company name">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 -mx-3 md:flex">
+                        <div class="px-3 md:w-full">
+                            <!-- <label class="mb-2" for="location">
+                              Email ID*
+                            </label>-->
+                            <div style="margin-top:3%">
+                                <input type="text" id="txtEmailID" class="validate textStyle" placeholder="Email ID">
+                            </div>
+                        </div>
+                        <div class="px-0 md:w-1/3">
+                            <label class="mb-2" for="location">
+
+                            </label>
+                            <div>
+                                <a href="#" onclick="getotpEmail();" class="w100 waves-effect waves-light padding0 send-otp">Send OTP</a>
+                            </div>
+                        </div>
+                        <div class="px-3 md:w-full">
+                            <!-- <label class="mb-2" for="department">
+
+                            </label>-->
+                            <div>
+                                <input type="text" id="txtemotp" class="validate textStyle" placeholder="OTP">
+                                <div class="col-lg-12 approve p-0">
+                                    <a href="#" onclick="getotpEmailVerify();">Approve OTP</a>
+                                    <i class="fa fa-check tick displayn" id="apppeicon" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="mb-2 -mx-3 md:flex">
+                         <div class="px-3 md:w-full">
+                            <!-- <label class="mb-2" for="location">
+                              Mobile no*
+                            </label>-->
+                            <div style="margin-top:3%">
+                                <input type="text" id="txtMobile" class="validate textStyle" placeholder="Mobile no">
+                            </div>
+                        </div>
+                       <div class="px-0 md:w-1/3">
+                            <label class="mb-2" for="location">
+                            </label>
+                            <div>
+                                 <a href="#" onclick="getotpMobile();" class="w100 waves-effect waves-light padding0 send-otp">Send OTP</a>
+                            </div>
+                        </div>
+                         <div class="px-3 md:w-full">
+                            <label class="mb-2" for="department">
+
+
+                            </label>
+                            <div>
+                                <input type="text" id="txtmobotp" class="validate textStyle" placeholder="OTP">
+                                <div class="col-lg-12 approve p-0">
+                                    <a href="#">Approve OTP</a>
+                                    <i class="fa fa-check tick displayn" id="appmicon" aria-hidden="true"></i>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div>
+                        <div class="flex flex-col justify-center">
+                            <div class="flex flex-col">
+                              
+                                
+                                    
+                                    <div>
+                                        <input type="checkbox" id="check" class="w-5 h-5 text-gray-600 form-checkbox">
+                                        <label for="check" class="checkBox terms">
+                                            I agree terms and conditions: By using this Site, you agree to be bound by, and to comply with, these Terms and Conditions. If you do not agree to these Terms and Conditions, please do not use this site.
+
+</label>
+                                    </div>
+                                
+                                
+                            </div>
+                        </div>
+
+
+                        <div class="mt-2 -mx-3 md:flex ">
+                            <div class="px-3 md:w-full flex justify-center">
+                                <a onclick="setvalpro();" class=" relative inline-flex items-center px-12 py-3 overflow-hidden text-lg font-medium text-sky-600 border-2 border-sky-600 rounded-full hover:text-white group hover:bg-sky-600" style="border-color: #e43c3d;
+    color: #e43c3d;">
+                                    <span class="absolute left-0 block w-full h-0 transition-all bg-sky-500 opacity-100 group-hover:h-full top-1/2 group-hover:top-0 duration-400 ease"></span>
+                                    <span class="absolute right-0 flex items-center justify-start w-10 h-10 duration-300 transform translate-x-full group-hover:translate-x-0 ease">
+                                        <svg class="w-7 h-7" fill="none" stroke="white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                    </span>
+                                    <p class="relative">Proceed</p>
+
+
+                                </a>
+                                <!-- <input type="button" class="hover:bg-orange-500 w-full px-4 py-3 mb-3 text-white border border-orange-200 rounded  " value="Proceed"> -->
+
+                            </div>
+                        </div>
+            </form>
+                    </div>
+                    <!-- =============================================== -->
+
+
+
+
+
+
+                </div>
+            </div>
+
+
+            
+        </div>
+    
+
+</div>
+
+    </div>
+
+    <footer style="user-select: auto;">
+        <div class="footer" style="user-select: auto;">
+            <div class="container small-container" style="user-select: auto;">
+                <div class="d-flex justify-content-between footer-content" style="user-select: auto;">
+                    <p style="user-select: auto;">EZCompliance 2021 © All Rights Reserved</p>
+                    <div class="d-flex align-items-center justify-content-center" style="user-select: auto;">
+                        <a href="#" style="user-select: auto;"><i class="icofont-facebook" style="user-select: auto;"></i></a>
+                        <a href="#" style="user-select: auto;"><i class="icofont-twitter" style="user-select: auto;"></i></a>
+                        <a href="#" style="user-select: auto;"><i class="icofont-linkedin" style="user-select: auto;"></i></a>
+                        <a href="#" style="user-select: auto;"><i class="icofont-instagram" style="user-select: auto;"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

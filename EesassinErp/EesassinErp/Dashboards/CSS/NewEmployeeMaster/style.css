@@ -1,0 +1,1064 @@
+﻿.employeeMasterPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 84vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Top bar instructions */
+.employeeMasterPage .top-bar .limit-instruction {
+    font-size: 0.9rem;
+    color: #6b4b2d;
+    background: transparent;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+/* New Employee button (rounded pill) */
+.employeeMasterPage .btn-newEmployee {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Toggle pill - single capsule container */
+.employeeMasterPage .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .employeeMasterPage .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 8px 18px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+        /* active pill */
+        .employeeMasterPage .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+        }
+
+        /* ensure focus ring for accessibility (subtle) */
+        .employeeMasterPage .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+/* Section cards */
+.employeeMasterPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .employeeMasterPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        min-height: 320px;
+    }
+
+/* Table wrapper and hide scrollbar visually */
+.employeeMasterPage .small-table-wrapper {
+    max-height: auto;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+}
+
+    .employeeMasterPage .small-table-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+.employeeMasterPage .small-table-wrapper {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* table header sticky */
+.employeeMasterPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.employeeMasterPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.employeeMasterPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+.employeeMasterPage .small-table tbody td .store-code-link {
+    text-decoration: none;
+}
+
+/* action menu */
+.employeeMasterPage .action-menu {
+    position: relative;
+    width: 48px;
+    text-align: right;
+    background-color: var(--card-bg);
+}
+
+    .employeeMasterPage .action-menu .btn {
+        color: var(--primary);
+    }
+
+    .employeeMasterPage .action-menu .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+
+/* filter button */
+.employeeMasterPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .employeeMasterPage .filter-btn.active,
+    .employeeMasterPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.employeeMasterPage .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.employeeMasterPage .export-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .employeeMasterPage .export-btn:hover {
+        background: var(--primary-dark);
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .employeeMasterPage .export-btn:focus,
+    .employeeMasterPage .export-btn:active {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* Pagination area */
+.employeeMasterPage .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .employeeMasterPage .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .employeeMasterPage .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.employeeMasterPage #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .employeeMasterPage #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+/* statuses */
+.employeeMasterPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.employeeMasterPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.employeeMasterPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.employeeMasterPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .employeeMasterPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .employeeMasterPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .employeeMasterPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .employeeMasterPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+/*Buttons*/
+.view-btn, .download-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .view-btn:hover, .download-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* Document Status Progress Bar */
+.employeeMasterPage .doc-status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 140px;
+}
+
+.employeeMasterPage .doc-progress {
+    flex: 1;
+    height: 6px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.employeeMasterPage .doc-progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+/* Color based on completion */
+.employeeMasterPage .progress-low {
+    background: #E54848; /* red */
+}
+
+.employeeMasterPage .progress-mid {
+    background: #F29D38; /* orange */
+}
+
+.employeeMasterPage .progress-high {
+    background: #2FA86F; /* green */
+}
+
+/* Percentage text */
+.employeeMasterPage .doc-progress-text {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #444;
+    min-width: 32px;
+    text-align: right;
+}
+
+
+
+
+/* ================= Generate Card Styling ================= */
+.employeeMasterPage .import-box {
+    background: #FFF1EB; /* soft theme BG */
+    border: 1px solid rgba(34,34,34,0.08);
+    border-radius: 12px;
+    padding: 18px;
+}
+
+/* File input */
+.employeeMasterPage #newEmployeeImportFile {
+    border-radius: 10px;
+    border: 1px solid rgba(34,34,34,0.12);
+    background: #fff;
+    padding: 8px 12px;
+}
+
+/* Save Button (Primary) */
+.employeeMasterPage .import-save-btn {
+    background: #E45D27 !important; /* primary */
+    color: #fff !important;
+    border: none;
+    border-radius: 999px;
+    font-weight: 400;
+    padding: 4px 8px;
+    transition: 0.25s ease;
+}
+
+    .employeeMasterPage .import-save-btn:hover {
+        background: var(--primary-dark) !important;
+    }
+
+/* Cancel button */
+.employeeMasterPage .cancel-btn {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    border-radius: 999px;
+    font-weight: 400;
+    padding: 4px 8px;
+    transition: 0.25s ease;
+}
+
+    .employeeMasterPage .cancel-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* Download Template */
+.employeeMasterPage #empMasterDownloadTemplate {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border: none;
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-weight: 400;
+    text-decoration: none;
+}
+
+    .employeeMasterPage #empMasterDownloadTemplate a {
+        color: #fff !important;
+        text-decoration: none;
+    }
+
+    .employeeMasterPage #empMasterDownloadTemplate:hover {
+        background: var(--primary-dark);
+    }
+
+/* File preview */
+.employeeMasterPage #importFilePreview {
+    background: #fff;
+    border: 1px dashed #E45D27;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #6B1B4A;
+}
+
+    .employeeMasterPage #importFilePreview.selected {
+        background: #FFF1EB;
+        border-color: #C44C1F;
+    }
+
+    .employeeMasterPage #importFilePreview strong {
+        color: #E45D27;
+    }
+
+.employeeMasterPage #wrapper {
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    position: relative;
+    scrollbar-width: none;
+}
+
+
+
+
+/* ================= Employee Modal ================= */
+.employeeMasterPage .employee-modal {
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* Header */
+.employeeMasterPage .employee-modal-header {
+    background: var(--primary);
+    color: #fff;
+    padding: 12px 18px;
+}
+
+    .employeeMasterPage .employee-modal-header .modal-title {
+        font-weight: 500;
+    }
+
+/* Body */
+.employeeMasterPage .employee-modal-body {
+    background: var(--card-bg);
+}
+
+    /* Labels */
+    .employeeMasterPage .employee-modal-body .form-label {
+        font-size: 0.72rem;
+        font-weight: 500;
+        margin-bottom: 4px;
+    }
+
+    /* Inputs */
+    .employeeMasterPage .employee-modal-body .form-control-sm,
+    .employeeMasterPage .employee-modal-body .form-select-sm {
+        border-radius: 8px;
+        font-size: 0.78rem;
+    }
+
+/* Section title */
+.employeeMasterPage .section-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+/* Upload Field (Aligned) */
+.employeeMasterPage .upload-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.employeeMasterPage .upload-input-wrap {
+    position: relative;
+    flex: 1;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 6px 8px;
+    background: #fff;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+.employeeMasterPage .upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.employeeMasterPage .file-name {
+    font-size: 0.72rem;
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employeeMasterPage .upload-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.employeeMasterPage .upload-icon {
+    font-size: 0.9rem;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+    .employeeMasterPage .upload-icon:hover {
+        background: rgba(228,93,39,0.12);
+    }
+
+
+/* Footer */
+.employeeMasterPage .employee-modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+
+/* ================= Employee View Modal ================= */
+
+.employeeViewModalPage .modal-dialog-slideout {
+    margin: 0 0 0 auto;
+    height: 100%;
+    transform: translateX(100%);
+    transition: transform 0.35s ease-out;
+}
+
+.employeeViewModalPage.show .modal-dialog-slideout {
+    transform: translateX(0);
+}
+
+/* Make modal content flex layout */
+.employeeViewModalPage .modal-content {
+    height: 100%;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Let body take remaining space and scroll */
+.employeeViewModalPage .ev-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+
+/* HEADER  */
+.employeeViewModalPage .ev-header {
+    background: var(--primary);
+    border-bottom: none;
+}
+
+/* BODY  */
+.employeeViewModalPage .ev-body {
+    padding: 1rem 1.2rem;
+    overflow-y: auto;
+    background: var(--card-bg);
+}
+
+/* PROFILE  */
+.employeeViewModalPage .ev-profile {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.employeeViewModalPage .ev-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #dcdcdc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 8px;
+    font-size: 2.5rem;
+    color: #555;
+}
+
+.employeeViewModalPage .ev-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.employeeViewModalPage .ev-meta {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Section Divider Title (Contact / Documents / Transfer Logs) */
+
+.employeeViewModalPage .ev-transfer-title {
+    position: relative;
+    margin-bottom: 14px;
+}
+
+    .employeeViewModalPage .ev-transfer-title::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #e5e5e5;
+        z-index: 0;
+    }
+
+.employeeViewModalPage .ev-transfer-chip {
+    position: relative;
+    background: linear-gradient(90deg, #ff8a00, #ff5f00);
+    color: #fff;
+    padding: 4px 18px;
+    font-size: 0.72rem;
+    border-radius: 20px;
+    font-weight: 500;
+    z-index: 1;
+}
+
+
+/* CONTACT INFO  */
+.employeeViewModalPage .ev-info {
+    font-size: 0.8rem;
+}
+
+.employeeViewModalPage .ev-info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+    .employeeViewModalPage .ev-info-row label {
+        font-weight: 500;
+        color: #333;
+    }
+
+/* DIVIDER  */
+.employeeViewModalPage .ev-divider {
+    border-top: 1px solid #eee;
+    margin: 12px 0;
+}
+
+/* DOCUMENT LIST  */
+.employeeViewModalPage .ev-doc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 0.78rem;
+    gap: 8rem;
+}
+
+.employeeViewModalPage .ev-doc-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.employeeViewModalPage .ev-doc-name {
+    font-weight: 500;
+    color: #222;
+}
+
+.employeeViewModalPage .ev-doc-date {
+    font-size: 0.7rem;
+    color: #888;
+}
+
+/* DOCUMENT ICON ACTIONS  */
+.employeeViewModalPage .ev-doc-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.employeeViewModalPage .ev-doc-icon {
+    font-size: 0.95rem;
+    color: var(--primary);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+    .employeeViewModalPage .ev-doc-icon:hover {
+        color: #c44b1d;
+    }
+
+/* REMOVE OLD BUTTON STYLES  */
+/* (Safe override if old CSS still exists) */
+.employeeViewModalPage .ev-doc-btn,
+.employeeViewModalPage .ev-chip {
+    display: none !important;
+}
+
+/* TRANSFER LOG  */
+
+.employeeViewModalPage .ev-transfer-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+/* Centered orange chip */
+.employeeViewModalPage .ev-transfer-title {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+    .employeeViewModalPage .ev-transfer-title::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #ddd;
+        z-index: 0;
+    }
+
+.employeeViewModalPage .ev-transfer-chip {
+    position: relative;
+    background: var(--primary);
+    color: #fff;
+    padding: 4px 14px;
+    font-size: 0.72rem;
+    border-radius: 20px;
+    font-weight: 500;
+    z-index: 1;
+}
+
+/* Table Layout */
+.employeeViewModalPage .ev-transfer-table {
+    font-size: 0.75rem;
+}
+
+
+.employeeViewModalPage .ev-transfer-table-inner {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+    .employeeViewModalPage .ev-transfer-table-inner thead th {
+        text-align: left;
+        font-weight: 600;
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.75rem;
+        padding: 4px 6px;
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .employeeViewModalPage .ev-transfer-table-inner tbody td {
+        padding: 4px 6px;
+        color: #333;
+        font-size: 0.75rem;
+        border-bottom: 1px solid #f2f2f2;
+    }
+
+    .employeeViewModalPage .ev-transfer-table-inner tbody tr:hover {
+        background-color: #FFE8D9;
+    }
+
+
+/* Green Employee Code */
+.employeeViewModalPage .ev-transfer-code {
+    color: #198754;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+    .employeeViewModalPage .ev-transfer-code:hover {
+        color: #146c43;
+        transform: translateX(2px);
+    }
+
+/* FOOTER  */
+
+.employeeViewModalPage .ev-footer {
+    border-top: 1px solid #eee;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--card-bg);
+}
+
+.employeeViewModalPage .ev-footer-btn {
+    padding: 6px 18px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+    /* Primary Gradient */
+    .employeeViewModalPage .ev-footer-btn.primary {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 4px 6px;
+        font-weight: 400;
+        font-size: 0.8rem;
+    }
+
+        .employeeViewModalPage .ev-footer-btn.primary:hover {
+            background: var(--primary-dark);
+        }
+
+    /* Secondary (clean neutral) */
+    .employeeViewModalPage .ev-footer-btn.secondary {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 4px 6px;
+        font-weight: 400;
+        font-size: 0.8rem;
+    }
+
+        .employeeViewModalPage .ev-footer-btn.secondary:hover {
+            background: var(--primary-dark);
+        }
+
+
+
+/* ================= Compliance Documents Modal ================= */
+
+.complianceDocsModal {
+    --primary: #E45D27;
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+}
+
+/* Slide from right */
+.modal-dialog-slideout {
+    position: fixed;
+    right: 0;
+    margin: 0;
+    height: 100%;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+}
+
+.modal.show .modal-dialog-slideout {
+    transform: translateX(0);
+}
+
+.modal-dialog-slideout .modal-content {
+    height: 100%;
+    border-radius: 0;
+}
+
+/* Header */
+.complianceDocs-header {
+    background: var(--primary);
+}
+
+/* Body */
+.complianceDocs-body {
+    background: var(--card-bg);
+    padding: 10px;
+}
+
+/* Document Card */
+.complianceDocsModal .doc-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* Row */
+.complianceDocsModal .doc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4rem;
+}
+
+/* Info */
+.doc-name {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.8rem;
+}
+
+.doc-meta {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Actions */
+.doc-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.action-icon {
+    font-size: 14px;
+    color: var(--primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .action-icon:hover {
+        color: var(--primary-dark);
+        transform: scale(1.15);
+    }
+
+/* History */
+.doc-history {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #f0e1da;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    padding: 6px 0;
+    color: #555;
+}
+
+.version {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.small-icon {
+    font-size: 15px;
+}
+
+/* ================= Transfer Employee Modal ================= */
+
+ #transferEmployeeModal .te-modal-content {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Header */
+ #transferEmployeeModal .te-header {
+    background: var(--primary);
+    color: #fff;
+    border-bottom: none;
+}
+
+ #transferEmployeeModal .modal-title {
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* Body */
+ #transferEmployeeModal .te-body {
+    background: #fff;
+    padding: 16px;
+}
+
+/* Subtitle */
+ #transferEmployeeModal .te-subtitle {
+    font-size: 0.8rem;
+    color: #555;
+    margin-bottom: 14px;
+}
+
+/* Search */
+ #transferEmployeeModal .te-search-wrapper {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+ #transferEmployeeModal .te-search-input {
+    font-size: 0.8rem;
+}
+
+ #transferEmployeeModal .te-search-btn {
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.8rem;
+    padding: 6px 14px;
+    border-radius: 6px;
+}
+
+     #transferEmployeeModal .te-search-btn:hover {
+        background: var(--primary-dark);
+    }
+
+/* Units Title */
+ #transferEmployeeModal .te-units-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+/* Unit Row */
+ #transferEmployeeModal .te-unit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+ #transferEmployeeModal .te-unit-code {
+    color: #0d6efd;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+ #transferEmployeeModal .te-unit-emp {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Transfer Button */
+ #transferEmployeeModal .te-transfer-btn {
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 4px 6px;
+    border-radius: 999px;
+}
+
+     #transferEmployeeModal .te-transfer-btn:hover {
+        background: var(--primary-dark);
+    }

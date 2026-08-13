@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html>
+<html ng-app="myLoginApp">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Landing Page</title>
+    <link href="~/login/landingpage.css" rel="stylesheet" />
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/loginController.js?Ver="+ViewBag.Version+"")"></script>
+  
+</head>
+
+<body> 
+    <div class="container" ng-click="Redirect()"> 
+        <img src="../Login/image/ezcomplogo.png" alt="Logo" class="logo">  
+        <h1>India’s Smart Unified Compliance<br><span class="highlight">Dashboard</span></h1> 
+        <div class="login-section" style="cursor:pointer !important"  ng-click="Redirect()">
+            <button id="loginBtn" ng-click="Redirect()">
+                <img src="../Login/image/Frame.png" alt="Login Icon" class="login-icon" ng-click="Redirect()"> 
+                LOG IN
+            </button>
+        </div>
+        <div>
+            <div ng-click="Redirect()">
+                <img src="../Login/image/EZ Compliance.png" alt="Illustration" class="illustration" ng-click="Redirect()">
+            </div>
+          
+        </div> 
+    </div>
+
+    <script> 
+        function redirectToLogin() {
+            window.location.href = "../Login/Login"; 
+        }
+           setTimeout(redirectToLogin, 2500);
+        document.getElementById('loginBtn').addEventListener('click', redirectToLogin);
+    </script>
+
+</body>
+</html>

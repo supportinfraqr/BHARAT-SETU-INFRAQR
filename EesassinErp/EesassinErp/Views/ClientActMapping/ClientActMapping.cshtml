@@ -1,0 +1,125 @@
+﻿@{
+    ViewBag.Title = "CLIENT DOCUMENT MAPPING";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+} 
+<script src="~/scripts/myjslib/ClientActMapping.js"></script>
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Client Document Mapping</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Master</span></a></li>
+                <li class="active"><span>Client Document Mapping</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-md-6 col-sm-6 col-xs-12 mgbt-xs-15">
+
+                                            <label class="control-label">Client<span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="BindClient();">
+                                                <select id="ddlModule" class="select2 form-control validate" ng-model="ClientId" ng-change="GetSubMenuList()">
+                                                    <option value="">Select Client</option>
+                                                    <option ng-repeat="module in ListedUsers" value="{{module.PartyId}}">{{module.PartyName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-12 col-sm-12 col-xs-12">
+
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15" ng-hide="hide">
+                                            <div class="datatable-responsive table-responsive advance-btn-table">
+                                                <table id="tblNavMenu" class="table compact table-hover table-striped table-bordered nowrap ng-scope"
+                                                       ng-model="NavMenuModel" style="width:100%">
+                                                    <thead>
+                                                        <tr>
+
+                                                            <th class="text-center w-50-p">
+                                                                <div class="checkbox checkbox-primary table-check-wt">
+                                                                    <input type="checkbox" class="clear" ng-model="chkAll" ng-change="chkAllRow()" />
+                                                                    <label></label>
+                                                                </div>
+                                                            </th>
+                                                            <th class="srno">S.No.</th>
+                                                            <th>Act</th> 
+                                                            <th>Form</th>
+                                                            <th>Nature</th>
+                                                            <th>Remark</th>
+                                                            <th>Score</th> 
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+
+
+                                                        <tr ng-repeat="navmenu in NavMenuList" repeat-done>
+                                                            <td class="text-center">
+                                                                <div class="checkbox checkbox-primary table-check-wt">
+                                                                    <input type="checkbox" class="clear" id="chkAllow" ng-model="chkAllow[$index]" ng-checked="chkAllow[$index]"
+                                                                           ng-change="chkRowAll($index)" ng-init="chkAllow[$index]=navmenu.IsAllow" />
+
+                                                                    <label></label>
+                                                                </div>
+                                                            </td>
+                                                            <td class="srno">
+                                                                {{$index+1}}
+                                                                <input type="hidden" id="hfMenuId" value="{{navmenu.Id}}" />
+                                                            </td>
+                                                            <td>{{navmenu.Act}}</td>
+                                                            <td>{{navmenu.Form}}</td>
+                                                            <td>{{navmenu.Nature}}</td>
+                                                            <td>{{navmenu.REMARK}}</td>
+                                                            <td>{{navmenu.Score}}</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>

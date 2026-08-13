@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="script/script.js" defer></script>
+    <script src="script/script1.js" defer></script>
+</head>
+<body>
+    <div class="dashboard-container">
+      
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>Compliance Dashboard</h1>
+                <button class="btn-primary">Go to Supplier</button>
+            </header>
+
+                <!-- Overview Cards -->
+                <section class="compliance-summary">
+            
+                   <div class="applicable-act">
+                    
+                        
+                        <section class="compliance-tables">
+                            <section class="overview-cards">
+                                <div class="card">Total Compliance<br><strong>100%</strong>
+                                    <div class="inner-box">
+                                    100
+                                    </div>
+                                </div>
+                                <div class="card1">Total Location<br><strong>30%</strong>
+                                    <div class="inner-box1">
+                                        80
+                                    </div></div>
+                                <div class="card2">Complied<br><strong>40%</strong>
+                                    <div class="inner-box2">
+                                        10
+                                    </div></div>
+                                <div class="card3">Not Complied<br><strong>100%</strong>
+                                    <div class="inner-box3">
+                                        200
+                                    </div></div>
+                                    
+                            </section>
+                        
+                    </div>
+                </section>
+    <br>
+        
+        
+
+            <!-- Graphs and Statistics -->
+            <section class="statistics">
+                <div class="calendar-summary">
+                    <h3>Calendar Compliance Summary</h3>
+                    <div class="chart-container">
+                        <canvas id="calendarChart"></canvas>
+                    </div>
+                </div>
+                <div class="compliance-risk">
+                    <h3>Compliance Risk Matrix</h3>
+                    <div class="chart-container">
+                        <canvas id="riskMatrixChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Statutory Due Dates Summary -->
+            <section class="compliance-summary5">
+            
+                <div class="container">
+                    <!-- Tabs -->
+                    <div class="tabs">
+                        <div class="tab active" data-tab="statutory">Statutory Due Dates</div>
+                        <div class="tab" data-tab="internal">Internal Due Dates</div>
+                    </div>
+            
+                    <!-- Statutory Content -->
+                    <div class="content active" id="statutory">
+                        <!-- Filters -->
+                        <div class="filters">
+                            <div>
+                                <select id="state">
+                                    <option>Select State</option>
+                                    <option>Delhi</option>
+                                    <option>Andhra Pradesh</option>
+                                    <option>Haryana</option>
+                                    <option>Assam</option>
+                                </select>
+                                <select id="year">
+                                    <option>Select Year</option>
+                                    <option>2023</option>
+                                    <option>2024</option>
+                                </select>
+                                <select id="month">
+                                    <option>Select Month</option>
+                                    <option>October</option>
+                                </select>
+                            </div>
+                            <button>Search</button>
+                            
+                        </div>
+          
+            
+                        <!-- Table -->
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Act Name</th>
+                                    <th>Compliance Name</th>
+                                    <th>State Name</th>
+                                    <th>Due Date</th>
+                                    <th>Actual Submission Date</th>
+                                    <th>Delay Days</th>
+                                    <th>Status</th>
+                                    <th>View File</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Equal Remuneration Act</td>
+                                    <td>Salary - October 2023</td>
+                                    <td>Delhi</td>
+                                    <td>06 Jan 2024</td>
+                                    <td>06 Jan 2024</td>
+                                    <td>0</td>
+                                    <td><span class="status completed">Completed</span></td>
+                                    <td><a href="#" class="view">View</a></td>
+                                </tr>
+                                <tr>
+                                    <td>Maternity Act</td>
+                                    <td>PT - October 2023</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>06 Jan 2024</td>
+                                    <td>07 Jan 2024</td>
+                                    <td>1</td>
+                                    <td><span class="status delayed">Delay Completed</span></td>
+                                    <td><a href="#" class="view">View</a></td>
+                                </tr>
+                                <tr>
+                                    <td>Maternity Act</td>
+                                    <td>PT - October 2023</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>06 Jan 2024</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td><span class="status pending">Pending</span></td>
+                                    <td><a href="#" class="view">View</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+            
+                        <!-- View All Link -->
+                        <a href="#" class="view-all">View All</a>
+                    </div>
+            
+                    <!-- Internal Content -->
+                    <div class="content" id="internal">
+                        <!-- Filters -->
+                        <div class="filters">
+                            <div>
+                                <select id="state">
+                                    <option>Select State</option>
+                                    <option>Delhi</option>
+                                    <option>Andhra Pradesh</option>
+                                    <option>Haryana</option>
+                                    <option>Assam</option>
+                                </select>
+                                <select id="year">
+                                    <option>Select Year</option>
+                                    <option>2023</option>
+                                    <option>2024</option>
+                                </select>
+                                <select id="month">
+                                    <option>Select Month</option>
+                                    <option>October</option>
+                                </select>
+                            </div>
+                            <button>Search</button>
+                        </div>
+            
+                        <!-- Table -->
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Task Name</th>
+                                    <th>Assigned To</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>View File</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Internal Review</td>
+                                    <td>John Doe</td>
+                                    <td>05 Jan 2024</td>
+                                    <td><span class="status pending">Pending</span></td>
+                                    <td><a href="#" class="view">View</a></td>
+                                </tr>
+                                <tr>
+                                    <td>Compliance Submission</td>
+                                    <td>Jane Smith</td>
+                                    <td>04 Jan 2024</td>
+                                    <td><span class="status completed">Complied</span></td>
+                                    <td><a href="#" class="view">View</a></td>
+                                </tr>
+                                <tr>
+                                    <td>Compliance Submission</td>
+                                    <td>Jane Smith</td>
+                                    <td>04 Jan 2024</td>
+                                    <td><span class="status completed">Complied</span></td>
+                                    <td><a href="#" class="view">View</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+            
+                        <!-- View All Link -->
+                        <a href="#" class="view-all">View All</a>
+                    </div>
+                </div>
+            
+            </section>
+<br>
+        
+            <!-- Compliance Summary -->
+            <section class="containerA">
+                <div class="cardA">
+                    <h2>Abstract & Notice of Display</h2>
+                    <div class="chart">
+                    <canvas id="donutChart"></canvas>
+                    <div class="percentage-label female">
+                        <span><img src="img/male.png" alt="Description of the image" style="width: 100%; height: auto;" /></span>35%
+                    </div>
+                    <div class="percentage-label male">
+                        <span><img src="img/female.png" alt="Description of the image" style="width: 100%; height: auto;" /></span>65%
+                    </div>
+                    </div>
+                    <div class="legend">
+                    <div class="legend-item">
+                        <span class="color-box displayed"></span>
+                        <span>Displayed</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-box not-displayed"></span>
+                        <span>Not Displayed</span>
+                    </div>
+                    </div>
+                </div>
+                <div class="cardB ">
+                    <!-- Header Section -->
+                    <div class="header">
+                    <h2>Applicable Act (Industry Name)</h2><br>
+                    <div class="filters">
+                        <select id="applicableActs">
+                        <option>Select Applicable Acts</option>
+                        <option>Equal Remuneration Act</option>
+                        <option>Maternity Act</option>
+                        <option>Minimum Wages Act</option>
+                        <option>Payment of Wages</option>
+                        </select>
+                        <select id="state">
+                        <option>Select State</option>
+                        <option>Delhi</option>
+                        <option>Andhra Pradesh</option>
+                        <option>Haryana</option>
+                        <option>Assam</option>
+                        </select>
+                    </div>
+                    <button class="export-button" onclick="exportReport()">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 16 16" fill="currentColor">
+                          <path d="M4.5 1v1h7V1h1v2h-9V1zM8 11h1.5L8 9.5 6.5 11H8zm4-1h2V5H2v5h10zM1 5v5h2v5h10V5H1z"/>
+                        </svg>
+                        Export Report
+                      </button>
+                    </div>
+                
+                    <!-- Table Section -->
+                    <table>
+                    <thead>
+                        <tr>
+                        <th>Applicable Act</th>
+                        <th>State Name</th>
+                        <th>Act Type</th>
+                        <th>Compliance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                        <td><span class="circle"></span>Equal Remuneration Act</td>
+                        <td>Delhi</td>
+                        <td>Labour</td>
+                        <td><a href="#" class="compliance">Compliance</a></td>
+                        </tr>
+                        <tr>
+                        <td><span class="circle"></span>Maternity Act</td>
+                        <td>Andhra Pradesh</td>
+                        <td>Labour</td>
+                        <td><a href="#" class="compliance">Compliance</a></td>
+                        </tr>
+                        <tr>
+                        <td><span class="circle"></span>Minimum Wages Act</td>
+                        <td>Haryana</td>
+                        <td>Labour</td>
+                        <td><a href="#" class="compliance">Compliance</a></td>
+                        </tr>
+                        <tr>
+                        <td><span class="circle"></span>Payment of Wages</td>
+                        <td>Assam</td>
+                        <td>Labour</td>
+                        <td><a href="#" class="compliance">Compliance</a></td>
+                        </tr>
+                    </tbody>
+                    </table>
+                </div>
+                
+            </section>
+        </main>
+    </div>
+
+
+</body>
+</html>

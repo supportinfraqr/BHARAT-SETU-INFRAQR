@@ -1,0 +1,83 @@
+﻿@{
+    ViewBag.Title = "Mapping";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+ 
+<script src="~/Scripts/myjslib/MappingController.js?Ver=@ViewBag.Version"></script>
+ 
+<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+    <div class="collapse in" id="collapseinputbox">
+        <form id="user-form"> 
+            <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 "  >
+                <fieldset class="fieldset">
+                    <legend class="legend">Site Mapping</legend>
+                    <div class="datatable-responsive table-responsive advance-btn-table">
+
+                        <table class="table table-in-input-box compact table-bordered nowrap dataTable t-mgtb-n" ng-init="AddListSet()">
+                            <thead>
+                                <tr>
+                                    <th class="srno">Sr.No.</th>
+                                    <th class="text-right">&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp Client</th>
+                                    <th class="text-right">Site</th>
+                                    <th class="text-right">Vendor</th>
+                                   
+                                    <th class="text-right">Auditor</th> 
+                                    <th class="text-center">+/-</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="obj in   ListSet" repeat-done>
+                                    <td>
+                                        <label ng-model="ListSet[$index].Srno" ng-bind="ListSet[$index].Srno=$index+1"></label>
+                                    </td>
+                                    <td class="text-right">
+                                        <select id="ddlClientId{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-init="BindClient()" ng-change="BindClientSite(ListSet[$index].ClientId,$index)" ng-model="ListSet[$index].ClientId">
+                                            <option value="">Select Client</option>
+                                            <option ng-repeat="x in  AllPartyCList"  value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                        </select>
+                                    </td>
+
+                                    <td class="text-right">   
+                                        <select id="ddlClientSite{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-init="BindClientSite()"   ng-change="SaveAfterValidate();" ng-model="ListSet[$index].ClientSiteId">
+                                            <option value="">Select Site</option>
+                                            <option ng-repeat="x in  AllPartySiteCList[ListSet[$index].Srno-1] " value="{{x.SiteId}}">{{x.SiteName}}</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-right">
+                                    
+                                        <select id="ddlVendor{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-init="BindVendor()"  ng-change="SaveAfterValidate();" ng-model="ListSet[$index].VendorId">
+                                            <option value="">Select Vendor</option>
+                                            <option ng-repeat="x in AllPartySiteVList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                        </select> 
+ 
+                                    </td>
+                                    <td class="text-right">
+                                        <select id="ddlAuditor{{$index}}" autocomplete='address-level2' class="select2 form-control validate" ng-change="SaveAfterValidate();" ng-init="BindAuditor()" ng-model="ListSet[$index].AuditorId">
+                                            <option value="">Select Auditor</option>
+                                            <option ng-repeat="x in AllPartySiteAList"  value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                        </select>
+                                    </td>
+                                         
+                                    <td class="text-center">
+                                        <input type="button" value="+" class="btn btn-default2" ng-click="SaveAfterValidate();AddListSet()" data-toggle="tooltip" data-placement="top" title="Add Row"
+                                               ng-if="ListSet[$index].Srno==ListSet.length" />
+                                        <input type="button" class="btn btn-default2" id="btnRemoveCourses" value="-" ng-click="RemoveListSet($index);"
+                                               ng-if="ListSet.length>1" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                @Html.Partial("ActionView")
+            </div>
+
+        </form>
+    </div>
+</div>
+@Html.Partial("SearchAngularJs")

@@ -1,0 +1,955 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<style>
+
+    .modal-lg, .modal-xl {
+        max-width: 90% !important;
+    }
+
+    .table {
+        table-layout: fixed; /* Fixes the width of columns */
+        width: 100%; /* Ensures table takes full width */
+        border-collapse: collapse;
+    }
+
+    .column-search {
+        width: 100%
+    }
+
+    .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        word-wrap: break-word;
+        background-color: #f8f9fa;
+        background-clip: border-box;
+        /*   border: 1px solid rgba(0, 0, 0, 0.125);
+            border-radius: 0.25rem;*/
+    }
+
+    .table-container {
+        max-height: 400px; /* Adjust height as needed */
+        overflow-y: auto;
+        /*border: 1px solid #ccc;*/ /* Optional: for better visibility */
+    }
+
+
+
+    .table th, .table td {
+        max-width: 150px; /* Set a max width for columns */
+        overflow: hidden;
+        word-wrap: break-word; /* Breaks long words */
+        white-space: normal; /* Allows text to wrap */
+        text-overflow: ellipsis; /* Adds "..." if text overflows */
+        vertical-align: top; /* Aligns text properly */
+    }
+
+    .srno {
+        max-width: 50px; /* Set a max width for columns */
+        overflow: hidden;
+        word-wrap: break-word; /* Breaks long words */
+        white-space: normal; /* Allows text to wrap */
+        text-overflow: ellipsis; /* Adds "..." if text overflows */
+        vertical-align: top; /* Aligns text properly */
+    }
+
+    /* Optional: Make table scrollable horizontally */
+    .tableFixHead {
+        overflow: auto;
+        display: block;
+        max-height: 500px; /* Adjust as needed */
+    }
+
+
+
+    .table-container {
+        max-height: 500px; /* Adjust table height */
+        overflow-y: auto; /* Enable vertical scroll */
+        position: relative;
+    }
+
+    #myTable {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    thead {
+        position: sticky;
+        top: 0;
+        background-color: white;
+        z-index: 10;
+    }
+
+    th, td {
+        /* padding: 10px;*/
+    }
+
+    th {
+        background: #f8f9fa;
+    }
+
+    .tableFixHead {
+        overflow-x: auto;
+        display: block;
+        white-space: nowrap;
+        height: 364px; /* Adjust as needed */
+    }
+
+        /*.tableFixHead thead th {
+                position: sticky;
+                top: 0;
+                background: #ffc107;*/ /* bg-warning */
+        /*z-index: 2;
+            }*/
+
+        .tableFixHead tbody tr td {
+            white-space: nowrap;
+        }
+
+        /* Fix first four columns */
+        /*   .tableFixHead th:nth-child(1),
+            .tableFixHead td:nth-child(1) {
+                position: sticky;
+                left: 0;
+                background: white;
+                z-index: 3;
+            }
+    */
+        .tableFixHead th:nth-child(2),
+        .tableFixHead td:nth-child(2) {
+            position: sticky;
+            left: 50px; /* Adjust width as needed */
+            background: white;
+            z-index: 3;
+        }
+
+        .tableFixHead th:nth-child(3),
+        .tableFixHead td:nth-child(3) {
+            position: sticky;
+            left: 120px; /* Adjust width as needed */
+            background: white;
+            z-index: 3;
+        }
+
+    /*   .tableFixHead th:nth-child(4),
+            .tableFixHead td:nth-child(4) {
+                position: sticky;
+                left: 200px;
+                background: white;
+                z-index: 3;
+            }*/
+
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 10px;
+        justify-content: right;
+        align-items: center;
+        gap: 5px;
+    }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background-color: white;
+            color: #333;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+            .pagination button.active {
+                background-color: #007bff;
+                color: white;
+                font-weight: bold;
+                border: 1px solid #007bff;
+            }
+
+            .pagination button:disabled {
+                background-color: #f1f1f1;
+                color: #999;
+                cursor: not-allowed;
+            }
+
+            .pagination button:hover:not(.active):not(:disabled) {
+                background-color: #e9ecef;
+            }
+
+        .pagination .dots {
+            background: none;
+            border: none;
+            color: #333;
+            cursor: default;
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+</style>
+
+
+
+
+
+<style>
+
+
+    .red-validation {
+        border: 1px solid red;
+        background-color: #ffe6e6;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .validation-msg {
+        color: red;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+
+
+    .filter-search {
+        list-style: none;
+        margin: 10px !important;
+        padding: 0px;
+    }
+    /* Set the position of the first column to sticky (frozen) */
+    .table-container th:first-child,
+    .table-container td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background-color: #fff;
+        box-shadow: 6px 0 5px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Adjust padding and height to align with other columns */
+    .table-container th:first-child,
+    .table-container td:first-child {
+        padding: 8px;
+        height: 50px;
+    }
+
+    /* Set the position of the last column (Make Payment) to sticky (frozen) */
+    .table-container th:last-child,
+    .table-container td:last-child {
+        position: sticky;
+        /*   right: 0;*/
+        z-index: 1;
+        background-color: #fff;
+        box-shadow: -6px 0 5px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Adjust padding and height to align with other columns */
+    .table-container th:last-child,
+    .table-container td:last-child {
+        padding: 8px;
+        height: 50px;
+    }
+
+    .dataTables_filter, .dataTables_info {
+        display: none;
+    }
+
+    tbody tr:last-child {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        z-index: 10;
+    }
+</style>
+<script>
+
+
+    function changedateformat(val) {
+        alert(val)
+        const myArray = val.split("-");
+
+        let year = myArray[0];
+        let month = myArray[1];
+        let day = myArray[2];
+
+        let formatteddate = day + "-" + month + "-" + year;
+        alert(formatteddate)
+        return formatteddate;
+    }
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const inputs = document.querySelectorAll(".column-search");
+
+        inputs.forEach(input => {
+            input.addEventListener("keyup", function () {
+                let index = parseInt(this.getAttribute("data-index")); // Convert index to a number
+                let filter = this.value.toLowerCase();
+                let table = document.getElementById("myTable");
+                let rows = table.getElementsByTagName("tr");
+
+                for (let i = 0; i < rows.length; i++) { // Start from 1 to skip header row
+                    let cell = rows[i].getElementsByTagName("td")[index];
+                    if (cell) {
+                        let textValue = cell.textContent || cell.innerText;
+
+                        // Check if the cell contains an input field and get its value
+                        let inputField = cell.querySelector("input");
+                        if (inputField) {
+                            textValue = inputField.value || "";
+                        }
+
+                        if (textValue.toLowerCase().indexOf(filter) > -1) {
+                            rows[i].style.display = "";
+                        } else {
+                            rows[i].style.display = "none";
+                        }
+                    }
+                }
+            });
+        });
+    });
+
+
+</script>
+<!----Added by shipra -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- For PDF Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<div class="col-md-12">
+    <div class="row mb-3 p-3 pt-0">
+        <div class="card p-0">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col-md-10">
+                        <ul class="nav nav-tabs" id="myTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="true">View</button>
+                            </li>
+                            @*<li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab" aria-controls="tab2" aria-selected="false">Import</button>
+                </li>*@
+                        </ul>
+                    </div>
+
+
+
+
+                    <div class="col-md-2 text-end">
+                        <div class="d-flex justify-content-end gap-2 align-items-center export-download-group">
+
+                            <!-- Export Dropdown -->
+                            <div class="dropdown">
+                                <a class="btn btn-primary expbtn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Export
+                                </a>
+                                <ul class="dropdown-menu escalul">
+                                    <li><a class="dropdown-item" ng-click="ExportExcel();ManageLog('Export in Excel')">Export in Excel</a></li>
+                                    <li><a class="dropdown-item" ng-click="ExportPdf();ManageLog('Export in PDF')">Export in PDF</a></li>
+                                </ul>
+                            </div>
+
+                            <!-- Download All Files Dropdown -->
+                            <div class="dropdown">
+                                <a class="btn btn-primary expbtn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Download All Files
+                                </a>
+                                <ul class="dropdown-menu escalul">
+                                    <li><a class="dropdown-item" ng-click="DownloadAllFiles('UploadApplicationCopy', 'ApplicationCopy'); ManageLog('Download All Application Copies')">Application Copies</a></li>
+                                    <li><a class="dropdown-item" ng-click="DownloadAllFiles('UploadChallanCopy', 'ChallanCopy'); ManageLog('Download All Challan Copies')"> Challan Copies</a></li>
+                                    <li><a class="dropdown-item" ng-click="DownloadAllFiles('UploadFeesCopy', 'FeesCopy'); ManageLog('Download All Fees Copies')"> Fees Copies</a></li>
+                                    <li><a class="dropdown-item" ng-click="DownloadAllFiles('UploadLicenseCopy', 'LicenseCopy'); ManageLog('Download All License Copies')"> License Copies</a></li>
+                                    <li><a class="dropdown-item" ng-click="DownloadAllFiles('UploadRenewedCopy', 'RenewedCopy'); ManageLog('Download All Renewed License Copies')"> Renewed License Copies</a></li>
+                                </ul>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ✅ Add this CSS anywhere in your CSS file or in a <style> block -->
+                    <style>
+                        .export-download-group .dropdown .btn {
+                            min-width: 150px;
+                            margin-top: 2%;
+                        }
+
+                        .export-download-group {
+                            gap: 10px;
+                        }
+                        .dropdown-menu {
+                            z-index: 1050 !important;
+                            position: absolute !important;
+                            min-width: 164px;
+                            left: 0;
+                            will-change: transform;
+                            max-height: 300px; /* Optional: Add scroll if list is too long */
+                            overflow-y: auto;
+                        }
+
+                    </style>
+
+
+
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                    <div class="row mb-3">
+                        <div class="col-md-9 mt-3">
+                            <ul class="filter-search">
+                                <li class="p-0">
+                                    <div class="input-group">
+                                        <input ng-keyup="GetLicenseRequestData()" class="form-control ng-pristine ng-valid ng-empty ng-touched" type="text" id="myInput" ng-model="searchText" value="" placeholder="Search">
+
+                                        <button ng-click="GetLicenseRequestData(1)" class="btn btn-default" type="button" id="button-addon2"><span class="icons icon-magnifier"></span></button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="table-container " style="height: 100%; display: flex; flex-direction: column;">
+
+
+                        <table class="table table-bordered table-hover unittbl tableFixHead">
+
+                            <thead class="bg-warning text-white">
+                                <tr>
+                                   
+
+                                    <th>S.No.</th>
+                                    <th>StoreCode</th>
+                                    <th>RefStoreCode</th>
+                                    <th>Proposed Date</th>
+                                    <th>License Name</th>
+                                    <th>License Type</th>
+                                    <th>Requested Date</th>
+                                    <th>Doc. Date</th>
+                                    <th>Application Status</th>
+                                    <th>Application Date</th>
+                                    <th>Upload Application Copy</th>
+                                    <th>Upload Challan Copy</th>
+                                    <th>Upload Fees Copy</th>
+                                    <th>License Status</th>
+                                    <th>License Date</th>
+                                    <th>License Number</th>
+                                    <th>Validity Start Date</th>
+                                    <th>Validity End Date</th>
+                                    <th>Upload License Copy</th>
+                                    <th>UserName</th>
+                                    <th>Password</th>
+                                    <th>Mobile No.</th>
+                                    <th>Email ID</th>
+                                    <th>Tentative Date</th>
+                                    <th ng-hide="IsExecuter == 'Client'">LicenseCost </th>
+                                    <th ng-hide="IsExecuter == 'Client'">GovtFees</th>
+                                    <th>RenewalRequest Date</th>
+
+                                    <th>Renewal Start Date</th>
+                                    <th>Renewal End Date</th>
+                                    <th>Renewal Status</th>
+                                    <th>Upload Renewed License</th>
+                                    <th ng-if="loginType==1"><p ng-if="loginType==1">Action</p></th>
+                                    <th ng-show="IsExecuter == 'Admin'"><p>Delete</p></th>
+                                </tr>
+
+                                <!-- SEARCH ROW -->
+                            </thead>
+
+                            <tbody id="myTable">
+
+                                <tr ng-repeat="license in LicenseRequestList | filter: filterByStatus" ng-disabled="{{IsValid}}">
+                                    <!-- ✅ Checkbox column -->
+                                    @*<td>
+            <input type="checkbox"
+                   class="select-license-checkbox"
+                   data-license='{{ license | json }}'
+                   ng-model="license.selected" />
+        </td>*@
+
+
+
+                                    @*<td>{{ $index + 1 }}</td>*@
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="checkbox"
+                                                   class="select-license-checkbox"
+                                                   data-license='{{ license | json }}'
+                                                   ng-model="license.selected" />
+                                            <span>{{ $index + 1 }}</span>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <b>
+                                            <a class="text-success store-code"
+                                               href="#" ng-Click="SetLicense(license,$index)"
+                                               data-bs-toggle="modal"
+                                               data-bs-target="#requestForm">
+                                                <b>{{license.StoreCode}}</b>
+                                            </a>
+                                        </b>
+                                    </td>
+                                    <td><b>{{license.RefStoreCode}}</b></td>
+                                    <td>{{license.ProposedDate}}</td>
+                                    <td>{{license.LicenseName}}</td>
+                                    <td>{{license.LicenseType}}</td>
+                                    <td>{{license.RequestedDate}}</td>
+                                    <td>{{license.DocumentDate}}</td>
+                                    <td>
+                                        <select style="width:auto" class="form-select form-control validate" id="ApplicationStatus{{$index}}" ng-model="license.ApplicationStatus" ng-change="onStatusChange(license);ManageLog('change Status Licence Name. : '+license.LicenseName + ' & StoreName '+license.StoreCode)" ng-disabled="{{IsValid}}">
+                                            <option value="">Select</option>
+                                            <option ng-repeat="item in ApplicationStatusList" value="{{item.AttributeValue}}">{{item.AttributeValue}}</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input style="width:auto" date-input type="date" class="form-control" id="ApplicationDate{{$index}}" ng-model="license.ApplicationDate" ng-class="{'validate': license.ApplicationDateInvalid}" ng-disabled="{{IsValid}}" />
+                                    </td>
+                                    <td>
+                                        <div id="UploadApplicationCopy{{$index}}" ng-disabled="{{IsValid}}">
+                                            <label class="vdoc" ng-hide="license.LStatus==2||license.LStatus==4||{{loginType}}==4">
+                                                Browse&nbsp;
+                                                <input id="license{{$index+1}}" class="pagerlink" type="file" style="display:none" ng-model="license.UploadApplicationCopy" onchange="angular.element(this).scope().uploadFile('UploadApplicationCopy', this)" ng-required="isChallanCopyMandatory" />
+                                            </label>
+                                            <a ng-show="license.UploadApplicationCopy||license{{$index+1}}=='1'" ng-click="viewDocument(license.UploadApplicationCopy,'ApplicationCopy');ManageLog('View Application Copy Licence Name : '+license.LicenseName + ' & StoreName '+license.StoreCode)">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div id="ChallanCopy{{$index}}" ng-disabled="{{IsValid}}">
+                                            <label class="vdoc" ng-hide="license.LStatus==2||license.LStatus==4||{{loginType}}==4">
+                                                Browse&nbsp;
+                                                <input id="UploadChallanCopy{{$index+1}}" type="file" style="display:none" ng-model="license.UploadChallanCopy" onchange="angular.element(this).scope().uploadFile('UploadChallanCopy', this)" ng-required="isChallanCopyMandatory" />
+                                            </label>
+                                            <a ng-show="license.UploadChallanCopy||UploadChallanCopy{{$index+1}}=='1'" ng-click="viewDocument(license.UploadChallanCopy,'ChallanCopy');ManageLog('View Challan Copy Licence Name : '+license.LicenseName + ' & StoreName '+license.StoreCode)">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div id="FeesCopy{{$index+1}}" ng-disabled="{{IsValid}}">
+                                            <label class="vdoc" ng-hide="license.LStatus==2||license.LStatus==4||{{loginType}}==4">
+                                                Browse&nbsp;
+                                                <input id="UploadFeesCopy{{$index+1}}" type="file" style="display:none" ng-model="license.UploadFeesCopy" onchange="angular.element(this).scope().uploadFile('UploadFeesCopy', this)" />
+                                            </label>
+
+                                            <a ng-show="license.UploadFeesCopy||UploadFeesCopy{{$index+1}}=='1'" ng-click="viewDocument(license.UploadFeesCopy,'FeesCopy');ManageLog('View Fees Copy Licence Name : '+license.LicenseName + ' & StoreName '+license.StoreCode)">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+
+
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <select style="width:auto" ng-model="license.LicenseStatus" id="LicenseStatus{{$index}}" class="form-select form-control validate" ng-disabled="{{IsValid}}" ng-change="chkissuestatus($index)">
+                                            <option value="">Select</option>
+                                            <option ng-repeat="item in LicenseStatusList" value="{{item.AttributeValue}}">{{item.AttributeValue}}</option>
+                                        </select>
+                                    </td>
+
+                                    <td><input date-input type="date" class="form-control" style="width:auto" id="IssuedDate{{$index}}" ng-model="license.IssuedDate" ng-disabled="{{IsValid}}" ng-change="LDate($index)" /></td>
+                                    <td>  <input type="text" class="form-control" style="width:auto" ng-model="license.LicenseNumber" id="LicenseNumber{{$index}}" ng-disabled="{{IsValid}}"></td>
+                                    <td><input date-input type="date" style="width:auto" class="form-control" ng-model="license.ValidityStartDate" id="ValidityStartDate{{$index}}" ng-disabled="{{IsValid}}" /></td>
+                                    <td><input date-input type="date" style="width:auto" class="form-control" ng-model="license.ValidityEndDate" id="ValidityEndDate{{$index}}" ng-disabled="{{IsValid}}" ng-change="SetDate($index)" /></td>
+                                    <td>
+
+
+                                        <div ng-disabled="{{IsValid}}">
+
+                                            <label class="vdoc" ng-hide="license.LStatus==2||license.LStatus==4||{{loginType}}==4">
+                                                Browse&nbsp;
+                                                <input id="UploadLicenseCopy{{$index+1}}" type="file" style="display:none" ng-model="UploadLicenseCopy" onchange="angular.element(this).scope().uploadFile('UploadLicenseCopy', this)" />
+                                            </label>
+                                            <a ng-show="license.UploadLicenseCopy||UploadLicenseCopy{{$index+1}}=='1'" ng-click="viewDocument(license.UploadLicenseCopy,'LicenseCopy');ManageLog('View License Copy Licence Name : '+license.LicenseName + ' & StoreName '+license.StoreCode)">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+
+
+                                    <td>  <input type="text" style="width:auto" class="form-control" ng-model="license.UserName" ng-disabled="{{IsValid}}"></td>
+                                    <td>  <input type="text" style="width:auto" class="form-control" ng-model="license.UserPassword" ng-disabled="{{IsValid}}"></td>
+                                    <td>  <input id="MobileNumber{{$index}}" style="width:auto" type="text" class="form-control" ng-model="license.MobileNumber" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" numeric-only dynamic-length maxlength="10" minlength="10" ng-disabled="{{IsValid}}"></td>
+                                    <td>  <input type="text" id="Email{{$index}}" style="width:auto" class="form-control" ng-model="license.EmailId" ng-disabled="{{IsValid}}"></td>
+                                    <td><input date-input type="date" class="form-control" style="width:auto" ng-model="license.TentativeDateofComp" ng-disabled="{{IsValid}}" /></td>
+
+
+
+
+
+                                    <td ng-hide="IsExecuter == 'Client'"><input class="form-control" ng-model="license.ActualCost" ng-hide="IsExecuter == 'Client'" /> </td>
+                                    <td ng-hide="IsExecuter == 'Client'"><input class="form-control" ng-model="license.GovtFees" ng-hide="IsExecuter == 'Client'" /></td>
+
+                                    <td><input type="text" class="form-control" readonly ng-model="license.RenewalRequestDate" /></td>
+
+                                    <td>
+
+                                        <input type="date" style="width:auto" class="form-select form-control " ng-model="license.RenewalStartDate" ng-show="license.LStatus==4" ng-disabled="{{IsValid}}" />
+                                        <input date-input type="date" style="width:auto" class="form-control" id="RenewalStartDate{{$index}}" ng-model="license.RenewalStartDate" ng-disabled="{{IsValid}}" ng-show="license.LStatus==3" />
+                                    </td>
+                                    <td>
+
+                                        <input date-input type="date" class="form-select form-control " style="width:auto" ng-model="license.RenewalEndDate" ng-show="license.LStatus==4||license.LStatus==3" ng-disabled="{{IsValid}}" />
+                                    </td>
+                                    <td>
+                                        <p ng-show="license.LStatus==4">{{license.RenewalStatus}}</p>
+                                        <select style="width:auto" ng-model="license.RenewalStatus" class="form-select form-control validate" ng-disabled="{{IsValid}}" ng-show="license.LStatus==3">
+                                            <option value="">Select</option>
+                                            <option value="Renew">Renew</option>
+                                            @*<option value="NonRenew">Non Renew</option>*@
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div ng-disabled="{{IsValid}}">
+                                            <label class="vdoc" ng-if="loginType==1" ng-show="license.LStatus==4||license.LStatus==3">
+                                                Browse&nbsp;
+                                                <input id="UploadRenewedCopy{{$index+1}}" type="file" style="display:none" ng-model="license.UploadRenewedCopy" onchange="angular.element(this).scope().uploadFile('UploadRenewedCopy', this)" />
+                                            </label>
+
+                                            <div ng-if="license.UploadRenewedCopy != 'undefined'">
+
+                                                <a ng-show="license.UploadRenewedCopy||UploadRenewedCopy{{$index+1}}=='1'"
+                                                   ng-click="viewDocument(license.UploadRenewedCopy, 'RenewedCopy'); ManageLog('View Renewed Copy Licence Name: ' + license.LicenseName + ' & StoreName ' + license.StoreCode)">
+                                                    <i class="fa fa-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                    </td>
+                                    <td ng-hide="loginType == 4"><a class="btn btn-warning" ng-click="SubmitLicense(license,$index);ManageLog('Submit License Licence Name : '+license.LicenseName + ' & StoreName '+license.StoreCode)" ng-hide="license.LStatus==2||license.LStatus==4||{{loginType}}==4">Save</a></td>
+                                    <td ng-show="IsExecuter == 'Admin'"><a class="btn btn-warning" ng-Click="DeleteRecord(license.LicenceRequstId);ManageLog('delete licence: '+license.LicenseName + ' & StoreName '+license.StoreCode)">Delete</a></td>
+
+
+
+                                </tr>
+                                <tr>
+                                    <th><input type="text" class="column-search" data-index="0" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="1" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="2" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="3" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="4" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="5" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="6" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="7" placeholder="Search"></th>
+                                    <th></th>
+                                    <th><input type="text" class="column-search" data-index="9" placeholder="Search"></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th><input type="text" class="column-search" data-index="14" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="15" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="16" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="17" placeholder="Search"></th>
+                                    <th></th>
+                                    <th><input type="text" class="column-search" data-index="19" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="20" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="21" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="22" placeholder="Search"></th>
+                                    <th><input type="text" class="column-search" data-index="23" placeholder="Search"></th>
+                                    <th ng-hide="IsExecuter == 'Client'"><input type="text" class="column-search" data-index="24" placeholder="Search"></th>
+                                    <th ng-hide="IsExecuter == 'Client'"><input type="text" class="column-search" data-index="25" placeholder="Search"></th>
+                                    <th></th>
+                                    <th><input type="text" class="column-search" data-index="27" placeholder="Search"></th>
+
+                                    <th><input type="text" class="column-search" data-index="28" placeholder="Search"></th>
+                                    <th></th>
+                                    <th></th>
+                                    <th ng-show="IsExecuter == 'Admin'"></th>
+                                    <th ng-show="IsExecuter == 'Admin'"></th>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="pagination">
+                            <button ng-disabled="currentPage === 1" ng-click="changePage(currentPage - 1)">Previous</button>
+
+                            <button ng-repeat="page in pageNumbers"
+                                    ng-class="{'active': page === currentPage}"
+                                    ng-click="changePage(page)">
+                                {{ page === "..." ? "…" : page }}
+                            </button>
+
+                            <button ng-disabled="currentPage === Math.ceil(totalItems / pageSize)" ng-click="changePage(currentPage + 1)">Next</button>
+                        </div>
+
+
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-12">
+                            <a class="btn-view" ng-click="Allrecord()">View All</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal fade" id="requestForm" tabindex="-1" aria-labelledby="requestFormModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content modalbr">
+                        <div class="modal-header reqstfrmhed">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <a href="#" class="btnarrow" data-bs-dismiss="modal" id="closemodalrequestForm" aria-label="Close"><i class="fa fa-arrow-left"></i></a>
+                                </div>
+                                <div class="col-md-9 text-center">
+                                    <h5 class="modal-title mt-2" id="requestFormModalLabel">License Master</h5>
+                                </div>
+                                <div class="col-md-1 text-right">
+                                    <a href="#" class="btnarrow" data-bs-dismiss="modal" id="closemodalrequestForm" aria-label="Close"><i class="fa fa-times-circle"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive">
+                                        <table>
+                                            <tr>
+                                                <th>
+                                                    <select style="width:auto" class="form-select form-control validate" ng-model="SetLT" ng-change="ChangeLicenseType(SetLT)">
+                                                        <option value="">Select License Type</option>
+                                                        <option ng-repeat="x in filteredLicenses" value="{{x.LicenceRequstId}}">
+                                                            {{ x.LicenseType + ' ' + x.LicenseName + ' ' + x.RenewalRequestDate }}
+                                                        </option>
+                                                    </select>
+                                                </th>
+                                            </tr>
+                                        </table>
+                                        <table class="table table-hover text-center bgw">
+                                            <tr>
+                                                <th>Store Code</th>
+                                                <th>Ref Store Code</th>
+                                                <th>Store Address</th>
+                                                <th>Proposed Date</th>
+                                                <th>License Name </th>
+                                            </tr>
+                                            <tr>
+                                                <th><input type='text' class="form-control validate" ng-model="LMStoreCode" ng-disabled="true"></th>
+                                                <th><input type='text' class="form-control validate" ng-model="LMRefStoreCode" ng-disabled="true"></th>
+                                                <th><input type='text' class="form-control validate" ng-model="LMRefStoreAddress" ng-disabled="true"></th>
+                                                <th><input type='text' class="form-control validate" ng-model="LMProposedDate" ng-disabled="true"></th>
+                                                <th><input type='text' class="form-control validate" ng-model="LMLicenseNamee" ng-disabled="true"></th>
+                                            </tr>
+                                            <tr>
+                                                <th>License Type</th>
+                                                <th>Requested Date</th>
+                                                <th>Document Date</th>
+                                                <th>Application Status</th>
+                                                <th>Application Date</th>
+                                            </tr>
+                                            <tr>
+                                                <th><input type='text' class="form-control validate" ng-model="LMLicenseType" ng-disabled="true"></th>
+                                                <th><input type='text' class="form-control validate" ng-model="LMRequestedDate" ng-disabled="true"></th>
+                                                <th><input type='text' class="form-control validate" ng-model="LMDocDate" ng-disabled="true"></th>
+
+                                                <th>
+                                                    <select class="form-select form-control validate" id="LMAppStatus" ng-model="LMAppStatus" ng-change="onStatusChange(license);ManageLog('change Status Licence Name. : '+license.LicenseName + ' & StoreName '+ LMStoreCode)" ng-disabled="{{IsValid}}">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="item in ApplicationStatusList" value="{{item.AttributeValue}}">{{item.AttributeValue}}</option>
+                                                    </select>
+
+                                                </th>
+                                                <th>
+                                                    <input date-input type="date" class="form-control" id="AppDate" ng-model="AppDate" ng-class="{'validate': AppDate}" ng-disabled="{{IsValid}}" />
+
+                                                </th>
+
+                                            </tr>
+                                            <tr>
+                                                <th>Upload Application Copy </th>
+                                                <th>Challan Copy</th>
+                                                <th>UploadFees Copy</th>
+                                                <th>License Status</th>
+                                                <th>License Date</th>
+
+                                            </tr>
+                                            <tr>
+                                                <th>
+                                                    <div id="LMAppcopy" ng-disabled="{{IsValid}}">
+                                                        <label class="vdoc" ng-hide="LMLStatus==2||LMLStatus==4||{{loginType}}==4">
+                                                            Browse&nbsp;
+                                                            <input id="LMAppcopy" class="pagerlink" type="file" style="display:none" ng-model="LMAppcopy" onchange="angular.element(this).scope().uploadFile('UploadApplicationCopy', this)" ng-required="isChallanCopyMandatory" />
+                                                        </label>
+                                                        <a ng-show="LMAppcopy" ng-click="viewDocument(LMAppcopy);ManageLog('View Application Copy Licence Name : '+ LMAppcopy + ' & StoreName '+ LMStoreCode)">
+                                                            <i class="fa fa-download"></i>
+                                                        </a>
+                                                    </div>
+                                                </th>
+                                                <th>
+                                                    <div id="LMchallanCopy" ng-disabled="{{IsValid}}">
+                                                        <label class="vdoc" ng-hide="LMLStatus==2||LMLStatus==4||{{loginType}}==4">
+                                                            Browse&nbsp;
+                                                            <input id="LMchallanCopy" type="file" style="display:none" ng-model="LMchallanCopy" onchange="angular.element(this).scope().uploadFile('UploadChallanCopy', this)" ng-required="isChallanCopyMandatory" />
+                                                        </label>
+                                                        <a ng-show="LMchallanCopy" ng-click="viewDocument(LMchallanCopy);ManageLog('View Challan Copy Licence Name : '+ LMLicenseName + ' & StoreName '+LMStoreCode)">
+                                                            <i class="fa fa-download"></i>
+                                                        </a>
+                                                    </div>
+                                                </th>
+                                                <th>
+                                                    <div id="LMFeeCopy" ng-disabled="{{IsValid}}">
+                                                        <label class="vdoc" ng-hide="LMLStatus==2||LMLStatus==4||{{loginType}}==4">
+                                                            Browse&nbsp;
+                                                            <input id="LMFeeCopy" type="file" style="display:none" ng-model="LMFeeCopy" onchange="angular.element(this).scope().uploadFile('UploadFeesCopy', this)" />
+                                                        </label>
+
+                                                        <a ng-show="LMFeeCopy" ng-click="viewDocument(LMFeeCopy);ManageLog('View Fees Copy Licence Name : '+ LMLicenseName + ' & StoreName '+ LMStoreCode)">
+                                                            <i class="fa fa-download"></i>
+                                                        </a>
+                                                    </div>
+                                                </th>
+                                                <th>
+                                                    <select ng-model="LMLicenseStatus" id="LMLicenseStatus" class="form-select form-control validate" ng-disabled="{{IsValid}}" ng-change="chkissuestatus($index)">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="item in LicenseStatusList" value="{{item.AttributeValue}}">{{item.AttributeValue}}</option>
+                                                    </select>
+                                                </th>
+                                                <th>
+                                                    <input date-input type="date" class="form-control" id="LMLicensDate" ng-model="LMLicensDate" ng-disabled="{{IsValid}}" ng-change="LDate($index)" />
+                                                </th>
+                                            </tr>
+                                            <tr>
+                                                <th>License Number</th>
+                                                <th>Validity StartDate</th>
+                                                <th>Validity EndDate</th>
+                                                <th>License Copy</th>
+                                                <th>UserName </th>
+
+                                            </tr>
+                                            <tr>
+                                                <th>
+                                                    <input type="text" class="form-control" ng-model="LMLicenseNumber" id="LMLicenseNumber" ng-disabled="{{IsValid}}">
+                                                </th>
+                                                <th>
+                                                    <input date-input type="date" class="form-control" ng-model="LMValidityStartDate" id="LMValidityStartDate" ng-disabled="{{IsValid}}" />
+                                                </th>
+                                                <th>
+                                                    <input date-input type="date" class="form-control" ng-model="LMValidityEndDate" id="LMValidityEndDate" ng-disabled="{{IsValid}}" ng-change="SetDate($index)" />
+                                                </th>
+                                                <th>
+                                                    <div id="LMLicenseCopy" ng-disabled="{{IsValid}}">
+
+                                                        <label class="vdoc" ng-hide="LMLStatus==2||LMLStatus==4||{{loginType}}==4">
+                                                            Browse&nbsp;
+                                                            <input id="LMLicenseCopy" type="file" style="display:none" ng-model="LMLicenseCopy" onchange="angular.element(this).scope().uploadFile('UploadLicenseCopy', this)" />
+                                                        </label>
+                                                        <a ng-show="LMLicenseCopy" ng-click="viewDocument(LMLicenseCopy);ManageLog('View License Copy Licence Name : '+ LMLicenseName + ' & StoreName '+ LMStoreCode)">
+                                                            <i class="fa fa-download"></i>
+                                                        </a>
+                                                    </div>
+
+                                                </th>
+                                                <th>
+                                                    <input type="text" class="form-control" ng-model="LMUserName" ng-disabled="{{IsValid}}">
+                                                </th>
+
+                                            </tr>
+
+                                            <tr>
+                                                <th>User Password</th>
+                                                <th>Mobile Number</th>
+                                                <th>Email</th>
+                                                <th>Tentative Date</th>
+                                                <th ng-hide="IsExecuter == 'Client'">License Cost</th>
+                                            </tr>
+                                            <tr>
+                                                <th>
+                                                    <input type="text" class="form-control" ng-model="LMUserPassword" ng-disabled="{{IsValid}}">
+                                                </th>
+                                                <th> <input id="MobileNumber" type="text" class="form-control" ng-model="LMMobileNumber" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" numeric-only dynamic-length maxlength="10" minlength="10" ng-disabled="{{IsValid}}"></th>
+                                                <th>
+                                                    <input type="text" id="LMEmailId" class="form-control" ng-model="LMEmailId" ng-disabled="{{IsValid}}">
+                                                </th>
+                                                <th>
+                                                    <input date-input type="date" class="form-control" ng-model="LMTentativeDateofComp" ng-disabled="{{IsValid}}" />
+                                                </th>
+                                                <th ng-hide="IsExecuter == 'Client'">
+                                                    <input type="text" class="form-control" ng-model="LMActualCost" />
+                                                </th>
+
+                                            </tr>
+                                            <tr>
+                                                <th ng-hide="IsExecuter == 'Client'">Govt Fees</th>
+                                                <th ng-show="LMLStatus==4||LMLStatus==3">Renewal Request Date</th>
+                                                <th ng-show="LMLStatus==4||LMLStatus==3">Renewal Start Date</th>
+
+                                                <th ng-show="LMLStatus==4||LMLStatus==3">Renewal End Date</th>
+                                                <th ng-show="LMLStatus==4||LMLStatus==3">Renewal Status</th>
+
+
+
+
+
+                                            </tr>
+                                            <tr>
+                                                <th ng-hide="IsExecuter == 'Client'">
+                                                    <input type="text" class="form-control" ng-model="LMGovtFees" />
+                                                </th>
+                                                <th>
+                                                    <input type="text" class="form-control" ng-model="LMRenewalRequestDate" ng-disabled="true" ng-show="LMLStatus==4||LMLStatus==3" />
+                                                </th>
+                                                <th>
+                                                    <input type="date" class="form-control" ng-model="LMRenewalStartDate" ng-disabled="{{IsValid}}" ng-show="LMLStatus==4||LMLStatus==3" />
+                                                </th>
+
+                                                <th ng-disabled="{{IsValid}}">
+                                                    <input date-input type="date" class="form-control" ng-model="LMRenewalEnddate" ng-show="LMLStatus==4||LMLStatus==3" ng-disabled="{{IsValid}}" />
+
+                                                </th>
+                                                <th>
+                                                    <p ng-show="LMLStatus==4">{{LMRenewalStatus}}</p>
+                                                    <select ng-model="LMRenewalStatus" class="form-select form-control validate" ng-disabled="{{IsValid}}" ng-show="LMLStatus==3">
+                                                        <option value="">Select</option>
+                                                        <option value="Renew">Renew</option>
+                                                        <option value="NonRenew">Non Renew</option>
+                                                    </select>
+
+                                                </th>
+
+
+                                            </tr>
+                                            <tr>
+
+
+                                            <tr>
+                                                <th ng-show="LMLStatus==4||LMLStatus==3">Renewed Copy</th>
+                                                <th colspan="4"></th>
+                                            </tr>
+                                            <tr>
+
+
+                                                <th>
+                                                    <div id="LMUploadRenewedCopy" ng-disabled="{{IsValid}}">
+                                                        <label class="vdoc" ng-if="loginType==1" ng-show="LMLStatus==4||LMLStatus==3">
+                                                            Browse&nbsp;
+                                                            <input id="LMUploadRenewedCopy" type="file" style="display:none" ng-model="LMUploadRenewedCopy" onchange="angular.element(this).scope().uploadFile('UploadRenewedCopy', this)" />
+                                                        </label>
+                                                        <a ng-show="LMUploadRenewedCopy && LMUploadRenewedCopy.trim() !== ''" ng-click="viewDocument(LMUploadRenewedCopy,'RenewedCopy');ManageLog('View Renewed Copy Licence Name : '+ LMLicenseName + ' & StoreName '+ LMStoreCode)">
+                                                            <i class="fa fa-download"></i>
+                                                        </a>
+                                                    </div>
+                                                </th>
+
+                                                <th colspan="4">
+                                                    <a class="btn btn-warning" ng-click="LSave();ManageLog('Submit License Licence Name : '+license.LicenseName + ' &amp; StoreName '+license.StoreCode)" ng-hide="LMLStatus==2||LMLStatus==4||loginType==4" style="WIDTH: 21%;">Save</a>
+                                                </th>
+                                            </tr>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/scripts/RetailJsLib/LicenseRequestMasterController.js?Ver=@ViewBag.Version"></script>
+<script src="~/Content/lib/moment/moment.js"></script>

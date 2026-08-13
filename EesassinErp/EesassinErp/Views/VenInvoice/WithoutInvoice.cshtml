@@ -1,0 +1,125 @@
+﻿@{
+    ViewBag.Title = "Without Invoice";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+<script src="~/Scripts/myjslib/VendorInvoiceController.js?Ver=@ViewBag.Version"></script>
+<script>
+    function nospaces(t) {
+        if (t.value.match(/\s/g)) {
+            t.value = t.value.replace(/\s/g, '');
+        }
+    }
+</script>
+<style>
+    .site-th {
+        width: 100px;
+    }
+
+    .invoic-type-th {
+        width: 150px;
+    }
+
+    .location-th {
+        width: 150px;
+    }
+</style>
+<div class="container-fluid" oncontextmenu="return false;">
+    <form id="user-form">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Document Creation</h4>
+                <div class="row">
+                    <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                        <label class="control-label">Client</label>
+                        <div class="input-box" ng-init="AllParty()">
+                            <select id="ddlCustomerId" autocomplete='address-level2' class="select2 form-control validate" ng-model="ClientId" ng-change="BindStatusInvoice()" ng-disabled="freeze">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in AllPartyList | filter: { PartyType: 'Client' }" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                            </select>
+                            <div class="text-box-msg-r">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" >
+                        <label class="control-label">State</label>
+                        <div class="input-box">
+                            <select id="ddlstate" autocomplete='address-level2' class="form-control clear validate" ng-disabled="freeze" ng-init="AllState()" ng-model="StateId" ng-change="AllPartySiteLoadWI();WIBindMonth();WIBindFinacialYear();">
+                                <option value="">Select State</option>
+                                <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                            </select>
+                            <div class="text-box-msg-r">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" >
+                        <label class="control-label">Financial Year<span class="vd_red"></span></label>
+                        <div class="input-box">
+
+                            <select id="ddlfyid" autocomplete='address-level2' class="select2 form-control validate" ng-model="FyId" ng-change="BindIn(FyId)" ng-disabled="freeze">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in WIfinacialyearList" value="{{x.FinancialName}}">{{x.FinancialName}}</option>
+                            </select>
+                 
+                            <div class="text-box-msg-r">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" >
+                        <label class="control-label">Month<span class="vd_red"></span></label>
+                        <div class="input-box">
+                            <select id="ddlMONTH" autocomplete='address-level2' class="select2 form-control validate" ng-model="Month" ng-change="ChangeMonth()" ng-disabled="freeze">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in WIMonthList" value="{{x.MonthNumber}}">{{x.MonthName}}</option>
+                            </select>
+                            <div class="text-box-msg-r">
+                            </div>
+                        </div>
+                    </div> 
+                    <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15"  >
+                        <label class="control-label">Site<span class="vd_red"></span></label>
+                        <div class="input-box">
+                            <select class="select2 form-control validate" ng-model="WClientSiteId" ng-change="SetSingleLocation(WClientSiteId)">
+                                <option value="">Select Site</option>
+                                <option ng-repeat="x in AllPartySiteVList" value="{{x.SiteId}}">{{x.SiteName}}</option>
+                            </select>
+                            <div class="text-box-msg-r">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15"  >
+                        <label class="control-label">Location<span class="vd_red"></span></label>
+                        <div class="input-box">
+                            <select id="ddlLocation" autocomplete='address-level2' class="form-control  clear validate" ng-model="WLocation">
+                                <option value="">Select Location</option>
+                                <option ng-repeat="x in LocationL" value="{{x.Location}}">{{x.Location}}</option>
+                            </select>
+                            <div class="text-box-msg-r">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" >
+                        <label class="control-label"><span class="vd_red"></span></label>
+                        <div class="input-box">
+                            <button type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search"
+                                    ng-click="ValidateWithoutInvoice()">
+                                <span class="triangle-box" title="Search"></span>
+                                <span>Save Without Invoice </span>
+                            </button>
+                            <button type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search"
+                                    ng-model="ClearH" ng-click="ClearReset()">
+                                <span class="triangle-box" title="Search"></span>
+                                <span>Refresh </span>
+                            </button>
+                        </div>
+                    </div> 
+                     
+                </div>
+            </div>
+        </div> 
+    </form>
+</div>
+ 

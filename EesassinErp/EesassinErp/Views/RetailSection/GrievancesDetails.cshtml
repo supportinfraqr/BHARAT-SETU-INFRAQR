@@ -1,0 +1,333 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Grievances Details";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/SupportGrievances/GrievancesDetails/style.css" rel="stylesheet" />
+<script>
+    $(document).ready(function () {
+
+        $("#grievancesAddActionBtn").on("click", function () {
+
+            $(".grievancesActionCard").removeClass("d-none");
+
+        });
+
+    });
+</script>
+
+<div class="grievancesDetails px-4 py-4">
+
+    <h2 class="grievancesDetailsPageTitle">
+        Inadequate Safety Equipment
+    </h2>
+
+    <div class="grievancesDetailsLayout">
+
+        <!-- LEFT SIDE -->
+        <div class="grievancesDetailsLeft">
+
+            <!-- Worker Details -->
+            <div class="grievancesDetailsCard">
+                <h6 class="grievancesDetailsCardTitle">
+                    WORKER & PROJECT DETAILS
+                </h6>
+
+                <div class="grievancesWorkerGrid">
+
+                    <div class="grievancesWorkerItem">
+                        <span>Name</span>
+                        <strong>Rajesh Kumar</strong>
+                    </div>
+
+                    <div class="grievancesWorkerItem">
+                        <span>Site Location</span>
+                        <strong>Construction Site A</strong>
+                    </div>
+
+                    <div class="grievancesWorkerItem">
+                        <span>Contractor</span>
+                        <strong>TechCorp Solutions</strong>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="grievancesDetailsCard">
+                <h6 class="grievancesDetailsCardTitle">
+                    PROBLEM DESCRIPTION
+                </h6>
+
+                <p class="grievancesProblemText">
+                    Workers on the 14th floor of Block C are reporting severe shortages of safety helmets and high-altitude harnesses. Multiple harnesses currently in use show visible fraying and signs of material fatigue, posing a critical fall risk. Despite multiple verbal requests to the site foreman, no new equipment has been dispatched. This is a direct violation of the Safety Compliance protocol established in the Q1 review.
+                </p>
+            </div>
+
+            <!-- Evidence -->
+            <div class="grievancesDetailsCard">
+
+                <h6 class="grievancesDetailsCardTitle">
+                    EVIDENCE & ATTACHMENTS
+                </h6>
+
+                <div class="grievancesAudioPlayer">
+
+                    <button class="grievancesAudioPlayBtn">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+
+                    <div class="grievancesAudioContent">
+
+                        <div class="grievancesAudioName">
+                            Voice_Recording_Kumar.mp3
+                        </div>
+
+                        <div class="grievancesAudioProgress">
+                            <div class="grievancesAudioProgressFill"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="grievancesAudioTime">
+                        0:45 / 2:14
+                    </div>
+
+                    <button class="grievancesAudioVolumeBtn">
+                        <i class="bi bi-volume-up"></i>
+                    </button>
+
+                </div>
+
+                <div class="grievancesAttachmentsGrid">
+
+                    <div class="grievancesAttachmentCard">
+                        <img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?q=80&w=800"
+                             alt="">
+                    </div>
+
+                    <div class="grievancesAttachmentCard">
+                        <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=800"
+                             alt="">
+                    </div>
+
+                    <div class="grievancesAttachmentMore">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>+2 More</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Add Action Button -->
+            <div class="grievancesActionBtnWrapper">
+
+                <button type="button"
+                        class="grievancesAddActionBtn"
+                        id="grievancesAddActionBtn">
+                    <i class="bi bi-plus"></i>
+                    Add Action
+                </button>
+
+            </div>
+
+            <!-- Action Card -->
+            <div class="grievancesDetailsCard grievancesActionCard d-none">
+
+                <h6 class="grievancesDetailsCardTitle">
+                    ACTIONS TAKEN
+                </h6>
+
+                <textarea class="grievancesActionTextarea"
+                          placeholder="List the actions taken to resolve the grievances..."></textarea>
+
+                <div class="grievancesActionFooter">
+
+                    <button class="grievancesSubmitBtn">
+                        Submit
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="grievancesDetailsRight">
+
+            <!-- Trail -->
+            <div class="grievancesDetailsCard grievancesStickyCard">
+
+                <h6 class="grievancesDetailsCardTitle">
+                    GRIEVANCE TRAIL
+                </h6>
+
+                <div class="grievancesTrailBody">
+
+                    <div class="grievancesTimeline">
+
+                        <div class="grievancesTimelineItem completed">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>Grievance Raised</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    May 18, 2024 • 10:30 AM
+                                </span>
+
+                                <div class="grievancesBadge">
+                                    AUTO-LOGGED
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="grievancesTimelineItem completed">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>Assigned to Safety Officer</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    May 19, 2024 • 02:15 PM
+                                </span>
+
+                                <p class="grievancesAssignedTo">
+                                    Assigned to: Vivek Sharma
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="grievancesTimelineItem active">
+
+                            <div class="grievancesTimelineDot"></div>
+
+                            <div class="grievancesTimelineContent">
+
+                                <h5>In Progress</h5>
+
+                                <span class="grievancesTimelineDate">
+                                    Current Status
+                                </span>
+
+                                @*<div class="grievancesNextActionBox">
+
+                                    <small>NEXT ACTION</small>
+
+                                    <p>
+                                        Procurement approval pending from Finance.
+                                    </p>
+
+                                </div>*@
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Discussion -->
+            <div class="grievancesDetailsCard grievancesStickyCard">
+
+                <div class="grievancesDiscussionHeader">
+
+                    <h6 class="grievancesDetailsCardTitle mb-0">
+                        COMMITTEE DISCUSSION
+                    </h6>
+
+                    <span class="grievancesPrivateBadge">
+                        PRIVATE
+                    </span>
+
+                </div>
+
+                <div class="grievancesDiscussionBody">
+
+                    <div class="grievancesMessageWrapper">
+
+                        <div class="grievancesMessageSender">
+                            Vivek Sharma (Safety Officer)
+                        </div>
+
+                        <div class="grievancesReceivedMessage">
+                            I've inspected Site A. The complaint is valid. 40% of the harnesses are past their safety rating. Need immediate replacement funds.
+                        </div>
+
+                        <div class="grievancesMessageTime">
+                            11:05 AM
+                        </div>
+
+                    </div>
+
+                    <div class="grievancesMessageWrapper">
+
+                        <div class="grievancesMessageSender">
+                            Saina (Finance Manager)
+                        </div>
+
+                        <div class="grievancesReceivedMessage">
+                            The Q2 safety budget is nearly depleted. Can we reallocate from the training fund?
+                        </div>
+
+                        <div class="grievancesMessageTime">
+                            11:20 AM
+                        </div>
+
+                    </div>
+
+                    <div class="grievancesMessageWrapper grievancesSentWrapper">
+
+                        <div class="grievancesMessageSender text-end">
+                            You (Principal Employer)
+                        </div>
+
+                        <div class="grievancesSentMessage">
+                            Safety is non-negotiable. Reallocate the funds and order the equipment today. I want an update by EOD.
+                        </div>
+
+                        <div class="grievancesMessageTime text-end">
+                            11:45 AM
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="grievancesDiscussionFooter">
+
+                    <button class="grievancesAttachBtn">
+                        <i class="bi bi-paperclip"></i>
+                    </button>
+
+                    <input type="text"
+                           placeholder="Add a comment..."
+                           class="grievancesCommentInput">
+
+                    <button class="grievancesSendBtn">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

@@ -1,0 +1,1805 @@
+﻿
+@{
+    ViewBag.Title = "PayrollDashboard";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="~/PayrollDashboard/style.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar px-4">
+        <!-- Left logo -->
+        <div class="nav-left">
+            <img src="~/PayrollDashboard/assets/icons/logo.svg" alt="Logo" class="logo" />
+        </div>
+
+        <!-- Center nav items -->
+        <div class="nav-center d-flex gap-3">
+            <!-- Dashboard dropdown -->
+            <div class="dropdown">
+                <button class="dropbtn d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                    Dashboard
+                    <img src="~/PayrollDashboard/assets/icons/DropArrow.svg" class="arrow ms-1" alt="Arrow">
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Dashboard 1</a></li>
+                    <li><a class="dropdown-item" href="#">Dashboard 2</a></li>
+                    <li><a class="dropdown-item" href="#">Dashboard 3</a></li>
+                </ul>
+            </div>
+
+            <!-- Master dropdown -->
+            <div class="dropdown">
+                <button class="dropbtn d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                    Master
+                    <img src="~/PayrollDashboard/assets/icons/DropArrow.svg" class="arrow ms-1" alt="Arrow">
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Master 1</a></li>
+                    <li><a class="dropdown-item" href="#">Master 2</a></li>
+                    <li><a class="dropdown-item" href="#">Master 3</a></li>
+                </ul>
+            </div>
+
+            <!-- Report dropdown -->
+            <div class="dropdown">
+                <button class="dropbtn d-flex align-items-center" type="button" data-bs-toggle="dropdown">
+                    Report
+                    <img src="~/PayrollDashboard/assets/icons/DropArrow.svg" class="arrow ms-1" alt="Arrow">
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Report 1</a></li>
+                    <li><a class="dropdown-item" href="#">Report 2</a></li>
+                    <li><a class="dropdown-item" href="#">Report 3</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Right icons & profile -->
+        <div class="nav-right d-flex align-items-center gap-3">
+
+            <!-- SEARCH WRAPPER -->
+            <div class="search-wrapper position-relative">
+                <img src="~/PayrollDashboard/assets/icons/search.svg"
+                     alt="Search" id="search-icon" class="icon cursor-pointer">
+                <input type="text" id="search-field" placeholder="Search..." class="search-input">
+            </div>
+
+            <img src="~/PayrollDashboard/assets/icons/notify.svg"
+                 alt="Notify" class="icon cursor-pointer">
+
+            <!-- USER SWITCH DROPDOWN -->
+            <div class="dropdown position-relative">
+                <img src="~/PayrollDashboard/assets/icons/user-switch.svg"
+                     alt="UserSwitch"
+                     class="icon cursor-pointer dropdown-toggle"
+                     id="userSwitchDropdown"
+                     data-bs-toggle="dropdown"
+                     title="Switch Profile">
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Profile 1</a></li>
+                    <li><a class="dropdown-item" href="#">Profile 2</a></li>
+                    <li><a class="dropdown-item" href="#">Profile 3</a></li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <button class="profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <img src="~/PayrollDashboard/assets/profile.png" alt="Profile">
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Profile</a></li>
+                    <li><a class="dropdown-item" href="#">Settings</a></li>
+                    <li><a class="dropdown-item" href="#">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar d-flex justify-content-between align-items-center px-4">
+        <div class="status-left d-flex align-items-center gap-2">
+            <span class="status-dot"></span>
+            Client Name(Industry)
+        </div>
+        <div class="status-right d-flex align-items-center gap-3">
+            <span>Last Updated: Oct 01, 2025 - 05:10 PM</span>
+            <div class="dropdown">
+                <button class="login-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Login as: <span id="selected-role">Executive</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item role-option" href="#">Executive</a></li>
+                    <li><a class="dropdown-item role-option" href="#">Manager</a></li>
+                    <li><a class="dropdown-item role-option" href="#">Admin</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+
+    <! ======================== DASHBOARD ======================== >
+    <div class="dashboard px-2 py-2">
+        <!-- Capsule Toggle (single capsule container) -->
+        <div class="mb-3">
+            <div class="toggle-pill" role="tablist" aria-label="PF or ESIC">
+                <button type="button" class="btn btn-pill active" data-target="#PFCard" aria-pressed="true">PF</button>
+                <button type="button" class="btn btn-pill" data-target="#ESICCard" aria-pressed="false">ESIC</button>
+            </div>
+        </div>
+
+        <!-- Dynamic sections -->
+        <div class="section-wrap">
+            <div id="PFCard" class="card section-card border-0 active" style="background-color:transparent">
+                <!-- ================== CONTAINER 1 ================== -->
+                <div class="container-fluid mt-1" id="container1">
+                    <div class="container1 p-2" style=" background-color: #FFFFFF;">
+
+                        <div class="custom-card h-100 d-flex flex-column p-4">
+
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                <h2 class="fw-medium mb-2" style="color: #E45D27; font-size: 1.5rem;">Payroll Summary</h2>
+                                <button class="btn btn-sm btn-primary" id="payroll-btn">Generate Payroll</button>
+                            </div>
+
+                            <!-- Summary Section -->
+                            <div class="summary-card p-4 rounded-3">
+
+                                <!-- Dropdowns -->
+                                <div class="d-flex gap-2 mb-4 flex-wrap">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                            Year
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">2025</a></li>
+                                            <li><a class="dropdown-item" href="#">2024</a></li>
+                                            <li><a class="dropdown-item" href="#">2023</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                            Month
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">January</a></li>
+                                            <li><a class="dropdown-item" href="#">February</a></li>
+                                            <li><a class="dropdown-item" href="#">March</a></li>
+                                            <li><a class="dropdown-item" href="#">April</a></li>
+                                            <li><a class="dropdown-item" href="#">May</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Summary Items in 2 Columns -->
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <ul class="summary-list list-unstyled mb-0 ">
+                                            <li><span>• Total Employees Proceed :</span> <strong>250</strong></li>
+                                            <li><span>• Total VPS :</span> <strong>₹ 12,45,000</strong></li>
+                                            <li><span>• EDLI Wages :</span> <strong>₹ 3,40,000</strong></li>
+
+                                        </ul>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <ul class="summary-list list-unstyled mb-0">
+                                            <li><span>• Pension Wages :</span> <strong>₹ 2,75,000</strong></li>
+                                            <li><span>• Account No. 01 :</span> <strong>₹ 1,10,000</strong></li>
+                                            <li><span>• Account No. 02 :</span> <strong>₹ 1,35,000</strong></li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <ul class="summary-list list-unstyled mb-0">
+                                            <li><span>• Account No. 10 :</span> <strong>₹ 1,50,000</strong></li>
+                                            <li><span>• Account No. 21 :</span> <strong>₹ 1,05,000</strong></li>
+                                            <li><span>• Account No. 22 :</span> <strong>₹ 90,000</strong></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================== CONTAINER 2 ================== -->
+                <div class="container-fluid mt-4" id="container2">
+                    <div class="container2 custom-card p-3">
+                        <div class="h-100 p-3 d-flex flex-column">
+
+                            <!-- Table Toolbar -->
+                            <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 flex-nowrap">
+                                <!-- Left: Month, Year, Go -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Month Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Month
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">January</a></li>
+                                            <li><a class="dropdown-item" href="#">February</a></li>
+                                            <li><a class="dropdown-item" href="#">March</a></li>
+                                            <li><a class="dropdown-item" href="#">April</a></li>
+                                            <li><a class="dropdown-item" href="#">May</a></li>
+                                            <li><a class="dropdown-item" href="#">June</a></li>
+                                            <li><a class="dropdown-item" href="#">July</a></li>
+                                            <li><a class="dropdown-item" href="#">August</a></li>
+                                            <li><a class="dropdown-item" href="#">September</a></li>
+                                            <li><a class="dropdown-item" href="#">October</a></li>
+                                            <li><a class="dropdown-item" href="#">November</a></li>
+                                            <li><a class="dropdown-item" href="#">December</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Year Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Year
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">2025</a></li>
+                                            <li><a class="dropdown-item" href="#">2024</a></li>
+                                            <li><a class="dropdown-item" href="#">2023</a></li>
+                                            <li><a class="dropdown-item" href="#">2022</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Go Button -->
+                                    <button class="btn btn-sm filter-btn active">Go</button>
+                                </div>
+
+                                <!-- Middle: Search -->
+                                <div class="ms-auto me-2" style="width: 200px;">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                </div>
+
+                                <!-- Right: Export Dropdown -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">Export</button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">PDF</a></li>
+                                            <li><a class="dropdown-item" href="#">CSV</a></li>
+                                            <li><a class="dropdown-item" href="#">Excel</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 small-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Payroll Type</th>
+                                            <th>Payroll Name</th>
+                                            <th>Mode</th>
+                                            <th>Location</th>
+                                            <th>Submission Date</th>
+                                            <th>Days Delay</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td><!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td><!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item openPayrollFiles" href="#">Payroll Files</a></li>
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+
+
+                                <!-- PAYROLL FILES MODAL -->
+                                <div class="modal fade" id="payrollFilesModal" tabindex="-1" aria-labelledby="payrollFilesModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                                        <div class="modal-content border-0" style="background-color: #FFF1EB; border-radius: 10px;">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h5 class="modal-title fw-semibold" id="payrollFilesModalLabel" style="color:#E45D27;">Payroll Files</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                        style="filter: invert(51%) sepia(93%) saturate(2018%) hue-rotate(347deg) brightness(95%) contrast(91%);"></button>
+                                            </div>
+
+                                            <div class="modal-body pt-2">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Wage Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Active Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Excel Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">CSV Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">TXT Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Summary Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer border-0 pt-0">
+                                                <button type="button" class="btn btn-sm text-white px-4" style="background-color:#E45D27;" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
+                                <!-- Pagination -->
+                                <div class="table-pagination d-flex justify-content-between align-items-center mt-2">
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary" id="prevPage">Previous</button>
+                                        <button class="btn btn-sm btn-outline-primary" id="nextPage">Next</button>
+                                    </div>
+                                    <button class="btn btn-sm btn-primary" id="viewAllRows">View All Rows</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ESICCard" class="card section-card border-0 d-none" style="background-color:transparent">
+                <!-- ================== CONTAINER 1 ================== -->
+                <div class="container-fluid mt-1" id="container1">
+                    <div class="container1 p-2" style=" background-color: #FFFFFF;">
+
+                        <div class="custom-card h-100 d-flex flex-column p-4">
+
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                                <h2 class="fw-medium mb-2" style="color: #E45D27; font-size: 1.5rem;">ESIC Summary</h2>
+                                <button class="btn btn-sm" id="payroll-btn">Generate ESIC</button>
+                            </div>
+
+                            <!-- Summary Section -->
+                            <div class="summary-card p-4 rounded-3">
+
+                                <!-- Dropdowns -->
+                                <div class="d-flex gap-2 mb-4 flex-wrap">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                            Year
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">2025</a></li>
+                                            <li><a class="dropdown-item" href="#">2024</a></li>
+                                            <li><a class="dropdown-item" href="#">2023</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                            Month
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">January</a></li>
+                                            <li><a class="dropdown-item" href="#">February</a></li>
+                                            <li><a class="dropdown-item" href="#">March</a></li>
+                                            <li><a class="dropdown-item" href="#">April</a></li>
+                                            <li><a class="dropdown-item" href="#">May</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Summary Items in 2 Columns -->
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <ul class="summary-list list-unstyled mb-0 ">
+                                            <li><span>• Total Employees Proceed :</span> <strong>250</strong></li>
+                                            <li><span>• Total VPS :</span> <strong>₹ 12,45,000</strong></li>
+                                            <li><span>• EDLI Wages :</span> <strong>₹ 3,40,000</strong></li>
+
+                                        </ul>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <ul class="summary-list list-unstyled mb-0">
+                                            <li><span>• Pension Wages :</span> <strong>₹ 2,75,000</strong></li>
+                                            <li><span>• Account No. 01 :</span> <strong>₹ 1,10,000</strong></li>
+                                            <li><span>• Account No. 02 :</span> <strong>₹ 1,35,000</strong></li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <ul class="summary-list list-unstyled mb-0">
+                                            <li><span>• Account No. 10 :</span> <strong>₹ 1,50,000</strong></li>
+                                            <li><span>• Account No. 21 :</span> <strong>₹ 1,05,000</strong></li>
+                                            <li><span>• Account No. 22 :</span> <strong>₹ 90,000</strong></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================== CONTAINER 2 ================== -->
+                <div class="container-fluid mt-4" id="container2">
+                    <div class="container2 custom-card p-3">
+                        <div class="h-100 p-3 d-flex flex-column">
+
+                            <!-- Table Toolbar -->
+                            <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 flex-nowrap">
+                                <!-- Left: Month, Year, Go -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Month Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Month
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">January</a></li>
+                                            <li><a class="dropdown-item" href="#">February</a></li>
+                                            <li><a class="dropdown-item" href="#">March</a></li>
+                                            <li><a class="dropdown-item" href="#">April</a></li>
+                                            <li><a class="dropdown-item" href="#">May</a></li>
+                                            <li><a class="dropdown-item" href="#">June</a></li>
+                                            <li><a class="dropdown-item" href="#">July</a></li>
+                                            <li><a class="dropdown-item" href="#">August</a></li>
+                                            <li><a class="dropdown-item" href="#">September</a></li>
+                                            <li><a class="dropdown-item" href="#">October</a></li>
+                                            <li><a class="dropdown-item" href="#">November</a></li>
+                                            <li><a class="dropdown-item" href="#">December</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Year Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Year
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="#">2025</a></li>
+                                            <li><a class="dropdown-item" href="#">2024</a></li>
+                                            <li><a class="dropdown-item" href="#">2023</a></li>
+                                            <li><a class="dropdown-item" href="#">2022</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Go Button -->
+                                    <button class="btn btn-sm filter-btn active">Go</button>
+                                </div>
+
+                                <!-- Middle: Search -->
+                                <div class="ms-auto me-2" style="width: 200px;">
+                                    <input type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                </div>
+
+                                <!-- Right: Export Dropdown -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">Export</button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">PDF</a></li>
+                                            <li><a class="dropdown-item" href="#">CSV</a></li>
+                                            <li><a class="dropdown-item" href="#">Excel</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 small-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Payroll Type</th>
+                                            <th>Payroll Name</th>
+                                            <th>Mode</th>
+                                            <th>Location</th>
+                                            <th>Submission Date</th>
+                                            <th>Days Delay</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="javascript:void(0)" onclick="openESICEditModal(this)">Edit Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td><!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td><!-- Three-dot menu -->
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">View More</a></li>
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">Form</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Return</td>
+                                            <td>Maharashtra</td>
+                                            <td>25 Oct</td>
+                                            <td>26 Oct</td>
+                                            <td>1</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>ESI</td>
+                                            <td>ESI Return</td>
+                                            <td>Delhi</td>
+                                            <td>15 Oct</td>
+                                            <td>–</td>
+                                            <td>10</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>PT</td>
+                                            <td>Tax Payment</td>
+                                            <td>Gujarat</td>
+                                            <td>20 Oct</td>
+                                            <td>20 Oct</td>
+                                            <td>0</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>LWF</td>
+                                            <td>Contribution</td>
+                                            <td>Karnataka</td>
+                                            <td>10 Oct</td>
+                                            <td>–</td>
+                                            <td>17</td>
+                                            <td>Overdue</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>CLRA</td>
+                                            <td>License Renewal</td>
+                                            <td>Tamil Nadu</td>
+                                            <td>5 Oct</td>
+                                            <td>8 Oct</td>
+                                            <td>3</td>
+                                            <td>Complied</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>EPF</td>
+                                            <td>PF Challan</td>
+                                            <td>Rajasthan</td>
+                                            <td>20 Oct</td>
+                                            <td>–</td>
+                                            <td>7</td>
+                                            <td>Pending</td>
+                                            <td class="action-menu">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-link p-0 m-0 text-dark" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical fs-6"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                                        <li><a class="dropdown-item" href="#">View Details</a></li>
+                                                        <li><a class="dropdown-item" href="#">Go to Page</a></li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+
+
+                                <!-- PAYROLL FILES MODAL -->
+                                <div class="modal fade" id="payrollFilesModal" tabindex="-1" aria-labelledby="payrollFilesModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                                        <div class="modal-content border-0" style="background-color: #FFF1EB; border-radius: 10px;">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h5 class="modal-title fw-semibold" id="payrollFilesModalLabel" style="color:#E45D27;">Payroll Files</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                        style="filter: invert(51%) sepia(93%) saturate(2018%) hue-rotate(347deg) brightness(95%) contrast(91%);"></button>
+                                            </div>
+
+                                            <div class="modal-body pt-2">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Wage Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Active Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Excel Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">CSV Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">TXT Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-6">
+                                                        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center file-card">
+                                                            <span class="fw-medium">Summary Sheet</span>
+                                                            <button class="btn btn-sm text-white" style="background-color:#E45D27;">Download</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer border-0 pt-0">
+                                                <button type="button" class="btn btn-sm text-white px-4" style="background-color:#E45D27;" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
+                                <!-- Pagination -->
+                                <div class="table-pagination d-flex justify-content-between align-items-center mt-2">
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary" id="prevPage">Previous</button>
+                                        <button class="btn btn-sm btn-outline-primary" id="nextPage">Next</button>
+                                    </div>
+                                    <button class="btn btn-sm btn-primary" id="viewAllRows">View All Rows</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= ESIC Edit Form (Full-width) Modal ================= -->
+                <div class="modal fade lm-viewmore-modal" id="esicEditModal" tabindex="-1" aria-labelledby="esicEditModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-fullscreen lm-viewmore-dialog">
+                        <div class="modal-content lm-upload-page-card" style="background:#FFF1EB;">
+
+                            <!-- Header -->
+                            <div class="d-flex align-items-center justify-content-between py-2 px-4 border-bottom" style="gap: 12px; background: #E45D27;">
+                                <div>
+                                    <h5 class="mb-0" id="esicEditModalLabel" style="font-weight:500; color:#fff">
+                                        ESIC – Edit Form
+                                    </h5>
+                                </div>
+
+                                <div>
+                                    <button type="button" class="btn esic-edit-back" data-bs-dismiss="modal" style="background-color: #fff; color: #E45D27">
+                                        <i class="bi bi-arrow-left"></i> Back
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Body -->
+                            <div class="modal-body lm-viewmore-body p-4">
+                                <div class="container-fluid">
+                                    <div class="row g-3">
+
+                                        <!-- Payroll Type -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Payroll Type <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="ddlPayrollType_esic">
+                                                <option value="">Select</option>
+                                                <option>Monthly</option>
+                                                <option>Half-yearly</option>
+                                                <option>Annual</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Mode -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Mode <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="ddlMode_esic">
+                                                <option value="">Select</option>
+                                                <option>Online</option>
+                                                <option>Offline</option>
+                                                <option>Mixed</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Location -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Location <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="ddlLocation_esic">
+                                                <option value="">Select</option>
+                                                <option>Mumbai</option>
+                                                <option>Pune</option>
+                                                <option>Nashik</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Month -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Month <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="ddlMonth_esic">
+                                                <option value="">Select</option>
+                                                <option>January</option>
+                                                <option>February</option>
+                                                <option>March</option>
+                                                <option>April</option>
+                                                <option>May</option>
+                                                <option>June</option>
+                                                <option>July</option>
+                                                <option>August</option>
+                                                <option>September</option>
+                                                <option>October</option>
+                                                <option>November</option>
+                                                <option>December</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Year -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Year <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="ddlYear_esic">
+                                                <option value="">Select</option>
+                                                <option>2023</option>
+                                                <option>2024</option>
+                                                <option>2025</option>
+                                                <option>2026</option>
+                                                <option>2027</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Challan Number -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Challan Number <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="txtChallanNumber_esic">
+                                        </div>
+
+                                        <!-- Challan Date -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Challan Date <span class="text-danger">*</span></label>
+                                            <input type="date" class="form-control" id="txtChallanDate_esic">
+                                        </div>
+
+                                        <!-- Challan Amount -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Challan Amount <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="txtChallanAmount_esic">
+                                        </div>
+
+                                        <!-- TRRN Number -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">TRRN Number</label>
+                                            <input type="text" class="form-control" id="txtTRRN_esic">
+                                        </div>
+
+                                        <!-- Payment Date -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Payment Date</label>
+                                            <input type="date" class="form-control" id="txtPaymentDate_esic">
+                                        </div>
+
+                                        <!-- Payment Amount -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Payment Amount</label>
+                                            <input type="number" class="form-control" id="txtPaymentAmount_esic">
+                                        </div>
+
+                                        <!-- Payment Confirmation Number -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Payment Confirmation Number</label>
+                                            <input type="text" class="form-control" id="txtPaymentConfirmation_esic">
+                                        </div>
+
+                                        <!-- Employee Contribution -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Employee Contribution</label>
+                                            <input type="number" class="form-control" id="txtEmpContribution_esic">
+                                        </div>
+
+                                        <!-- Employer Contribution -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Employer Contribution</label>
+                                            <input type="number" class="form-control" id="txtEmployerContribution_esic">
+                                        </div>
+
+                                        <!-- Challan Copy -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Challan Copy</label>
+                                            <input type="file" class="form-control" id="fuChallanCopy_esic">
+                                        </div>
+
+                                        <!-- Payment Receipt -->
+                                        <div class="col-md-3">
+                                            <label class="form-label">Payment Receipt</label>
+                                            <input type="file" class="form-control" id="fuPaymentReceipt_esic">
+                                        </div>
+
+                                    </div> <!-- /.row -->
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="modal-footer border-0 p-4" style="background:transparent;">
+                                <div class="w-100 d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn" id="btnCloseESIC" data-bs-dismiss="modal" style="background:var(--primary); color:#fff;">Close</button>
+                                    <button type="button" class="btn" id="btnUpdateESIC" style="background:var(--primary); color:#fff;">
+                                        Update ESIC
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/PayrollDashboard/script.js"></script>
+</body>
+</html>
+

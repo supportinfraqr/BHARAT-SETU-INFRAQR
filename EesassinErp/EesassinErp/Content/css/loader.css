@@ -1,0 +1,115 @@
+﻿.loader{
+    border: 16px solid #f3f3f3;
+    border-radius: 50%;
+    /*border-top: 16px solid blue;
+    border-right: 16px solid green;
+    border-bottom: 16px solid red;
+    border-left: 16px solid pink;*/
+    border-top: 16px solid #3498db;
+    width: 100px;
+    height: 100px;
+    -webkit-animation: spin 2s linear infinite;
+    animation: spin 2s linear infinite;
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:42%;
+    right:0
+}
+.loader .spinner{
+    position:absolute;
+    top:50%;
+    width:100%;
+    margin-top:-10px;
+    font-size:20px;
+    text-align:center
+}
+.loader-wrap{
+    position:fixed;
+    left:10%;
+    right:0;
+    top:25%;
+    bottom:0;
+    text-align:center;
+    opacity:1;
+    -webkit-transition:opacity 0.2s ease-out;
+    -o-transition:opacity 0.2s ease-out;
+    transition:opacity 0.2s ease-out
+}
+@media (min-width: 1049px){
+    .loader-wrap{
+        margin-left:185px
+    }
+    .sidebar-on-right .loader-wrap{
+        margin-right:185px;
+        margin-left:0
+    }
+}
+@media (min-width: 768px) and (max-width: 1048px){
+    .loader-wrap{
+        margin-left:62px
+    }
+    .sidebar-on-right .loader-wrap{
+        margin-right:62px;
+        margin-left:0
+    }
+}
+.sidebar-hidden .loader-wrap{
+    margin-left:0 !important;
+    margin-right:0 !important
+}
+.loader-wrap.hiding{
+    opacity:0
+}
+.loader-wrap .fa{
+    position:absolute;
+    top:50%;
+    line-height:30px;
+    margin-top:-85px;
+    font-size:18px;
+    vertical-align:middle
+}
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+
+#cover-spin {
+    position:fixed;
+    width:100%;
+    left:0;right:0;top:0;bottom:0;
+    background-color: rgba(255,255,255,0.7);
+    z-index:9999;
+    display:none;
+}
+
+@-webkit-keyframes spin {
+	from {-webkit-transform:rotate(0deg);}
+	to {-webkit-transform:rotate(360deg);}
+}
+
+@keyframes spin {
+	from {transform:rotate(0deg);}
+	to {transform:rotate(360deg);}
+}
+
+#cover-spin::after {
+    content:'';
+    display:block;
+    position:absolute;
+    left:48%;top:40%;
+    width:40px;height:40px;
+    border-style:solid;
+    border-color:black;
+    border-top-color:transparent;
+    border-width: 4px;
+    border-radius:50%;
+    -webkit-animation: spin .8s linear infinite;
+    animation: spin .8s linear infinite;
+}

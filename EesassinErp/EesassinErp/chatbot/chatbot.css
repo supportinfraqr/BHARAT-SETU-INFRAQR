@@ -1,0 +1,120 @@
+﻿body {
+    font-family: Arial, sans-serif;
+}
+
+#chatIcon {
+    position: fixed;
+    bottom: 55px;
+    right: 20px;
+    background: #007bff;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 999;
+}
+
+    #chatIcon img {
+        width: 30px;
+        height: 30px;
+    }
+
+#chatContainer {
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 340px;
+    background: #f9f9f9;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    max-height: 600px;
+    min-height: 56%;
+    overflow-y: auto;
+    z-index: 998;
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+    .chat-message span {
+        background: #e6f0ff;
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 93%;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .chat-message img {
+        width: 20px;
+        height: 20px;
+        margin-left: 8px;
+    }
+
+#responseSection, #feedbackSection {
+    display: none;
+}
+
+textarea {
+    width: 95%;
+    margin-bottom: 10px;
+    padding: 6px;
+    height: 60px
+}
+
+.btn1 {
+    background-color: #007bff !important;
+    color: white !important;
+    padding: 8px 12px !important;
+    border: none !important;
+    border-radius: 5px !important;
+    cursor: pointer !important;
+    margin-right: 5px !important;
+}
+
+.stars {
+    display: flex;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.star {
+    font-size: 20px;
+    cursor: pointer;
+    color: gray;
+}
+
+    .star.selected {
+        color: gold;
+    }
+
+#dropArea {
+    border: 1px dashed #007bff;
+    padding: 20px;
+    text-align: center;
+    color: #555;
+    background: #f0f8ff;
+    cursor: pointer;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+    #dropArea.hover {
+        background: #e0f0ff;
+        border-color: #0056b3;
+    }
+
+.error-border {
+    border: 1px solid red !important;
+}

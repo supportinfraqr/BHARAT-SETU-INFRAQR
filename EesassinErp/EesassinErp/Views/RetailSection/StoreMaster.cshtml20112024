@@ -1,0 +1,1054 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Store Master";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+
+<style>
+    .tblcss {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+    }
+
+    .newslider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.1/xlsx.full.min.js"></script>
+
+
+
+<div class="pagecontentbody" ng-show="StoreMasterGrid">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+                    <h4 class="mb-0"></h4>
+                </div>
+
+                <div class="col-sm-3 text-end" ng-if="SM_NewStoreFlag==1">
+                    <a class="btn btn-warning" href="#" ng-click="ShowDivStoreMasterForm()"><span class="fas fa-plus"></span>&nbsp;&nbsp;New Store</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row mb-3 p-3">
+                <div class="card p-0">
+                    <div class="card-header">
+                        <div class="row">
+                            <div class="col-md-10">
+                                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="true">View</button>
+                                    </li>
+                                    <li ng-if="SCS_DeleteFlag==1" class="nav-item" role="presentation">
+                                        <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab" aria-controls="tab2" aria-selected="false">Import</button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <a href="#" class="btn btn-primary expbtn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="margin-top: 2px;">Export</a>
+                                <ul class="dropdown-menu escalul" aria-labelledby="escalbtnLink">
+                                    <li><a ng-click="ExportExcel()" class="dropdown-item">Export in Excel</a></li>
+
+                                    <li><a class="dropdown-item" ng-click="ExportPdf();">Export in PDF</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="myTabContent">
+                            <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                                <div class="row mb-3 align-items-center">
+                                    <div class="col-md-6 mt-3">
+                                        <ul class="filter-search">
+                                            <li class="p-0">
+                                                <div class="input-group">
+                                                    <input class="form-control" type="text" id="myInput" value="" placeholder="Search">
+                                                    <button class="btn btn-default" type="button" id="button-addon2">
+                                                        <span class="icons icon-magnifier"></span>
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6 mt-3 d-flex justify-content-end">
+                                        <!-- Adjusted to take up remaining space and align right -->
+                                        <ul class="btngroup me-3">
+                                            <!-- Added margin to space out buttons -->
+                                            <li class="nav-item submenu">
+                                                <a class="btn btn-default" href="" type="button" id="A1">Sort by <span class="fa fa-arrow-down"></span></a>
+                                            </li>
+                                        </ul>
+                                        <a class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#BulkUpload">Bulk Status Update</a>
+                                    </div>
+                                </div>
+
+
+                                <div class="table-responsive nosearch">
+                                    <table id="example" class="display nowrap table table-bordred table-hover tableFixHead unittbl datatable">
+                                        <thead>
+                                            <tr>
+
+                                                <th width="12%">Sr.No</th>
+                                                <th width="12%">Store Code</th>
+                                                <th width="12%">Ref. Store Code</th>
+                                                <th>Store Name</th>
+                                                <th>Category</th>
+                                                <th>Location</th>
+                                                <th>City</th>
+                                                @*<th>Circle</th>
+                                                    <th>Region</th>*@
+                                                <th>Manager Name</th>
+                                                <th>Email</th>
+                                                <th>Contact No.</th>
+                                                <th width="8%">Status</th>
+                                                <th width="5%"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="myTable">
+
+                                            <tr ng-repeat="stores in StoreList">
+                                                @*<td>
+                                                        <input type="checkbox" />
+                                                    </td>*@
+                                                <td>{{stores.SrNo}}</td>
+                                                <td><a class="text-success" href="#" data-bs-toggle="modal" data-bs-target="#requestForm" ng-click="GetLicenseMaster(stores.Id,stores.UserId,stores.StoreCode)"><b>{{stores.StoreCode}}</b></a></td>
+                                                <td>{{stores.RefStoreCode}}</td>
+                                                <td>{{stores.StoreName}}</td>
+                                                <td>{{stores.Category}}</td>
+                                                <td>{{stores.StoreLocation}}</td>
+                                                <td>{{stores.CITY_NAME}}</td>
+                                                @*<td>{{stores.CircleId}}</td>
+                                                    <td>{{stores.RegionName}}</td>*@
+                                                <td>{{stores.StoreManagerName}}</td>
+                                                <td>{{stores.StoreManagerEmail}}</td>
+                                                <td>{{stores.StoreManagerMobileNo}}</td>
+                                                <td>
+                                                    @*<div class="form-control2">
+                                                            <label class="switch">
+                                                                <input type="checkbox" id="{{stores.StoreCode}}" ng-model="stores.IsActive" ng-click="ChangeStatus(stores.IsActive,stores.StoreCode)" ng-checked="stores.IsActive==1?true:false">
+                                                                <div class="slider round">
+                                                                    <span class="on">Active</span>
+                                                                    <span class="off">Deactive</span>
+                                                                </div>
+                                                            </label>
+                                                        </div>*@
+                                                    <div class="form-control2">
+                                                        <label class="switch" style="text-align:center">
+                                                            <div class="newslider" ng-if="stores.IsActive==1" style="border-radius: 34px;background-color: #92c88e!important">
+                                                                <span style="vertical-align: middle">Active</span>
+                                                            </div>
+                                                            <div class="newslider" ng-if="stores.IsActive==0" style="border-radius: 34px;background-color: #f9cccc!important ">
+                                                                <span style="vertical-align: middle">Deactive</span>
+                                                            </div>
+                                                            <div class="newslider" ng-if="stores.IsActive==2" style="border-radius: 34px;background-color: #E67525!important">
+                                                                <span style="vertical-align: middle">Upcoming</span>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="editlist dropdown">
+                                                        <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><span class="fa fa-ellipsis-v"></span></a>
+                                                        <div class="dropdown-menu">
+
+                                                            <a class="dropdown-item" href="#" data-bs-toggle="modal" ng-click="BindSidelicence(stores.StoreId)" data-bs-target="#profileview">License Copy</a>
+                                                            <a href="@Url.Action("ComplianceDoc","RetailSection")" class="dropdown-item">Compliance Doc</a>
+                                                            <a href="#" ng-if="SM_ViewFlag==1" ng-click="EditStore(stores.StoreCode)" class="dropdown-item">View More</a>
+
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="row">
+                                        <div class="col-md-12">
+                                            <a class="btn-view" ng-click="ViewAllClicked()">View All</a>
+                                        </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                                <div class="py-5 mt-3 text-center">
+
+                                    <a class="btn btn-warning btn-lg" href="~/DownloadMat/StoreMasterSampleSheet.xlsx" download><span class="fas fa-download"></span>&nbsp;&nbsp;Download Store Sample Sheet</a>
+                                </div>
+                                <div class="py-5 mt-3 text-center">
+                                    <div class="input-box">
+                                        <input type="file" id="input-excel" onchange="angular.element(document).scope().DisplayExcel(), angular.element(document).scope().setFile(this);" />
+                                        <div class="text-box-msg-r">
+                                        </div>
+                                    </div>
+                                    <div class="input-box">
+                                        <button id="btnValiadte" type="button" class="btn2 btn-common btn-3 btn-3d pe-7s-check" ng-click="SaveRecord()">
+                                            Save Record
+                                        </button>
+                                    </div>
+                                    <div class="input-box" id="wrapper">
+
+                                    </div>
+                                </div>
+
+                                <div class="dropbg" ng-if="SCS_DeleteFlag==1">
+                                    <form method="post" action="/upload">
+                                        <div class="row">
+                                            <div class="col-md-5 text-center">
+                                                <img src="~/compliance/images/dropf.png" />
+                                            </div>
+                                            <div class="col-md-7">
+                                                <h4 class="mt-5">Choose a Select [.csv] files</h4>
+                                                <p>
+                                                    click   to select thorough your machine Accepted files type:.csv
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="pagecontentbody" ng-show="StoreMasterForm">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+                    <h4 class="mb-0"></h4>
+                </div>
+                <div class="col-sm-3 text-end">
+                    <a href="../RetailSection/StoreMaster?Store Master" class="btn btn-primary">Go Back</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row mb-3 p-3">
+                <div class="card p-0">
+                    <div class="card-body">
+                        <div class="row g-3">
+
+                            <div class="col-md-3">
+                                <label class="form-label">Store Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStoreCode" ng-model="StoreCode" ng-change="validate()" disabled />
+                                <span class="text-danger" ng-show="showValidationError">Special characters are not allowed.</span>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Ref. Store Code  </label>
+                                <input type="text" class="form-control" id="txtRefStoreCode" ng-model="RefStoreCode" maxlength="10" />
+                                <span class="text-danger" ng-show="showValidationError">Special characters are not allowed.</span>
+                            </div>
+                            <div class="col-md-3" ng-init="CategoryList = [{ID: 1, Name: 'Store'}, {ID: 2, Name: 'Warehouse'}, {ID: 3, Name: 'Factory'}]">
+                                <label class="control-label">Category<span class="vd_red">*</span></label>
+                                <div class="input-box">
+                                    <select id="ddlCategory" class="select2 form-control validate" ng-model="Category">
+                                        <option value="">Select Category</option>
+                                        <option ng-repeat="x in CategoryList" value="{{x.Name}}">{{x.Name}}</option>
+                                    </select>
+                                    <div class="text-box-msg-r">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Store Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtStoreName" ng-model="StoreName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Complete Address <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtCompleteAddress" ng-model="CompleteAddress" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="control-label">Proposed/Existing <span class="text-danger">*</span></label>
+                                <div class="input-box">
+                                    <input id="txtProposedDate" type="date" class="form-control clear validate" ng-model="StartDate" />
+
+                                    <div class="text-box-msg-r">
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Store Location <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtStoreLocation" ng-model="StoreLocation" />
+                            </div>
+                            <div class="col-md-3" ng-init="AllState();BindMasters(1,0)">
+                                <label class="control-label">State<span class="vd_red">*</span></label>
+                                <div class="input-box">
+                                    <select id="ddlstate" autocomplete='address-level2' class="select2 form-control validate" ng-change="AllCity()" ng-model="State">
+                                        <option value="">Select State</option>
+                                        <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                    </select>
+                                    <div class="text-box-msg-r">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="control-label">City<span class="vd_red">*</span></label>
+                                <div class="input-box">
+                                    <select id="ddlcity" autocomplete='address-level2' class="select2 form-control validate" ng-model="CityId">
+                                        <option value="">Select City</option>
+                                        <option ng-repeat="x in AllCityList" value="{{x.CITY_CODE}}">{{x.CITY_NAME}}</option>
+                                    </select>
+                                    <div class="text-box-msg-r">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Circle/Cluster</label>
+                                <select class="form-select form-control" id="txtCircleId" ng-model="CircleId">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in CircleList" value="{{x.Id}}">{{x.Name}}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3" ng-init="BindMasters(2,0)">
+                                <label class="form-label">Region<span class="vd_red">*</span> </label>
+                                <div>
+                                    <select class="form-select form-control validate" id="txtRegionId" ng-model="RegionId">
+                                        <option value="">Select</option>
+                                        <option ng-repeat="x in RegionList" value="{{x.Id}}">{{x.Name}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zip Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtZipCode" ng-model="ZipCode" numeric-only dynamic-length maxlength="6" minlength="6" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Store Manager Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtStoreManagerName" ng-model="StoreManagerName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Store Manager Mobile No. <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtStoreManagerMobileNo" ng-model="StoreManagerMobileNo" onblur="validatePhoneNo('#txtStoreManagerMobileNo')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Store Manager Email <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtStoreManagerEmail" ng-model="StoreManagerEmail" onblur="validateEmail('#txtStoreManagerEmail')" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Area Manager Name </label>
+                                <input type="text" class="form-control" id="txtAreaManagerName" ng-model="AreaManagerName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Area Manager Mobile No.</label>
+                                <input type="text" class="form-control" id="txtAreaManagerMobileNo" ng-model="AreaManagerMobileNo" onblur="validatePhoneNo('#txtAreaManagerMobileNo')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Area Manager Email</label>
+                                <input type="text" class="form-control" id="txtAreaManagerEmail" ng-model="AreaManagerEmail" onblur="validateEmail('#txtAreaManagerEmail')" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zonal Manager Name</label>
+                                <input type="text" class="form-control" id="txtZonalManagerName" ng-model="ZonalManagerName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zonal Manager Mobile No.</label>
+                                <input type="text" class="form-control" id="txtZonalManagerMobileNo" ng-model="ZonalManagerMobileNo" onblur="validatePhoneNo('#txtZonalManagerMobileNo')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Zonal Manager Email</label>
+                                <input type="text" class="form-control" id="txtZonalManagerEmail" ng-model="ZonalManagerEmail" onblur="validateEmail('#txtZonalManagerEmail')" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Circle Head Name</label>
+                                <input type="text" class="form-control" id="txtCircleHeadName" ng-model="CircleHeadName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Circle Head Mobile No.</label>
+                                <input type="text" class="form-control" id="txtCircleHeadMobileNo" ng-model="CircleHeadMobileNo" onblur="validatePhoneNo('#txtCircleHeadMobileNo')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Circle Head Email </label>
+                                <input type="text" class="form-control" id="txtCircleHeadEmail" ng-model="CircleHeadEmail" onblur="validateEmail('#txtCircleHeadEmail')" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Regional Head Name</label>
+                                <input type="text" class="form-control" id="txtRegionalHeadName" ng-model="RegionalHeadName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Regional Head Mobile No.</label>
+                                <input type="text" class="form-control" id="txtRegionalHeadMobileNo" ng-model="RegionalHeadMobileNo" onblur="validatePhoneNo('#txtRegionalHeadMobileNo')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Regional Head Email</label>
+                                <input type="text" class="form-control" id="txtRegionalHeadEmail" ng-model="RegionalHeadEmail" onblur="validateEmail('#txtCircleHeadEmail')" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Corporate Head Name</label>
+                                <input type="text" class="form-control" id="txtCorporateHeadName" ng-model="CorporateHeadName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Corporate Head Mobile No.</label>
+                                <input type="text" class="form-control" id="txtCorporateHeadMobileNo" ng-model="CorporateHeadMobileNo" onblur="validatePhoneNo('#txtCorporateHeadMobileNo')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Corporate Head Email</label>
+                                <input type="text" class="form-control" id="txtCorporateHeadEmail" ng-model="CorporateHeadEmail" onblur="validateEmail('#txtCorporateHeadEmail')" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Store Area in sq.ft. <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtSQFTStoreArea" ng-model="SQFTStoreArea" onblur="validateNumberAndDecimalOnly('#txtSQFTStoreArea')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Days to Expire <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control validate" id="txtDaysOfExpire" ng-model="DaysOfExpire" onblur="validateNumberAndDecimalOnly('#txtDaysOfExpire')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                            </div>
+
+                            <div class="col-md-3 statuscus">
+                                <label for="status" class="form-label">Status  <span class="text-danger">*</span></label>
+                                <div class="form-control2">
+
+                                    <select class="form-control validate" ng-model="IsActive">
+                                        <option value="">Select</option>
+                                        <option value="0">Deactive</option>
+                                        <option value="1">Active</option>
+                                        <option value="2">Upcoming</option>
+                                    </select>
+
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <h6 class="subheading m-0">Documents </h6>
+                            </div>
+                            <table class="table ">
+                                <thead>
+                                    <tr style="text-align: center;">
+                                        <th>Sr no</th>
+                                        <th>Document Name</th>
+                                        <th>Period From</th>
+                                        <th>Period Upto</th>
+                                        <th>View/Upload</th>
+                                        <th>Remark</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>Electricity Bill</td>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="ElectricityBillPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex justify-content-center align-items-center">
+                                                <input type="file" id="fuElectricityBill{{$index}}" onchange="angular.element(this).scope().uploadElectricityBill('ElectricityBill', this)" ng-model="ElectricityBill" class="d-none" />
+                                                <button class="btn btn-success" ng-click="triggerFileInput('fuElectricityBill' + $index)">
+                                                    Choose File
+                                                </button>
+
+                                            </div>
+                                            <div style="display:{{Electr}};text-align: center;">
+                                                <i class="fa fa-check-square"></i>
+                                                <a ng-click="DownloadWithName(ElectricityBill, 'Electricity Bill')">Download Electricity Bill</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" ng-model="ElectricityBillRemark" />
+                                            </div>
+                                        </td>
+
+                                    </tr>
+                                    <tr>
+                                        <td>2</td>
+                                        <td>Lease/LOI</td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="LeaseFromDate" />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="LeasePaidReceiptPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+
+                                            <div class="d-flex justify-content-center align-items-center">
+                                                <input type="file" id="fuRentAgreement{{$index}}" onchange="angular.element(this).scope().uploadRentAgreement('RentAgreement', this)" ng-model="RentAgreement" class="d-none" />
+                                                <button class="btn btn-success" ng-click="triggerFileInput('fuRentAgreement' + $index)">
+                                                    Choose File
+                                                </button>
+
+                                            </div>
+                                            <div style="display:{{RentA}};text-align: center;">
+                                                <i class="fa fa-check-square"></i>
+                                                <a ng-click="DownloadWithName(RentAgreement, 'Lease Agreement')">Download Lease Agreement</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" ng-model="LeasePaidReceiptRemark" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>3</td>
+                                        <td>Property Tax Receipt</td>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="PropertyTaxPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+
+                                            <div class="d-flex justify-content-center align-items-center">
+                                                <input type="file" id="fuPropertyTaxPaidReceipt{{$index}}" onchange="angular.element(this).scope().uploadPropertyTaxPaidReceipt('PropertyTaxPaidReceipt', this)" ng-model="PropertyTaxPaidReceipt" class="d-none" />
+                                                <button class="btn btn-success" ng-click="triggerFileInput('fuPropertyTaxPaidReceipt' + $index)">
+                                                    Choose File
+                                                </button>
+
+                                            </div>
+                                            <div style="display:{{Propertyt}};text-align: center;">
+                                                <i class="fa fa-check-square"></i>
+                                                <a ng-click="DownloadWithName(PropertyTaxPaidReceipt, 'PropertyTaxPaidReceipt')">Property Tax Receip</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" ng-model="PropertyTaxRemark" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>4</td>
+                                        <td>Fire NOC</td>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="FireNocPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+
+                                            <div class="d-flex justify-content-center align-items-center">
+                                                <input type="file" id="fuBuildingPlan{{$index}}" onchange="angular.element(this).scope().uploadBuildingPlan('BuildingPlan', this)" ng-model="BuildingPlan" class="d-none" />
+                                                <button class="btn btn-success" ng-click="triggerFileInput('fuBuildingPlan' + $index)">
+                                                    Choose File
+                                                </button>
+
+                                            </div>
+                                            <div style="display:{{BuildingP}};text-align: center;">
+                                                <i class="fa fa-check-square"></i>
+                                                <a ng-click="DownloadWithName(BuildingPlan, 'Fire NOC')">Download Fire NOC</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" ng-model="FireNocRemark" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>5</td>
+                                        <td>Pollution</td>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="PollutionPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+
+                                            <div class="d-flex justify-content-center align-items-center">
+                                                <input type="file" id="fuStabilityStructureCertificate{{$index}}" onchange="angular.element(this).scope().uploadStabilityStructureCertificate('StabilityStructureCertificate', this)" ng-model="StabilityStructureCertificate" class="d-none" />
+                                                <button class="btn btn-success" ng-click="triggerFileInput('fuStabilityStructureCertificate' + $index)">
+                                                    Choose File
+                                                </button>
+
+                                            </div>
+                                            <div style="display:{{StabilityS}};text-align: center;">
+                                                <i class="fa fa-check-square"></i>
+                                                <a ng-click="DownloadWithName(StabilityStructureCertificate, 'Upload Pollution')">Download Pollution Certificate</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" ng-model="PollutionRemark" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>6</td>
+                                        <td>Ownership Docs</td>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="OwnershipDocPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+
+                                            <div ng-init="GETAdditionalDoc()" class="d-flex justify-content-center align-items-center">
+                                                <input type="file" id="fuCompletionCertificate{{$index}}" onchange="angular.element(this).scope().uploadCompletionCertificate('CompletionCertificate', this)" ng-model="CompletionCertificate" class="d-none" />
+                                                <button class="btn btn-success" ng-click="triggerFileInput('fuCompletionCertificate' + $index)">
+                                                    Choose File
+                                                </button>
+
+                                            </div>
+                                            <div style="display:{{CompletionC}};text-align: center;">
+                                                <i class="fa fa-check-square"></i>
+                                                <a ng-click="DownloadWithName(CompletionCertificate, 'Ownership Docs')">Ownership Docs Certificate</a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="text" class="form-control" ng-model="OwnershipDocRemark" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>7</td>
+                                        <td>Additional Docs</td>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <div class="form-group">
+                                                <input type="date" class="form-control" ng-model="AdditionalDocPeriodUpTo" />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="col-md-3" ng-repeat="x in AdditionalDocList">
+                                                <label class="form-label">7. Additional Document</label>
+                                                <label class="form-label">{{x.AdditionalDocName}}</label>
+                                                <div class="fileupld">
+                                                    <i class="fa fa-check-square"></i>
+                                                    <input type="file" ng-disabled="true" class="form-control" id="fuCompletionCertificate{{$index}}" />
+                                                </div>
+                                                <div class="fileupld" style="display:block;position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a href="{{x.AdditionalDoc}}" download>Download Additional Document</a></div>
+                                            </div>
+                                            <div class="align-items-center">
+                                                <label class="form-label"> Additional Document </label>
+                                                <input class="form-label ng-pristine ng-valid ng-empty ng-touched" type="text"
+                                                       ng-model="AdditionalDocName" style="width:100%;" placeholder="Enter Additional Document Name">
+                                                <div class="d-flex justify-content-center align-items-center">
+                                                    <input type="file" onclick="this.value=null;" accept="*/*" class="form-control d-none" id="AdditionalDoc" onchange="angular.element(this).scope().AdditionalDocshow(this);" ng-model="AdditionalDoc" />
+                                                    <button class="btn btn-success" ng-click="triggerFileInput('AdditionalDoc')">
+                                                        Choose File
+                                                    </button>
+                                                </div>
+
+                                            </div>
+
+                                        </td>
+                        <td>
+                            <div class="form-group">
+                                <input type="text" class="form-control" ng-model="AdditionalDocRemark" />
+                            </div>
+                        </td>
+                        </tr>
+                        </tbody>
+                        </table>
+
+
+                    </div>
+                        <div class="row justify-content-center">
+                            <div class="col-12">
+                                <hr />
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <input type="button" class="btn btn-warning" value="{{ ButtonName }}" ng-if="SM_NewStoreFlag==1||SM_EditFlag==1" ng-click="ShowDivStoreMasterGrid()" />
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <input type="button" class="btn btn-warning" ng-show="ButtonReset" ng-if="SM_NewStoreFlag==1||SM_EditFlag==1" value="Reset" ng-click="ResetStoreMasterForm()" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="pagecontentbody" ng-show="StoreMasterDocForm">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+                    <h4 class="mb-0"></h4>
+                </div>
+                <div class="col-sm-2 text-end">
+                    <a class="btn btn-warning" ng-if="Status!=1" ng-click="SubmitStoreDocumentDetails(0)">Save as Draft</a>
+                </div>
+                <div class="col-sm-1 text-end">
+                    <a class="btn btn-warning" ng-if="Status!=1" ng-click="SubmitStoreDocumentDetails(1)">Submit</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12 px-2">
+            <div class="row mb-2 cusbord">
+                <div class="col-md-4">
+                    <label>S.No.</label>
+                </div>
+                <div class="col-md-4">
+                    <label>Documents/Information Required</label>
+                </div>
+                <div class="col-md-4">
+                    <label>Store code - {{ selectedStoreCode }}</label>
+</div>
+            </div>
+        </div>
+        <div class="col-md-12 px-4">
+
+            <div class="row mb-3" ng-show="Section1=='ok'">
+                <div class="col-md-12 mb-3">
+                    <h6 class="subheading m-0"><b>1. Directors Details</b></h6>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Name</label>
+
+                        <input type="text" class="form-control" ng-model="DName" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Father Name</label>
+                        <input type="text" class="form-control" ng-model="DFatherName" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" class="form-control" ng-model="DAddress" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Aadhaar No.</label>
+                        <input type="text" class="form-control" ng-model="DAadhaarNo" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" maxlength="12" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>PAN No.</label>
+                        <input type="text" class="form-control" ng-model="DPanNo" maxlength="10" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" class="form-control" ng-model="DDateOfBirth" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Email ID</label>
+                        <input type="text" id="txtDEmailId" class="form-control" ng-model="DEmailId" onblur="validateEmail('#txtDEmailId')" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Mobile No.</label>
+                        <input type="text" id="txtDMobileNo" class="form-control" ng-model="DMobileNo" onblur="validatePhoneNo('#txtDMobileNo')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" maxlength="10" />
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3" ng-show="Section2=='ok'">
+                <div class="col-md-12 mb-3">
+                    <h6 class="subheading m-0"><b>2. Authorized Signatory Details</b></h6>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" class="form-control" ng-model="AName" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Father Name</label>
+                        <input type="text" class="form-control" ng-model="AFatherName" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" class="form-control" ng-model="AAddress" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Aadhaar No.</label>
+                        <input type="text" class="form-control" ng-model="AAadhaarNo" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" maxlength="12" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>PAN No.</label>
+                        <input type="text" class="form-control" ng-model="APanNo" maxlength="10" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" class="form-control" ng-model="ADateOfBirth" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Email ID</label>
+                        <input type="text" id="txtAEmailId" class="form-control" ng-model="AEmailId" onblur="validateEmail('#txtAEmailId')" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Mobile No.</label>
+                        <input type="text" class="form-control" id="txtAMobileNo" ng-model="AMobileNo" onblur="validatePhoneNo('#txtAMobileNo')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" maxlength="10" />
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3" ng-show="Section3=='ok'">
+                <div class="col-md-12 mb-3">
+                    <h6 class="subheading m-0"><b>3. Other</b></h6>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Nature of Business</label>
+                        <input type="text" class="form-control" ng-model="NatureofBusiness" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Date of Commencement</label>
+                        <input type="date" class="form-control" ng-model="DateofCommencement" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Product Category</label>
+                        <input type="text" class="form-control" ng-model="ProductCategory" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Aadhaar Registered office Address No.</label>
+                        <input type="text" class="form-control" ng-model="AadhaarRegisteredofficeAddressNo" />
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3 upldoc upldocn">
+                <div class="col-md-12 mb-3">
+                    <h6 class="subheading m-0"><b>4. Required Documents</b></h6>
+                </div>
+
+                <div class="col-md-3 mb-3" ng-repeat="requiredDocuemntList in _RequiredDocuemntList">
+                    <label class="form-label">{{_RequiredDocuemntList[$index].DocumentName}}</label>
+
+                    <div class="fileupld" ng-click="SetValue($index,'#fuCandidatePhoto'+$index)">
+
+                        <i class="{{_RequiredDocuemntList[$index].ICON}}"></i>
+                        <input type="file" class="form-control" id="fu{{_RequiredDocuemntList[$index].DisplayName}}" onchange="angular.element(this).scope().show(this,'Album')" ng-model="_RequiredDocuemntList[$index].DisplayName" />
+                    </div>
+                    <a style="display:{{_RequiredDocuemntList[$index].IsDownload}}" href="{{_RequiredDocuemntList[$index].DocumentLink}}" download>Download Document</a>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="requestForm" tabindex="-1" aria-labelledby="requestFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modalbr">
+            <div class="modal-header reqstfrmhed">
+                <div class="row">
+                    <div class="col-md-2">
+                        <a href="#" class="btnarrow" data-bs-dismiss="modal" id="closemodalrequestForm" aria-label="Close"><i class="fa fa-arrow-left"></i></a>
+                    </div>
+                    <div class="col-md-8 text-center">
+                        <h5 class="modal-title mt-2" id="requestFormModalLabel">Request Form</h5>
+                    </div>
+                    <div class="col-md-2 text-right">
+                        <div class="progress" data-percentage="{{LDOC}}">
+                            <span class="progress-left">
+                                <span class="progress-bar"></span>
+                            </span>
+                            <span class="progress-right">
+                                <span class="progress-bar"></span>
+                            </span>
+                            <div class="progress-value">
+                                <div class="text-center">
+                                    {{LDOC}}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="table-responsive">
+                            <table class="table table-hover text-center bgw">
+                                <thead class="">
+                                    <tr>
+                                        <th>S.No.</th>
+                                        <th>Applicable License</th>
+                                        <th>Approval</th>
+                                        <th>Upload Doc.</th>
+                                        <th>View </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    <tr ng-repeat="licenseMaster in LicenseMasterList">
+                                        <td> {{ licenseMaster.SrNo }} </td>
+                                        <td>{{ licenseMaster.LicenseName }}</td>
+                                        <td>
+                                            <button class="btn btn-default bgr" ng-if="SMF_EditFlag==1" ng-disabled="licenseMaster.IsApproved == true" ng-click="ApproveLicenseMaster(licenseMaster.LicenseId)">Approve</button>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-default" ng-disabled="licenseMaster.Status == 1" ng-if="licenseMaster.IsApproved == true || licenseMaster.IsActive==false" ng-click="ShowStoreMasterDocForm(licenseMaster.Id,licenseMaster.LicenseId,licenseMaster.StoreId);PermissionForSection(licenseMaster.LicenseId)">Click Here</button>
+                                        </td>
+                                        <td><a href="#" ng-if="licenseMaster.Status == 1 && SMF_ViewFlag==1" ng-click="ShowStoreMasterDocForm(licenseMaster.Id,licenseMaster.LicenseId,licenseMaster.StoreId);PermissionForSection(licenseMaster.LicenseId)" class="text-dark"><i class="fa fa-eye"></i></a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal right fade createpop" id="profileview" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">X</button>
+            </div>
+            <form class="needs-validation" novalidate>
+                <div class="modal-body" style="padding-top: 0 !important;">
+                    <div class="popup-content-scroll popupheit">
+                        <div class="nano-content form-design">
+                            <div class="text-center prodit profilprog">
+                                <div class="progress" data-percentage="{{TotPerLicence}}">
+                                    <span class="progress-left">
+                                        <span class="progress-bar"></span>
+                                    </span>
+                                    <span class="progress-right">
+                                        <span class="progress-bar"></span>
+                                    </span>
+                                    <div class="progress-value">
+                                        <div class="text-center">
+                                            <span class="licncsts">License Status</span><br />
+                                            {{TotPerLicence}}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <br />
+                                <span>Store Code: {{SetStore}}</span><br />
+                                <span>Last Updated: {{ModifiedOn}}</span>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Documents</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive">
+                                        <table class="cusmtbl">
+                                            <tr ng-repeat="x in Sidelicence">
+                                                <td><b>{{x.LicenseName}}</b></td>
+                                                <td style="width: 10%"><a ng-if="x.ISUPLOAD!='-1'" target="_blank" href="{{x.UploadLicenseCopy}}" class="viewlink">View</a></td>
+                                                <td class="text-center" style="width: 15%">
+                                                    <a ng-if="x.ISUPLOAD!='-1'" href="{{x.UploadLicenseCopy}}"><span class="browtext"><i class="fa fa-download" download></i></span></a>
+                                                </td>
+                                            </tr>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="row w-100 justify-content-center">
+                        <div class="col-md-6 d-grid">
+                            <a href="@Url.Action("LicenseMaster","RetailSection")" class="btn btn-warning">View More</a>
+
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="BulkUpload" tabindex="-1" aria-labelledby="BulkUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="BulkUploadModalLabel">Bulk Status Update</h5>
+                <button id="closeId" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" ng-click="onCross()">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label class="control-label"><b>Store Code</b><span class="vd_red">*</span></label>
+                            <label class="control-label"><input style="margin-left:10px" type="checkbox" id="allselectStore" ng-model="isChecked" ng-change="toggleSelectAll()" ng-checked="isChecked" />All</label>
+                            <div class="input-box">
+                                <select id="storeListId" autocomplete='address-level2' class="select2 form-control validate" ng-model="selectedStores" multiple>
+                                    <option value="">Select Party</option>
+                                    <option ng-repeat="x in StoreList" value="{{x.StoreId}}">{{x.StoreCode}}</option>
+                                </select>
+                                <div class="text-box-msg-r">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            <label class="mb-3"><b>Status</b></label>
+                            <select class="form-control form-select validate" ng-model="IsActive" ng-change="">
+                                <option value="">Select</option>
+                                <option value="0">Deactive</option>
+                                <option value="1">Active</option>
+                                <option value="2">Upcoming</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <!-- Center the button -->
+                    <button type="button" class="btn btn-primary" ng-click="saveStoresStatus()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="~/scripts/RetailJsLib/RetailStoreMasterController.js"></script>

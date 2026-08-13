@@ -1,0 +1,405 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Skill Module";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<link href="~/Content/Dashboards/SkillPages/WorkerSkillDashboard/WorkerSkillModule/style.css" rel="stylesheet" />
+
+<div class="workerSkillModule px-4 py-4">
+
+    <!-- ======================================================
+        MODULE LAYOUT
+    ====================================================== -->
+
+    <div class="workerSkillModuleLayout">
+
+        <!-- ======================================================
+            LEFT SECTION
+        ====================================================== -->
+
+        <div class="workerSkillLeft">
+
+            <!-- Top Header -->
+
+            <div class="workerSkillTopBar">
+
+                <h5 class="workerSkillModuleName">
+                    Module 3 : Hazard Identification
+                </h5>
+
+                <span class="workerSkillBadge">
+
+                    <i class="bi bi-patch-check-fill me-2"></i>
+
+                    Mandatory Training
+
+                </span>
+
+            </div>
+
+
+            <!-- ======================================================
+                VIDEO PLAYER
+            ====================================================== -->
+
+            <div class="workerSkillVideoCard">
+
+                <video class="workerSkillVideo"
+                       controls
+                       preload="metadata"
+                       poster="https://picsum.photos/1200/700?random=2">
+
+                    <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+
+                   
+
+                </video>
+
+            </div>
+
+
+            <!-- ======================================================
+                MODULE DETAILS
+            ====================================================== -->
+
+            <div class="workerSkillInfoCard">
+
+                <h2>
+
+                    Module 3 :
+                    Advanced Hazard Identification
+
+                </h2>
+
+                <p>
+
+                    In this session, we dive deep into identifying
+                    non-obvious workplace hazards within high-traffic
+                    industrial zones. You will learn to evaluate
+                    chemical storage risks, electrical bypass
+                    vulnerabilities, and ergonomic stressors that are
+                    often overlooked during routine inspections.
+
+                </p>
+
+                <div class="workerSkillMeta">
+
+                    <div class="workerSkillMetaItem">
+
+                        <i class="bi bi-file-earmark-pdf"></i>
+
+                        <span>
+
+                            Handout.pdf
+                            (2.4 MB)
+
+                        </span>
+
+                    </div>
+
+                    <div class="workerSkillMetaItem">
+
+                        <i class="bi bi-clock"></i>
+
+                        <span>
+
+                            12 Minutes Duration
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ======================================================
+                BOTTOM BUTTONS
+            ====================================================== -->
+
+            <div class="workerSkillFooter">
+
+                <button class="btn workerSkillPrevBtn">
+
+                    <i class="bi bi-arrow-left me-2"></i>
+
+                    Previous Lesson
+
+                </button>
+
+                <div class="workerSkillNextArea">
+
+                    <button class="btn workerSkillNextBtn">
+
+                        Next Lesson
+
+                        <i class="bi bi-arrow-right ms-2"></i>
+
+                    </button>
+
+                    <small>
+
+                        <i class="bi bi-lock-fill me-1"></i>
+
+                        Finish current video to unlock
+
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ======================================================
+            SIDEBAR
+        ====================================================== -->
+
+        <aside class="workerSkillSidebar">
+
+            <!-- ======================================================
+                PROGRESS
+            ====================================================== -->
+
+            <div class="workerSkillCard">
+
+                <div class="workerSkillProgressHeader">
+
+                    <h5>
+
+                        Course Progress
+
+                    </h5>
+
+                    <strong>
+
+                        60%
+
+                    </strong>
+
+                </div>
+
+                <div class="progress workerSkillProgressBar">
+
+                    <div class="progress-bar bg-success"
+                         style="width:60%">
+
+                    </div>
+
+                </div>
+
+                <p>
+
+                    3 of 5 lessons completed
+
+                </p>
+
+            </div>
+
+
+
+            <!-- ======================================================
+                COURSE CONTENT
+            ====================================================== -->
+
+            <div class="workerSkillCard">
+
+                <h3 class="workerSkillContentTitle">
+
+                    Course Content
+
+                </h3>
+
+                <div class="workerSkillLessons">
+
+                    <!-- Lesson -->
+
+                    <div class="workerLesson lessonCompleted">
+
+                        <div class="workerLessonIcon">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                        </div>
+
+                        <div class="workerLessonInfo">
+
+                            <h6>
+
+                                Orientation & Safety Policy
+
+                            </h6>
+
+                            <span>
+
+                                05:20 • Completed
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Lesson -->
+
+                    <div class="workerLesson lessonCompleted">
+
+                        <div class="workerLessonIcon">
+
+                            <i class="bi bi-check-circle-fill"></i>
+
+                        </div>
+
+                        <div class="workerLessonInfo">
+
+                            <h6>
+
+                                Personal Protective Equipment
+
+                            </h6>
+
+                            <span>
+
+                                08:15 • Completed
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Active -->
+
+                    <div class="workerLesson lessonActive">
+
+                        <div class="workerLessonIcon">
+
+                            <i class="bi bi-play-circle-fill"></i>
+
+                        </div>
+
+                        <div class="workerLessonInfo">
+
+                            <h6>
+
+                                Hazard Identification
+
+                            </h6>
+
+                            <span>
+
+                                Playing Now
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Locked -->
+
+                    <div class="workerLesson lessonLocked">
+
+                        <div class="workerLessonIcon">
+
+                            <i class="bi bi-lock-fill"></i>
+
+                        </div>
+
+                        <div class="workerLessonInfo">
+
+                            <h6>
+
+                                Incident Reporting Protocols
+
+                            </h6>
+
+                            <span>
+
+                                10:45 • Locked
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Locked -->
+
+                    <div class="workerLesson lessonLocked">
+
+                        <div class="workerLessonIcon">
+
+                            <i class="bi bi-lock-fill"></i>
+
+                        </div>
+
+                        <div class="workerLessonInfo">
+
+                            <h6>
+
+                                Certification Assessment
+
+                            </h6>
+
+                            <span>
+
+                                15:00 • Locked
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ======================================================
+                SUPPORT
+            ====================================================== -->
+
+            <div class="workerSkillSupport">
+
+                <h5>
+
+                    Need Assistance?
+
+                </h5>
+
+                <p>
+
+                    Our compliance team is available
+                    24/7 to answer your questions.
+
+                </p>
+
+                <button class="btn workerSkillSupportBtn">
+
+                    Chat with Support
+
+                </button>
+
+            </div>
+
+        </aside>
+
+    </div>
+
+</div>

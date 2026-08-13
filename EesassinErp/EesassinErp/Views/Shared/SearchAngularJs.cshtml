@@ -1,0 +1,109 @@
+﻿
+@*<script type="text/javascript" src=""></script>*@
+<script src="~/Content/html2canvas.js"></script>
+<style>
+    .very-small-font {
+        font-size: 8px;
+    }
+
+    .small-font {
+        font-size: 10px;
+    }
+
+    .big-font {
+        font-size: 14px;
+    }
+
+    .modal-body {
+        overflow-y: auto;
+    }
+
+    #anchor {
+        display: none;
+    }
+
+    .lbl-padding-25 {
+        padding-right: 25px;
+    }
+
+    .dataTables_filter {
+        float: right;
+    }
+
+    .row-1 {
+        margin: -10px 0px 0px 0px;
+        text-align: center;
+    }
+</style>
+
+<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding">
+    <div class="collapse" id="CollapseSearchTableList">
+        <div class="table-heading-box">
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding">
+                <div class="table-header-box">
+                    <div class="pull-left">
+                        <h6 class="panel-title txt-dark">@ViewBag.TitleList &nbsp;<i id="chkShow" class="fa fa-plus-square" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Sort by Column"></i> </h6>
+                    </div>
+                    <div class="pull-right float-right">
+                        <select id="ddlFonts" class="pull-left inline-block mr-15" onchange="resizeFont()">
+                            <option value="very-small-font">8</option>
+                            <option value="small-font">10</option>
+                            <option value="big-font" selected="selected">12</option>
+                        </select>
+                        <a href="#" class="pull-left inline-block RefreshSearchTable mr-15"><i class="mdi mdi-replay"></i></a>
+                        <a href="#" class="pull-left inline-block full-screen2 mr-15"><i class="mdi mdi-fullscreen"></i></a>
+                        <a class="pull-left inline-block close-panel2" href="#collapseinputbox" data-effect="fadeOut" role="button" data-toggle="collapse" aria-expanded="false" aria-controls="collapseinputbox">
+                            <i class="mdi mdi-close"></i>
+                        </a>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding">
+                <div class="add-columns-box ">
+                  
+                    <div id="anchor" ></div>
+                </div>
+            </div>
+
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding">
+                    <div class="datatable-responsive table-responsive advance-btn-table" 
+                         ng-init="GetReportHeaderUsingCategory('Page Report')">
+                        <div id="ReportHeader" ng-bind-html="ReportHeader" ng-hide="true"></div>
+                        <div id="UpdatePanel">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+        $('#chkShow').click(function () {
+            if ($(this).attr('class')=='fa fa-plus-square')
+            {
+                $(this).attr('class','fa fa-minus-square')
+                $("#anchor").slideDown(400, "swing");
+            }
+            else
+            {
+                $("#anchor").slideUp(400, "swing");
+                $(this).attr('class', 'fa fa-plus-square')
+            }
+        });
+
+        var div = $(document).find('.input-btn');
+        div.attr('class', 'col-sm-12');
+    });
+ 
+</script>
+
+
+
+
+
+
+

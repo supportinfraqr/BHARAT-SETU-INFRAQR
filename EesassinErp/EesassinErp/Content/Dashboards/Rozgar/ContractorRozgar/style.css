@@ -1,0 +1,865 @@
+﻿/* ===================================================
+   CONTRACTOR ROZGAR
+=================================================== */
+
+.contractorRozgar {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #F9F9F9;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 20px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+/* ===================================================
+   TOP STATS
+=================================================== */
+
+.contractorRozgarStats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.contractorRozgarStatCard {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #022B5E;
+    transition: 0.2s ease;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+.contractorRozgarStatLabel {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.contractorRozgarStatValue {
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+/* ===================================================
+   MAIN LAYOUT
+=================================================== */
+
+.contractorRozgarMain {
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+}
+
+/* ===================================================
+   FILTERS
+=================================================== */
+
+.contractorRozgarFilters {
+    flex: 0 0 330px;
+    width: 330px;
+}
+
+.contractorRozgarFilterTitle {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 16px;
+}
+
+.contractorRozgarFilterCard {
+    background: var(--card-bg);
+    border-radius: 28px;
+    border: 1px solid #D8D8D8;
+    padding: 14px;
+}
+
+.contractorRozgarSearch {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+    .contractorRozgarSearch i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #222;
+        font-size: 20px;
+    }
+
+    .contractorRozgarSearch input {
+        width: 100%;
+        height: 48px;
+        border-radius: 18px;
+        border: 1px solid #BFC2C7;
+        background: #fff;
+        padding-left: 52px;
+        padding-right: 16px;
+        font-size: 17px;
+        outline: none;
+    }
+
+.contractorRozgarAccordionItem {
+    border-top: 1px solid #D6D6D6;
+}
+
+    .contractorRozgarAccordionItem:first-of-type {
+        border-top: none;
+    }
+
+.contractorRozgarAccordionBtn {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 6px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #222;
+}
+
+    .contractorRozgarAccordionBtn i {
+        font-size: 15px;
+    }
+
+.contractorRozgarAccordionBody {
+    padding: 0 4px 14px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 20px;
+}
+
+.contractorRozgarCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+    .contractorRozgarCheckbox input {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+    }
+
+    .contractorRozgarCheckbox span {
+        font-size: 13px;
+        color: #666;
+    }
+
+/* ===================================================
+   CONTENT AREA
+=================================================== */
+
+.contractorRozgarContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.contractorRozgarContentHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.contractorRozgarWorkerHeading {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+/* ===================================================
+   VIEW TOGGLE
+=================================================== */
+
+.contractorRozgarViewSwitch {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid #D6D6D6;
+    background: #fff;
+}
+
+.contractorRozgarViewBtn {
+    width: 40px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    transition: .25s;
+    color: #222;
+}
+
+    .contractorRozgarViewBtn.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .contractorRozgarViewBtn i {
+        font-size: 18px;
+    }
+
+/* ===================================================
+   RESPONSIVE
+=================================================== */
+
+@media (max-width: 1400px) {
+
+    .contractorRozgarFilters {
+        width: 320px;
+        flex: 0 0 320px;
+    }
+
+    .contractorRozgarWorkerHeading {
+        font-size: 34px;
+    }
+}
+
+@media (max-width: 1199px) {
+
+    .contractorRozgarStats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .contractorRozgarMain {
+        gap: 20px;
+    }
+
+    .contractorRozgarFilters {
+        width: 300px;
+        flex: 0 0 300px;
+    }
+
+    .contractorRozgarWorkerHeading {
+        font-size: 30px;
+    }
+}
+
+@media (max-width: 991px) {
+
+    .contractorRozgarMain {
+        flex-direction: column;
+    }
+
+    .contractorRozgarFilters {
+        width: 100%;
+        flex: unset;
+    }
+
+    .contractorRozgarContent {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767px) {
+
+    .contractorRozgarStats {
+        grid-template-columns: 1fr;
+    }
+
+    .contractorRozgarFilterTitle {
+        font-size: 30px;
+    }
+
+    .contractorRozgarWorkerHeading {
+        font-size: 26px;
+    }
+
+    .contractorRozgarAccordionBody {
+        grid-template-columns: 1fr;
+    }
+}
+
+/*========== Hero section heading style =============*/
+.contractorRozgarHero {
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.contractorRozgarHeroTitle {
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--primary);
+    margin-bottom: 1px;
+}
+
+.contractorRozgarHeroDesc {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.2;
+    color: #6B7280;
+}
+
+.contractorRozgarHeroButton {
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    padding: 6px 12px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+    .contractorRozgarHeroButton:hover {
+        background: var(--primary-dark);
+    }
+
+.contractorRozgarHeroButtonLight {
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    display: flex;
+    padding: 6px 12px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+    .contractorRozgarHeroButtonLight:hover {
+        background: var(--primary);
+        color:#fff;
+    }
+
+
+
+/* ===================================================
+   GRID VIEW
+=================================================== */
+
+.contractorRozgarGridView {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.contractorRozgarWorkerCard {
+    background: var(--card-bg);
+    border: 1px solid #D8D8D8;
+    border-radius: 24px;
+    padding: 20px;
+    transition: .25s ease;
+}
+
+    .contractorRozgarWorkerCard:hover {
+        transform: translateY(-2px);
+    }
+
+.contractorRozgarWorkerTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+    .contractorRozgarWorkerTop h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .contractorRozgarWorkerTop p {
+        margin: 4px 0 0;
+        color: #6B7280;
+        font-size: 14px;
+    }
+
+.contractorRozgarLocation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #6B7280;
+    white-space: nowrap;
+}
+
+    .contractorRozgarLocation i {
+        color: var(--primary);
+    }
+
+.contractorRozgarWorkerInfo {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+    .contractorRozgarWorkerInfo label {
+        display: block;
+        font-size: 12px;
+        color: #6B7280;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .contractorRozgarWorkerInfo span {
+        display: block;
+        font-size: 15px;
+        font-weight: 500;
+        color: #111827;
+    }
+
+.contractorRozgarProfileBtn {
+    width: 100%;
+    height: 46px;
+    /* border: none; */
+    border-radius: 14px;
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-weight: 500;
+    font-size: 15px;
+    transition: .25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+    .contractorRozgarProfileBtn:hover {
+        background: var(--primary);
+        color:#fff;
+    }
+
+    .contractorRozgarProfileBtn i {
+        font-size: 13px;
+    }
+
+/* ===================================================
+   TABLE VIEW
+=================================================== */
+
+.contractorRozgarTableView {
+    background: #F5F5F5;
+    border: 1px solid #D8D8D8;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.contractorRozgarTable {
+    min-width: 1000px;
+}
+
+    .contractorRozgarTable thead th {
+        background: #ECECEC;
+        border: none;
+        padding: 14px 16px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #6B7280;
+        white-space: nowrap;
+    }
+
+    .contractorRozgarTable tbody td {
+        padding: 8px 16px;
+        vertical-align: middle;
+        border-color: #E5E7EB;
+        font-size: 14px;
+        color: #111827;
+    }
+
+    .contractorRozgarTable tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+.contractorRozgarRole {
+    color: var(--primary) !important;
+    font-weight: 500;
+}
+
+.contractorRozgarEyeBtn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: none;
+    color: var(--primary);
+    transition: .25s;
+}
+
+    .contractorRozgarEyeBtn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .contractorRozgarEyeBtn i {
+        font-size: 16px;
+    }
+
+/* ===================================================
+   FOOTER / PAGINATION
+=================================================== */
+
+.contractorRozgarFooter {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.contractorRozgarRecordCount {
+    font-size: 14px;
+    color: #6B7280;
+}
+
+.contractorRozgarPagination {
+    gap: 6px;
+}
+
+    .contractorRozgarPagination .page-link {
+        border: none;
+        border-radius: 10px;
+        min-width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #374151;
+        background: #fff;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .contractorRozgarPagination .page-item.active .page-link {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .contractorRozgarPagination .page-link:focus {
+        box-shadow: none;
+    }
+
+    .contractorRozgarPagination .page-item.disabled .page-link {
+        background: transparent;
+        color: #9CA3AF;
+    }
+
+/* ===================================================
+   LARGE TABLETS
+=================================================== */
+
+@media (max-width: 1199px) {
+
+    .contractorRozgarGridView {
+        grid-template-columns: 1fr;
+    }
+
+    .contractorRozgarWorkerCard {
+        padding: 18px;
+    }
+}
+
+/* ===================================================
+   TABLETS
+=================================================== */
+
+@media (max-width: 991px) {
+
+    .contractorRozgarGridView {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===================================================
+   MOBILE
+=================================================== */
+
+@media (max-width: 767px) {
+
+    .contractorRozgarGridView {
+        grid-template-columns: 1fr;
+    }
+
+    .contractorRozgarWorkerInfo {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .contractorRozgarWorkerTop {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .contractorRozgarFooter {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .contractorRozgarPagination {
+        flex-wrap: wrap;
+    }
+}
+
+
+
+/*------View Profile Modal-----*/
+.contractorRozgarProfileModal .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.contractorRozgarProfileModal .modal-header {
+    /*padding: 18px 24px;*/
+    background: var(--primary);
+    color: #fff;
+}
+
+.contractorRozgarProfileModal .modal-title {
+    font-weight: 500;
+}
+
+.contractorRozgarProfileModal .modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px;
+    background: var(--bg);
+}
+
+/* HEADER */
+
+.contractorRozgarProfileHeader {
+    background: var(--card-bg);
+    border: 1px solid #E5E5E5;
+    border-radius: 20px;
+    padding: 18px;
+}
+
+.contractorRozgarProfileTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+    .contractorRozgarProfileTop h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 500;
+    }
+
+.contractorRozgarProfileRole {
+    color: var(--primary);
+    font-weight: 500;
+    margin-top: 1px;
+}
+
+.contractorRozgarAvailability {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+    .contractorRozgarAvailability.available {
+        background: #EAF8EE;
+        color: #16A34A;
+    }
+
+/* META */
+
+.contractorRozgarProfileMeta {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    background: #fff;;
+    border-radius: 18px;
+    padding: 14px;
+}
+
+    .contractorRozgarProfileMeta label {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: #64748B;
+    }
+
+    .contractorRozgarProfileMeta span {
+        font-weight: 500;
+    }
+
+/* CARD */
+
+.contractorRozgarProfileCard {
+    background: #FFFFFF78;
+    border: 1px solid #E5E5E5;
+    border-radius: 20px;
+    padding: 22px;
+}
+
+    .contractorRozgarProfileCard h5 {
+        font-weight: 500;
+        margin-bottom: 12px;
+    }
+
+/* SKILLS */
+
+.contractorRozgarSkillWrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.contractorRozgarSkill {
+    padding: 6px 14px;
+    background: #F4F6FFAD;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* CERTIFICATE */
+
+.contractorRozgarCertificationList {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+    .contractorRozgarCertificationList li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+
+    .contractorRozgarCertificationList i {
+        color: var(--primary);
+    }
+
+/* TIMELINE */
+
+.contractorRozgarTimeline {
+    margin-top: 10px;
+}
+
+.contractorRozgarTimelineItem {
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 30px;
+}
+
+    .contractorRozgarTimelineItem:last-child {
+        margin-bottom: 0;
+    }
+
+    .contractorRozgarTimelineItem::before {
+        content: "";
+        position: absolute;
+        left: 8px;
+        top: 18px;
+        width: 2px;
+        height: calc(100% + 15px);
+        background: #D8D8D8;
+    }
+
+    .contractorRozgarTimelineItem:last-child::before {
+        display: none;
+    }
+
+.contractorRozgarTimelineDot {
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border-radius: 50%;
+    position: absolute;
+    left: 3px;
+    top: 6px;
+}
+
+.contractorRozgarTimelineHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+    .contractorRozgarTimelineHead h6 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .contractorRozgarTimelineHead span {
+        white-space: nowrap;
+        color: #64748B;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+.contractorRozgarTimelineContent p {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 1.2;
+    color: #525252;
+    max-width: 800px;
+}
+
+/* BUTTON */
+
+.contractorRozgarInterestBtn {
+    min-width: 290px;
+    height: 45px;
+    border-radius: 12px;
+    border: 1px solid var(--primary);
+    background: #fff;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+    .contractorRozgarInterestBtn i {
+        margin-right: 8px;
+    }
+
+.contractorRozgarInterestBtn:hover{
+    color: #fff;
+    background:var(--primary);
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 767px) {
+
+    .contractorRozgarProfileMeta {
+        grid-template-columns: 1fr;
+    }
+
+    .contractorRozgarTimelineHead {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .contractorRozgarProfileTop {
+        flex-direction: column;
+    }
+
+    .contractorRozgarInterestBtn {
+        width: 100%;
+        min-width: auto;
+    }
+}

@@ -1,0 +1,562 @@
+﻿.noticeManagementPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 84vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Top bar instructions */
+.noticeManagementPage .top-bar .limit-instruction {
+    font-size: 0.9rem;
+    color: #6b4b2d;
+    background: transparent;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+/* Bulk Download button (rounded pill) */
+.noticeManagementPage #reportNoticeBtn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* KPI CARDS */
+.notice-kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    transition: 0.2s ease;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .notice-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.notice-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.notice-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+/* Section cards */
+.noticeManagementPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+.noticeManagementPage .section-card .card-body {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    min-height: 320px;
+}
+
+/* Table wrapper and hide scrollbar visually */
+.noticeManagementPage .small-table-wrapper {
+    max-height: auto;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+}
+
+    .noticeManagementPage .small-table-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+.noticeManagementPage .small-table-wrapper {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* table header sticky */
+.noticeManagementPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.noticeManagementPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.noticeManagementPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+.noticeManagementPage .small-table tbody td .store-code-link {
+    text-decoration: none;
+}
+
+
+
+/* filter button */
+.noticeManagementPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .noticeManagementPage .filter-btn.active,
+    .noticeManagementPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.noticeManagementPage .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.noticeManagementPage .export-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .noticeManagementPage .export-btn:hover {
+        background: var(--primary-dark);
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .noticeManagementPage .export-btn:focus,
+    .noticeManagementPage .export-btn:active {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+.noticeManagementPage .td-inline-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 100%;
+}
+
+.noticeManagementPage .td-text {
+    white-space: nowrap;
+}
+
+.noticeManagementPage .td-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .noticeManagementPage .td-actions i {
+        font-size: 0.85rem;
+        color: var(--primary);
+        cursor: pointer;
+        transition: transform 0.15s ease, color 0.15s ease;
+    }
+
+        .noticeManagementPage .td-actions i:hover {
+            transform: scale(1.15);
+            color: var(--primary-dark);
+        }
+
+
+/* Pagination area */
+.noticeManagementPage .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .noticeManagementPage .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .noticeManagementPage .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.noticeManagementPage #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .noticeManagementPage #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+/* statuses */
+.noticeManagementPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.noticeManagementPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.noticeManagementPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.noticeManagementPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .noticeManagementPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .noticeManagementPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .noticeManagementPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .noticeManagementPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+/*Buttons*/
+.view-btn, .download-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .view-btn:hover, .download-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* Percentage bar */
+.noticeManagementPage .ex-progress {
+    display: inline-block;
+    width: 90px;
+    height: 8px;
+    background: #eee;
+    border-radius: 10px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+    .noticeManagementPage .ex-progress .bar {
+        height: 100%;
+        border-radius: 10px;
+    }
+
+.noticeManagementPage .bar-green {
+    background: #22c55e;
+}
+
+.noticeManagementPage .bar-amber {
+    background: #f59e0b;
+}
+
+.noticeManagementPage .bar-red {
+    background: #ef4444;
+}
+
+.noticeManagementPage .ex-percent {
+    font-size: 12px;
+    font-weight: 400;
+}
+
+
+/*========Report Notice Modal========*/
+.noticeManagementPage .reportNotice-modal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.noticeManagementPage .reportNotice-modal .reportNotice-body {
+    background: var(--card-bg);
+}
+
+.noticeManagementPage .reportNotice-modal .form-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.noticeManagementPage .reportNotice-modal .form-control,
+.noticeManagementPage .reportNotice-modal .form-select {
+    border-radius: 8px;
+    font-size: 0.78rem;
+}
+
+    .noticeManagementPage .reportNotice-modal .form-control:disabled {
+        background-color: #f5f5f5;
+        color: #777;
+    }
+
+.noticeManagementPage .reportNotice-form {
+    padding: 4px;
+}
+
+.noticeManagementPage .reportNotice-modal .modal-footer {
+    border-top: 1px solid rgba(0,0,0,0.06);
+    padding: 10px 16px;
+    background: var(--card-bg);
+}
+
+.noticeManagementPage .reportNotice-modal .modal-footer .submit-btn{
+border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.8rem;
+}
+
+    .noticeManagementPage .reportNotice-modal .modal-footer .submit-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.noticeManagementPage .reportNotice-modal .notice-draft-wrapper {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.noticeManagementPage .reportNotice-modal .notice-draft-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    background: #fafafa;
+}
+
+    .noticeManagementPage .reportNotice-modal .notice-draft-header h6 {
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+.noticeManagementPage .reportNotice-modal .draft-badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #ffe4e4;
+    color: #b42318;
+    font-weight: 500;
+}
+
+.noticeManagementPage .reportNotice-modal .notice-draft-body {
+    padding: 14px;
+    max-height: 260px;
+    overflow-y: auto;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.noticeManagementPage .reportNotice-modal .draft-block {
+    margin-bottom: 12px;
+}
+
+.noticeManagementPage .reportNotice-modal .draft-paragraph {
+    text-align: justify;
+}
+
+.noticeManagementPage .reportNotice-modal .draft-warning {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(0,0,0,0.15);
+    font-size: 0.72rem;
+    color: #8a3d1a;
+}
+
+.noticeManagementPage .reportNotice-modal .draft-actions .btn {
+    border-radius: 999px;
+    font-size: 0.72rem;
+    padding: 4px 8px;
+}
+
+.noticeManagementPage .reportNotice-modal .edit-draft-btn, .cancel-draft-btn, .download-draft-btn, .trail-btn {
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: #fff;
+}
+
+    .noticeManagementPage .reportNotice-modal .edit-draft-btn:hover,
+    .noticeManagementPage .reportNotice-modal .cancel-draft-btn:hover,
+    .noticeManagementPage .reportNotice-modal .download-draft-btn:hover,
+    .noticeManagementPage .reportNotice-modal .trail-btn:hover {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+    }
+
+.noticeManagementPage .reportNotice-modal .save-draft-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+.noticeManagementPage .reportNotice-modal .save-draft-btn:hover {
+    background: var(--primary-dark);
+    color: #fff;
+}
+
+
+/* Editable mode visual cue */
+.noticeManagementPage .reportNotice-modal .notice-draft-body[contenteditable="true"] {
+    outline: 2px dashed rgba(228,93,39,0.4);
+    background: #fffaf6;
+}
+
+
+/* Trail small modal*/
+/* ===== Draft Trail Modal ===== */
+
+.noticeManagementPage .draftTrail-modal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.noticeManagementPage .draftTrail-modal .modal-body {
+    background: var(--card-bg);
+    padding: 14px;
+}
+
+.noticeManagementPage .draftTrail-modal .draft-trail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Individual trail item */
+.noticeManagementPage .draftTrail-modal .trail-item {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.75rem;
+}
+
+/* Header row */
+.noticeManagementPage .draftTrail-modal .trail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.noticeManagementPage .draftTrail-modal .trail-version {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.noticeManagementPage .draftTrail-modal .trail-date {
+    font-size: 0.7rem;
+    color: #666;
+}
+
+/* Change block */
+.noticeManagementPage .draftTrail-modal .trail-change {
+    font-size: 0.72rem;
+    color: #333;
+    line-height: 1.4;
+}
+
+    .noticeManagementPage .draftTrail-modal .trail-change details summary {
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--primary);
+        margin-bottom: 4px;
+    }
+
+    .noticeManagementPage .draftTrail-modal .trail-change small {
+        display: block;
+        margin-top: 4px;
+        color: #777;
+    }
+
+/* Empty state */
+.noticeManagementPage .draftTrail-modal .trail-empty {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #888;
+    padding: 20px 0;
+}

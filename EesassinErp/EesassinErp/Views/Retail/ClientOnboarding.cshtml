@@ -1,0 +1,213 @@
+﻿@{
+    ViewBag.Title = "Client Boarding";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<script src="~/Scripts/RetailJsLib/ClientBoardingController.js?Ver=@ViewBag.Version"></script>
+@*<script src="~/Scripts/myjslib/ddlBindings.js"></script>*@
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<input type="hidden" id="Id1" name="Id1" value="" ng-model="hfId1" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Client Boarding</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Client Boarding</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Boarding Type<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @*<input id="txtBoardingtype" type="text" ng-model="Boardingtype" class="form-control  clear validate" />*@
+                                                <select id="txtBoardingtype" autocomplete='address-level2' class="select2 form-control validate" ng-model="Boardingtype">
+                                                   <option value="">Select</option>
+                                                    <option value="Gap Review">Gap Review</option>
+                                                    <option value="Payroll Processing">Payroll Processing</option>
+                                                    <option value="Payroll Compliance">Payroll Compliance</option>
+                                                    <option value="Stablisment Compliance">Stablisment Compliance</option>
+                                                    <option value="Factory Compliance">Factory Compliance</option>
+                                                    <option value="Store Compliance">Store Compliance</option>
+                                                    <option value="Other Comppliance">Other Comppliance</option>
+                                                    <option value="CLRA Compliance">CLRA Compliance</option>
+                                                    <option value="BOCW Compliance">BOCW Compliance</option>
+                                                    <option value="BGV Compliance">BGV Compliance</option>
+                                                    <option value="Notice Compliance">Notice Compliance</option>
+                                                    <option value="Attendance">Attendance</option>
+                                                    <option value="Leave">Leave</option>
+                                                    <option value="Recovery">Recovery</option>
+                                                    <option value="F&F">F&F</option>
+                                                    <option value="TDS Deduction">TDS Deduction</option>
+                                                    <option value="Uniform Deduction">Uniform Deduction</option>
+                                                    <option value="Other Deduction">Other Deduction</option>
+                                                    <option value="Salary Revision">Salary Revision</option>
+                                                    <option value="One Time Payment">One Time Payment</option>
+                                                    <option value="Other Details">Other Details</option>
+                                                    <option value="Employee Master">Employee Master</option>
+                                                    <option value="UAN & ESIC Number">UAN & ESIC Number</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Document Name<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input id="txtAct" type="text" ng-model="DocumentName" class="form-control  clear validate" />
+
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div> 
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Frequency<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlFrequency" autocomplete='address-level2' class="select2 form-control validate" ng-model="Frequency">
+                                                    <option value="">Select</option>
+                                                    <option value="Monthly">Monthly</option>
+                                                    <option value="Quarterly">Quarterly</option>
+                                                    <option value="HalfYearly">Half Yearly</option>
+                                                    <option value="Yearly">Yearly</option>
+                                                    <option value="Weekly">Weekly</option>
+                                                    <option value="Fortnightly">Fortnightly</option>
+
+
+                                                </select>
+
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindMonth()">
+                                            <label class="control-label">Month<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlCustomerId" autocomplete='address-level2' class="select2 form-control validate" ng-model="Month">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">{{x.MonthName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindFinacialYear()">
+                                            <label class="control-label">Year<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+
+                                                <select id="ddlCustomerId" autocomplete='address-level2' class="select2 form-control validate" ng-model="Year">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in finacialyearList" value="{{x.FyId}}">{{x.FyId}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">State<span class="vd_red">*</span></label>
+
+                                            <div class="input-box" ng-init="BindState()">
+                                                <select id="ddlCustomerId" autocomplete='address-level2' class="select2 form-control validate" ng-model="State">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in StateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Description</label>
+                                            <div class="input-box">
+                                                <input id="txtDescription" type="text" ng-model="Description" class="form-control  clear" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Due Date<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input id="txtDueDate" type="date" ng-model="DueDate" class="form-control  clear validate" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Remark</label>
+                                            <div class="input-box">
+                                                <input id="txtRemark" type="text" ng-model="Remark" class="form-control  clear" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--<div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Upload File</label>
+                                            <div class="input-box">
+                                                <input type="file" id="UploadFile" onchange="angular.element(this).scope().UploadFileshow(this, '#AlbumIcon')" ng-model="UploadFile">
+
+                                                <div class="text-box-msg-r">
+                                                </div>-->
+                                                @*<a ng-show="Save === 'Edit'" href="{{UploadFile}}" class="ng-binding">{{UploadFile}}</a>*@
+                                            <!--</div>
+                                        </div>-->
+                                        <div class="col-md-2 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Upload File(excel/pdf only)</label>
+                                            <div class="input-box">
+                                                <input type="file" id="ExcelFile"
+                                                       onchange="angular.element(this).scope().UploadExcelFile(this)"
+                                                       accept=".xls, .xlsx,.pdf" />
+
+                                                <div class="text-box-msg-r">
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>

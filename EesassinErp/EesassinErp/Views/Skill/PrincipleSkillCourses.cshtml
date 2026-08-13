@@ -1,0 +1,1284 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Principle Skill Courses";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/SkillPages/PrincipleSkillDashboard/PrincipleSkillCourses/style.css" rel="stylesheet" />
+<script src="~/Content/Dashboards/SkillPages/PrincipleSkillDashboard/PrincipleSkillCourses/script.js"></script>
+<script src="~/scripts/RetailJsLib/SkillController.js"></script>
+<script>
+    app.directive('filePreview', function () {
+
+        return {
+
+            restrict: 'A',
+
+            scope: false,
+
+            link: function (scope, element, attrs) {
+
+
+                element.bind('change', function (event) {
+
+
+                    var file = event.target.files[0];
+
+
+                    if (file) {
+
+
+                        var reader = new FileReader();
+
+
+                        reader.onload = function (e) {
+
+
+                            scope.$apply(function () {
+
+ 
+                                if (attrs.previewModel) {
+
+
+                                    scope.$eval(
+                                        attrs.previewModel + " = '" + e.target.result + "'"
+                                    );
+
+
+                                }
+                                 
+                                if (attrs.fileModel) {
+
+
+                                    scope.$eval(
+                                        attrs.fileModel + " = file",
+                                        {
+                                            file: file
+                                        }
+                                    );
+
+
+                                }
+                                 
+                                if (!attrs.previewModel && scope.x) {
+
+
+                                    scope.x.ModuleThumbnailPreview = e.target.result;
+
+                                    scope.x.ModuleThumbnailFile = file;
+
+
+                                }
+
+
+
+                            });
+
+
+                        };
+
+
+                        reader.readAsDataURL(file);
+
+
+                    }
+
+
+                });
+
+
+            }
+
+        };
+
+    });
+</script>
+
+<div class="principleSkillCourses px-4 py-4">
+
+    <div class="container-fluid">
+
+        <div class="row g-4">
+
+      
+            <div class="col-xl-4 col-lg-5">
+
+                <div class="coursePreviewWrapper">
+
+                    <h4 class="previewHeading" ng-init="Getadddetail()">
+                        Training Programs
+                    </h4>
+
+                    <div class="coursePreviewCard">
+
+                        <div class="previewImageWrapper">
+ 
+
+                            <img class="img-fluid"
+                                 ng-src="{{CourseCoverPage_Preview || '../Content/Skill/coverpreview.png'}}"
+                                 alt="Course">
+
+                            <button class="previewViewBtn"
+                                    type="button">
+
+                                <i class="bi bi-eye-fill"></i>
+
+                            </button>
+
+                            <span class="previewCategory">
+                                {{Title}}
+                            </span>
+
+                        </div>
+
+                        <div class="previewBody">
+
+                            <div class="previewTitleRow">
+
+                                <div>
+
+                                    <h4 id="previewCourseTitle">
+                                        {{Title}}
+                                    </h4>
+
+                                    <span class="previewStatus">
+
+                                        {{Status}}
+
+                                    </span>
+
+                                </div>
+
+                                <div class="form-check form-switch" hidden>
+
+                                    <input class="form-check-input"
+                                           type="checkbox">
+
+                                </div>
+
+                            </div>
+
+                            <button class="previewShareBtn">
+
+                                <i class="bi bi-share-fill"></i>
+
+                                Share
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =======================================================
+                RIGHT CONTENT
+            ======================================================== -->
+
+            <div class="col-xl-8 col-lg-7">
+
+                <!-- ===================================== -->
+                <!-- STEP 1 -->
+                <!-- ===================================== -->
+
+                <div id="courseStep1">
+                    <div class="courseMainContainer">
+
+                        <!-- COURSE DETAILS -->
+
+                        <div class="courseSectionCard">
+
+                            <div class="sectionTitle">
+
+                                <h3>
+
+                                    Add Course Details
+
+                                </h3>
+
+                            </div>
+
+                            <div class="row g-4 align-items-start">
+
+                                <!-- LEFT -->
+
+                                <div class="col-xl-8">
+
+                                    <div class="mb-4">
+
+                                        <label class="form-label">
+
+                                            Course Title
+
+                                        </label>
+
+                                        <input type="text"
+                                               class="form-control courseInput validate"
+                                               ng-model="Title"
+                                               placeholder="Enter course title">
+
+                                    </div>
+
+                                    <div>
+
+                                        <label class="form-label">
+
+                                            Brief Description
+
+                                        </label>
+
+                                        <textarea rows="6"
+                                                  class="form-control courseTextarea validate"
+                                                  ng-model="CourseDesc"
+                                                  placeholder="Write a short description about this course"></textarea>
+
+                                    </div>
+
+                                </div>
+
+                                <!-- RIGHT -->
+
+                                <div class="col-xl-4">
+
+                                    <label class="form-label">
+
+                                        Course Cover
+
+                                    </label>
+
+                                    <label class="courseCoverUpload">
+                                        <div class="uploadContent">
+                                            <input type="file" id="LetterAttachment{{$index}}"
+                                                   onchange="angular.element(this).scope().uploadFile('CourseCoverPage', this)" ng-model="CourseCoverPage"
+                                                   hidden
+                                                   accept="image/*">
+
+
+
+                                            <div class="uploadIcon">
+
+                                                <i class="bi bi-image"></i>
+
+                                            </div>
+
+                                            <h5>
+
+                                                Upload Course Cover
+
+                                            </h5>
+
+                                            <p>
+
+                                                Recommended Size
+
+                                                <br>
+
+                                                1280 × 720
+
+                                            </p>
+
+                                            <p type="button"
+                                                    class="uploadBrowseBtn">
+
+                                                Browse Image
+
+                                            </p>
+
+                                        </div>
+
+                                    </label>
+
+                                </div>
+
+                                <div class="row g-4">
+                                    <div class="col-xl-12">
+                                        <button type="button" class="btnEmptyAdd" style="float: right;" ng-click="SaveCourse()">
+                                            Save
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- COURSE MODULES -->
+
+                        <div class="courseSectionCard mt-2" ng-show="CourseId">
+
+                            <div class="courseModuleHeader">
+
+                                <h3>
+                                    Course Modules
+                                </h3>
+
+                                <button type="button"
+                                        class="btnAddModule"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#addModuleModal">
+
+                                    <i class="bi bi-plus-circle"></i>
+
+                                    Add New Module
+
+                                </button>
+
+                            </div>
+
+
+                            <!-- ==========================================
+        EMPTY STATE
+    =========================================== -->
+
+                            <div class="emptyModuleState" ng-hide="Moduleid">
+
+                                <div class="emptyModuleIcon">
+
+                                    <i class="bi bi-journal-bookmark"></i>
+
+                                </div>
+
+                                <h4>
+
+                                    No Modules Added Yet
+
+                                </h4>
+
+                                <p>
+
+                                    Click <strong>Add New Module</strong> to start creating your course.
+
+                                </p>
+
+                                <button type="button"
+                                        class="btnEmptyAdd"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#addModuleModal">
+
+                                    <i class="bi bi-plus-circle"></i>
+
+                                    Add First Module
+
+                                </button>
+
+                            </div>
+
+
+                             
+                            <div id="courseModulesContainer">
+                                <div class="courseModuleCard accordion-item" ng-repeat="x in ModuleDetail">
+
+                                    <!-- ================= HEADER ================= -->
+
+                                    <div class="moduleHeader">
+
+                                        <div class="moduleHeaderLeft">
+
+                                            <span class="moduleNumber">
+
+                                                Module {{$index + 1}}
+
+                                            </span>
+
+                                            <h4 class="moduleTitle" hidden>
+
+                                                New Module
+
+                                            </h4>
+
+                                        </div>
+
+                                        <div class="moduleHeaderRight">
+                                            <div class="form-check form-switch me-3">
+                                              
+                                                <input class="form-check-input moduleToggle"
+                                                       type="checkbox"
+                                                       ng-model="x.Publish"
+                                                       ng-true-value="1"
+                                                       ng-false-value="0"
+                                                       ng-change="UpdateStatus(x.id, x.Publish)">
+                                            </div>
+
+                                            <button type="button" class="btnModuleDelete" ng-click="DeleteRecord(x.id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            <button class="btnCollapseModule" type="button">
+                                                <i class="bi bi-chevron-down"></i>
+                                            </button>
+
+                                        </div>
+
+                                    </div>
+
+                                    <!-- ================= BODY ================= -->
+
+                                    <div class="collapse show moduleCollapse">
+
+                                        <div class="moduleBody">
+
+                                            <div class="row g-4">
+
+                                                <!-- LEFT -->
+
+                                                <div class="col-lg-4">
+
+                                                    <label class="form-label">
+
+                                                        Module Thumbnail
+
+                                                    </label>
+
+                                                    <label class="moduleThumbnailUpload">
+
+                                                        <input type="file"
+                                                               hidden
+                                                               accept="image/*" onchange="angular.element(this).scope().SaveThumbnail('ModuleThumbnail', this)"
+                                                               file-preview
+                                                               ng-model="x.ModuleThumbnail">
+
+                                                        <div class="uploadPlaceholder">
+
+                                                            <img ng-if="x.ModuleThumbnailPreview"
+                                                                 ng-src="{{x.ModuleThumbnailPreview}}"
+                                                                 class="img-fluid thumbnailPreview">
+
+                                                            <div ng-if="!x.ModuleThumbnailPreview">
+
+                                                                <i class="bi bi-image"></i>
+
+                                                                <h6>
+                                                                    Upload Thumbnail
+                                                                </h6>
+
+                                                                <small>
+                                                                    JPG / PNG
+                                                                </small>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </label>
+
+                                                </div>
+
+                                                <!-- RIGHT -->
+
+                                                <div class="col-lg-8">
+
+                                                    <div class="mb-3">
+
+                                                        <label class="form-label">
+
+                                                            Module Name
+
+                                                        </label>
+
+                                                        <input class="form-control moduleTitleInput" ng-model="x.Modulename"
+                                                               type="text">
+
+                                                    </div>
+
+                                                    <div>
+
+                                                        <label class="form-label">
+
+                                                            Module Description
+
+                                                        </label>
+
+                                                        <textarea class="form-control moduleDescriptionInput" ng-model="x.ModuleDesc"
+                                                                  rows="5"></textarea>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                            <hr class="my-4">
+
+                                            <!-- ================= VIDEOS ================= -->
+
+                                            <div class="moduleVideosHeader">
+
+                                                <h5>
+                                                    Videos
+                                                </h5>
+
+                                                <button type="button"
+                                                        class="btnAddVideo"
+                                                        ng-click="AddVideo(x)">
+                                                    <i class="bi bi-plus-circle"></i>
+                                                    Add Video
+                                                </button>
+
+                                            </div>
+
+
+                                            <!-- Empty State -->
+                                            <div class="emptyVideoState"
+                                                 ng-if="!x.Videos || x.Videos.length == 0">
+
+                                                <i class="bi bi-camera-video"></i>
+
+                                                <h6>
+                                                    No Videos Added
+                                                </h6>
+
+                                                <p>
+                                                    Click <strong>Add Video</strong> to upload your first lesson.
+                                                </p>
+
+                                            </div>
+
+
+                                            <!-- Dynamic Videos -->
+                                            <div class="moduleVideosContainer">
+
+
+                                                <div class="moduleVideoCard"
+                                                     ng-repeat="video in x.Videos track by $index">
+
+
+                                                    <!-- HEADER -->
+
+                                                    <div class="videoCardHeader">
+
+                                                        <div class="videoCardTitle">
+
+                                                            <span class="videoNumber">
+                                                                Video {{$index+1}}
+                                                            </span>
+
+                                                        </div>
+                                                        
+                                                    <div style="display: flex;gap: 8px;">
+                                                        <button type="button" ng-show="video.id"
+                                                                class="btnCourseNext"
+                                                                ng-click="SaveVideo(video,x.id,video.id,14)">
+                                                            Update
+                                                        </button>
+                                                        <button type="button" ng-show="!video.id"
+                                                                class="btnCourseNext"
+                                                                ng-click="SaveVideo(video,x.id,video.id,5)">
+                                                            Save
+                                                        </button>
+
+                                                        <button type="button" ng-show="video.id"
+                                                                class="btnDeleteVideo"
+                                                                ng-click="DeleteVideo(video.id)">
+
+                                                            <i class="bi bi-trash"></i>
+
+                                                            Delete
+
+                                                        </button>
+                                                    </div>
+
+
+                                                    </div>
+
+
+
+                                                    <!-- BODY -->
+
+                                                    <div class="videoCardBody">
+
+                                                        <div class="row g-4">
+
+
+
+                                                            <div class="col-xl-3 col-lg-4">
+
+                                                                <label class="form-label">
+                                                                    Video Thumbnail
+                                                                </label>
+
+
+                                                                <label class="videoThumbnailUpload">
+
+
+                                                                    <input type="file"
+                                                                           hidden
+                                                                           accept="image/*" id="VideoimgThumbnail{{$index}}"
+                                                                           onchange="angular.element(this).scope().uploadFile('VideoimgThumbnail', this)"
+                                                                           file-preview
+                                                                           preview-model="video.ThumbnailPreview" ng-model="VideoimgThumbnail" file-model="video.ThumbnailFile">
+
+
+                                                                    <div class="uploadPlaceholder">
+
+
+                                                                        <img ng-if="video.ThumbnailPreview"
+                                                                             ng-src="{{video.ThumbnailPreview}}"
+                                                                             style="width:100%;height:150px;object-fit:cover;">
+
+
+                                                                        <div ng-if="!video.ThumbnailPreview">
+
+                                                                            <i class="bi bi-image"></i>
+
+                                                                            <h6>
+                                                                                Upload Thumbnail
+                                                                            </h6>
+
+                                                                            <small>
+                                                                                JPG / PNG
+                                                                            </small>
+
+                                                                        </div>
+
+
+                                                                    </div>
+
+
+                                                                </label>
+
+
+                                                            </div>
+                                                        
+
+
+                                                            <!-- Video Upload -->
+
+                                                            <div class="col-xl-3 col-lg-4">
+
+
+                                                                <label class="form-label">
+                                                                    Upload Video
+                                                                </label>
+
+
+                                                                <label class="videoUploadArea">
+                                                                    <input type="file"
+                                                                           hidden
+                                                                           accept="video/*"
+                                                                           onchange="angular.element(this).scope().VideoChange(this.files, angular.element(this).scope().video)" />
+
+                                                                    <div class="uploadPlaceholder">
+
+                                                                        <video ng-if="video.VideoFile"
+                                                                               ng-src="{{video.VideoFile}}"
+                                                                               controls
+                                                                               style="width:100%; height:150px; object-fit:cover;">
+                                                                        </video>
+
+                                                                        <div ng-if="!video.VideoFile">
+                                                                            <i class="bi bi-camera-video"></i>
+
+                                                                            <h6>Upload Video</h6>
+
+                                                                            <small>MP4 / MOV</small>
+                                                                        </div>
+
+                                                                    </div>
+
+
+
+
+                                                                </label>
+
+
+                                                            </div>
+
+
+
+
+
+                                                            <!-- Details -->
+
+                                                            <div class="col-xl-6 col-lg-4">
+
+
+                                                                <div class="mb-3">
+
+
+                                                                    <label class="form-label">
+                                                                        Video Title
+                                                                    </label>
+
+
+                                                                    <input type="text"
+                                                                           class="form-control videoTitleInput"
+                                                                           ng-model="video.Title"
+                                                                           placeholder="Enter video title">
+
+
+                                                                </div>
+
+
+
+                                                                <div>
+
+
+                                                                    <label class="form-label">
+                                                                        Video Description
+                                                                    </label>
+
+
+                                                                    <textarea rows="5"
+                                                                              class="form-control videoDescriptionInput"
+                                                                              ng-model="video.Description"
+                                                                              placeholder="Enter video description"></textarea>
+
+
+                                                                </div>
+
+
+                                                            </div>
+
+
+                                                        </div>
+
+
+                                                    </div>
+
+
+                                                </div>
+
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+
+
+                        <!-- FOOTER NAVIGATION -->
+
+                        <div class="courseFooter">
+
+                            <button class="btnCourseBack">
+
+                                <i class="bi bi-arrow-left"></i>
+
+                                Back
+
+                            </button>
+
+                            <button type="button"
+                                    id="btnStep1Next"
+                                    class="btnCourseNext">
+
+                                Next
+
+                                <i class="bi bi-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- ===================================== -->
+                <!-- STEP 2 -->
+                <!-- ===================================== -->
+
+                <div id="courseStep2" class="d-none">
+
+                    <!-- PROGRAM REQUIREMENTS -->
+
+                    <div class="courseSectionCard">
+
+                        <div class="sectionTitle mb-4">
+
+                            <h3>Program Requirements</h3>
+
+                            <p class="text-muted mb-0">
+                                Require students to complete certain actions in order to advance through your training.
+                            </p>
+
+                        </div>
+
+                        <!-- Lesson Order -->
+
+                        <div class="requirementItem">
+
+                            <div class="form-check">
+
+                                <input class="form-check-input"
+                                       type="checkbox" ng-model="Lessonorder"   >
+
+                                <label class="form-check-label" for="lessonOrder">
+
+                                    <span class="requirementTitle">
+                                        Enforce Lesson Order
+                                    </span>
+
+                                    <span class="requirementDesc">
+                                        Workers must progress through lectures in order.
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Video Watching -->
+
+                        <div class="requirementItem">
+
+                            <div class="form-check">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       ng-model="VideoOrder">
+
+                                <label class="form-check-label" for="videoWatching">
+
+                                    <span class="requirementTitle">
+                                        Enforce Video Watching
+                                    </span>
+
+                                    <span class="requirementDesc">
+                                        Workers must watch certain percentage of video to advance.
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                            <div class="requirementInputRow">
+
+                                <input type="number"
+                                       ng-model="LimitVideo"
+                                       class="form-control requirementSmallInput"
+                                       ng-disabled="!VideoOrder"
+                                       min="70"
+                                       max="100">
+
+                                <span class="inputSuffix">%</span>
+
+                                <p>
+                                    Set a minimum percentage to advance further
+                                    (Default 70%)
+                                </p>
+
+                            </div>
+
+                            
+
+                        </div>
+
+                        <div class="requirementItem">
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       ng-model="CourseDeadline">
+
+                                Course Completion Deadline
+                            </div>
+
+                            <div class="requirementInputRow">
+
+                                <input ng-model="StartDate"
+                                       style="width:20%"
+                                       type="date"
+                                       class="form-control"
+                                       ng-disabled="!CourseDeadline">
+
+                                <span class="mx-2">To</span>
+
+                                <input ng-model="EndDate"
+                                       style="width:20%"
+                                       type="date"
+                                       class="form-control"
+                                       ng-disabled="!CourseDeadline">
+
+                                <p ng-if="CourseDeadline" class="text-warning">
+                                    ⚠ Course will be available only between Start Date and End Date.
+                                </p>
+
+                            </div>
+
+                        </div>
+                        <!-- Published -->
+
+                        <div class="requirementItem">
+
+                            <div class="form-check">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       ng-model="OnlyPublished">
+
+                                <label class="form-check-label"
+                                       for="publishedOnly">
+
+                                    <span class="requirementTitle">
+                                        Only published trainings are visible to workers
+                                    </span>
+
+                                    <span class="requirementDesc">
+                                        Draft trainings remain hidden until officially published.
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Watch Time -->
+                        <!-- Certificate -->
+
+                        <div class="requirementItem">
+
+                            <div class="form-check">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       ng-model="AutoCertificate">
+
+                                <label class="form-check-label"
+                                       for="certificateIssue">
+
+                                    <span class="requirementTitle">
+                                        Auto Certificate Issuing
+                                    </span>
+
+                                    <span class="requirementDesc">
+                                        Workers receive certificates automatically after course completion.
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                        <div class="requirementItem">
+
+                            <div class="form-check">
+
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       ng-model="CourseReminder">
+
+                                <label class="form-check-label"
+                                       for="certificateIssue">
+
+                                    <span class="requirementTitle">
+                                        Course Reminder
+                                    </span>
+
+                                    <span class="requirementDesc">
+                                        Workers receive Reminder automatically if course pending.
+                                    </span>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+
+                     
+
+                    </div>
+
+
+                    <!-- ===================================== -->
+                    <!-- STEP 2 FOOTER -->
+                    <!-- ===================================== -->
+
+                    <div class="courseFooter">
+
+                        <button type="button"
+                                id="btnStep2Back"
+                                class="btnCourseBack">
+
+                            <i class="bi bi-arrow-left"></i>
+
+                            Back
+
+                        </button>
+
+                        <button type="button"
+                                id="btnStep2Next"
+                                class="btnCourseNext" ng-click="UpdateFlags()">
+
+                            Next
+
+                            <i class="bi bi-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ===================================== -->
+                <!-- STEP 3 -->
+                <!-- ===================================== -->
+                <div id="courseStep3" class="d-none">
+
+
+                    <!-- STEP 3 : TRAINING CERTIFICATE -->
+
+                    <div class="courseSectionCard courseCertificateSection">
+
+                        <!-- Header -->
+
+                        <div class="certificateHeader">
+
+                            <h2 class="certificateTitle">
+
+                                Training Certificate
+
+                            </h2>
+
+                            <p class="certificateSubTitle">
+
+                                This certificate will be issued whenever an employee completes the training.
+
+                            </p>
+
+                        </div>
+
+
+
+                        <!-- Certificate Preview -->
+
+                        <div class="certificatePreviewWrapper">
+
+                            <div class="certificatePreviewCard">
+
+                                <img id="certificatePreviewImage"
+                                     src="~/Content/Dashboards/SkillPages/PrincipleSkillDashboard/PrincipleSkillCourses/certificate-template.png"
+                                     alt="Certificate">
+
+                            </div>
+
+                        </div>
+
+
+
+                        <!-- Action Buttons -->
+                        @*<div class="certificateActions">
+
+                    <input type="file"
+                           id="certificateUpload"
+                           accept="image/*"
+                           hidden>
+
+                    <button type="button"
+                            id="btnReplaceCertificate"
+                            class="btnCoursePrimary">
+
+                        <i class="bi bi-arrow-repeat me-2"></i>
+
+                        Replace
+
+                    </button>
+
+                    <button type="button"
+                            id="btnPreviewCertificate"
+                            class="btnCourseOutline">
+
+                        <i class="bi bi-eye me-2"></i>
+
+                        Preview
+
+                    </button>
+
+                </div>*@
+
+                    </div>
+
+
+
+                    <!-- FOOTER -->
+
+                    <div class="courseFooter">
+
+                        <button type="button"
+                                id="btnStep3Back"
+                                class="btnCourseBack">
+
+                            <i class="bi bi-arrow-left me-2"></i>
+
+                            Back
+
+                        </button>
+
+                        @*<button type="button"
+                                id="btnSaveCourse"
+                                class="btnCourseNext">
+
+                            <i class="bi bi-check-circle me-2"></i>
+
+                            Save
+
+                        </button>*@
+
+                    </div>
+
+                </div>
+
+            </div>
+            <!-- Right Column -->
+
+        </div>
+        <!-- Row -->
+
+    </div>
+    <!-- Container -->
+    <!-- =======================================================
+        ADD MODULE MODAL
+    ======================================================= -->
+
+    <div class="modal fade"
+         id="addModuleModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+
+            <div class="modal-content skillModal">
+
+                <!-- Header -->
+
+                <div class="modal-header">
+
+                    <h4 class="modal-title">
+
+                        Add New Module
+
+                    </h4>
+
+                    <button class="btn-close"
+                            type="button"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <!-- Body -->
+
+                <div class="modal-body">
+
+                    <div class="row g-4">
+
+                        <!-- Module Name -->
+
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+
+                                Module Name
+
+                            </label>
+
+                            <input type="text"
+                                   class="form-control moduleInput" ng-model="Modulename"
+                                   placeholder="Enter module name">
+
+                        </div>
+
+                        <!-- Module Description -->
+
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+
+                                Module Description
+
+                            </label>
+
+                            <textarea class="form-control moduleTextarea"
+                                      rows="5" ng-model="ModuleDesc"
+                                      placeholder="Write a short description"></textarea>
+
+                        </div>
+
+                        <!-- Sequence -->
+
+                        <div class="col-md-12">
+
+                            <label class="form-label">
+
+                                Sequence
+
+                            </label>
+
+                            <input type="number"
+                                   class="form-control moduleInput" ng-model="Sequence"
+                                  value="1">
+
+                        </div>
+
+                        <!-- Publish -->
+
+                        <div class="col-md-12">
+
+                            <div class="modulePublishBox">
+
+                                <span>
+
+                                    Publish this Module
+
+                                </span>
+
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input"
+                                           type="checkbox" ng-model="ChkmodulePublish">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+
+                <div class="modal-footer">
+
+                    <button class="btnModuleCancel"
+                            type="button"
+                            data-bs-dismiss="modal">
+
+                        Cancel
+
+                    </button>
+
+                    <button class="btnModuleSave" id="btnSaveModule" type="button" ng-click="SaveModule()">
+                        <i class="bi bi-plus-circle"></i>
+                        Add Module
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- principleSkillCourses -->

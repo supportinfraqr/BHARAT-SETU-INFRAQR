@@ -1,0 +1,152 @@
+﻿
+@{
+    ViewBag.Title = "Coummunication DashBoard";
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+<link href="~/Content/css/webwhatsapp/web-css.css" rel="stylesheet" />
+@*<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">*@
+
+
+@*<script src="http://91.234.35.26/iwiki-admin/v1.0.0/admin/js/jquery.nicescroll.min.js"></script>*@
+<script src="~/scripts/myjslib/CommunicationController.js"></script>
+<script src="~/scripts/jszip-utils.js"></script>
+<div class="container-fluid">
+    <div class="chat">
+        <div class="chat-wrapper">
+            <div class="row">
+                <div class="col-md-4 stretch-card">
+                    <div class="card w-100 left-card">
+                        <div class="card-body p-2">
+                            <div class="chatbox">
+                                <select class="mb-2" ng-model="SortId" ng-change="BindCommunication()">
+                                    <option value="">Sort by</option>
+                                    <option value="2">DateWise Dsc</option>
+                                    <option value="1">DateWise Asc</option>
+                                    <option value="3">Name Wise</option>
+                                </select>
+                                <select class="mb-2" ng-model="StatusId" ng-change="BindCommunication()">
+                                    <option value="">Select Status</option>
+                                    <option value="0">Pending</option>
+                                    <option value="1">Complete</option>
+                                </select>
+                                <input class="chatbox" ng-model="SearchCom" style="height: 30px;width: 100%;" ng-keyup="BindCommunication()" placeholder="Search" />
+
+                                <div class="chat-list-wrapper" ng-init="BindCommunication()">
+                                    <ul class="chat-list">
+                                        <li class="new" ng-repeat="x in InvoiceList " ng-click="SetValues(x.RegInvoiceNo,x.ConversationId)">
+                                            <div class="body">
+                                                <div class="header">
+                                                    <span class="username">{{x.HeaderInvoice }} {{x.InvoiceNo}}</span>
+                                                    <small class="timestamp text-muted">
+                                                        <i class="fa fa-clock-o"></i>Last Update : {{x.UpdatedON}}
+                                                    </small>
+                                                </div>
+                                                <p>{{x.PartyName}}</p>
+                                                <p>{{x.WhichDate}} {{x.InvDate}}</p>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8 stretch-card" ng-show="ClickShow">
+                    <div class="card w-100 audit-communication-card">
+                        <div class="card-body p-2">
+                            <h6><strong>{{HeaderInvoice }}</strong> {{InvoiceNo}}</h6>
+                            <p><strong>Pending:</strong> {{Pendding}}; <strong>Submit:</strong> {{Submit}}, <strong>Reject:</strong> {{Reject}}; <strong>TotalDoc:</strong> {{TotalDoc}}</p>
+                            <p><strong>{{WhichDate}}</strong> {{IDATE}}; <strong>Client Name:</strong> {{ClientName}}; <strong>Location:</strong> {{Location}}</p>
+                           
+                            <p  id="p1"></p>
+                            <div class="invoice-table w-100">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <!--<h6 class="text-left"> Invoice No. {{InvoiceNo}}</h6>-->
+                                    <div class="doc-head">Documents </div>
+                                    <div class="btns">
+                                        <a class="btn btn-green btn-sm" ng-show="IsSumitted==1 && InvoiceType=='Regular'"
+                                           ng-click="SelectIframoutiframe('AuditorComplianceReport','ComplianceReport',InvoiceNo+'|'+ClientId,'ComplianceReport')">Compliance Report</a>
+                                        <a class="btn btn-green btn-sm" ng-show="IsSumitted==1 && TypeInvoice=='WithoutInvoice'"
+                                           ng-click="SelectIframoutiframe('AuditorComplianceReport','ComplianceReport',InvoiceNo+'|'+ClientId + '|' + VendorId,'ComplianceReport')">Compliance Report</a>
+                                        <div class="btn btn-green btn-sm" ng-show="IsSumitted==0" ng-click="FinalSubmittion()">Final Submittion</div>
+                                        <input id="download_all" type='button' ng-click="downloadAll()" value="Download All Doc" />
+
+                                     </div>
+
+                                </div>
+                                <div class="table-responsive fixed-height-table">
+                                    <table class="documents">
+                                        <thead>
+                                            <tr>
+                                                <th>SNO</th>
+                                                <th>DocumentName</th>
+                                                <th>View</th>
+                                                <th>Action</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody ng-repeat="xx in InDocList">
+                                            <tr>
+                                                <td>{{xx.SRNO}} </td>
+                                                <td>{{xx.DocumentName}} </td>
+                                                <td>
+                                                    <a class="button document downloadable" ng-show="xx.IsAllowUpload=='1'" target="_blank" href="{{xx.DocumentFile}}">View & Download </a>
+                                                </td>
+                                                <td>
+                                                    <div ng-if="xx.Status !=1" class="btn btn-sm btn-primary" ng-show="xx.IsAllowUpload=='1'" ng-click="ApproveRecord(xx.ConversationId,xx.SNO)">Approve</div>
+                                                    <label ng-if="xx.Status ==1" class="badge badge-success">Approved</label>
+                                                </td>
+                                                <td>
+                                                    <div class="button-req" ng-if="xx.Status !=1" ng-show="xx.IsAllowUpload=='1'" ng-click="ReqRecord(xx.ConversationId,xx.SNO)">Req. for Re-upload</div>
+                                                    <label ng-if="xx.Status ==1" class="badge badge-success">Approved</label>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-7">
+                                    <div class="message-list-wrapper">
+                                        <ul class="message-list">
+                                            <li class="text-center" style="display:none">
+                                                <a class="btn btn-default">Load More Messages</a>
+                                            </li>
+                                            <li class="{{xx.AddClass}}" ng-repeat="xx in InList">
+                                                <h6>   {{xx.Conversation}}</h6>
+                                                <small class="timestamp">
+                                                    <i class="fa fa-clock-o"></i>{{xx.UpdatedON}}
+                                                </small>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="compose-box" ng-show="IsSumitted==0">
+                                        <textarea id="btn-input" class="form-control input-sm" ng-model="Message" placeholder="Type your message here..."></textarea>
+                                        <div class="mt-1" ng-init="BindAllDocument()">
+                                            <select id="ddlreq" class="select2 form-control" ng-model="ReqNewDoc" ng-change="SetMessage(x.DocumentName)">
+                                                <option value="">Request For Additional Document</option>
+                                                <option ng-repeat="x in AllDocument" value="{{x.Id}}">{{x.DocumentName}}</option>
+                                            </select>
+                                        </div>
+                                        <div class="mt-1">
+                                            <div ng-click="SendMessage()"></div>
+                                            <div class="btn btn-green btn-sm pull-right" ng-click="SendMessage()">Send</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+
+
+  

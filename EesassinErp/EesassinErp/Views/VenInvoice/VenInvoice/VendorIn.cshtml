@@ -1,0 +1,229 @@
+﻿@{
+    ViewBag.Title = "Vendor Invoice";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+<script src="~/Scripts/myjslib/VendorInvoiceController.js?Ver=@ViewBag.Version"></script>
+<script>
+    function nospaces(t) {
+        if (t.value.match(/\s/g)) {
+            t.value = t.value.replace(/\s/g, '');
+        }
+    }
+</script>
+<style>
+	.site-th {
+		width:100px;
+	}
+	.invoic-type-th {
+		width:150px;
+	}
+	.location-th {
+		width:150px;
+	}
+</style>
+<div class="container-fluid" oncontextmenu="return false;">
+	<form id="user-form">
+		<div class="card">
+			<div class="card-body">
+				<h4 class="card-title">Invoice Registration</h4>
+				<div class="row">
+					<div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+						<label class="control-label">Client</label>
+						<div class="input-box" ng-init="AllParty()">
+							<select id="ddlCustomerId" autocomplete='address-level2' class="select2 form-control" ng-model="ClientId" ng-change="AllPartySiteC()" ng-disabled="freeze">
+								<option value="">Select</option>
+								<option ng-repeat="x in AllPartyList | filter: { PartyType: 'Client' }" value="{{x.PartyId}}">{{x.PartyName}}</option>
+							</select>
+							<div class="text-box-msg-r">
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+						<label class="control-label">State</label>
+						<div class="input-box">
+							<select id="ddlstate" autocomplete='address-level2' class="form-control clear validate" ng-disabled="freeze" ng-init="AllState()" ng-model="StateId" ng-change="AllPartySiteLoad()">
+								<option value="">Select State</option>
+								<option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+							</select>
+							<div class="text-box-msg-r">
+							</div>
+						</div>
+					</div>
+
+					<div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindFinacialYear()">
+						<label class="control-label">Financial Year<span class="vd_red"></span></label>
+						<div class="input-box">
+
+							<select id="ddlfyid" autocomplete='address-level2' class="select2 form-control" ng-model="FyId" ng-change="BindIn(FyId)" ng-disabled="freeze">
+								<option value="">Select</option>
+								<option ng-repeat="x in finacialyearList" value="{{x.FinancialName}}">{{x.FinancialName}}</option>
+							</select>
+							<input type="text" id="txtfyid" ng-disabled="true" ng-model="FyId" />
+							<div class="text-box-msg-r">
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-2 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindMonth()">
+						<label class="control-label">Month<span class="vd_red"></span></label>
+						<div class="input-box">
+							<select id="ddlMONTH" autocomplete='address-level2' class="select2 form-control" ng-model="Month" ng-change="ChangeMonth()" ng-disabled="freeze">
+								<option value="">Select</option>
+								<option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">{{x.MonthName}}</option>
+							</select>
+							<div class="text-box-msg-r">
+							</div>
+						</div>
+					</div>
+                       
+                   
+					<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15"  >
+						<label class="control-label"><span class="vd_red"></span></label>
+						<div class="input-box">
+                             
+							<button type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search"  
+									ng-model="Search" ng-click="HideShowtable()">
+								<span class="triangle-box" title="Search"></span>
+								<span>Search </span>
+							</button>
+							<button type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search"
+									ng-model="ClearH" ng-click="ClearHEADER()">
+								<span class="triangle-box" title="Search"></span>
+								<span>Refresh </span>
+							</button>
+							<div class="text-box-msg-r">
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="card" ng-init="AddInvoiceDetail()" ng-show="IsHide">
+			<div class="card-body">
+				<h4 class="card-title">Invoice Details</h4>
+				<div class="table-responsive advance-btn-table mb-3">
+					<table class="table table-in-input-box compact table-bordered nowrap dataTable t-mgtb-n">
+						<thead>
+							<tr>
+								<th class="srno">SNo.</th>
+								<th style="width: 100px;">Site</th>
+								<th>Invoice Date</th>
+								<th>Invoice No.</th>
+								<th style="display:none">State</th>
+								<th style="width: 150px;">Location</th>
+								<th style="display:none">Manpower Type</th>
+								<th>Manpower Count</th>
+								<th style="width: 150px;">Invoice Type</th>
+								<th>Taxable Value</th>
+								<th>CGST</th>
+								<th>SGST</th>
+								<th>IGST</th>
+								<th>Gross Amount</th>
+								<th>upload Invoicecopy</th>
+								<th ng-if="{{Save}}=='Edit'">View Invoice</th>
+								<th ng-show="false">Status</th>
+								<th class="text-center">+/-</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr ng-repeat="obj in InvoiceDetail" repeat-done>
+								<td>
+									<label ng-model="InvoiceDetail[$index].Srno" ng-bind="InvoiceDetail[$index].Srno=$index+1"></label>
+								</td>
+								<td>
+									<select style="width: 150px !important;" id="ddlVendorSiteId" autocomplete='address-level2' class="select2 form-control validate" ng-init="AllPartySiteLoad()"   ng-disabled="{{hideIsLocation}}" ng-model="InvoiceDetail[$index].VendorSiteId" ng-change="SetLocation(InvoiceDetail[$index].VendorSiteId,$index)">
+										<option value="">Select Site</option>
+										<option ng-repeat="x in AllPartySiteVList" value="{{x.SiteId}}">{{x.SiteName}}</option>
+									</select>
+								</td>
+
+								<td>
+									<input id="txtToDate" type="date" ng-show="{{InvoiceDetail[$index].Ishide}}!=false" class="form-control clear" placeholder="To Date" ng-model="InvoiceDetail[$index].InvDate" ng-change="SetState($index)" min="{{StartDate}}" max="{{EndDate}}" value="{{convertTodate(InvoiceDetail[$index].InvDate)}}" />
+									<div ng-show="{{InvoiceDetail[$index].Ishide}}==false">{{InvoiceDetail[$index].InvDate}}</div>
+								</td>
+								<td>
+									<input id="VendorInvNum{{$index}}" type="text" ng-model="InvoiceDetail[$index].VendorInvNum" class="form-control clear validate" onkeyup="nospaces(this)" maxlength="16"/>
+								</td>
+								<td style="display:none">
+									<select id="ddlstate{{$index}}" autocomplete='address-level2' class="form-control  clear" ng-bind="InvoiceDetail[$index].StateId={{StateId}}"  ng-model="InvoiceDetail[$index].StateId">
+										<option value="">Select State</option>
+										<option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+									</select>
+								</td>
+								<td>
+                                  
+                                    <select id="ddlLocation{{$index}}" autocomplete='address-level2' class="form-control  clear"   ng-model="InvoiceDetail[$index].Location" ng-hide ="{{hideIsLocation}}">
+                                        <option value="">Select Location</option>
+                                        <option ng-repeat="x in LocationList[InvoiceDetail[$index].Srno-1]" value="{{x.Location}}">{{x.Location}}</option>
+                                    </select>
+                                    
+									<input style="width: 150px !important;" id="txtLoc{{$index}}" type="text"  ng-model="InvoiceDetail[$index].Location" class="form-control clear" ng-hide="{{IsLocation}}" ng-disabled="true"/>
+								</td>
+
+								<td style="display:none">
+									<select id="ddlManpowertype{{$index}}" autocomplete='address-level2' class="select2 form-control" ng-init="BindManpower()" ng-change="chkManpower($index)" ng-model="InvoiceDetail[$index].Manpowertype">
+										<option value="">Select</option>
+										<option ng-repeat="x in  ManpowerList" value="{{x.LCode}}">{{x.LValue}}</option>
+									</select>
+
+								</td>
+								<td>
+									<input id="txtManpowerCount{{$index}}" type="text" ng-model="InvoiceDetail[$index].ManpowerCount" class="form-control clear" ng-keyup="ValidateINvoice($index);chkManpower($index)" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+
+
+								</td>
+								<td>
+									<select style="width: 150px !important;" id="ddlInvoiceType" autocomplete='address-level2' class="select2 form-control validate" ng-model="InvoiceDetail[$index].InvoiceType" ng-keyup="ValidateINvoice($index);chkManpower($index)">
+										<option value="">Select </option>
+										<option value="Regular">Regular </option>
+										<option value="Reimbursement">Reimbursement</option>
+										<option value="Overtime">Overtime</option>
+										<option value="other">other</option>
+									</select>
+								</td>
+								<td>
+									<input id="txtTaxable{{$index}}" type="text" ng-change="BindRowTax($index)" ng-model="InvoiceDetail[$index].TaxableValue" ng-keyup="ValidateINvoice($index)" class="form-control clear validate" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+								</td>
+								<td>
+									<input id="txtCGST{{$index}}" type="text" ng-model="InvoiceDetail[$index].CGST" ng-blur="BindSGSTTax($index)" ng-keyup="ValidateINvoice($index)" class="form-control clear validate" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+								</td>
+								<td>
+									<input id="txtSGST{{$index}}" type="text" ng-model="InvoiceDetail[$index].SGST" ng-disabled="true" class="form-control clear validate" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+								</td>
+								<td>
+									<input id="txtIGST{{$index}}" type="text" ng-model="InvoiceDetail[$index].IGST" ng-blur="BindIGSTTax($index)" ng-keyup="ValidateINvoice($index)" class="form-control clear validate" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+								</td>
+								<td>
+									<input id="txtGrossAmount{{$index}}" type="text" ng-model="InvoiceDetail[$index].GrossAmount"
+										   ng-disabled="true" class="form-control clear validate" />
+								</td>
+
+								<td>
+									<img id="CandidatePhoto{{$index}}" ng-show="{{InvoiceDetail[$index].Ishide}}!=false" src="~/Content/img/upload.png" ng-click="SetValue($index,'#fuCandidatePhoto'+$index)" style="width: 24px; height: 24px" />
+                                    <div ng-show="{{InvoiceDetail[$index].IsFile}} !=''" >{{InvoiceDetail[$index].IsFile}}</div>
+									<input type="file" ng-show="{{InvoiceDetail[$index].Ishide}}!=false" id="fuCandidatePhoto{{$index}}" style="display:none" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" ng-model="InvoiceDetail[$index].fileupload">
+									<a target="_blank" ng-show="{{InvoiceDetail[$index].Ishide}}==false" href="{{InvoiceDetail[$index].fileupload}}">View Invoice</a>
+								</td>
+
+								<td ng-show="false">
+									<label id="txtStatus{{$index}}" ng-show="false" ng-model="InvoiceDetail[$index].Status" ng-bind="InvoiceDetail[$index].Status='Draft'" class="form-control clear validate"> </label>
+								</td>
+								<td class="text-center">
+									<input type="button" value="+" class="btn btn-default2" ng-click="ValidateINvoice($index);AddInvoiceDetail()" data-toggle="tooltip" data-placement="top" title="Add Row"
+										   ng-if="InvoiceDetail[$index].Srno==InvoiceDetail.length" />
+									<input type="button" class="btn btn-default2" id="btnRemoveCourses" value="-" ng-click="RemoveInvoiceDetail($index);"
+										   ng-if="InvoiceDetail.length>1" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				@Html.Partial("ActionView")
+			</div>
+		</div>
+	</form>
+</div>
+@Html.Partial("SearchAngularJs")

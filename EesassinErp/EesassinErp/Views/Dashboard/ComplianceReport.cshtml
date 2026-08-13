@@ -1,0 +1,419 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Compliance Audit Report";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="~/scripts/myjslib/AuditorComplianceController.js"></script>
+
+
+
+<style>
+    #complianceAuditReport {
+        font-family: "Inter", sans-serif;
+        --primary: #022B5E;
+        --primary-dark: #033d84;
+        --bg: #FFFFFF;
+        --card-bg: #fff;
+        --border: #D9D9D9;
+        --text: #1F2937;
+        --muted: #6B7280;
+        --radius: 12px;
+        background: var(--bg);
+        min-height: 100vh;
+        color: var(--text);
+    }
+
+    .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        max-height: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    /* Section cards */
+    #complianceAuditReport .section-card {
+        background: transparent;
+        border: none;
+    }
+
+        #complianceAuditReport .section-card .card-body {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            min-height: 320px;
+        }
+
+    #complianceAuditReport .audit-info-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 0.82rem;
+    }
+
+    #complianceAuditReport .audit-info-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    #complianceAuditReport .audit-label {
+        font-weight: 500;
+        color: #555;
+    }
+
+    #complianceAuditReport .audit-value {
+        font-weight: 600;
+        color: #223;
+    }
+
+    #complianceAuditReport .audit-info-divider {
+        width: 1px;
+        height: 18px;
+        background: #ddd;
+    }
+
+
+
+    /* KPI CARDS */
+    .kpi-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        border-left: 5px solid #022B5E;
+        transition: 0.2s ease;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+
+    .kpi-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #555;
+    }
+
+    .kpi-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-top: 4px;
+        color: #022B5E;
+    }
+
+
+    /* Table wrapper and hide scrollbar visually */
+    #complianceAuditReport .small-table-wrapper .table-responsive {
+        max-height: 75vh;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scroll-behavior: smooth;
+        position: relative;
+    }
+
+        #complianceAuditReport .small-table-wrapper .table-responsive::-webkit-scrollbar {
+            display: none;
+        }
+
+    /* table header sticky */
+    #complianceAuditReport .small-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #f8f9fd;
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+    /* table body */
+    #complianceAuditReport .small-table tbody td {
+        background-color: var(--card-bg);
+        font-size: 0.78rem;
+        vertical-align: middle;
+        text-align: center;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    /* hover */
+    #complianceAuditReport .small-table tbody tr:hover td {
+        background-color: #F8f9fc;
+    }
+
+
+    /* filter button */
+    #complianceAuditReport .filter-btn {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        #complianceAuditReport .filter-btn.active,
+        #complianceAuditReport .filter-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* small inputs */
+    #complianceAuditReport .table-toolbar .form-control-sm {
+        height: 36px;
+        border-radius: 999px;
+        border-color: var(--primary);
+    }
+
+    /* Export button (rounded) */
+    #complianceAuditReport .export-btn {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+        #complianceAuditReport .export-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+        #complianceAuditReport .export-btn:focus,
+        #complianceAuditReport .export-btn:active {
+            outline: none;
+            /*box-shadow: 0 0 0 3px rgba(228,93,39,0.12);*/
+        }
+
+    /*Fix Search bar and button in toolbar*/
+    #complianceAuditReport .table-toolbar .input-group .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    #complianceAuditReport .table-toolbar .input-group .btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-color: var(--primary);
+    }
+
+
+    /* Table Buttons*/
+
+    .btn-upload, .btn-view, .btn-submit {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.78rem;
+    }
+
+        .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Table Selects*/
+
+    #complianceAuditReport .form-control {
+        font-size: .78rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid #dcdcdc;
+        outline: none;
+        min-width: 200px;
+    }
+</style>
+<div id="complianceAuditReport" class="px-4 py-2">
+    <div class="card section-card">
+        <h4 class="mt-3" style="color: #022B5E">Compliance Report</h4>
+
+        <!-- Audit Details  -->
+        @*<div class="audit-info-row">
+            <div class="audit-info-item">
+                <span class="audit-label">Audit Score</span>
+                <span class="audit-value">Score Obtained: 49</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Compliance Score</span>
+                <span class="audit-value">44.55%</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Date of Audit Report</span>
+                <span class="audit-value">2025-11-21</span>
+            </div>
+        </div>*@
+
+        <!-- KPI Bar  -->
+        <div class="container my-4">
+            <div class="row g-3">
+
+                <!-- Compliance Score-->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">Vendor</div>
+                        <div class="kpi-value">{{VendorUserCount || '0'}}</div>
+                    </div>
+                </div>
+
+                <!-- High Risk -->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">Site</div>
+                        <div class="kpi-value">
+                            {{sitecount || '0'}}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medium Risk -->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">Preliminary</div>
+                        <div class="kpi-value">{{DraftCount || '0'}}</div>
+                    </div>
+                </div>
+
+                <!-- Low Risk -->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title"> Final report</div>
+                        <div class="kpi-value">{{FinalCount || '0'}}</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="card-body p-3 h-100 d-flex flex-column">
+
+            <!-- Toolbar -->
+            <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            {{selectedInvoiceType || 'Invoice List'}}
+                        </button>
+
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="" ng-click="filterInvoice('')">All</a>
+                            </li>
+
+                            <li ng-repeat="type in InvoiceTypes">
+                                <a class="dropdown-item" href="" ng-click="filterInvoice(type)">
+                                    {{type}}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                     
+
+                   
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                    <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                        <div class="input-group input-group-sm">
+                            <input id="scSearch" type="text" class="form-control form-control-sm" ng-model="TextSearch" placeholder="Search..." />
+                            <button class="btn btn-sm" id="scSearchBtn" style="border-color: #022B5E" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" ng-click="exportCompianceoCSV()">CSV</a></li>
+                              
+                                <li><a class="dropdown-item" href="#" ng-click="printCompianceTable()">Print</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Table wrapper -->
+            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3" ng-init="AllVendorCompliance()">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 small-table">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Invoice No/Unique No</th>
+                                <th>Location(Site)</th>
+                                <th>Contractor</th>
+                                @*<th>Auditor</th>*@
+                                <th>Month</th>
+                                <th>Status</th>
+                                <th>Preliminary Generated on</th>
+                                <th>Final Report Generated on</th>
+                                <th>View button</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr ng-repeat="x in filteredInvoices | filter:TextSearch">
+                                <td>{{$index +1}}</td>
+                                <td>{{x.VendorInvNum}}</td>
+                                <td>{{x.Location}}</td>
+                                <td>
+                                    {{x.VendorUser}}
+                                </td>
+                                @*<td>{{x.Auditor}}</td>*@
+                                <td>
+                                    {{x.MonthName}}
+                                </td>
+                                <td>
+                                    {{x.ComplianceStatus}}
+                                </td>
+                                <td>{{x.GeneratedOn}}</td>
+                                <td>
+                                    {{x.FinalSubmit}}
+                                </td>
+
+                                <td><a class="btn btn-sm btn-submit px-3" ng-click="Clicktocompliance(x.VendorInvNum,x.ClientId,x.VendorId)">View</a></td>
+                            </tr>
+                            <tr ng-if="!filteredInvoices || filteredInvoices.length == 0">
+                                <td colspan="9" class="text-center text-muted py-3" style="color: var(--primary) !important;">
+                                   Data Not Found
+                                </td>
+                            </tr>
+
+
+
+                        </tbody>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

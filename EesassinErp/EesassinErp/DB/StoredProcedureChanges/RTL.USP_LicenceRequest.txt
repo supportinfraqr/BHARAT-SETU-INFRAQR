@@ -1,0 +1,463 @@
+USE [eesassinuat_uat1]
+GO
+/****** Object:  StoredProcedure [RTL].[USP_LicenceRequest]    Script Date: 11-10-2024 13:51:09 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ 
+ 
+ALTER PROCEDURE [RTL].[USP_LicenceRequest]
+(
+	@userId INT=null,
+	@Action INT=null,
+	@LicenceRequestId BIGINT = 0,
+	@ApplicationStatus varchar(50) = NULL,
+	@ApplicationDate varchar(50)  = NULL,
+	@UploadApplicationCopy varchar(500)  = '',
+	@UploadChallanCopy varchar(500)  = '',
+	@UploadFeesCopy varchar(500)  = '',
+	@LicenseStatus varchar(50)  = NULL,
+	@LicenseDate varchar(50)  = NULL,
+	@LicenseNumber varchar(50)  = NULL,
+	@ValidityStartDate varchar(50)  = NULL,
+	@ValidityEndDate varchar(50)  = NULL,
+	@UploadLicenseCopy varchar(500)  = '',
+
+	@RenewalRequestDate	varchar(50)	= NULL,
+	@RenewalStatus	varchar(50)	= NULL,
+	@RenewalStartDate	varchar(50)	= NULL,
+	@RenewalEnddate	varchar(50)	= NULL,
+	@UploadRenewedCopy	varchar(500)	= '', 
+
+	@UserName varchar(50)  = '',
+	@UserPassword nvarchar(50)  = '',
+	@MobileNumber varchar(50)  = '',
+	@EmailId varchar(50) = '',
+	@TentativeDateofComp varchar(50) = NULL,
+	@InvoiceStatus varchar(50) = NULL,
+	@InvoiceDate varchar(50) = NULL,
+	@InvoiceNo varchar(50) = '',
+	@InvoiceAmount varchar(50) = '',
+	@UploadInvoice varchar(500) = '' ,
+	@PaymentStatus	varchar(50)	 = NULL ,
+	@PaymentTAT	varchar(50)	 = NULL ,
+	@PaymentDuedate	date	 = NULL ,
+	@PaymentOverDueDate	date	 = NULL ,
+	@PaymentLink	varchar(50)	 = NULL ,
+	@ModifyBy	int	 = NULL ,
+	@ModifiedOn	datetime	 = NULL ,
+	@LStatus	int	 = NULL ,
+	@RenewalId BIGINT = 0,
+	@Result VARCHAR(50)=''  OUTPUT   
+)
+AS
+BEGIN
+
+	DECLARE @isAdmin BIT = 0 
+	IF EXISTS (SELECT 1 FROM [dbo].[LoginTable] WHERE  LoginId = @userID AND LoginType = 1)
+	BEGIN
+		SET @isAdmin = 1
+	END
+
+	IF(@Action = 2 )--AND @isAdmin = 1
+	BEGIN 
+		      if(@ApplicationStatus='Not Applied')
+			  Begin
+					Set @UploadApplicationCopy =''
+					Set @ApplicationDate =''
+			  End
+			   if(@LicenseStatus='Not Issued')
+			  Begin
+				Set @LicenseDate=''
+				Set @LicenseNumber=''
+				Set @ValidityStartDate=''
+				Set @ValidityEndDate=''
+				Set @UploadLicenseCopy=''
+			  End
+
+			   if(@InvoiceStatus='Pending')
+			  Begin
+				Set @InvoiceDate=''
+				Set @InvoiceNo=''
+				Set @InvoiceAmount=''
+				Set @UploadInvoice='' 
+			  End 
+
+				if(@UploadApplicationCopy='null')
+				Begin
+				Set @UploadApplicationCopy=''
+				END
+				if(@UploadChallanCopy='null')
+				Begin
+				Set @UploadChallanCopy=''
+				END
+				if(@UploadFeesCopy='null')
+				Begin
+				Set @UploadFeesCopy=''
+				END
+				if(@UploadLicenseCopy='null')
+				Begin
+				Set @UploadLicenseCopy=''
+				END
+				if(@UploadInvoice='null')
+				Begin
+				Set @UploadInvoice=''
+				END
+				if(@UploadRenewedCopy='null')
+				Begin
+				Set @UploadRenewedCopy=''
+				END
+				if(@TentativeDateofComp='null' or @TentativeDateofComp='Invalid Date')
+				Begin
+				Set @TentativeDateofComp=''
+				END
+	  
+
+
+
+
+
+			UPDATE [RTL].[LicenceRequest]
+			SET [ApplicationStatus] = ISNULL(@ApplicationStatus,'')
+			,[ApplicationDate] =	 ISNULL(@ApplicationDate,'')
+			,[UploadApplicationCopy] =  ISNULL(@UploadApplicationCopy,'')
+			,[UploadChallanCopy] =   ISNULL(@UploadChallanCopy,'')
+			,[UploadFeesCopy] =  ISNULL(@UploadFeesCopy,'')
+			,[LicenseStatus] =  ISNULL(@LicenseStatus,'')
+			,[LicenseDate] =  ISNULL(@LicenseDate, '')
+			,[LicenseNumber] =  ISNULL(@LicenseNumber,'')
+			,[ValidityStartDate] =  ISNULL(@ValidityStartDate,'')
+			,[ValidityEndDate] =  ISNULL(@ValidityEndDate, '')
+			,[UploadLicenseCopy] =  ISNULL(@UploadLicenseCopy, '')
+			,[UserName] =  ISNULL(@UserName,'')
+			,[UserPassword] =  ISNULL(@UserPassword,'')
+			,[MobileNumber] =  ISNULL(@MobileNumber,'')
+			,[EmailId] =  ISNULL(@EmailId,'')
+			,[TentativeDateofComp] =  ISNULL(@TentativeDateofComp, '')
+			,[InvoiceStatus] =  ISNULL(@InvoiceStatus,'')
+			,[InvoiceDate] =  ISNULL(@InvoiceDate, '')
+			,[InvoiceNo] =  ISNULL(@InvoiceNo,'')
+			,[InvoiceAmount] =  ISNULL(@InvoiceAmount,'')
+			,[UploadInvoice] =  ISNULL(@UploadInvoice,'') 
+			,PaymentLink='NOT_DEFINE_YET'
+			,PaymentOverDueDate=@PaymentOverDueDate
+			,PaymentDuedate=@PaymentDuedate
+			,PaymentTAT=@PaymentTAT
+			,PaymentStatus=@PaymentStatus
+			,RenewalEnddate= ISNULL(@RenewalEndDate,'') 
+			,RenewalStartDate= ISNULL(@RenewalStartDate,'') 
+			,RenewalStatus=	@RenewalStatus
+			,UploadRenewedCopy=@UploadRenewedCopy 
+			 
+
+			,[ModifyBy] =  @userId
+			,[ModifiedOn] =  GETUTCDATE()
+			WHERE Id = @LicenceRequestId 
+	 
+	   SET @Result ='2'
+
+	END
+	IF(@Action = 4)
+		BEGIN    
+		if(@IsAdmin=1)
+		Begin
+				 SELECT LR.Id As LicenceRequstId,SM.StoreCode,SM.RefStoreCode,SM.CompleteAddress AS StoreAddress,
+				format(SM.ProposedDate,'MM/dd/yyyy')ProposedDate ,
+				LM.LicenseName, 
+				CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+				format(SL.RequestedDate,'MM/dd/yyyy')RequestedDate ,  
+				format(SL.ModifiedOn,'MM/dd/yyyy')	    DocumentDate,
+				Isnull(ApplicationStatus,'')ApplicationStatus,
+				 CONVERT(char(10), ApplicationDate,126)ApplicationDate,
+			--	ISNULL(CONVERT(VARCHAR(23), ApplicationDate,103),'') ApplicationDate, 
+				UploadApplicationCopy,
+				UploadChallanCopy,
+				UploadFeesCopy,
+				Isnull(LicenseStatus,'')LicenseStatus, 
+				ISNULL(CONVERT(VARCHAR(23), LR.LicenseDate,103),'') IssuedDate, 
+				isnull(LicenseNumber,'')LicenseNumber, 
+				ISNULL(CONVERT(VARCHAR(23),ValidityStartDate,103),'') ValidityStartDate,
+				case when ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'')='01/01/1900' then ''
+				else 
+				format(ValidityEndDate,'MM/dd/yyyy') end ValidityEndDate, 
+				UploadLicenseCopy, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalRequestDate,103),'') RenewalRequestDate,  
+				Isnull(RenewalStatus,'')RenewalStatus, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalStartDate,103),'') RenewalStartDate, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalEnddate,103),'') RenewalEnddate, 
+				UploadRenewedCopy,
+				isnull(UserName,'')UserName ,
+				isnull(UserPassword,'')UserPassword ,
+				isnull(MobileNumber,'')MobileNumber ,
+				isnull(EmailId,'')EmailId ,
+				TentativeDateofComp,
+				Isnull(InvoiceStatus,'')InvoiceStatus,   
+				ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') InvoiceDate,
+				isnull(InvoiceNo,'')InvoiceNo ,
+				isnull(InvoiceAmount,'')InvoiceAmount ,
+				UploadInvoice,
+				case when PaymentStatus='SUCCESS' then 'Paid' else 'Unpaid' end PaymentStatus,
+				isnull(PaymentTAT,0)PaymentTAT,  
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					format(DATEADD(day, convert(int,PaymentTAT), ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),'MM/dd/yyyy')
+					END PaymentDueDate, 
+
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					case when  DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) >0
+					then DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) 
+					else 0 end
+					END PaymentOverDueDate,
+
+				 PaymentOverDueDate, 
+				PaymentLink,
+				LR.ModifyBy,
+				LR.ModifiedOn,
+				LStatus   
+				FROM 
+				[RTL].LicenceRequest LR
+				INNER JOIN [RTL].StoreLicences SL
+				ON  LR. StoreLicenceId = SL.Id
+				INNER JOIN [RTL].StoreMaster SM
+				ON SM.ID = SL.StoreId
+				INNER JOIN [RTL].LicenseMaster LM
+				ON LM.LicenseId = SL.LicenseId  
+				order by LicenceRequstId  DESC
+		 End
+		else
+		Begin
+		   	 if exists(select 1 from rtl.AssignExecuter where executerId=@userId)
+			 Begin
+			SELECT LR.Id As LicenceRequstId,SM.StoreCode,SM.RefStoreCode,SM.CompleteAddress AS StoreAddress,
+				format(SM.ProposedDate,'MM/dd/yyyy')ProposedDate ,LM.LicenseName,
+				CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+				format(SL.RequestedDate,'MM/dd/yyyy')RequestedDate , 
+				format(SL.ModifiedOn,'MM/dd/yyyy')	 DocumentDate ,ApplicationStatus,  
+					 CONVERT(char(10), ApplicationDate,126)ApplicationDate,
+				UploadApplicationCopy,
+				UploadChallanCopy,
+				UploadFeesCopy,
+				LicenseStatus,	
+				ISNULL(CONVERT(VARCHAR(23), LR.LicenseDate,121),'') IssuedDate, 
+				LicenseNumber,
+				ISNULL(CONVERT(VARCHAR(23), ValidityStartDate,121),'') ValidityStartDate, 
+					case when ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'')='01/01/1900' then ''
+				else 
+				format(ValidityEndDate,'MM/dd/yyyy')  end ValidityEndDate, 
+				 UploadLicenseCopy,	ISNULL(CONVERT(VARCHAR(23), RenewalRequestDate,121),'') RenewalRequestDate,  
+				Isnull(RenewalStatus,'')RenewalStatus,
+				ISNULL(CONVERT(VARCHAR(23), RenewalStartDate,121),'') RenewalStartDate, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalEnddate,121),'') RenewalEnddate, 
+			 	UploadRenewedCopy,UserName,UserPassword,MobileNumber,EmailId,TentativeDateofComp,InvoiceStatus, 
+				ISNULL(CONVERT(VARCHAR(23), InvoiceDate,121),'') InvoiceDate, 
+				InvoiceNo,
+				InvoiceAmount,
+				UploadInvoice,
+				case when PaymentStatus='SUCCESS' then 'Paid' else 'Unpaid' end PaymentStatus,
+				isnull(PaymentTAT,0)PaymentTAT,	 
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					format(DATEADD(day, convert(int,PaymentTAT), ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),'MM/dd/yyyy')
+					END PaymentDueDate,  
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					case when  DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) >0
+					then DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) 
+					else 0 end
+					END PaymentOverDueDate, 
+				PaymentLink,	LR.ModifyBy,LR.ModifiedOn,LStatus  
+				FROM 
+				[RTL].LicenceRequest LR
+				INNER JOIN [RTL].StoreLicences SL ON  LR. StoreLicenceId = SL.Id
+				INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId 
+				INNER JOIN [RTL].LicenseMaster LM ON LM.LicenseId = SL.LicenseId
+				--LEFT JOIN [RTL].LicenceRequestRenewal LRR ON LRR.LicenceRequestId = LR.Id
+				INNER JOIN RTL.StoreMapping AS SMS WITH (NOLOCK) ON SMS.StoreId =SM.Id
+				and
+				SMS.PartyId in 
+				(select Distinct MapId from Logintable where LoginId=@userId) 
+			 
+				order by LicenceRequstId desc
+
+			End
+			else
+			Begin
+			SELECT LR.Id As LicenceRequstId,SM.StoreCode,SM.RefStoreCode,SM.CompleteAddress AS StoreAddress,
+				format(SM.ProposedDate,'MM/dd/yyyy')ProposedDate ,LM.LicenseName,
+				CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+				format(SL.RequestedDate,'MM/dd/yyyy')RequestedDate , 
+				format(SL.ModifiedOn,'MM/dd/yyyy')	 DocumentDate ,ApplicationStatus,  
+					 CONVERT(char(10), ApplicationDate,126)ApplicationDate,
+				UploadApplicationCopy,
+				UploadChallanCopy,
+				UploadFeesCopy,
+				LicenseStatus,	
+				ISNULL(CONVERT(VARCHAR(23), LR.LicenseDate,121),'') IssuedDate, 
+				LicenseNumber,
+				ISNULL(CONVERT(VARCHAR(23), ValidityStartDate,121),'') ValidityStartDate, 
+					case when ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'')='01/01/1900' then ''
+				else 
+				format(ValidityEndDate,'MM/dd/yyyy')  end ValidityEndDate, 
+				 UploadLicenseCopy,	ISNULL(CONVERT(VARCHAR(23), RenewalRequestDate,121),'') RenewalRequestDate,  
+				Isnull(RenewalStatus,'')RenewalStatus,
+				ISNULL(CONVERT(VARCHAR(23), RenewalStartDate,121),'') RenewalStartDate, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalEnddate,121),'') RenewalEnddate, 
+			 	UploadRenewedCopy,UserName,UserPassword,MobileNumber,EmailId,TentativeDateofComp,InvoiceStatus, 
+				ISNULL(CONVERT(VARCHAR(23), InvoiceDate,121),'') InvoiceDate, 
+				InvoiceNo,
+				InvoiceAmount,UploadInvoice,
+				case when PaymentStatus='SUCCESS' then 'Paid' else 'Unpaid' end PaymentStatus,
+				isnull(PaymentTAT,0)PaymentTAT,	 
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					format(DATEADD(day, convert(int,PaymentTAT), ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),'MM/dd/yyyy')
+					END PaymentDueDate,  
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					case when  DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) >0
+					then DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) 
+					else 0 end
+					END PaymentOverDueDate, 
+				PaymentLink,	LR.ModifyBy,LR.ModifiedOn,LStatus  
+				FROM 
+				[RTL].LicenceRequest LR
+				INNER JOIN [RTL].StoreLicences SL ON  LR. StoreLicenceId = SL.Id
+				INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId 
+				INNER JOIN [RTL].LicenseMaster LM ON LM.LicenseId = SL.LicenseId
+				--LEFT JOIN [RTL].LicenceRequestRenewal LRR ON LRR.LicenceRequestId = LR.Id
+				INNER JOIN RTL.StoreMapping AS SMS WITH (NOLOCK) ON SMS.StoreId =SM.Id
+				and SMS.UserId =@userId 
+				order by LicenceRequstId desc
+
+			End
+				
+
+
+		End
+					
+	END
+	IF(@Action=5)
+	Begin
+	 Declare @counts int =0;
+	     SET @counts =(SELECT COUNT(*) FROM  [RTL].[LicenceRequest] WHERE StoreLicenceId =(SELECT DISTINCT StoreLicenceId FROM [RTL].[LicenceRequest]  
+		 where Id=@LicenceRequestId ))
+
+		insert into[RTL].[LicenceRequest]
+		select  StoreLicenceId,	ApplicationStatus,	ApplicationDate,	UploadApplicationCopy,	UploadChallanCopy,	UploadFeesCopy,	LicenseStatus,
+		LicenseDate,	LicenseNumber,ValidityStartDate,''ValidityEndDate,	UploadLicenseCopy,convert(varchar, GETUTCDATE(), 3) 	RenewalRequestDate,	RenewalStatus,
+		RenewalStartDate,	RenewalEnddate,	UploadRenewedCopy,	UserName,	UserPassword,	MobileNumber,	EmailId,
+		'' TentativeDateofComp,	''InvoiceStatus,	''InvoiceDate,	''InvoiceNo,''	InvoiceAmount,	''UploadInvoice,	''PaymentStatus,
+		''PaymentTAT,''		PaymentDuedate,''	PaymentOverDueDate,''	PaymentLink,''	ModifyBy,''	ModifiedOn,
+		'3'	LStatus from [RTL].[LicenceRequest]
+		where Id=@LicenceRequestId
+		
+		
+		 pRINT @counts
+		 IF(@counts=1)
+		 bEGIN
+		 update [RTL].[LicenceRequest] set LStatus=2   where Id=@LicenceRequestId  
+		 eND 
+		 else
+		 BEGIN
+		  update [RTL].[LicenceRequest] set LStatus=4   where Id=@LicenceRequestId  
+		 END
+		  SET @Result ='Approved Successfully'
+	End
+	if(@Action=6)
+	Begin
+	SELECT LR.Id As LicenceRequstId,SM.StoreCode,SM.RefStoreCode ,SM.CompleteAddress AS StoreAddress,
+				format(SM.ProposedDate,'MM/dd/yyyy')ProposedDate ,LM.LicenseName,
+				CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+				format(SL.RequestedDate,'MM/dd/yyyy')RequestedDate , 
+				format(SL.ModifiedOn,'MM/dd/yyyy')	 DocumentDate ,ApplicationStatus,  
+					 CONVERT(char(10), ApplicationDate,126)ApplicationDate,
+				UploadApplicationCopy,
+				UploadChallanCopy,
+				UploadFeesCopy,
+				LicenseStatus,	
+				ISNULL(CONVERT(VARCHAR(23), LR.LicenseDate,121),'') IssuedDate, 
+				LicenseNumber,
+				ISNULL(CONVERT(VARCHAR(23), ValidityStartDate,121),'') ValidityStartDate, 
+					case when ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'')='01/01/1900' then ''
+				else 
+				format(ValidityEndDate,'MM/dd/yyyy')  end ValidityEndDate, 
+				 UploadLicenseCopy,	ISNULL(CONVERT(VARCHAR(23), RenewalRequestDate,121),'') RenewalRequestDate,  
+				Isnull(RenewalStatus,'')RenewalStatus,
+				ISNULL(CONVERT(VARCHAR(23), RenewalStartDate,121),'') RenewalStartDate, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalEnddate,121),'') RenewalEnddate, 
+			 	UploadRenewedCopy,UserName,UserPassword,MobileNumber,EmailId,TentativeDateofComp,InvoiceStatus, 
+				ISNULL(CONVERT(VARCHAR(23), InvoiceDate,121),'') InvoiceDate, 
+				InvoiceNo,
+				InvoiceAmount,
+				case when PaymentStatus='SUCCESS' then 'Paid' else 'Unpaid' end PaymentStatus,
+				isnull(PaymentTAT,0)PaymentTAT,	 
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					format(DATEADD(day, convert(int,PaymentTAT), ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),'MM/dd/yyyy')
+					END PaymentDueDate,  
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					case when  DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) >0
+					then DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) 
+					else 0 end
+					END PaymentOverDueDate, 
+				PaymentLink,	LR.ModifyBy,LR.ModifiedOn,LStatus  
+				FROM 
+				[RTL].LicenceRequest LR
+				INNER JOIN [RTL].StoreLicences SL ON  LR. StoreLicenceId = SL.Id
+				INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId 
+				INNER JOIN [RTL].LicenseMaster LM ON LM.LicenseId = SL.LicenseId
+				--LEFT JOIN [RTL].LicenceRequestRenewal LRR ON LRR.LicenceRequestId = LR.Id
+				INNER JOIN RTL.StoreMapping AS SMS WITH (NOLOCK) ON SMS.StoreId =SM.Id
+				and 
+				SMS.UserId =@userId
+				where PaymentStatus !='SUCCESS'
+				and isnull(InvoiceAmount,'') !=''  
+				order by LicenceRequstId desc 
+	End
+	if(@Action=7)
+	Begin
+ SELECT LR.Id LID, SM.StoreCode+' | ['+RefStoreCode+'] | '+' [ '+LM.LicenseName+' ] | ' +CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END +'| Amount : '+ ISNULL(InvoiceAmount,'0') ALicence   , LR.Id As LicenceRequstId,SM.StoreCode,
+SM.CompleteAddress AS StoreAddress,
+				format(SM.ProposedDate,'MM/dd/yyyy')ProposedDate ,LM.LicenseName,
+				CASE WHEN LStatus IN(1,2) then 'Fresh' ELSE 'Renewed' END LicenseType,
+				format(SL.RequestedDate,'MM/dd/yyyy')RequestedDate , 
+				format(SL.ModifiedOn,'MM/dd/yyyy')	 DocumentDate ,ApplicationStatus,  
+					 CONVERT(char(10), ApplicationDate,126)ApplicationDate,
+				UploadApplicationCopy,
+				UploadChallanCopy,
+				UploadFeesCopy,
+				LicenseStatus,	
+				ISNULL(CONVERT(VARCHAR(23), LR.LicenseDate,121),'') IssuedDate, 
+				LicenseNumber,
+				ISNULL(CONVERT(VARCHAR(23), ValidityStartDate,121),'') ValidityStartDate, 
+					case when ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'')='01/01/1900' then ''
+				else 
+				format(ValidityEndDate,'MM/dd/yyyy')  end ValidityEndDate, 
+				 UploadLicenseCopy,	ISNULL(CONVERT(VARCHAR(23), RenewalRequestDate,121),'') RenewalRequestDate,  
+				Isnull(RenewalStatus,'')RenewalStatus,
+				ISNULL(CONVERT(VARCHAR(23), RenewalStartDate,121),'') RenewalStartDate, 
+				ISNULL(CONVERT(VARCHAR(23), RenewalEnddate,121),'') RenewalEnddate, 
+			 	UploadRenewedCopy,UserName,UserPassword,MobileNumber,EmailId,TentativeDateofComp,InvoiceStatus, 
+				ISNULL(CONVERT(VARCHAR(23), InvoiceDate,121),'') InvoiceDate, 
+				InvoiceNo,
+				InvoiceAmount,
+				case when PaymentStatus='SUCCESS' then 'Paid' else 'Unpaid' end PaymentStatus,
+				isnull(PaymentTAT,0)PaymentTAT,	 
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					format(DATEADD(day, convert(int,PaymentTAT), ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),'MM/dd/yyyy')
+					END PaymentDueDate,  
+					case when ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'') =''  then '' else
+					case when  DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) >0
+					then DATEDIFF(day,  DATEADD(day, convert(int,PaymentTAT),ISNULL(CONVERT(VARCHAR(23), InvoiceDate,103),'')),getdate() ) 
+					else 0 end
+					END PaymentOverDueDate, 
+				PaymentLink,	LR.ModifyBy,LR.ModifiedOn,LStatus  
+				FROM 
+				[RTL].LicenceRequest LR
+				INNER JOIN [RTL].StoreLicences SL ON  LR. StoreLicenceId = SL.Id
+				INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId 
+				INNER JOIN [RTL].LicenseMaster LM ON LM.LicenseId = SL.LicenseId
+				--LEFT JOIN [RTL].LicenceRequestRenewal LRR ON LRR.LicenceRequestId = LR.Id
+				INNER JOIN RTL.StoreMapping AS SMS WITH (NOLOCK) ON SMS.StoreId =SM.Id 
+			    where isnull(PaymentStatus,'Unpaid') !='SUCCESS'
+				order by LicenceRequstId desc 
+	End
+END
+
+
+ 

@@ -1,0 +1,31 @@
+﻿
+@{
+    ViewBag.Title = "DashBoard";
+    Layout = "~/Views/Common/_CommonLayout.cshtml";
+}
+<script src="~/scripts/myjslib/controller.js"></script>
+
+
+<!DOCTYPE html>
+<div class="tab-main-box">
+    <ul class="nav nav-tabs profile-tab iframe-wrapper-tab" role="tablist">
+        <li id="tabmenuhomedashboard" class="nav-item active">
+        
+        <a class="nav-link active pad-r-30" id="ancormenuhomedashboard" onclick="Showtab('#menuhomedashboard')" data-toggle="tab" href="#homedashboard"
+           aria-expanded="false" role="tab">DashBoard</a> 
+            <i id="btnrefreshmenuhomedashboard" class="pe-7s-refresh-2 close-box" title="Reload Page" onclick="ReloadBox('#menuhomedashboard');" disabled="disabled"></i>
+        </li>
+
+    </ul>
+</div>
+    <div class="iframe-wrapper tab-content" oncontextmenu="return false;">
+        <iframe id="menuhomedashboard" class="iframedesign " oncontextmenu="return false;"  ng-src="{{url}}"  src='../DashBoard/AdminDashBoard' rameborder="0" marginheight="1" role="tabpanel" marginwidth="1" seamless="seamless"  allowtransparency="true"></iframe>
+    </div>
+
+
+    
+
+
+
+
+

@@ -1,0 +1,877 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "License Common Compliance";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="~/ReportsDashboard/LicenseCommonCompliance/style.css" rel="stylesheet" />
+<script src="~/ReportsDashboard/LicenseCommonCompliance/script.js"></script>
+<div class="licCommonCompPage px-4 py-2">
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="Overview, License Report, Expiry Report or Report">
+            <button type="button" class="btn btn-pill active" data-target="#overview" aria-pressed="true">Overview</button>
+            <button type="button" class="btn btn-pill" data-target="#licenseReport" aria-pressed="false">License Report </button>
+            <button type="button" class="btn btn-pill" data-target="#expiryReport" aria-pressed="false">Expiry License</button>
+            <button type="button" class="btn btn-pill" data-target="#masterReport" aria-pressed="false">Reports</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- CARD 1 : Overview (default visible) -->
+        <div id="overview" class="card section-card active">
+            <!-- Header -->
+            <div class="licCommonCompPage-header mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h4 class="mb-0">License Overview</h4>
+                    <button type="button" class="btn btn-sm export-btn">
+                        <i class="bi bi-download me-1"></i> Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Region
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Central</a></li>
+                                <li><a class="dropdown-item" href="#">North</a></li>
+                                <li><a class="dropdown-item" href="#">East</a></li>
+                                <li><a class="dropdown-item" href="#">West</a></li>
+                                <li><a class="dropdown-item" href="#">South</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Applied</a></li>
+                                <li><a class="dropdown-item" href="#">Not Applied</a></li>
+                                <li><a class="dropdown-item" href="#">Issued</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Expiry Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Expiring Soon</a></li>
+                                <li><a class="dropdown-item" href="#">Expired</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Stage
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fresh</a></li>
+                                <li><a class="dropdown-item" href="#">Old</a></li>
+                                <li><a class="dropdown-item" href="#">Renewed</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Outlet
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">DemoSN1</a></li>
+                                <li><a class="dropdown-item" href="#">DemoSN2</a></li>
+                                <li><a class="dropdown-item" href="#">DemoSN3</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Type
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Factory License</a></li>
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                State
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Assam</a></li>
+                                <li><a class="dropdown-item" href="#">Bihar</a></li>
+                                <li><a class="dropdown-item" href="#">Chandigarh</a></li>
+                                <li><a class="dropdown-item" href="#">Delhi</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Address
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location1</a></li>
+                                <li><a class="dropdown-item" href="#">Location2</a></li>
+                                <li><a class="dropdown-item" href="#">Bihar</a></li>
+                                <li><a class="dropdown-item" href="#">Chandigarh</a></li>
+                                <li><a class="dropdown-item" href="#">Delhi</a></li>
+                            </ul>
+                        </div>
+
+                        @*<button class="btn btn-sm go-btn">Go</button>*@
+                        <button class="btn btn-sm reset-btn">Reset</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <!-- Smart Search -->
+                        <div class="licCommonCompPage-search">
+                            <div class="licCommonCompPage-searchBox">
+                                <i class="bi bi-search"></i>
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search licenses, outlets, states…"
+                                       id="licSmartSearch"
+                                       autocomplete="off" />
+                            </div>
+
+                            <!-- Search Dropdown -->
+                            <div class="licCommonCompPage-searchDropdown d-none" id="licSearchDropdown">
+                                <!-- Filled dynamically -->
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!--  Dashboard Chart -->
+                <div class="licCommonCompPage-chartWrap mt-3">
+                    <div class="licCommonCompPage-chartContainer">
+                        <canvas id="licCommonComplianceChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- CARD 2 -->
+        <div id="licenseReport" class="card section-card d-none">
+            @*<h4 class="mb-4">License Report </h4>*@
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">License Report</h4>
+                <button type="button" class="btn btn-sm export-btn">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+            </div>
+            <!-- TOP SUMMARY CARD -->
+            <div class="licenseReport-summary card-body mb-4">
+                <div class="licenseReport-summary-row">
+
+                    <!-- LEFT -->
+                    <div class="licenseReport-client">
+                        <h4 class="client-name">Acme Corporation</h4>
+                        <div class="client-meta">
+                            <span>Client ID: CLT-2024-1847</span>
+                            <span class="dot">•</span>
+                            <span>Manufacturing</span>
+                            <span class="dot">•</span>
+                            <span>New York, USA</span>
+                        </div>
+                        <div class="client-date">
+                            Report Generated: January 8, 2026 at 02:23 PM
+                        </div>
+                    </div>
+
+                    <!-- RIGHT -->
+                    <div class="licenseReport-health">
+                        <div class="health-label">Overall Risk Score</div>
+                        <div class="health-score">12<span>/100</span></div>
+                        <div class="health-status">Needs Attention</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ================= KPI Bar ================= -->
+            <div class="container mb-4">
+                <div class="licCommonCompPage-kpi-row d-flex gap-3">
+
+                    <!-- Total License -->
+                    <div class="licCommonCompPage-kpi-card">
+                        <div>
+                            <div class="licCommonCompPage-kpi-title">Total License</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-value">7</div>
+                    </div>
+
+                    <div class="licCommonCompPage-kpi-card">
+                        <div>
+                            <div class="licCommonCompPage-kpi-title">Active</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-value">3</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="licCommonCompPage-kpi-card">
+                        <div>
+                            <div class="licCommonCompPage-kpi-title">Expring Soon</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-value">2</div>
+                    </div>
+
+                    <!-- Expired -->
+                    <div class="licCommonCompPage-kpi-card">
+                        <div>
+                            <div class="licCommonCompPage-kpi-title">Expired</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-value">1</div>
+                    </div>
+                    <div class="licCommonCompPage-kpi-card">
+                        <div>
+                            <div class="licCommonCompPage-kpi-title">Pending Approval</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-value">1</div>
+                    </div>
+                    <div class="licCommonCompPage-kpi-card">
+                        <div>
+                            <div class="licCommonCompPage-kpi-title">Total Documents</div>
+                        </div>
+                        <div class="licCommonCompPage-kpi-value">1</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ================= Priority Actions (Inside License Report) ================= -->
+            <div class="licenseReport-priorityActions card-body">
+
+                <!-- Header -->
+                <div class="priorityActions-header">
+                    <h5 class="priorityActions-title">Priority Actions</h5>
+                    <span class="priorityActions-badge">4 Actions Required</span>
+                </div>
+
+                <!-- Actions Grid -->
+                <div class="priorityActions-body">
+
+                    <div class="priorityActions-item">
+                        <div class="priorityActions-icon">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+
+                        <div class="priorityActions-content">
+                            <div class="priorityActions-item-title">
+                                Renew Health & Safety Certificate
+                            </div>
+                            <div class="priorityActions-desc">
+                                License expired 29 days ago. Immediate renewal required to avoid penalties.
+                            </div>
+                        </div>
+
+                        <div class="priorityActions-date">Overdue</div>
+                    </div>
+
+                    <div class="priorityActions-item">
+                        <div class="priorityActions-icon">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+
+                        <div class="priorityActions-content">
+                            <div class="priorityActions-item-title">
+                                Complete Import/Export License Renewal
+                            </div>
+                            <div class="priorityActions-desc">
+                                License expires in 23 days. Submit renewal application immediately.
+                            </div>
+                        </div>
+
+                        <div class="priorityActions-date">Jan 31, 2026</div>
+                    </div>
+
+                    <div class="priorityActions-item">
+                        <div class="priorityActions-icon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div class="priorityActions-content">
+                            <div class="priorityActions-item-title">
+                                Submit Pending Documents for Environmental Permit
+                            </div>
+                            <div class="priorityActions-desc">
+                                2 documents pending submission. Required for renewal process.
+                            </div>
+                        </div>
+
+                        <div class="priorityActions-date">Feb 28, 2026</div>
+                    </div>
+
+                    <div class="priorityActions-item">
+                        <div class="priorityActions-icon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+
+                        <div class="priorityActions-content">
+                            <div class="priorityActions-item-title">
+                                Follow up on Trade License Approval
+                            </div>
+                            <div class="priorityActions-desc">
+                                Application pending for 38 days. Contact Department of Trade for status update.
+                            </div>
+                        </div>
+
+                        <div class="priorityActions-date">Jan 20, 2026</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ================= License Report : Insights (Scoped) ================= -->
+            <div class="licReportInsights mt-3">
+
+                <div class="row g-3 align-items-stretch">
+
+                    <!-- LEFT -->
+                    <div class="col-lg-6">
+                        <div class="licReportInsights-card">
+                            <h5 class="licReportInsights-title">License Status Distribution</h5>
+                            <div class="licReportInsights-chartWrap licReportInsights-chart-lg">
+                                <canvas id="licStatusDonut"></canvas>
+
+                                <!-- Legend -->
+                                <div class="licReportInsights-legend single-row">
+                                    <span class="active">Active: 3</span>
+                                    <span class="expiring">Expiring Soon: 2</span>
+                                    <span class="expired">Expired: 1</span>
+                                    <span class="pending">Pending Approval: 1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT -->
+                    <div class="col-lg-6 d-flex flex-column gap-3">
+
+                        <!-- Risk -->
+                        <div class="licReportInsights-card">
+                            <h5 class="licReportInsights-title">Risk Assessment</h5>
+                            <div class="licReportInsights-riskWrap">
+                                <div class="risk-chart">
+                                    <canvas id="riskDonut"></canvas>
+                                    <div class="risk-score">12</div>
+                                    <div class="risk-label">Risk Score</div>
+                                </div>
+
+                                <ul class="licReportInsights-riskList">
+                                    <li class="high">High Risk: 1</li>
+                                    <li class="medium">Medium Risk: 3</li>
+                                    <li class="low">Low Risk: 3</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Document -->
+                        <div class="licReportInsights-card">
+                            <h6 class="licReportInsights-title">Document Status</h6>
+                            <div class="licReportInsights-chartWrap licReportInsights-chart-sm">
+                                <canvas id="docStatusBar"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= License Report : Charts Row ================= -->
+            <div class="row g-3 mt-1">
+
+                <!-- Left: Licenses by Category -->
+                <div class="col-lg-6">
+                    <div class="licReportInsights-card h-100">
+                        <h5 class="licReportInsights-title">Licenses by Category</h5>
+                        <div class="licReportInsights-chartWrap licReportInsights-chart-lg">
+                            <canvas id="licensesByCategory"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Expiry Timeline -->
+                <div class="col-lg-6">
+                    <div class="licReportInsights-card h-100">
+                        <h5 class="licReportInsights-title">Expiry Timeline (6 Months)</h5>
+                        <div class="licReportInsights-chartWrap licReportInsights-chart-lg">
+                            <canvas id="expiryTimeline"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ================= License Details & Status Table ================= -->
+            <div class="small-table-wrapper exLicTableWrapper flex-grow-1 overflow-auto rounded-3 mt-3">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 exLicTable" id="exLicTable">
+                        <thead>
+                            <tr>
+                                <th>License ID</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Issue Date</th>
+                                <th>Expiry Date</th>
+                                <th>Days to Expiry</th>
+                                <th>Risk</th>
+                                <th>Compliance</th>
+                                <th>Documents (P/A/C)</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr>
+                                <td>LIC-001</td>
+                                <td>Business Operating License</td>
+                                <td><span class="ex-status ex-active">Active</span></td>
+                                <td>15/01/2025</td>
+                                <td>14/01/2027</td>
+                                <td class="ex-days ex-good">736d</td>
+                                <td><span class="ex-risk ex-low">Low</span></td>
+                                <td>
+                                    <div class="ex-progress">
+                                        <span class="bar bar-green" style="width:95%"></span>
+                                    </div>
+                                    <span class="ex-percent">95%</span>
+                                </td>
+                                <td class="ex-docs">0 / <span>5</span> / <span>3</span></td>
+                            </tr>
+
+                            <tr>
+                                <td>LIC-002</td>
+                                <td>Environmental Permit</td>
+                                <td><span class="ex-status ex-warning">Expiring Soon</span></td>
+                                <td>01/02/2024</td>
+                                <td>28/02/2026</td>
+                                <td class="ex-days ex-warn">51d</td>
+                                <td><span class="ex-risk ex-medium">Medium</span></td>
+                                <td>
+                                    <div class="ex-progress">
+                                        <span class="bar bar-amber" style="width:78%"></span>
+                                    </div>
+                                    <span class="ex-percent">78%</span>
+                                </td>
+                                <td class="ex-docs">2 / <span>3</span> / <span>2</span></td>
+                            </tr>
+
+                            <tr>
+                                <td>LIC-003</td>
+                                <td>Health & Safety Certificate</td>
+                                <td><span class="ex-status ex-danger">Expired</span></td>
+                                <td>10/06/2023</td>
+                                <td>10/12/2025</td>
+                                <td class="ex-days ex-bad">Overdue 29d</td>
+                                <td><span class="ex-risk ex-high">High</span></td>
+                                <td>
+                                    <div class="ex-progress">
+                                        <span class="bar bar-red" style="width:45%"></span>
+                                    </div>
+                                    <span class="ex-percent">45%</span>
+                                </td>
+                                <td class="ex-docs">5 / <span>2</span> / <span>1</span></td>
+                            </tr>
+
+                            <tr>
+                                <td>LIC-004</td>
+                                <td>Trade License</td>
+                                <td><span class="ex-status ex-info">Approval Pending</span></td>
+                                <td>01/12/2025</td>
+                                <td>01/12/2027</td>
+                                <td class="ex-days ex-na">N/A</td>
+                                <td><span class="ex-risk ex-medium">Medium</span></td>
+                                <td>
+                                    <div class="ex-progress">
+                                        <span class="bar bar-amber" style="width:60%"></span>
+                                    </div>
+                                    <span class="ex-percent">60%</span>
+                                </td>
+                                <td class="ex-docs">3 / <span>1</span> / <span>0</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ================= Recommended Actions & Next Steps ================= -->
+            <div class="licActionNextSteps mt-4">
+                <div class="row g-3 align-items-stretch">
+
+                    <!-- LEFT : Actions -->
+                    <div class="col-lg-8">
+                        <div class="licAction-card h-100">
+
+                            <!-- Header -->
+                            <div class="licAction-header d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="mb-0">Recommended Actions &amp; Next Steps</h6>
+                                <span class="licAction-tag">Strategic Guidance</span>
+                            </div>
+
+                            <!-- Action Columns -->
+                            <div class="row g-3">
+
+                                <!-- Immediate Actions -->
+                                <div class="col-md-6">
+                                    <div class="licAction-block">
+                                        <div class="licAction-title immediate">
+                                            <i class="bi bi-bullseye"></i>
+                                            Immediate Actions (Next 7 Days)
+                                        </div>
+                                        <ul class="licAction-list">
+                                            <li>Initiate renewal process for expired Health &amp; Safety Certificate</li>
+                                            <li>Submit all pending documents for Import/Export License renewal</li>
+                                            <li>Schedule compliance audit for low-scoring licenses</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Short-term Actions -->
+                                <div class="col-md-6">
+                                    <div class="licAction-block">
+                                        <div class="licAction-title short">
+                                            <i class="bi bi-activity"></i>
+                                            Short-term Actions (Next 30 Days)
+                                        </div>
+                                        <ul class="licAction-list">
+                                            <li>Complete renewal applications for Environmental Permit</li>
+                                            <li>Follow up on Trade License approval status</li>
+                                            <li>Upload pending documents for all licenses with incomplete documentation</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT : Summary -->
+                    <div class="col-lg-4">
+                        <div class="licAction-summary h-100">
+
+                            <div class="licAction-summaryItem compliant">
+                                <i class="bi bi-shield-check"></i>
+                                <span><strong>3</strong> of <strong>7</strong> compliant</span>
+                            </div>
+
+                            <div class="licAction-summaryItem attention">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span><strong>3</strong> need attention</span>
+                            </div>
+
+                            <hr />
+
+                            <div class="licAction-review">
+                                Next Review: <strong>Feb 7, 2026</strong>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ================= Quick Notes & Client Annotations ================= -->
+            <div class="licReportNotes card-body my-4">
+
+                <!-- Header -->
+                <div class="licReportNotes-header">
+                    @*<i class="bi bi-journal-text"></i>*@
+                    <h5 class="licReportNotes-title">Quick Notes & Client Annotations</h5>
+                </div>
+
+                <!-- Editable Inner Card -->
+                <div class="licReportNotes-editor" contenteditable="true">
+                    <ul>
+                        <li>Contact John from EPA office regarding permit extension timeline</li>
+                        <li>Review internal safety procedures before audit on Jan 25th</li>
+                        <li>Budget allocation needed for Q2 license renewals (~$15,000)</li>
+                    </ul>
+
+                    <div class="licReportNotes-placeholder">
+                        Additional notes can be added here…
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- CARD 3 -->
+        <div id="expiryReport" class="card section-card d-none">
+            @*<h4 class="mb-4">Expiry Report </h4>*@
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Expiry License</h4>
+                <button type="button" class="btn btn-sm export-btn">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+            </div>
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- ================= KPI Bar ================= -->
+                <div class="container mb-4">
+                    <div class="licCommonCompPage-kpi-row d-flex gap-2">
+
+                        <!-- Total License -->
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Total License</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">230</div>
+                        </div>
+
+                        <!-- Expiring Soon License -->
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Expring Soon</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">86</div>
+                        </div>
+
+                        <!-- Expired -->
+                        <div class="licCommonCompPage-kpi-card">
+                            <div>
+                                <div class="licCommonCompPage-kpi-title">Expired</div>
+                            </div>
+                            <div class="licCommonCompPage-kpi-value">68</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Name
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Signage License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTO</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTE</a></li>
+                                <li><a class="dropdown-item" href="#">Music License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code 
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location 1</a></li>
+                                <li><a class="dropdown-item" href="#">Location 2</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="exLicTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Location Code</th>
+                                    <th>License Name</th>
+                                    <th>License Number</th>
+                                    <th>Validity Start</th>
+                                    <th>Validity End</th>
+                                    <th>Days to Expire</th>
+                                    <th>Expiry Status</th>
+                                    <th>Renewal Request</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exLicTableBody">
+                                <tr>
+                                    <td>1</td>
+                                    <td><span data-bs-toggle="tooltip" data-bs-placement="top" title="Location Name: Mumbai • Store Type: Retail • Region: West">
+                                        00004225
+                                        </span>
+                                    </td>
+                                    <td>Trade License</td>
+                                    <td>TL-2023-001</td>
+                                    <td>12/12/2025</td>
+                                    <td>12/01/2026</td>
+                                    <td>15</td>
+                                    <td>Expiring Soon</td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Renewal
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td>
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top"
+                                              title="Food License applicable for Main Branch">
+                                            00004225
+                                        </span>
+                                    </td>
+                                    <td>Food License</td>
+                                    <td>FL-2022-045</td>
+                                    <td>12/12/2025</td>
+                                    <td>12/01/2026</td>
+                                    <td>0</td>
+                                    <td>Expired</td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Approve
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td>
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top"
+                                              title="Liquor License applicable for Main Branch">
+                                            00004225
+                                        </span>
+                                    </td>
+                                    <td>Liquor License</td>
+                                    <td>LL-2024-011</td>
+                                    <td>12/12/2025</td>
+                                    <td>12/01/2026</td>
+                                    <td>120</td>
+                                    <td>Active</td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Disabled
+                                        </button>
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="exLicPaginationWrap">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm" id="exLicPrev" type="button">Previous</button>
+                            <button class="btn btn-sm" id="exLicNext" type="button">Next</button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="exLicPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                            <button class="btn btn-sm btn-primary" id="viewAllRows" type="button">View All Rows</button>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+        </div>
+
+            <!-- CARD 4 -->
+        <div id="masterReport" class="card section-card d-none">
+            @*<h4 class="mb-4">License Master Report</h4>*@
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Reports</h4>
+                <button type="button" class="btn btn-sm export-btn">
+                    <i class="bi bi-download me-1"></i> Export
+                </button>
+            </div>
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">00004224</a></li>
+                                <li><a class="dropdown-item" href="#">00004225</a></li>
+                                <li><a class="dropdown-item" href="#">00004209</a></li>
+                                <li><a class="dropdown-item" href="#">00004205</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Application Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Applied</a></li>
+                                <li><a class="dropdown-item" href="#">Not Applied</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Issued</a></li>
+                                <li><a class="dropdown-item" href="#">Not Issued</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Renewal Status
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Renewed</a></li>
+                                <li><a class="dropdown-item" href="#">Not Renewed</a></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm search-btn">Search</button>
+
+                    </div>
+
+                    @*<div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                    <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                        <div class="input-group input-group-sm">
+                            <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                            <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 justify-content-center">
+                        <div class="dropdown">
+                            <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#">CSV</a></li>
+                                <li><a class="dropdown-item" href="#">PDF</a></li>
+                                <li><a class="dropdown-item" href="#">Print</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>*@
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

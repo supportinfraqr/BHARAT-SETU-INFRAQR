@@ -1,0 +1,63 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bharat Shram Setu</title>
+
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f7fb;
+            font-family: Arial;
+        }
+
+        .box {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px #ddd;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+        }
+
+        h2 {
+            color: #1b4d89;
+            margin-top: 20px;
+        }
+
+        p {
+            color: #555;
+            font-size: 16px;
+        }
+
+        .loader {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+
+<body>
+
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <script type="text/javascript">
+        alert('@Html.Raw(ViewBag.ErrorMessage)');
+        window.location.href = '@Url.Action("Login", "Login")';
+        </script>
+    }
+
+</body>
+</html>

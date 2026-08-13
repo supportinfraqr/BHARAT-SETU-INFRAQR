@@ -1,0 +1,1489 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = null;
+}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="~/Content/NewLogin/style.css" rel="stylesheet" /> 
+<link href="@Url.Content("~/Content/plugins/assets/css/font-icons/font-awesome.css")" rel="stylesheet" media="all" />
+<script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+<script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/B_loginController.js?Ver="+ViewBag.Version+"")"></script>
+<script type="text/javascript" src="@Url.Content("~/scripts/myjslib/myJs.js?Ver="+ViewBag.Version+"")"></script>
+@*<script src="~/Content/NewLogin/script.js"></script>*@
+<style>
+    .red-validation {
+        border: 1px solid #d65e65 !important;
+    }
+    .newOtpBoxes input {
+        border: 1px solid #ccc;
+        transition: .2s;
+    }
+
+    .otp-error input {
+        border: 1px solid #dc3545 !important;
+    }
+
+    .otp-success input {
+        border: 1px solid #28a745 !important;
+    }
+</style>
+<div class="newLoginPage" ng-app="myLoginApp" ng-controller="myLoginController">
+
+    <!-- ========================= -->
+    <!-- MAIN SECTION -->
+    <!-- ========================= -->
+    <div class="newLoginMain">
+
+
+        <!-- CONTENT -->
+        <div class="newLoginContent">
+
+            <!-- ====================================== -->
+            <!-- LEFT HERO -->
+            <!-- ====================================== -->
+            <div class="newLoginHero">
+
+                <div class="newLoginHeroTop">
+                    <!-- Brand Area -->
+                    <div class="newLoginBrandSection">
+
+                        <div class="newLoginBrandRow">
+
+                            <img src="~/Content/NewLogin/images/bharatshramsetu-logo.png"
+                                 class="newLoginBrandLogo">
+
+                            <div class="newLoginBrandText">
+
+                                <h1 class="newLoginBrandTitle">
+
+                                    <span class="bharat">Bharat</span><span class="shram">Shram</span><span class="setu">Setu</span>
+
+                                </h1>
+
+                                <div class="newLoginTagline">
+
+                                    <span></span>
+
+                                    <p>
+                                        One Nation, One ID, One Platform
+                                    </p>
+
+                                    <span></span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Main Heading -->
+                    <div class="newLoginHeroHeading">
+
+                        <h2>
+                            A Unified Digital Platform for Workforce Identity,
+                            Welfare and Empowerment.
+                        </h2>
+
+                    </div>
+
+
+                    <!-- Feature Row -->
+                    <div class="newLoginFeatureRow">
+
+                        <div class="newLoginFeatureBox">
+
+                            <img src="~/Content/NewLogin/images/icon-trust.svg">
+
+                            <h4 style="color:#1E3A8A">Trust</h4>
+
+                            <p>Secure & Verified</p>
+
+                        </div>
+
+                        <div class="newLoginFeatureDivider"></div>
+
+                        <div class="newLoginFeatureBox">
+
+                            <img src="~/Content/NewLogin/images/icon-transparency.svg">
+
+                            <h4 style="color:#F58220">Transparency</h4>
+
+                            <p>Clear & Accountable</p>
+
+                        </div>
+
+                        <div class="newLoginFeatureDivider"></div>
+
+                        <div class="newLoginFeatureBox">
+
+                            <img src="~/Content/NewLogin/images/icon-inclusivity.svg">
+
+                            <h4 style="color:#009245">Inclusivity</h4>
+
+                            <p>For Every Worker</p>
+
+                        </div>
+
+                        <div class="newLoginFeatureDivider"></div>
+
+                        <div class="newLoginFeatureBox">
+
+                            <img src="~/Content/NewLogin/images/icon-empowerment.svg">
+
+                            <h4 style="color:#1E3A8A">Empowerment</h4>
+
+                            <p>Growth & Welfare</p>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="newLoginHeroBottom">
+                    <!-- STATS BANNER -->
+                    <div class="newLoginStatsBanner">
+
+                        <div class="newLoginStatsItem">
+
+                            <div class="newLoginStatsIcon">
+                                <img src="~/Content/NewLogin/images/icon-workers.svg" alt="">
+                            </div>
+
+                            <div class="newLoginStatsContent">
+                                <h4>50+ Crore</h4>
+                                <p>Workers</p>
+                            </div>
+
+                        </div>
+
+                        <div class="newLoginStatsDivider"></div>
+
+                        <div class="newLoginStatsItem">
+
+                            <div class="newLoginStatsIcon">
+                                <img src="~/Content/NewLogin/images/icon-establishments.svg" alt="">
+                            </div>
+
+                            <div class="newLoginStatsContent">
+                                <h4>Millions</h4>
+                                <p>Establishments</p>
+                            </div>
+
+                        </div>
+
+                        <div class="newLoginStatsDivider"></div>
+
+                        <div class="newLoginStatsItem">
+
+                            <div class="newLoginStatsIcon">
+                                <img src="~/Content/NewLogin/images/icon-platform.svg" alt="">
+                            </div>
+
+                            <div class="newLoginStatsContent">
+                                <h4>One Trusted</h4>
+                                <p>Platform</p>
+                            </div>
+
+                        </div>
+
+                        <div class="newLoginStatsDivider"></div>
+
+                        <div class="newLoginStatsItem">
+
+                            <div class="newLoginStatsIcon">
+                                <img src="~/Content/NewLogin/images/icon-vision.svg" alt="">
+                            </div>
+
+                            <div class="newLoginStatsContent">
+                                <h4>One Nation</h4>
+                                <p>One Vision</p>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Bottom Message -->
+                    <div class="newLoginBottomMessage">
+
+                        <div class="newLoginTriLine"></div>
+
+                        <p>
+                            Building a Stronger, Safer and Empowered Bharat
+                        </p>
+
+                        <div class="newLoginTriLine"></div>
+
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ====================================== -->
+            <!-- LOGIN CARD -->
+            <!-- ====================================== -->
+
+            <div class="newLoginCard">
+
+                <!-- ====================================== -->
+                <!-- CARD HEADER -->
+                <!-- ====================================== -->
+
+                <div class="newLoginCardHeader">
+
+                    <h2 id="newLoginCardTitle">
+                        Welcome Back!
+                    </h2>
+
+                    <p id="newLoginCardSubTitle">
+                        Log in to your BharatShramSetu account
+                        {{TUserName}}
+                    </p>
+
+                </div>
+
+
+
+
+                <!-- ====================================== -->
+                <!-- LOGIN FLOW -->
+                <!-- ====================================== -->
+
+                <div id="newLoginFlow">
+
+
+
+                    <!-- Login As -->
+                    @*<div class="newLoginRoleSection">
+
+                        <label class="newLoginRoleLabel">
+                            Login as
+                        </label>
+
+                        <div class="newLoginRoleRow">
+
+                            <label class="newLoginRole active">
+                                <input type="radio" name="loginRole" value="Worker" checked>
+                                <span class="newLoginRoleDot"></span>
+                                Worker
+                            </label>
+
+                            <label class="newLoginRole">
+                                <input type="radio" name="loginRole" value="Contractor">
+                                <span class="newLoginRoleDot"></span>
+                                Contractor
+                            </label>
+
+                            <label class="newLoginRole">
+                                <input type="radio" name="loginRole" value="Principal Employer">
+                                <span class="newLoginRoleDot"></span>
+                                Principal Employer
+                            </label>
+
+                        </div>
+
+                    </div>*@
+
+
+
+                    <!-- ====================================== -->
+                    <!-- LOGIN VIEWS -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginViewsWrapper">
+
+
+                        <!-- ====================================== -->
+                        <!-- OTP VIEW (DEFAULT) -->
+                        <!-- ====================================== -->
+
+                        <div class="newLoginView active"
+                             id="otpView">
+
+                            <div class="newLoginField">
+
+                                <label>
+                                    Mobile Number/Email ID
+                                </label>
+
+                                <input id="username-input" type="text" class="form-control" ng-model="MobileNumber" placeholder="Enter Email or Mobile" autocomplete="new-username">
+
+                            </div>
+
+
+                            <button id="btnStep1Login" class="newLoginPrimaryBtn" ng-click="Loginotp()">
+
+                                <span>Send OTP</span>
+
+                                <i class="fa-solid fa-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <!-- ====================================== -->
+                        <!-- OTP VERIFY VIEW -->
+                        <!-- ====================================== -->
+
+                        <div class="newLoginView"
+                             id="otpVerifyView">
+
+                            <div class="newLoginField">
+                                <button type="button"
+                                        class="newLoginBackBtn"
+                                        id="backToOtp">
+
+                                    ← Back
+
+                                </button>
+
+                                <label>
+                                    Mobile Number/ Email ID
+                                </label>
+
+                                <input type="text" ng-model="MobileNumber"  class="form-control validate"  disabled  >
+
+                            </div>
+
+
+                            <div class="newLoginField">
+
+                                <label>
+                                    OTP
+                                </label>
+
+                                <div class="newLoginInputWithAction">
+
+                                    <input type="password" class="form-control validate" id="Potp" ng-model="Potp"
+                                           placeholder="Enter OTP">
+
+                                    <a href="javascript:void(0)"
+                                       class="newLoginInlineLink"
+                                       ng-click="Loginotp()"
+                                       ng-class="{'disabled-link': otpTimer > 0}"
+                                       ng-disabled="otpTimer > 0"
+                                       style="pointer-events: {{otpTimer > 0 ? 'none' : 'auto'}};">
+
+                                        {{ otpTimer > 0 ? 'Resend OTP (' + otpTimer + 's)' : 'Resend OTP' }}
+
+                                    </a>
+                                   
+                                </div>
+
+                            </div>
+
+
+                            <button id="btnSecureLogin" class="newLoginPrimaryBtn" ng-click="SecureLogin()">
+
+                                <span>Secure Login</span>
+
+                                <i class="fa-solid fa-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <!-- ====================================== -->
+                        <!-- MPIN VIEW -->
+                        <!-- ====================================== -->
+
+                        <div class="newLoginView"
+                             id="mpinView">
+
+                            <div class="newLoginField">
+
+                                <label>
+                                    Mobile Number / EmailId
+                                </label>
+
+                                <input type="text" id="Mobile" ng-model="MPINMobileNo"  
+                                       placeholder="Enter Email or Mobile">
+
+                            </div>
+
+
+                            <div class="newLoginField">
+
+                                <label>
+                                    MPIN
+                                </label>
+
+                                <div class="newLoginInputWithAction">
+
+                                    <input type="password" ng-model="MPIN"  id="MPIN" maxlength="6"
+                                           placeholder="Enter MPIN">
+
+                                    <a href="#" ng-click="ForgetMpin()"
+                                       class="newLoginInlineLink"
+                                       id="openForgotMpin">
+
+                                        Forgot MPIN?
+
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+
+                            <button id="btnSecureLoginMPin" class="newLoginPrimaryBtn" ng-click="SecureLoginMPin()">
+
+                                <span>Secure Login</span>
+
+                                <i class="fa-solid fa-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <!-- ====================================== -->
+                        <!-- PASSWORD VIEW -->
+                        <!-- ====================================== -->
+
+                        <div class="newLoginView"
+                             id="passwordView">
+
+                            <div class="newLoginField">
+
+                                <label>
+                                    UserName
+                                </label>
+
+                                <input type="text" ng-model="UserName" id="user"
+                                       placeholder="Enter UserName">
+
+                            </div>
+
+
+                            <div class="newLoginField">
+
+                                <label>
+                                    Password
+                                </label>
+
+                                <div class="newLoginInputWithAction">
+
+                                    <input type="password" ng-model="Password" id="pass"
+                                           placeholder="******">
+
+                                    <a href="#" 
+                                       class="newLoginInlineLink"
+                                       id="openForgotPassword">
+
+                                        Forgot Password?
+
+                                    </a>
+
+                                </div>
+
+                            </div>
+
+
+                            <button id="btnSecureLoginUserName" class="newLoginPrimaryBtn" ng-click="SecureLoginUserName()">
+
+                                <span>Secure Login</span>
+
+                                <i class="fa-solid fa-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- ====================================== -->
+                    <!-- CONTINUE WITH -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginContinueWith">
+
+                        <span class="line"></span>
+
+                        <p>
+                            OR CONTINUE WITH
+                        </p>
+
+                        <span class="line"></span>
+
+                    </div>
+
+
+
+                    <!-- ====================================== -->
+                    <!-- OTP METHOD OPTIONS -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginMethodGrid active"
+                         id="otpMethods">
+
+                        <button class="newLoginMethodCard openMpin">
+
+                            <img src="~/Content/NewLogin/images/icon-mpin.svg"
+                                 alt="">
+
+                            <span>
+                                MPIN
+                            </span>
+
+                        </button>
+
+
+                        <button class="newLoginMethodCard openPassword">
+
+                            <img src="~/Content/NewLogin/images/icon-password.svg"
+                                 alt="">
+
+                            <span>
+                                ID / Password
+                            </span>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- ====================================== -->
+                    <!-- MPIN METHOD OPTIONS -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginMethodGrid"
+                         id="mpinMethods">
+
+                        <button class="newLoginMethodCard openOtp">
+
+                            <img src="~/Content/NewLogin/images/icon-otp.svg"
+                                 alt="">
+
+                            <span>
+                                OTP
+                            </span>
+
+                        </button>
+
+
+                        <button class="newLoginMethodCard openPassword">
+
+                            <img src="~/Content/NewLogin/images/icon-password.svg"
+                                 alt="">
+
+                            <span>
+                                ID / Password
+                            </span>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- ====================================== -->
+                    <!-- PASSWORD METHOD OPTIONS -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginMethodGrid"
+                         id="passwordMethods">
+
+                        <button class="newLoginMethodCard openOtp">
+
+                            <img src="~/Content/NewLogin/images/icon-otp.svg"
+                                 alt="">
+
+                            <span>
+                                OTP
+                            </span>
+
+                        </button>
+
+
+                        <button class="newLoginMethodCard openMpin">
+
+                            <img src="~/Content/NewLogin/images/icon-mpin.svg"
+                                 alt="">
+
+                            <span>
+                                MPIN
+                            </span>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- ====================================== -->
+                    <!-- REGISTER -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginRegister">
+
+                        New to BharatShramSetu?
+
+                        <a href="#" ng-click="openregistration()" >
+                            Register Now
+                        </a>
+
+                    </div>
+
+
+
+                    <!-- ====================================== -->
+                    <!-- STORE BUTTONS -->
+                    <!-- ====================================== -->
+
+                    <div class="newLoginStoreButtons" id="storeButtons">
+
+                        <a href="https://play.google.com/store/apps/details?id=com.retail.ezcompliance.ezcompliance&pcampaignid=web_share"
+                           target="_blank">
+                            <img src="~/Content/NewLogin/images/google-play.png"
+                                 alt="Google Play">
+                        </a>
+
+                        <a href="https://apps.apple.com/in/app/ez-compliance/id6752576679"
+                           target="_blank">
+                            <img src="~/Content/NewLogin/images/app-store.png"
+                                 alt="App Store">
+                        </a>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ====================================== -->
+                <!-- REGISTER FLOW -->
+                <!-- ====================================== -->
+
+                <div id="newRegisterFlow" class="newRegisterFlow">
+
+
+                    <!-- STEP 1 -->
+                    <div class="newRegisterStep active"
+                         id="registerStep1">
+
+                        <div class="newLoginRoleSection">
+
+                            <label class="newLoginRoleLabel">
+                                Register as
+                            </label>
+
+                            <div class="newLoginRoleRow">
+
+                                <label class="newLoginRole active">
+                                    <input type="radio" value="7" checked>
+                                    <span class="newLoginRoleDot"></span>
+                                    Worker
+                                </label>
+
+                                <label class="newLoginRole">
+                                    <input type="radio" value="6">
+                                    <span class="newLoginRoleDot"></span>
+                                    Contractor
+                                </label>
+
+                                <label class="newLoginRole">
+                                    <input type="radio" value="5">
+                                    <span class="newLoginRoleDot"></span>
+                                    Principal Employer
+                                </label>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Mobile Number / EmailId
+                            </label>
+
+                            <input id="userNewMobileNo" type="text" class="form-control" ng-model="NewMobileNo"
+                                   placeholder="Enter Email or Mobile">
+
+                        </div>
+
+
+                        <button  class="newLoginPrimaryBtn" ng-click="Registration()"
+                                id="registerSendOtp">
+
+                            <span>Send OTP</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+
+                        <div class="newLoginContinueWith">
+
+                            <span class="line"></span>
+
+                            <p>OR</p>
+
+                            <span class="line"></span>
+
+                        </div>
+
+
+                        <button class="newRegisterWhatsappBtn"
+                                type="button"
+                                onclick="window.open('https://wa.me/15558016064?text=Hello', '_blank')">
+                            <i class="fa-brands fa-whatsapp"></i>
+                            Register with WhatsApp
+                        </button>
+
+
+                        <div class="newRegisterBottomText">
+
+                            Already have an account?
+
+                            <a href="#"
+                               id="backToLogin">
+
+                                Login Here
+
+                            </a>
+
+                        </div>
+
+                        <div class="newLoginStoreButtons">
+
+                           
+
+                          
+                            <a href="https://play.google.com/store/apps/details?id=com.retail.ezcompliance.ezcompliance&pcampaignid=web_share" target="_blank">
+                                <img src="~/Content/NewLogin/images/google-play.png">
+                            </a>
+
+
+                            <a href="https://apps.apple.com/in/app/ez-compliance/id6752576679" target="_blank">  <img src="~/Content/NewLogin/images/app-store.png"></a>
+                       
+                        </div>
+
+
+                        <div class="newRegisterTerms">
+
+                            By continuing, you agree to our
+
+                            <a href="#">
+                                Terms & Conditions
+                            </a>
+
+                            and
+
+                            <a  target="_blank" href="https://ezcompliance.in/privacy-policy/">
+                                Privacy Policy
+                            </a>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- STEP 2 -->
+                    <div class="newRegisterStep"
+                         id="registerStep2">
+
+                        <button class="newLoginBackBtn"
+                                id="registerBackStep1">
+
+                            ← Back
+
+                        </button>
+
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Mobile Number / EmailId
+                            </label>
+
+                            <input type="text" ng-model="NewMobileNo" >
+
+                        </div>
+
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Enter OTP
+                            </label>
+
+                            <div class="newLoginInputWithAction">
+
+                                <input id="NewNRotp" type="text" ng-model="NewNRotp"
+                                       placeholder="Enter OTP">
+
+                                <a href="javascript:void(0)"
+                                   class="newLoginInlineLink"
+                                   ng-click="ReSendotp()"
+                                   ng-class="{'disabled-link': otpTimer > 0}"
+                                   ng-disabled="otpTimer > 0"
+                                   style="pointer-events: {{otpTimer > 0 ? 'none' : 'auto'}};">
+
+                                    {{ otpTimer > 0 ? 'Resend OTP (' + otpTimer + 's)' : 'Resend OTP' }}
+
+                                </a>
+                                <span ng-if="!isOtpExpired">
+                                    OTP expires in
+                                    {{(otpExpireTimer/60 | number:0)}}:
+                                    {{otpExpireTimer%60 < 10 ? '0' + (otpExpireTimer%60) : otpExpireTimer%60}}
+                                </span>
+
+                                <span ng-if="isOtpExpired" style="color:red">
+                                    OTP Expired
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <button class="newLoginPrimaryBtn"  ng-click="ConfirmRegistration()"
+                                id="registerNextStep">
+
+                            <span>Next</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+                        <div class="newLoginContinueWith">
+
+                            <span class="line"></span>
+
+                            <p>OR</p>
+
+                            <span class="line"></span>
+
+                        </div>
+
+
+                        <button class="newRegisterWhatsappBtn">
+
+                            <i class="fa-brands fa-whatsapp"></i>
+
+                            Register with WhatsApp
+
+                        </button>
+
+
+                        <div class="newRegisterBottomText">
+
+                            Already have an account?
+
+                            <a href="#"
+                               id="backToLoginStep3">
+
+                                Login Here
+
+                            </a>
+
+                        </div>
+
+                        @*<div class="newLoginStoreButtons">
+
+                                <img src="~/Content/NewLogin/images/google-play.png">
+
+                                <img src="~/Content/NewLogin/images/app-store.png">
+
+                            </div>*@
+
+
+                        <div class="newRegisterTerms">
+
+                            By continuing, you agree to our
+
+                            <a href="#">
+                                Terms & Conditions
+                            </a>
+
+                            and
+
+                            <a href="#">
+                                Privacy Policy
+                            </a>
+
+                        </div>
+                    </div>
+
+
+                    <!-- STEP 3 -->
+                    <div class="newRegisterStep"
+                         id="registerStep3">
+
+                        <button type="button"
+                                class="newLoginBackBtn"
+                                id="registerBackStep2">
+
+                            ← Back        
+
+                        </button>
+
+
+                        <div class="newLoginField">
+
+                            <label>
+                                New MPIN
+                            </label>
+
+                            <div class="newRegisterPasswordField">
+
+                                <input type="password"  id="MPIN1" ng-model="MPIN1" maxlength="6" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))"
+                                       placeholder="******">
+
+                                <button type="button"
+                                        class="newPasswordToggle">
+
+                                    <i class="fa-regular fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Confirm MPIN
+                            </label>
+
+                            <div class="newRegisterPasswordField">
+
+                                <input type="password" id="MPIN2" ng-model="MPIN2" maxlength="6" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))"
+                                       placeholder="******">
+
+                                <button type="button"
+                                        class="newPasswordToggle">
+
+                                    <i class="fa-regular fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <button class="newLoginPrimaryBtn" ng-click="CreateMpin()"
+                                id="step3Next">
+
+                            <span>Continue</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+
+                        <div class="newLoginContinueWith">
+
+                            <span class="line"></span>
+
+                            <p>OR</p>
+
+                            <span class="line"></span>
+
+                        </div>
+
+
+                        <button class="newRegisterWhatsappBtn">
+
+                            <i class="fa-brands fa-whatsapp"></i>
+
+                            Register with WhatsApp
+
+                        </button>
+
+
+                        <div class="newRegisterBottomText">
+
+                            Already have an account?
+
+                            <a href="#"
+                               id="backToLoginStep3">
+
+                                Login Here
+
+                            </a>
+
+                        </div>
+
+                        @*<div class="newLoginStoreButtons">
+
+                                <img src="~/Content/NewLogin/images/google-play.png">
+
+                                <img src="~/Content/NewLogin/images/app-store.png">
+
+                            </div>*@
+
+
+                        <div class="newRegisterTerms">
+
+                            By continuing, you agree to our
+
+                            <a href="#">
+                                Terms & Conditions
+                            </a>
+
+                            and
+
+                            <a href="#">
+                                Privacy Policy
+                            </a>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- STEP 4 PLACEHOLDER -->
+                    <div class="newRegisterStep"
+                         id="registerStep4">
+
+                        <button type="button"
+                                class="newLoginBackBtn"
+                                id="registerBackStep3">
+
+                            ← Back
+
+                        </button>
+
+
+
+
+                        <div class="newProfileOptionCard">
+
+                            <h4>
+                                Upload Documents for Auto-fill
+                            </h4>
+
+                            <p>
+
+                                Quickly populate your profile by uploading
+                                official documents.
+
+                                Supported files:
+                                Aadhaar, PAN, ESIC and UAN cards.
+
+                                Our system securely extracts data to save
+                                you time.
+
+                            </p>
+
+                            <button class="newProfileOptionBtn" ng-click="redirectotupload()">
+
+                                Continue with Upload
+
+                                <i class="fa-solid fa-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+
+                        <div class="newProfileOptionCard">
+
+                            <h4>
+                                Fill Details Manually
+                            </h4>
+
+                            <p>
+
+                                Prefer to enter your information yourself?
+
+                                Choose this option to manually fill in your
+                                personal, employment and banking details
+                                step-by-step.
+
+                            </p>
+
+                            <button class="newProfileOptionBtn" ng-click="WorkerRegistrationR()" >
+
+                                Continue Manually
+
+                                <i class="fa-solid fa-arrow-right"></i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    @*<div class="newLoginStoreButtons">
+
+                            <img src="~/Content/NewLogin/images/google-play.png">
+
+                            <img src="~/Content/NewLogin/images/app-store.png">
+
+                        </div>
+
+
+                        <div class="newRegisterTerms">
+
+                            By continuing, you agree to our
+
+                            <a href="#">
+                                Terms & Conditions
+                            </a>
+
+                            and
+
+                            <a href="#">
+                                Privacy Policy
+                            </a>
+
+                        </div>*@
+
+                </div>
+
+
+                <!-- ====================================== -->
+                <!-- FORGOT MPIN FLOW -->
+                <!-- ====================================== -->
+
+                <div id="forgotMpinFlow"
+                     class="newRegisterFlow">
+
+                    <!-- STEP 1 -->
+
+                    <div class="newRegisterStep active"
+                         id="forgotMpinStep1">
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Mobile Number
+                            </label>
+
+                            <input type="text" ng-model="MobileNumber" ng-disabled="true">
+
+                        </div>
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Enter OTP
+                            </label>
+
+                            <div class="newLoginInputWithAction">
+
+                                <input type="text" id="NewOTP"
+                                       placeholder="*******" ng-model="NewOTP">
+
+                                <a href="javascript:void(0)"
+                                   class="newLoginInlineLink"
+                                   ng-click="Loginotp()"
+                                   ng-class="{'disabled-link': otpTimer > 0}"
+                                   ng-disabled="otpTimer > 0"
+                                   style="pointer-events: {{otpTimer > 0 ? 'none' : 'auto'}};">
+
+                                    {{ otpTimer > 0 ? 'Resend OTP (' + otpTimer + 's)' : 'Resend OTP' }}
+
+                                </a>
+                                <span ng-if="!isOtpExpired">
+                                    OTP expires in
+                                    {{(otpExpireTimer/60 | number:0)}}:
+                                    {{otpExpireTimer%60 < 10 ? '0' + (otpExpireTimer%60) : otpExpireTimer%60}}
+                                </span>
+
+                                <span ng-if="isOtpExpired" style="color:red">
+                                    OTP Expired
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <button class="newLoginPrimaryBtn" ng-click="Verifynumber()"
+                                id="forgotMpinNext">
+
+                            <span>Next</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- STEP 2 -->
+
+                    <div class="newRegisterStep"
+                         id="forgotMpinStep2">
+
+                        <div class="newLoginField">
+
+                            <label>
+                                New MPIN
+                            </label>
+
+                            <div class="newRegisterPasswordField">
+
+                                <input type="password" id="MPIN1" ng-model="MPIN1" maxlength="6" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))"
+                                       placeholder="******">
+
+                                <button type="button"
+                                        class="newPasswordToggle">
+
+                                    <i class="fa-regular fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Confirm MPIN
+                            </label>
+
+                            <div class="newRegisterPasswordField">
+
+                                <input type="password" id="MPIN2" ng-model="MPIN2" maxlength="6" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))"
+                                       placeholder="******">
+
+                                <button type="button"
+                                        class="newPasswordToggle">
+
+                                    <i class="fa-regular fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <button class="newLoginPrimaryBtn" ng-click="UpdateMpin()" >
+
+                            <span>Continue</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- ====================================== -->
+                <!-- FORGOT PASSWORD FLOW -->
+                <!-- ====================================== -->
+                <div id="forgotPasswordFlow">
+
+                    <!-- STEP 1 -->
+
+                    <div class="newForgotPasswordStep active"
+                         id="forgotPasswordStep1">
+
+                        <button type="button"
+                                class="newLoginBackBtn"
+                                id="forgotPasswordBackToLogin">
+
+                            ← Back
+
+                        </button>
+
+                        <div class="newLoginField">
+
+                            <label>
+                                Mobile Number / Email Id
+                            </label>
+
+                            <input type="text" ng-model="MobileNumber" id="MobileNumber">
+
+                        </div>
+
+                        <button class="newLoginPrimaryBtn" ng-click="forgotPasswordNext()"
+                                id="forgotPasswordNext">
+
+                            <span>Next</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- STEP 2 -->
+
+                    <div class="newForgotPasswordStep"
+                         id="forgotPasswordStep2">
+
+                        <button type="button"
+                                class="newLoginBackBtn"
+                                id="forgotPasswordBackStep1">
+
+                            ← Back
+
+                        </button>
+
+
+                        <div class="newOtpContainer">
+
+                            <label>One-Time Password (OTP)</label>
+
+                            <div class="newOtpBoxes" ng-class="{
+        'otp-error': otpStatus == 'error',
+        'otp-success': otpStatus == 'success'
+    }">
+
+                                <input maxlength="1" ng-model="o1" ng-keyup="otpKey($event,1)">
+                                <input maxlength="1" ng-model="o2" ng-keyup="otpKey($event,2)">
+                                <input maxlength="1" ng-model="o3" ng-keyup="otpKey($event,3)">
+                                <input maxlength="1" ng-model="o4" ng-keyup="otpKey($event,4)">
+                                <input maxlength="1" ng-model="o5" ng-keyup="otpKey($event,5)">
+                                <input maxlength="1" ng-model="o6" ng-keyup="otpKey($event,6)">
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="newLoginField" ng-show="permissiontoopen">
+
+                            <label>
+                                New Password
+                            </label>
+
+                            <div class="newRegisterPasswordField">
+
+                                <input type="password" ng-model="Password1"
+                                       placeholder="******">
+
+                                <button type="button"
+                                        class="newPasswordToggle">
+
+                                    <i class="fa-regular fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="newLoginField"  ng-show="permissiontoopen">
+
+                            <label>
+                                Confirm New Password
+                            </label>
+
+                            <div class="newRegisterPasswordField">
+
+                                <input type="password" ng-model="Password2"
+                                       placeholder="******">
+
+                                <button type="button"
+                                        class="newPasswordToggle">
+
+                                    <i class="fa-regular fa-eye"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <button class="newLoginPrimaryBtn"  ng-show="permissiontoopen"   id="forgotPasswordContinue" ng-click="Updatepass()">
+
+                            <span>Continue</span>
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ================================= -->
+    <!-- FOOTER -->
+    <!-- ================================= -->
+    <footer class="newLoginFooter">
+
+        <div class="newLoginFooterLeft">
+
+            <div class="newLoginFooterItem">
+
+                <img src="~/Content/NewLogin/images/icon-secure.svg"
+                     alt="">
+
+                <span>
+                    Secure Platform
+                </span>
+
+            </div>
+
+            <div class="newLoginFooterItem">
+
+                <img src="~/Content/NewLogin/images/icon-government.svg"
+                     alt="">
+
+                <span>
+                    Digital Governance
+                </span>
+
+            </div>
+
+            <div class="newLoginFooterItem">
+
+                <img src="~/Content/NewLogin/images/icon-accessible.svg"
+                     alt="">
+
+                <span>
+                    Accessible Anytime
+                </span>
+
+            </div>
+
+            <div class="newLoginFooterItem">
+
+                <img src="~/Content/NewLogin/images/icon-support.svg"
+                     alt="">
+
+                <span>
+                    Support
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="newLoginFooterRight">
+            © 2024 BharatShramSetu. All rights reserved.
+        </div>
+
+    </footer>
+
+</div>

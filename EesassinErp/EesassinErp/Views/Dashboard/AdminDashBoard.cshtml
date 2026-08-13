@@ -1,0 +1,118 @@
+﻿
+@{
+    ViewBag.Title = "Admin DashBoard";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+
+
+<!DOCTYPE html>
+<script src="~/Scripts/myjslib/adminDashBoardController.js?Ver=@ViewBag.Version"></script>
+
+
+<style>
+    #calendar {
+        max-width: 100%;
+    }
+</style>
+<style>
+    .fixed-event-tooltip {
+        margin: 0px 0px 0px 0px !important;
+    }
+</style>
+
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">DashBoard</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Admin</span></a></li>
+                <li class="active"><span>DashBoard</span></li>
+            </ol>
+        </div>
+    </div> 
+    <div class="br-pagebody">
+
+        <div class="row">
+
+            <div class="col-md-4 col-sm-6 col-xs-12">
+                <div class="panel panel-default card-view shadow-base  pa-0">
+                    <div class="panel-wrapper collapse in">
+                        <div class="panel-body  pa-0">
+                            <div class="profile-box">
+                                <div class="profile-cover-pic">
+                                    <div class="profile-image-overlay profile_bg"></div>
+                                </div>
+                                <div class="profile-info text-center">
+                                    <div class="profile-img-wrap img-circle">
+                                        <img class="inline-block mb-10 img-circle" src='../Content/Photos/no-image.png'
+                                             ng-src={{Photo}} alt="User Image not found!" />
+                                    </div>
+                                    <h5 class="block stu-pr-name ">
+                                        <label ng-bind="Name"></label>
+                                    </h5>
+
+                                    <h3 class="mail-id-box">
+                                        <i class="fa fa-home"></i>&nbsp;&nbsp;
+                                        @*<i class="fa fa-envelope-o"></i>&nbsp;&nbsp;*@
+                                        <label ng-bind="BranchName"></label>
+                                    </h3>
+                                </div>
+                                <div class="move-in-box text-center">
+                                    @*<a class="pro-btn pro1"  href="@Url.Action("ViewProfile", "ViewProfile")">View  Profile</a>*@
+                                    <a class="pro-btn pro1" href="#">View  Profile</a>
+                                    &nbsp;&nbsp;&nbsp;
+                                    <a class="pro-btn pro2" href="">
+                                        <i class="fa fa-phone"></i>&nbsp;&nbsp;+91&nbsp;
+                                        <label ng-bind="ContactNo"></label> 
+                                    </a>
+                                </div>
+                                <div class="bottom-list-box table-card">
+                                    <ul class="in-line-list row-table"> 
+                                        <li class="col-sm-4 card-block-big br text-center">
+
+                                            <h5><label   ng-bind="Desig"></label></h5>
+                                            <span>Designation</span>
+
+                                        </li>
+                                        <li class="col-sm-4 card-block-big br text-center">
+
+                                            <h5><label ng-bind="CreatedOn"></label></h5>
+                                            <span>Joining Date</span>
+
+                                        </li>
+                                    </ul>
+
+                                </div>
+                               <div class="closing text-center">
+                                        <a href="#">See More Details <i class="fa fa-angle-double-right"></i></a>
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            
+          
+
+            
+
+            
+
+            
+
+            
+
+
+        </div>
+    </div>
+</div>
+
+

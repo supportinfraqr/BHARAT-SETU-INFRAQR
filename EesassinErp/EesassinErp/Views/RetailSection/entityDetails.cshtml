@@ -1,0 +1,306 @@
+﻿
+@{
+    ViewBag.Title = "entityDetails";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entity Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #FFF6F1;
+            font-family: "Poppins", sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Orange Theme Button */
+        .entityDetails-container .btn-orange {
+            background-color: #FD670B;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 500;
+            padding: 6px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .entityDetails-container .btn-orange:hover {
+            background-color: #E55C0A;
+            color: white;
+        }
+
+        /* Main Container */
+        .entityDetails-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin: 2rem auto;
+            width: 95%;
+        }
+
+        /* Section Titles */
+            .entityDetails-container h5.section-title {
+                font-weight: 400;
+                color: #FD670B;
+                margin-bottom: 1rem;
+            }
+
+        .entityDetails-container h5.section-title.text-danger {
+            color: #E30613 !important;
+        }
+
+        .entityDetails-container h5.section-title.text-primary {
+            color: #0047FF !important;
+        }
+
+        /* Form Fields */
+        .entityDetails-container label {
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: #333;
+        }
+
+        .entityDetails-container .form-control,
+        .entityDetails-container .form-select {
+            font-size: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: none;
+            transition: all 0.2s ease;
+        }
+
+        .entityDetails-container .form-control:focus,
+        .entityDetails-container .form-select:focus {
+            border-color: #FD670B;
+            box-shadow: 0 0 0 0.2rem rgba(253, 103, 11, 0.2);
+        }
+
+        /* Asterisk for required */
+        .entityDetails-container .required::after {
+            content: " *";
+            color: red;
+        }
+
+        hr {
+            margin-top: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-top: 1px solid #ddd;
+        }
+
+        /* Responsive Spacing */
+        @@media (max-width: 992px) {
+            .entityDetails-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="entityDetails-container">
+        <!-- Entity Details Section -->
+        <h5 class="section-title ">Entity Details</h5>
+        <form>
+            <div class="row g-3">
+                <!-- Row 1 -->
+                <div class="col-lg-4 col-md-6">
+                    <label class="required">Type of Entity</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Private Limited Company</option>
+                        <option>Public Limited Company</option>
+                        <option>LLP</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label class="required">Listed Status</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Stock Exchange Name</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>BSE (Bombay Stock Exchange)</option>
+                        <option>NSE (National Stock Exchange)</option>
+                    </select>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="col-lg-4 col-md-6">
+                    <label class="required">Funding Status</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Funded</option>
+                        <option>Not Funded</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Turnover</label>
+                    <input type="text" class="form-control" placeholder="Enter Turnover">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Net Profit</label>
+                    <input type="text" class="form-control" placeholder="Enter Net Profit">
+                </div>
+
+                <!-- Row 3 -->
+                <div class="col-lg-4 col-md-6">
+                    <label>Borrowing</label>
+                    <input type="text" class="form-control" placeholder="Enter Borrowing">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Authorized Share Cap</label>
+                    <input type="text" class="form-control" placeholder="Enter Authorized Share Cap">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Issued Share Cap</label>
+                    <input type="text" class="form-control" placeholder="Enter Issued Share Cap">
+                </div>
+
+                <!-- Row 4 -->
+                <div class="col-lg-4 col-md-6">
+                    <label>Paid Up Cap</label>
+                    <input type="text" class="form-control" placeholder="Enter Paid Up Cap">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Average Net Profit of Last 3 Years</label>
+                    <input type="text" class="form-control" placeholder="Enter Average Net Profit">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Holding / Subsidiary</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Holding</option>
+                        <option>Subsidiary</option>
+                        <option>Independent</option>
+                    </select>
+                </div>
+
+                <!-- Row 5 -->
+                <div class="col-lg-4 col-md-6">
+                    <label>NBFC Registered</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>RBI Registered</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Startup (DPIIT-registered)</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+
+                <!-- Row 6 -->
+                <div class="col-lg-4 col-md-6">
+                    <label>MSME Registered</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Registered under GST</label>
+                    <select class="form-select">
+                        <option selected>Select</option>
+                        <option>Yes</option>
+                        <option>No</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <hr>
+
+        <!-- Company Structure & Identification -->
+        <h5 class="section-title">Company Structure & Identification</h5>
+        <form>
+            <div class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <label>CIN (Corporate Identity No.)</label>
+                    <input type="text" class="form-control" placeholder="Enter CIN">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>PAN of Company</label>
+                    <input type="text" class="form-control" placeholder="Enter PAN">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>TAN of Company</label>
+                    <input type="text" class="form-control" placeholder="Enter TAN">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Date of Incorporation</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Registered Office State</label>
+                    <input type="text" class="form-control" placeholder="Enter State">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Business Activity (NIC Code)</label>
+                    <input type="text" class="form-control" placeholder="Enter NIC Code">
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <label>Financial Year End</label>
+                    <input type="text" class="form-control" placeholder="e.g. 31-Mar">
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <button type="submit" class="btn btn-orange">Submit</button>
+                <button type="button" class="btn btn-orange">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+
+
+
+

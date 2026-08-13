@@ -1,0 +1,200 @@
+﻿
+@{
+    ViewBag.Title = "documents";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/RetailOneTimeDocumentController.js"></script>
+<div class="pagecontentbody">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader pb-2">
+            <div class="row">
+                <div class="col-md-9">
+                </div>
+                <div class="col-sm-3 text-end">
+                    <a class="btn btn-primary" ng-click="SaveRecord()">Update</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row mb-3">
+                <div class="col-md-3 mb-3" ng-init="AllProfileDetail()">
+                    <div class="form-group">
+                        <label>Company Name </label>
+                        <input type="text" class="form-control"  ng-model="CompanyName"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Email ID</label>
+                        <input type="email" id="txtEmail" class="form-control"  ng-model="CompanyEmailId"  onblur = "validateEmail('#txtEmail')"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Contact no.</label>
+                        <input type="text" id="txtContactNo" class="form-control" ng-model="CompanyContactNo"  maxlength="10" onblur = "validatePhoneNo('#txtContactNo')" placeholder = ""    onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>CIN</label>
+                        <input type="text" class="form-control" ng-model="CIN"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>PAN</label>
+                        <input type="text" class="form-control" ng-model="Panitno" maxlength="10"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>TAN</label>
+                        <input type="text" class="form-control" ng-model="TAN" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>GSTN</label>
+                        <input type="text" class="form-control" ng-model="Gstinuin" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>PIN Code</label>
+                        <input type="text" class="form-control"  ng-model="Pincode"  maxlength="6" onblur="validateNumberAndDecimalOnly('#txtpincode')" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))" />
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group" ng-init="AllCountry()">
+                        <label>Country</label>
+                        <select id="ddlcountry" autocomplete='address-level2' class="select2 form-control validate" ng-change="AllState()" ng-model="Country">
+                            <option value="">Select Country</option>
+                            <option ng-repeat="x in AllCountryList" value="{{x.CountryId}}">{{x.CountryName}}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>State</label>
+                        <select id="ddlstate" autocomplete='address-level2' class="select2 form-control validate" ng-change="AllCity()" ng-model="State">
+                            <option value="">Select State</option>
+                            <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>City</label>
+                        <select id="ddlcity" autocomplete='address-level2' class="select2 form-control validate" ng-model="City">
+                            <option value="">Select City</option>
+                            <option ng-repeat="x in AllCityList" value="{{x.CITY_CODE}}">{{x.CITY_NAME}}</option>
+                        </select>
+                    </div>
+                </div>
+             
+        
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" class="form-control" ng-model="Address"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>PF Registration Code/Subcode</label>
+                        <input type="text" class="form-control" ng-model="PF"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Labour Welfare Fund Registration</label>
+                        <input type="text" class="form-control" ng-model="Labour"/>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="form-group">
+                        <label>Professional Tax Registration</label>
+                        <input type="text" class="form-control" ng-model="ProfessionalTaxReg"/>
+                    </div>
+                </div>
+                 
+            <div class="row mb-3 upldoc">
+                <div class="col-md-12 mb-3">
+                    <h6 class="subheading m-0">Upload Documents(Please Save Above Detail, Before Uploading Document)</h6>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">1. COI</label>
+                    <div class="fileupld"> 
+                        <i class="fa" ng-class="getFileIconClass(ISOCERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="ISOCERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this,1);" ng-model="ISOCERTIFICATE" />
+                    </div>
+                    <div>
+                        <div style="display:{{ISO}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(ISOCERTIFICATE,'ISO CERTIFICATE')">Download ISO CERTIFICATE</a></div>
+                    </div> 
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">2. PAN</label>
+                    <div class="fileupld">
+                        <i class="fa" ng-class="getFileIconClass(SECERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="SECERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this, 2);" ng-model="SECERTIFICATE" />
+                   </div>
+                    <div>
+                        <div style="display:{{SEC}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(SECERTIFICATE,'S&E CERTIFICATE')">Download S&E CERTIFICATE</a></div>
+                    </div> 
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">3. MOA AOA</label>
+                    <div class="fileupld">
+                        <i class="fa" ng-class="getFileIconClass(MSMECERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="MSMECERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this,3);" ng-model="MSMECERTIFICATE" />
+                    </div>
+                    <div>
+                        <div style="display:{{MSME}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(MSMECERTIFICATE,'MSME/Udyam Certificate')">Download MSME/Udyam Certificate</a></div>
+                    </div> 
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">4. GST Registration Certificate</label>
+                    <div class="fileupld">
+                        <i class="fa" ng-class="getFileIconClass(SLLCERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="SLLCERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this,4);" ng-model="SLLCERTIFICATE" />
+                    </div>
+                    <div>
+                        <div style="display:{{SLL}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(SLLCERTIFICATE,'Security Service License')">Download Security Service License</a></div>
+                    </div> 
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">5. MSME Registration Certificate</label>
+                    <div class="fileupld">
+                        <i class="fa" ng-class="getFileIconClass(CLRACERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="CLRACERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this,5);" ng-model="CLRACERTIFICATE" />
+                    </div>
+                    <div>
+                        <div style="display:{{CLRA}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(CLRACERTIFICATE,'CLRA License')">Download CLRA License</a></div>
+                    </div> 
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">6. List of Directors</label>
+                    <div class="fileupld">
+                        <i class="fa" ng-class="getFileIconClass(ContractCERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="ContractCERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this,6);" ng-model="ContractCERTIFICATE" />
+                    </div>
+                    <div>
+                        <div style="display:{{Contract}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(ContractCERTIFICATE,'Contract/Aggrement')">Download Contract/Aggrement</a></div>
+                    </div> 
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">7. Directors KYC</label>
+                    <div class="fileupld">
+                        <i class="fa" ng-class="getFileIconClass(InterstateCERTIFICATE)"></i>  
+                        <input type="file" onclick="this.value = null;" accept="*/*" class="form-control" id="InterstateCERTIFICATE" onchange="angular.element(this).scope().AddDocshow(this,7);" ng-model="InterstateCERTIFICATE" />
+                    </div>
+                    <div>
+                        <div style="display:{{Interstate}};position: relative;border-radius: 8px; border: 2px dashed #ccc;padding: 10px;text-align: center;"><a ng-click="DownloadWithName(InterstateCERTIFICATE,'Interstate Migrant Workmen License')">Download Interstate Migrant Workmen License</a></div>
+                    </div> 
+                </div>
+            </div>
+           
+        </div>
+    </div>
+</div>

@@ -1,0 +1,144 @@
+﻿
+
+@{
+    ViewBag.Title = "Account Access Permission";
+    ViewBag.TitleList = "Account Permission List";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<script src="~/Scripts/myjslib/LoginPermissionController.js?Ver=@ViewBag.Version"></script>
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Account Access Permission</h5>
+        </div>
+        <!-- Breadcrumb -->
+          <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Utility</span></a></li> 
+                <li class="active"><span>Account Access Permission</span></li>
+            </ol>
+        </div> 
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in">
+                                    <form id="user-form"> 
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select Staff Type <span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select ng-model="IsActive" ng-change="SetUser()" class="select2 form-control validate ng-pristine ng-valid ng-empty red-validation ng-touched">
+
+                                                    <option value="">Select</option>
+                                                    <option value="2">All</option>
+                                                    <option value="1">Active</option>
+                                                    <option value="0">Deactive</option>
+
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    
+                                    </form>
+                                </div>
+                                <div id="dvpanel2" class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding " style="display:none">
+
+                                    <div class="col-md-12 col-sm-12 col-xs-12">
+                                        <div class="datatable-responsive table-responsive advance-btn-table">
+                                            <table class="table compact table-hover table-striped table-bordered nowrap dataTable"  ng-model="SetUser">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="srno">Sr.No.</th> 
+                                                        <th>Photo</th>  
+                                                     
+                                                        <th><label ng-model="UName">{{UName}}</label></th>  
+                                                        <th><label ng-model="Password">{{Password}}</label></th>   
+                                                        <th><label ng-model="Designation">{{Designation}}</label></th>
+                                                        @*<th><label ng-model="EmailId">{{EmailId}}</label></th>*@
+                                                        <th><label ng-model="Contact">{{Contact}}</label></th>
+                                                     
+                                                        <th class="status-c-w text-center"> Status </th>
+                                                        <th class="status-c-w text-center">
+                                                            Action
+                                                            <div class="onoffswitch" style="display:none">
+                                                                <input type="checkbox" name="onoffswitch" ng-init="forcheck" class="onoffswitch-checkbox" id="myonoffswiktch" ng-model="all" ng-click="ConfirmUpdation()" checked>
+                                                                <label class="onoffswitch-label" for="myonoffswiktch">
+                                                                    <span class="onoffswitch-inner"></span>
+                                                                    <span class="onoffswitch-switch"></span>
+                                                                </label>
+                                                            </div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr ng-repeat="x in UserDetails" ;>
+                                                        <td>
+                                                            <input type="hidden" ng-model="Status[$index].LoginId" ng-init="Status[$index].LoginId=x.LoginId" value="{{x.LoginId}}" />
+                                                            {{x.Id}}
+                                                        </td>
+                                                        <td class="T-PPC2">
+                                                            <div class="img-box">
+                                                                <img ng-model="Photo" ng-init="Photo=x.Photo" src="{{x.Photo}}" />
+                                                                <div class="user-status" >
+                                                                    <div class="status" style="background-color: {{x.color}}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        
+                                                        <td>{{x.UserName}}</td>
+                                                        <td>{{x.Password}}</td>   
+                                                        <td>{{x.Designation}}</td> 
+                                                        @*<td>{{x.EmailId}}</td>*@
+                                                        <td>{{x.MobileNo}}</td>
+                                                  
+                                                   
+                                                        <td class="text-center">{{x.IsActive}}</td>
+                                                        <td class="text-center">
+                                                            <div class="onoffswitch" >
+                                                                <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="{{x.Id}}" ng-init="Status[$index].IsActive=(x.IsActive=='Active User'?true:false)" ng-model="Status[$index].IsActive" ng-change="ChangeStatus(Status[$index].IsActive,Status[$index].LoginId)">
+                                                                <label class="onoffswitch-label" for="{{x.Id}}">
+                                                                    <span class="onoffswitch-inner"></span>
+                                                                    <span class="onoffswitch-switch"></span>
+                                                                </label>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>
+
+

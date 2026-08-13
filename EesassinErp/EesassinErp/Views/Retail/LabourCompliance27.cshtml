@@ -1,0 +1,882 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Labour Compliance";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Masters/LabourCompliance/style.css" rel="stylesheet" />
+<script src="~/Masters/LabourCompliance/script.js"></script>
+<script src="~/scripts/RetailJsLib/StatutoryController.js?Ver=@ViewBag.Version"></script>
+<script>
+    app.directive('fileModel', ['$parse', function ($parse) {
+        return {
+            restrict: 'A',
+            scope: {
+                fileModel: '=',
+                rowData: '='   // 👈 row pass karenge
+            },
+            link: function (scope, element) {
+
+                element.bind('change', function () {
+
+                    scope.$apply(function () {
+                        scope.fileModel = element[0].files;
+                    });
+
+                    scope.$parent.fileSelected(element[0].files, scope.rowData);
+                });
+            }
+        };
+    }]);</script>
+<style>
+    .table-container {
+        max-height: 450px; /* Height yaha se control karo */
+        overflow-y: auto; /* Vertical scroll */
+        overflow-x: auto; /* Horizontal scroll ON */
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .custom-table {
+        width: max-content;
+        min-width: 100%;
+    }
+
+
+/*=========Changes==========*/
+/* scroll wrapper */
+.labourCompPage .toggle-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* hide scrollbar (optional) */
+.labourCompPage .toggle-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+
+/* main capsule */
+.labourCompPage .toggle-pill {
+    display: inline-flex;
+    min-width: max-content; /* important */
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    gap: 4px;
+    align-items: center;
+}
+
+.labourCompPage .table-container {
+    max-height: 65vh;
+    overflow: auto;
+    border-radius: 12px; 
+    scroll-behavior: smooth;
+}
+
+/* Sticky columns - body cells */
+.labourCompPage .custom-table tbody td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--card-bg);
+    min-width: 35px;
+}
+
+.labourCompPage .custom-table tbody td:nth-child(2) {
+    position: sticky;
+    left: 35px;
+    z-index: 4;
+    background: var(--card-bg);
+    width: 195px;
+    min-width: 195px;
+    max-width: 195px;
+}
+
+.labourCompPage .custom-table tbody td:nth-child(3) {
+    position: sticky;
+    left: 230px; /* 35 + 195 */
+    z-index: 3;
+    background: var(--card-bg);
+    min-width: 160px;
+    max-width: 200px;
+}
+
+.labourCompPage .custom-table thead th:nth-child(1) {
+    left: 0;
+    z-index: 10;
+}
+
+.labourCompPage .custom-table thead th:nth-child(2) {
+    left: 35px;
+    z-index: 9;
+    width: 195px;
+    min-width: 195px;
+    max-width: 195px;
+}
+
+.labourCompPage .custom-table thead th:nth-child(3) {
+    left: 230px;
+    z-index: 8;
+}
+
+
+.labourCompPage .custom-table thead th {
+    position: sticky;
+    top: 0;
+    /*z-index: 6;*/
+    background: #F37437;
+    color: #fff;
+}
+
+.labourCompPage .custom-table {
+    table-layout: auto;
+}
+
+/*.labourCompPage .custom-table td,
+.labourCompPage .custom-table th {
+    max-width: 160px;
+}*/
+
+/*Fix table issues here*/
+.labourCompPage .small-table td,
+.labourCompPage .small-table th {
+    vertical-align: middle;
+    line-height: 1.4;
+}
+
+.labourCompPage .small-table .form-select,
+.labourCompPage .small-table .form-control {
+    height: 30px;
+    min-height: 30px;
+    line-height: 1.2;
+}
+
+.labourCompPage .small-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.labourCompPage .custom-table td:nth-child(2),
+.labourCompPage .custom-table td:nth-child(3) {
+    white-space: normal !important;
+    max-width: 250px;
+    word-break: break-word;
+}
+
+.labourCompPage .custom-table td:nth-child(3),
+.labourCompPage .custom-table th:nth-child(3) {
+    white-space: normal !important;
+    word-break: break-word;
+}
+
+
+/* Disable horizontal sticky columns on tablets and below */
+@@media (max-width: 991px) {
+
+    .labourCompPage .custom-table td:nth-child(1),
+    .labourCompPage .custom-table td:nth-child(2),
+    .labourCompPage .custom-table td:nth-child(3),
+    .labourCompPage .custom-table th:nth-child(1),
+    .labourCompPage .custom-table th:nth-child(2),
+    .labourCompPage .custom-table th:nth-child(3) {
+
+        left: auto !important;
+    }
+}
+
+
+.labourCompPage {
+    overflow-x: hidden;
+}
+
+/*Moddal responsiveness Optimization*/
+@@media (max-width: 768px) {
+    .labourCompPage .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .labourCompPage .modal-xl,
+    .labourCompPage .modal-lg {
+        max-width: 100%;
+    }
+}
+
+</style>
+
+<div class="labourCompPage px-4 py-2" ng-init="reset()">
+    <h4 class="mb-4 " style="color: var(--primary)">Labour Compliance </h4>
+
+    <!-- ================= KPI Bar ================= -->
+    <div class="container-fluid px-4 my-4">
+        @*<div class="row g-3 kpi-row">*@
+              <div class="row g-3 row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-6">
+
+                  <div @*class="col-6 col-md-4 col-lg-3 col-xl-2" *@>
+                      <div class="lb-kpi-card">
+                          <div class="lb-kpi-title">Complied</div>
+                          <div class="lb-kpi-value">{{TotalComplied}}</div>
+                      </div>
+                  </div>
+
+                
+                  <div>
+                      <div class="lb-kpi-card">
+                          <div class="lb-kpi-title">Non-Complied / Pending</div>
+                          <div class="lb-kpi-value">{{TotalNonComplied}}/{{Totalpending}}</div>
+                      </div>
+                  </div>
+                  <div>
+                      <div class="lb-kpi-card">
+                          <div class="lb-kpi-title">Delay-Complied</div>
+                          <div class="lb-kpi-value">{{TotalDelayComplied}}</div>
+                      </div>
+                  </div>
+
+                  <div>
+                      <div class="lb-kpi-card">
+                          <div class="lb-kpi-title">Non-Applicable</div>
+                          <div class="lb-kpi-value">{{TotalNonApplicable}}</div>
+                      </div>
+                  </div>
+
+                  <div>
+                      <div class="lb-kpi-card">
+                          <div class="lb-kpi-title">Verified</div>
+                          <div class="lb-kpi-value">{{TotalVerified}}</div>
+                      </div>
+                  </div>
+
+                  <div>
+                      <div class="lb-kpi-card">
+                          <div class="lb-kpi-title">Remarks</div>
+                          <div class="lb-kpi-value">{{TotalClarification}}</div>
+                      </div>
+                  </div>
+
+              </div>
+    </div>
+
+    <!-- Capsule Toggle (single capsule container) -->
+    @*<div class="mb-3">
+            <div class="toggle-scroll">
+                <div class="toggle-pill" role="tablist">
+                    <button type="button" class="btn btn-pill"
+                            ng-class="{'active': SelectedAct=='All'}"
+                            ng-click="filterByAct('All')">
+                        All
+                    </button>
+
+                    <button type="button" class="btn btn-pill"
+                            ng-repeat="act in ActList"
+                            ng-class="{'active': SelectedAct==act}"
+                            ng-click="filterByAct(act)">
+                        {{act}}
+                    </button>
+                </div>
+            </div>
+        </div>*@
+
+    <!-- Dynamic sections -->
+<div class="section-wrap">
+    <!-- ALL CARD (default visible) -->
+    <div id="allCard" class="card section-card active" ng-init="BindNewSearch()">
+        @*<h5 class="mb-4 " style="color: var(--primary)">All card </h5>*@
+        <div class="card-body p-3 h-100 d-flex flex-column">
+            <!-- Toolbar -->
+            <div class="row g-2 align-items-center table-toolbar mb-2">
+                <div class="col-12 col-lg-8 d-flex flex-wrap gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{SelectedAct || 'Act'}}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li ng-repeat="act in ActList track by $index">
+                                <a class="dropdown-item" href="javascript:void(0)" ng-click="getAct(act)">
+                                    {{act}}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                            {{SelectedState || 'State'}}
+                        </button>
+
+                        <ul class="dropdown-menu">
+                            <li ng-repeat="state in StateList">
+                                <a class="dropdown-item"
+                                   href=""
+                                   ng-click="getstate(state)">
+                                    {{state}}
+                                </a>
+                            </li>
+                        </ul>
+
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                            {{SelectedStatus || 'Status'}}
+                        </button>
+
+                        <ul class="dropdown-menu">
+                            <li ng-repeat="status in StatusList">
+                                <a class="dropdown-item"
+                                   href="javascript:void(0)"
+                                   ng-click="getstatus(status)">
+                                    {{status}}
+                                </a>
+                            </li>
+                        </ul>
+
+                    </div>
+                    <div class="dropdown">
+                        <ul class="dropdown-menu">
+                            <li ng-repeat="month in MonthList">
+                                <a class="dropdown-item"
+                                   href="javascript:void(0)"
+                                   ng-click="getmonth(month)">
+                                    {{month}}
+                                </a>
+                            </li>
+                        </ul>
+
+                        <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                            {{SelectedMonth ? SelectedMonth : 'Month'}}
+                        </button>
+
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm filter-btn dropdown-toggle" data-bs-toggle="dropdown">
+                            {{SelectedYear || 'Year'}}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li ng-repeat="year in YearList">
+                                <a class="dropdown-item"
+                                   ng-click="getyear(year)">
+                                    {{year}}
+                                </a>
+                            </li>
+                        </ul>
+
+                    </div>
+
+                    <button class="btn btn-sm filter-btn active" ng-click="ApplyFilters()" style="display:none;">Go</button>
+                    <button class="btn btn-sm filter-btn active" ng-click="reset()">Reset</button>
+                </div>
+
+                <div class="col-12 col-lg-4 d-flex justify-content-lg-end gap-2">
+                    <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                        <div class="input-group input-group-sm">
+                            <input id="lbSearch"
+                                   type="text"
+                                   ng-model="Search"
+                                   class="form-control form-control-sm"
+                                   placeholder="Search..." />
+                            <button class="btn btn-sm" id="lbSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" ng-click="NewExportTableToCSV()">CSV</a></li>
+                                <li><a class="dropdown-item" ng-click="NEwPrintTable()">Print</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table wrapper -->
+            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                <div class="table-container">
+                    <table class="table table-sm mb-0 small-table custom-table" id="lbTable">
+                        <thead>
+                            <tr style="background-color: #F37437">
+                                <th>S.No</th>
+                                <th>Act Name</th>
+                                <th>Compliance Name</th>
+                                <th> Risk</th>
+                                <th> Frequency  </th>
+                                <th>Month</th>
+                                <th>State</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actual Submission Date</th>
+                                <th>Delay Days</th>
+                                <th class="no-print">Upload File</th>
+                                <th>Upload Date</th>
+                                <th class="no-print">Remark </th>
+                                <th class="no-print">Verification Status</th>
+                                <th class="no-print">Download</th>
+                                <th class="no-print">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            <tr ng-repeat="row in labourcomplianceRows  | filter:globalSearch">
+                                <td>{{$index + 1}}</td>
+                                <td>{{row.Act}}</td>
+                                <td>
+                                    <a href="javascript:void(0)"
+                                       class="store-code-link text-success"
+                                       ng-click="BindCompliance(row.Id); openComplianceModal()">
+                                        {{row.ComplianceName}}
+                                    </a>
+                                </td>
+                                <td>{{row.Risk}}</td>
+                                <td>
+                                    <a href="#"
+                                       ng-if="row.Frequency == 'Event'"
+                                       class="event-link text-success"
+                                       ng-click="openEventModal(row);">
+                                        {{row.Frequency}}
+                                    </a>
+
+                                    <span ng-if="row.Frequency != 'Event'">
+                                        {{row.Frequency}}
+                                    </span>
+                                </td>
+                                <td>{{ row.Month }}</td>
+                                <td>{{row.STATE_NM}}</td>
+                                <td>{{row.DueDate}}</td>
+                                <td>
+                                    <select class="form-select form-select-sm" ng-model="row.CStatus" ng-disabled="row.Flag==1 || PFUpload===false">
+                                        <option value="">Select </option>
+                                        <option value="Complied">Complied </option>
+                                        <option value="NonComplied">Non-Complied </option>
+                                        <option value="Delaycomplied">Delay-complied </option>
+                                        <option value="NonApplicable">Non-Applicable</option>
+                                    </select>
+                                    <p ng-show="false">{{row.CStatus}}</p>
+                                </td>
+                                <td>
+                                    <input date-input type="date" style="width:auto" class="form-control form-control-sm no-print" id="ActualSubmissionDate{{$index}}"
+                                           ng-model="row.ActualSubmissionDate" ng-disabled="row.Flag===1 || PFUpload===false">
+                                    <p ng-show="false">{{ row.ActualSubmissionDate | date:'yyyy-MM-dd' }}</p>
+                                </td>
+                                <td>{{row.DelayDays}}</td>
+
+                                <!-- Upload Field -->
+                                <td class="no-print">
+                                    <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15  no-print">
+                                        <div class="input-box">
+                                            <div style="display: flex; align-items: center;">
+                                                <button ng-disabled="row.Flag===1 || PFUpload===false" class="btn btn-sm btn-upload px-3 uploadbtn"
+                                                        ng-click="SetNewValue(row,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">
+                                                    <div ng-if="!row.UploadFile">Choose File</div>
+                                                    <div ng-if="row.UploadFile">Uploaded</div>
+                                                </button>
+
+                                                <input type="file"
+                                                       id="fileupoad{{$index}}"
+                                                       file-model="row.UploadFile"
+                                                       row-data="row"
+                                                       style="display:none;" />
+
+                                            </div>
+
+
+                                            <div class="text-box-msg-r">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p ng-show="false">
+                                        {{ row.UploadFile ? 'Uploaded' : 'Not Uploaded' }}
+                                    </p>
+                                </td>
+
+                                <td>{{row.CreateOn}}</td>
+
+                                <!--Corrected below td(Never use flex directly on <td>)-->
+                                <td class="no-print">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input class="form-control form-control-sm" ng-model="row.VRemark1" type="text" id="VRemark" style="font-size:10px" ng-disabled="row.Flag ===1" />
+
+                                        <i ng-if="row.VRemark !=''" class="bi bi-eye-fill" style="cursor: pointer; color: #F37437" ng-click="openRemarkModal(row.VRemark,'Client Remark')"></i>
+                                    </div>
+                                </td>
+                                @*<td class="d-flex align-items-center gap-2 no-print">
+                                        <input class="form-control form-control-sm" ng-model="row.VRemark1" type="text" id="VRemark" style="font-size:10px" ng-show="row.Flag !='1'" />
+
+                                        <i ng-if="row.VRemark !=''" class="bi bi-eye-fill" style="cursor: pointer; color: #F37437" ng-click="openRemarkModal(row.VRemark,'Client Remark')"></i>
+
+
+                                    </td>*@
+
+                                <td class="no-print">
+                                    <select class="form-select form-select-sm" ng-disabled="row.Flag===1 || PFVerify===false"
+                                            ng-model="row.IsVerified"
+                                            ng-class="{'text-success': row.IsVerified === 'Verified', 'text-danger': row.IsVerified === 'Clarify'}">
+
+                                        <option value="0">Select</option>
+                                        <option value="Verified">Verified</option>
+                                        <option value="Clarify">Remarks</option>
+
+                                    </select>
+
+                                </td>
+
+                                <td class="no-print"><a href="#" class="view" style="color:#F37437" ng-show="row.openthis=='1'" ng-click="viewFile(row)">{{ row.openthis == '1' ? 'Download File' : '' }}</a> </td>
+                                <td class="no-print">
+
+                                    <input class="btn btn-sm btn-submit px-3" ng-if="row.Flag!='1'" ng-hide="row.Flag===1" ng-disabled="PF_EditFlag===false" type="button" value="Submit" ng-click="NewverifyRecord(row )" />
+
+
+                                </td>
+                            </tr>
+                            <tr ng-if="(labourcomplianceRows | filter:globalSearch).length === 0">
+                                <td colspan="18" class="text-center text-danger fw-bold">
+                                    No Compliance Records Found
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="lmPaginationWrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:0.80rem;">Showing {{Pagesize}} of {{All}}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div id="lmPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                        <button class="btn btn-sm filter-btn active" id="viewAllRows" type="button" ng-click="ViewAlldata()">View {{Showing}} Rows</button>
+                    </div>
+                </div>
+                <!-- Pagination -->
+                <!--<div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="scPaginationWrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-primary" id="scPrev" type="button">Previous</button>
+                        <button class="btn btn-sm btn-outline-primary" id="scNext" type="button">Next</button>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div id="scPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                        <button class="btn btn-sm btn-primary" id="viewAllRows" type="button">View All Rows</button>
+                    </div>
+                </div>-->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= Compliance Details Modal ================= -->
+    <div class="modal fade" id="complianceDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 14px; background: #FEF3EC; overflow: hidden; ">
+
+                <!-- Header -->
+                <div class="compDetail-header d-flex align-items-center">
+                    <button type="button" class="btn compDetail-back-btn" data-bs-dismiss="modal" ng-click="closeModal()">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+
+                    <h5 class="modal-title text-center flex-grow-1" style="color:#fff">Compliance Details</h5>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body" style="background: #FEF3EC; font-size: 0.9rem;">
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Rule:</strong>
+                            <div class="text-secondary">{{Rule}}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Section:</strong>
+                            <div class="text-secondary">{{Section}}</div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Form No:</strong>
+                            <div class="text-secondary">{{FormNo}}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Risk:</strong>
+                            <div class="fw-bold text-danger">{{Risk}}</div>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <strong>Attachment:</strong>
+
+                    <!--<div class="text-secondary mb-3">-->
+                    <!-- If attachment exists -->
+                    <!--<a href="javascript:void(0)"
+                       ng-if="Attachment && Attachment != ''"
+                       ng-click="DownloadAttachment(Attachment)"
+                       class="text-decoration-none d-inline-flex align-items-center gap-2">
+
+                        <i class="bi bi-download text-primary" style="font-size:16px;"></i>
+                        <span class="text-primary">Attachment</span>
+                    </a>-->
+                    <!-- If no attachment -->
+                    <!--<span ng-if="!Attachment || Attachment == ''" class="text-muted">
+                            <i class="bi bi-paperclip"></i> No Attachment
+                        </span>
+
+                    </div>-->
+                    <div class="text-secondary mb-3">
+
+                        <!-- File available -->
+                        <span ng-if="Attachment && Attachment !== 'No file uploaded.'"
+                              class="d-inline-flex align-items-center gap-3">
+
+                            <a href=""
+                               ng-click="DownloadAttachment(Attachment)"
+                               class="text-decoration-none">
+                                <i class="bi bi-download text-danger" style="font-size:18px;"></i>
+                            </a>
+
+                            <a ng-href="{{Attachment}}"
+                               target="_blank"
+                               class="text-decoration-none">
+                                <i class="bi bi-eye-fill text-danger" style="font-size:18px;"></i>
+                            </a>
+
+                        </span>
+
+                        <!-- No file -->
+                        <span ng-if="!Attachment || Attachment === 'No file uploaded.'"
+                              class="text-muted">
+                            <i class="bi bi-paperclip"></i> No Attachment
+                        </span>
+
+                    </div>
+                    <hr class="my-3">
+
+                    <strong>Description:</strong>
+                    <div id="cd_description" class="text-secondary" style="line-height:1.5;overflow-y:scroll;height:160px;">
+                        {{Description}}
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= Event Modal ================= -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 14px; background: #FEF3EC; overflow: hidden; ">
+
+                <!-- Header -->
+                <div class="event-header d-flex align-items-center">
+
+                    <button type="button" class="btn event-back-btn"
+                            ng-click="closeEventModal()">
+                        <i class="bi bi-arrow-left"></i>
+                    </button>
+
+                    <h5 class="modal-title text-center flex-grow-1">Compliance Event</h5>
+                </div>
+                <!-- Body -->
+                <div class="modal-body" style="background: #FEF3EC; font-size: 0.9rem;">
+                    <!-- Table wrapper -->
+                    <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 small-table" id="fcTable">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Act Name</th>
+                                        <th>Compliance Name</th>
+                                        <th>Risk</th>
+                                        <th>Frequency</th>
+                                        <th>Month</th>
+                                        <th>State</th>
+                                        <th>Due Date</th>
+                                        <th>Status</th>
+                                        <th>Actual Submission Date</th>
+                                        <th>Delay Days</th>
+                                        <th>Upload File</th>
+                                        <th>Upload Date</th>
+                                        <th>Remark</th>
+                                        <th>Verification Status</th>
+                                        <th>Download</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fcTableBody">
+                                    <tr ng-repeat="event in selectedEvent1">
+
+                                        <td>
+                                            {{$index + 1}}
+                                            <input type="hidden" ng-model="event.CSIID">
+                                        </td>
+
+                                        <td>{{event.Act}}</td>
+
+                                        <td>{{event.ComplianceName}}</td>
+
+                                        <td>{{event.Risk}}</td>
+
+                                        <td>{{event.Frequency}}</td>
+
+                                        <td>{{event.Month}}</td>
+
+                                        <td>{{event.STATE_NM}}</td>
+
+                                        <td>{{ event.DueDate}}</td>
+
+                                        <td>
+                                            <select class="form-select form-select-sm"
+                                                    ng-model="event.CStatus"
+                                                    ng-disabled="event.Flag===1 || PFUpload===false">
+                                                <option value="">Select </option>
+                                                <option value="Complied">Complied</option>
+                                                <option value="NonComplied">Non-Complied</option>
+                                                <option value="Delaycomplied">Delay-Complied</option>
+                                                <option value="NonApplicable">Non-Applicable</option>
+                                            </select>
+                                        </td>
+
+                                        <td>
+
+                                            <input date-input type="date" style="width:auto" class="form-control form-control-sm no-print" ng-model="event.ActualSubmissionDate" ng-disabled="event.Flag===1 || PFUpload===false">
+                                            <p ng-show="false">{{ event.ActualSubmissionDate | date:'yyyy-MM-dd' }}</p>
+
+                                        </td>
+
+                                        <td>{{ event.DelayDays ? event.DelayDays : 0 }}</td>
+
+                                        <!-- Upload File -->
+                                        <td class="no-print">
+                                            <button ng-disabled="event.Flag===1 || PFUpload===false"
+                                                    class="btn btn-sm btn-upload px-3 uploadbtn"
+                                                    ng-click="SetValue(event,'#fileupoad_event'+$index)">
+
+                                                <span ng-if="!event.UploadFile">Choose File</span>
+                                                <span ng-if="event.UploadFile">Uploaded</span>
+                                            </button>
+
+                                            <input type="file"
+                                                   id="fileupoad_event{{$index}}"
+                                                   file-model="event.UploadFile"
+                                                   row-context="event"
+                                                   style="display:none;" />
+                                        </td>
+
+                                        <td>{{event.CreateOn | date:'dd-MM-yyyy' }}</td>
+
+                                        <!-- Remarks -->
+                                        <td class="no-print">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input class="form-control form-control-sm"
+                                                       ng-model="event.VRemark1"
+                                                       type="text"
+                                                       style="font-size:10px" ng-disabled="event.Flag===1" />
+
+                                                <i ng-if="event.VRemark !=''"
+                                                   class="bi bi-eye-fill"
+                                                   style="cursor:pointer;color:#F37437"
+                                                   ng-click="openRemarkModal1(event.VRemark,'Client Remark')">
+                                                </i>
+                                            </div>
+                                        </td>
+
+                                        <!-- Verified -->
+                                        <td class="no-print">
+                                            <select class="form-select form-select-sm"
+                                                    ng-model="event.IsVerified"
+                                                    ng-class="{'text-success': event.IsVerified === 'Verified','text-danger': event.IsVerified === 'Remarks'}" ng-disabled="event.Flag===1 || PFVerify===false">
+                                                <option value="">Select</option>
+                                                <option value="Verified">Verified</option>
+                                                <option value="Remarks">Remarks</option>
+                                            </select>
+                                        </td>
+
+                                        <!-- View -->
+                                        <td class="no-print">
+                                            <a href=""
+                                               class="view"
+                                               style="color:#F37437"
+                                               ng-show="event.openthis == '1' && event.UploadFile"
+                                               ng-click="viewFile(event, $event)">
+                                                Download File
+                                            </a>
+                                        </td>
+
+                                        <!-- Action -->
+                                        <td class="no-print">
+                                            <input class="btn btn-sm btn-submit px-3"
+                                                   type="button"
+                                                   value="Submit"
+                                                   ng-hide="event.Flag===1" ng-disabled="PF_EditFlag===false"
+                                                   ng-click="AddEventNewverifyRecord(event)" />
+                                        </td>
+
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-sm eventSubmitBtn" ng-click="addEventRow()">Add Event</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= Remark Modal ================= -->
+    <div class="modal fade" id="remarkModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+                <div style="background:#E45D27; padding:14px 20px;">
+                    <h5 class="text-white m-0">Remark</h5>
+                </div>
+                @*{{HeaderRemark}}*@
+                <div class="modal-body" style="background:#FFF1EB;">
+                    <div ng-bind-html="selectedRemark"></div>
+                </div>
+                <div class="modal-footer" style="background:#FFF1EB;">
+                    <button type="button" class="btn px-4" style="border-radius: 999px; color: #fff; background: var(--primary); padding: 6px 14px; font-weight: 400; font-size: 0.85rem;" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= Remark Modal ================= -->
+    <div class="modal fade" id="remarkModal1" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:14px; overflow:hidden;">
+                <div style="background:#E45D27; padding:14px 20px;">
+                    <h5 class="text-white m-0">Remark</h5>
+                </div>
+                @*{{HeaderRemark}}*@
+                <div class="modal-body" style="background:#FFF1EB;">
+                    <div ng-bind-html="selectedRemark1"></div>
+                </div>
+                <div class="modal-footer" style="background:#FFF1EB;">
+                    <button type="button" class="btn px-4" style="border-radius: 999px; color: #fff; background: var(--primary); padding: 6px 14px; font-weight: 400; font-size: 0.85rem;" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- CARD 1 -->
+    <div id="act1" class="card section-card d-none">
+        <h5 class="mb-4" style="color: var(--primary)">card 1 </h5>
+    </div>
+    <!-- CARD 2 -->
+    <div id="act2" class="card section-card d-none">
+        <h5 class="mb-4" style="color: var(--primary)">card 2 </h5>
+    </div>
+
+
+
+</div>
+
+</div>

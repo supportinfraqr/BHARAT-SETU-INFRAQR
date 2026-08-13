@@ -1,0 +1,310 @@
+﻿
+@{
+    ViewBag.Title = "RoleMenuPermission";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+
+<script src="~/Scripts/myjslib/RoleMenuPermissionController.js?Ver=@ViewBag.Version"></script>
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Role Menu Permission</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>User Management</span></a></li>
+                <li><a href="#"><span>Permission</span></a></li>
+                <li class="active"><span>Role Menu Permission</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Party Type<span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="BindModuleTypeList()">
+                                                <select id="ddlModuleType" autocomplete='address-level2' class="select2 form-control validate" ng-model="PartyType" ng-change="AllPartySiteLoad()">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in AllModuleTypeList" value="{{x.Id}}">{{x.Module_Type}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select Party <span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlCustomerId" autocomplete='address-level2' class="select2 form-control validate" ng-model="PartyId" ng-change="GetRoles(PartyId);AllUserListsLoad(PartyId)">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in AllPartyList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r"> 
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select User<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select autocomplete='address-level2' class="select2 form-control validate" id="ddlUserList" ng-model="UserId"  >
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in AllUserList" value="{{x.LoginId}}">{{x.Name}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Role<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlRole" class="select2 form-control validate" ng-model="Id" ng-change="GetPagesSectionMasterList()">
+                                                    <option value="">Select Role</option>
+                                                    <option ng-repeat="roles in RoleList" value="{{roles.Id}}">{{roles.Name}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Check All</label>
+                                            <div class="input-box">
+                                                <input type="checkbox" id="chkMaster" ng-click="checkUncheckAll()" />
+                                                <label for="chkMaster"></label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12">
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15" ng-hide="hide">
+                                            <div class="datatable-responsive table-responsive advance-btn-table">
+                                                <table id="tblNavMenu" class="table compact table-hover table-striped table-bordered nowrap ng-scope"
+                                                       ng-model="PagesSectionMaster" style="width:100%">
+                                                    <colgroup>
+                                                        <col style="width: 5%;" />
+                                                        <col style="width: 15%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                        <col style="width: 12%;" />
+                                                    </colgroup>
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="srno">S.No.</th>
+                                                            <th>Page Name</th>
+                                                            <th>Section Name</th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>View</label>
+                                                                </div>
+                                                            
+                                                                <br />
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Edit</label>
+                                                                </div>
+                                                               
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Bulk Upload</label>
+                                                                </div>
+                                                               
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Upload</label>
+                                                                </div>
+                                                               
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Download</label>
+                                                                </div>
+                                                               
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>NewStore</label>
+                                                                </div>
+                                                             
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>NewEmployee</label>
+                                                                </div>
+                                                              
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Checkbox1</label>
+                                                                </div>
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Checkbox2</label>
+                                                                </div>
+                                                            </th>
+                                                            <th class="text-center w-50-p">
+                                                                <div>
+                                                                    <label>Verify</label>
+                                                                </div>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr ng-repeat="sectionlist in PagesSectionMasterList" repeat-done>
+                                                            <td class="srno">
+                                                                {{$index+1}}
+                                                                <input type="hidden" id="hfId" value="{{sectionlist.Id}}" />
+                                                                <input type="hidden" id="hfSectionName" value="{{sectionlist.SectionName}}" />
+                                                            </td>
+                                                            <td>{{sectionlist.PageName}}</td>
+                                                            <td>{{sectionlist.SectionName}}</td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowViewFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+
+                                                                        <input type="checkbox" class="clear" id="chkAllowView" ng-model="chkAllow[$index]['View']"
+                                                                               ng-checked="chkAllow[$index]['View']" ng-init="chkAllow[$index]['View'] = sectionlist.ViewFlag" />
+                                                                        <label for="chkAllowView{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowEditFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowEdit" ng-model="chkAllow[$index]['Edit']"
+                                                                               ng-checked="chkAllow[$index]['Edit']" ng-init="chkAllow[$index]['Edit'] = sectionlist.EditFlag" />
+                                                                        <label for="chkAllowEdit{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowDeleteFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowDelete" ng-model="chkAllow[$index]['Delete']"
+                                                                               ng-checked="chkAllow[$index]['Delete']" ng-init="chkAllow[$index]['Delete'] = sectionlist.DeleteFlag" />
+                                                                        <label for="chkAllowDelete{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowUploadFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowUpload" ng-model="chkAllow[$index]['Upload']"
+                                                                               ng-checked="chkAllow[$index]['Upload']" ng-init="chkAllow[$index]['Upload'] = sectionlist.UploadFlag" />
+                                                                        <label for="chkAllowUpload{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowDownloadFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowDownload" ng-model="chkAllow[$index]['Download']"
+                                                                               ng-checked="chkAllow[$index]['Download']" ng-init="chkAllow[$index]['Download'] = sectionlist.DownloadFlag" />
+                                                                        <label for="chkAllowDownload{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowNewStoreFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowNewStore" ng-model="chkAllow[$index]['NewStore']"
+                                                                               ng-checked="chkAllow[$index]['NewStore']" ng-init="chkAllow[$index]['NewStore'] = sectionlist.NewStoreFlag" />
+                                                                        <label for="chkAllowNewStore{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowNewEmployeeFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowNewEmployee" ng-model="chkAllow[$index]['NewEmployee']"
+                                                                               ng-checked="chkAllow[$index]['NewEmployee']" ng-init="chkAllow[$index]['NewEmployee'] = sectionlist.NewEmployeeFlag" />
+                                                                        <label for="chkAllowNewEmployee{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowCheckbox1Flag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowCheckbox1" ng-model="chkAllow[$index]['Checkbox1']"
+                                                                               ng-checked="chkAllow[$index]['Chk1']" ng-init="chkAllow[$index]['Chk1'] = sectionlist.Checkbox1Flag" />
+                                                                        <label for="chkAllowCheckbox1{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowCheckbox2Flag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowCheckbox2" ng-model="chkAllow[$index]['Checkbox2']"
+                                                                               ng-checked="chkAllow[$index]['Chk2']" ng-init="chkAllow[$index]['Chk2'] = sectionlist.Checkbox2Flag" />
+                                                                        <label for="chkAllowCheckbox2{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div ng-if="sectionlist.AllowVerifyFlag">
+                                                                    <div class="checkbox checkbox-primary table-check-wt">
+                                                                        <input type="checkbox" class="clear" id="chkAllowVerify" ng-model="chkAllow[$index]['Verify']"
+                                                                               ng-checked="chkAllow[$index]['Verify']" ng-init="chkAllow[$index]['Verify'] = sectionlist.VerifyFlag" />
+                                                                        <label for="chkAllowVerify{{$index}}"></label>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+
+
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>

@@ -1,0 +1,110 @@
+﻿
+@{
+    ViewBag.Title = "Coummunication DashBoard";
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+
+}
+<link href="~/Content/css/webwhatsapp/web-css.css" rel="stylesheet" />
+@*<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">*@
+
+@*<script src="http://91.234.35.26/iwiki-admin/v1.0.0/admin/js/jquery.nicescroll.min.js"></script>*@
+<script src="~/scripts/myjslib/ClientCommunicationController.js"></script>
+<div class="container-fluid">
+    <div class="chat">
+        <div class="chat-wrapper">
+            <div class="row">
+                <div class="col-md-4 stretch-card">
+                    <div class="card w-100 left-card">
+                        <div class="card-body p-2" ng-init="BindVendor();">
+                            <div class="chatbox" ng-init="BindCommunication();">
+                                <select class="mb-3" ng-model="Controlbyuser" ng-change="BindControl()">
+                                    <option value="">Select</option>
+                                    <option value="0">Pending</option> 
+                                    <option value="1">Complete</option>
+                                </select>
+                                <select  class="mb-3"  ng-change="BindControl()" ng-model="VendorId" ng-init="BindControl()">
+                                    <option value="" style="font-size: 12px;">All Vendor</option>
+                                    <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                </select>
+                                <input class="chatbox" ng-model="SearchCom" style="height: 30px;width: 100%;" ng-keyup="BindControl()" placeholder="Search" />
+
+                                <div class="chat-list-wrapper">
+                                    <ul class="chat-list">
+                                        <li class="new" ng-repeat="x in InvoiceList " ng-click="SetValues(x.RegInvoiceNo,x.ConversationId)">
+                                            <div class="body">
+                                                <div class="header">
+                                                    <span class="username">{{x.HeaderInvoice }}  {{x.InvoiceNo}}</span>
+                                                    <small class="timestamp text-muted">
+                                                        <i class="fa fa-clock-o"></i>Last Update : {{x.UpdatedON}}
+                                                    </small>
+                                                </div>
+                                                <p>{{x.VName}}</p>
+                                                <p>Assign Date: {{x.CreatedOn}}</p>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8 stretch-card"  >
+                    <div class="card w-100 complete-card" ng-show="ComFreeze">
+                        <div class="card-body p-2">
+                            <h6><strong>{{HeaderInvoice}} </strong> {{InvoiceNo}}</h6>
+                            <p><strong>{{WhichDate}}</strong> {{IDATE}}; <strong>Client Name:</strong> {{ClientName}}; <strong>Location:</strong> {{Location}}</p>
+                            <input id="download_all1" type='button' ng-click="downloadAll()" value="Download All Doc"  />
+                            <div class="invoice-table w-100">
+                                <!--<h6 class="text-left"> Invoice No. {{InvoiceNo}}</h6>-->
+                                <div class="doc-head">Documents</div>
+                                <div class="table-responsive fixed-height-table">
+                                    <table class="documents">
+                                        <thead>
+                                            <tr>
+                                                <th>S.No.</th>
+                                                <th>Default</th>
+                                                <th>Document Name</th>
+                                                <th>Type</th>
+                                                <th>Frequency</th>
+                                                <th>Mandatory Flag</th>
+                                                <th>Required Format</th>
+                                                <th>Note</th>
+                                                <th>Status</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody ng-repeat="xx in InDocList">
+                                            <tr>
+                                                <td>{{xx.SRNO}} </td>
+                                                <td>
+                                                    <input type="checkbox" ng-checked="{{xx.IsDefault}}" />
+                                                </td>
+                                                <td><div style="width:200px !important">{{xx.DocumentName}}</div></td>
+                                                <td>{{xx.DocumentType}} </td>
+                                                <td>{{xx.Frequency}} </td>
+                                                <td>{{xx.Mandatory}}</td>
+                                                <td>{{xx.FormatType}}</td>
+                                                <td><div style="width:200px !important">{{xx.Note}}</div></td>
+                                                <td>
+                                                     {{xx.Status}}
+                                                </td>
+                                                <td>
+                                                    <div><a target="_blank" ng-show="xx.IsUpload==1" href="{{xx.DocumentFile}}">View Doc</a></div> 
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                          
+                        </div>
+                    </div>
+                </div>
+
+                 
+
+                 
+            </div>
+        </div>
+    </div>
+</div>

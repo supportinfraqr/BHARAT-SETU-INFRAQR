@@ -1,0 +1,213 @@
+﻿
+@{
+    ViewBag.Title = "LicenceStatusDashboardReport";
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+}
+<script src="~/scripts/RetailJsLib/LSDController.js"></script>
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <a href="../RetailSection/LicenceStatusDashboard"><span class="badge bg-ldanger">Back to Home</span> </a>
+        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Licence Status Dashboard Report</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12 ">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Retail</span></a></li>
+                <li><a href="#"><span>Licence Status Dashboard</span></a></li>
+                <li class="active"><span>Report</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="section-toggle">
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="GetRegion()">
+                                                <label class="control-label">Region</label>
+                                                <div class="input-box">
+                                                    <select autocomplete='address-level2' class="select2 form-control" ng-model="RegionId">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in  RegionList" value="{{x.RegionId}}">{{x.Name}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="GetDocumentStatus()">
+                                                <label class="control-label">Document Status</label>
+                                                <div class="input-box">
+                                                    <select id="ddlClientSite" autocomplete='address-level2' class="select2 form-control" ng-model="DocStatus">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in DocumentListSatus" value="{{x.Status}}">{{x.DocumentStatusList}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindLicenceStatus()">
+                                                <label class="control-label">Licence Status</label>
+                                                <div class="input-box">
+                                                    <select id="ddlLicenceStatus" autocomplete='address-level2' class="select2 form-control" ng-model="LicenceS">
+                                                        <option value="">Select</option>
+                                                        <option value="Applied">Applied</option>
+                                                        <option value="Not Applied">Not Applied</option>
+                                                        <option value="Issued">Issued</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindLicenceType()">
+                                                <label class="control-label">Fresh/Renewal</label>
+                                                <div class="input-box">
+                                                    <select id="ddlFresh" autocomplete='address-level2' class="select2 form-control" ng-model="LicenceType">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in LicenseTypeList" value="{{x.LStatus}}">{{x.LicenseType}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindClientList()">
+                                                <label class="control-label">Client Name</label>
+                                                <div class="input-box">
+                                                    <select id="ddlClient" autocomplete='address-level2' class="select2 form-control" ng-model="Client">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in ClientList" value="{{x.MapId}}">{{x.PartyName}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindInvoiceStatus()">
+                                                <label class="control-label">Invoice Status</label>
+                                                <div class="input-box">
+                                                    <select id="ddlInvoice" autocomplete='address-level2' class="select2 form-control" ng-model="InvoiceSt">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in InvoiceStatusList" value="{{x.invoiceStatus}}">{{x.invoiceStatus}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="GetPaymentStatus()">
+                                                <label class="control-label">Payment Status</label>
+                                                <div class="input-box">
+                                                    <select id="ddlPayment" autocomplete='address-level2' class="select2 form-control" ng-model="PaymentStatus">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in PaymentList" value="{{x.Payment}}">{{x.PaymentStatus}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindStore()">
+                                                <label class="control-label">Outlet Name</label>
+                                                <div class="input-box">
+                                                    <select id="ddlStore" autocomplete='address-level2' class="select2 form-control" ng-model="Store">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in StoreLList" value="{{x.Id}}">{{x.StoreName}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindLicence()">
+                                                <label class="control-label">Type of Licence</label>
+                                                <div class="input-box">
+                                                    <select id="ddlTypeofLicence" autocomplete='address-level2' class="select2 form-control" ng-model="License">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in LicenceList" value="{{x.LicenseId}}">{{x.LicenseName}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindState()">
+                                                <label class="control-label">State</label>
+                                                <div class="input-box">
+                                                    <select id="ddlState" autocomplete='address-level2' class="select2 form-control" ng-model="State">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in StateList" value="{{x.STATE_ID}}">{{x.STATE_NAME}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" ng-init="BindAddress()">
+                                                <label class="control-label">Address of the store</label>
+                                                <div class="input-box">
+                                                    <select id="ddlComplete" autocomplete='address-level2' class="select2 form-control" ng-model="Address">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in AddressList" value="{{x.CompleteAddress}}">{{x.CompleteAddress}}</option>
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Expire Status</label>
+                                                <div class="input-box">
+                                                    <select id="ddlExpire" autocomplete="address-level2" class="select2 form-control ng-pristine ng-valid ng-empty ng-touched" ng-model="ExpiryStatus">
+                                                        <option value="" selected="selected">Select</option>
+                                                        <option value="Expired">Expired</option>
+                                                        <option value="Expiring Soon">Expiring Soon</option>
+
+                                                    </select>
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                @Html.Partial("ActionSearch")
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding report-box">
+                                    <div class="arrow-container animated fadeInDown filter-toggle " ng-click="FilterToggle()">
+                                        <div class="arrow-2">
+                                            <i class="fa fa-angle-down"></i>
+                                        </div>
+                                        <div class="arrow-1 animated hinge infinite zoomIn"></div>
+                                    </div>
+                                    @Html.Partial("GeneralReportGrid")
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>
+

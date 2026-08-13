@@ -1,0 +1,264 @@
+﻿
+@{
+    ViewBag.Title = "Compliance Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<link rel="stylesheet" href="~/ComplianceDashboard/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script src="~/ComplianceDashboard/script/script.js" defer></script>
+
+ 
+<style>
+
+    tfoot tr:last-child {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        z-index: 10;
+    }
+
+    #licenseregistration th:nth-child(1),
+    #licenseregistration td:nth-child(1) {
+        width: 50px; /* Ya jitni chahiye utni width set karein */
+        min-width: 50px;
+        max-width: 60px;
+        text-align: center;
+    } 
+    </style >
+    <style >
+        .table-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            /* max-height: 429px; */
+        }
+    .stats {
+        display: flex;
+        justify-content: space-between;
+        margin: 20px;
+        height: 110px;
+        gap: 6%;
+        /*width: 1100px;*/
+    }
+
+    .stat-card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        flex: 1;
+        margin: 0 10px;
+        text-align: left;
+        position: relative;
+    }
+
+        .stat-card h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #efeded;
+            position: absolute; /* Position the heading */
+            bottom: 30px; /* Adjust spacing to accommodate the line */
+            left: 10px;
+        }
+
+            .stat-card h2::after {
+                content: "";
+                display: block;
+                width: 100%; /* Full width of the heading container */
+                height: 3px; /* Height of the red line */
+                background-color: red; /* Red color for the line */
+                position: absolute;
+                bottom: -10px; /* Position the line slightly below the heading */
+                left: 0;
+            }
+
+        .stat-card p {
+            margin: 0 0 20px;
+            font-size: 13px;
+            color: #fdf7f7;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+            .stat-card p img {
+                position: absolute; /* Position the image absolutely */
+                top: 10px; /* Adjust spacing from the top */
+                right: 0px; /* Adjust spacing from the right */
+                width: 24px;
+                height: 24px;
+            }
+</style>
+ 
+
+<div class="dashboard-container">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <!-- Overview Cards -->
+        @*<section class="compliance-summary" ng-init="BindTiles();GetLicenseRequestData()">
+                <div class="applicable-act">
+                    <section class="overview-cards">
+                        <div class="card1">
+                            <div class="icon-circle">📝</div>
+
+                            Total License <br>
+                                          <strong style=" position: absolute; margin-left: 17%; margin-top: 10%; float: right;">{{TotalLicense}}</strong>
+                        </div>
+                        <div class="card2">
+                            <div class="icon-circle">⏳</div>
+                            Expire Soon License <br>
+                                                <strong style=" position: absolute; margin-left: 17%; margin-top: 10%; float: right;">{{ExpiredSoon}}</strong>
+                        </div>
+                        <div class="card3">
+                            <div class="icon-circle">❌</div>
+                            Expired License <br>
+                                            <strong style=" position: absolute; margin-left: 17%; margin-top: 10%; float: right;">{{ExpiredLicense}}</strong>
+                        </div>
+                    </section>
+
+                </div>
+            </section>*@
+        <section style="position: relative; background-color: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
+            <div class="stats" ng-init="BindClientOnboardingTiles()">
+                <div class="stat-card" style="background-color: #4D4CAC;">
+                    <p>
+                        <img src="~/Client Onboarding/img/Group2.png" alt="Organization Icon" style="width: 55px; height:55px; padding-bottom: 4px;">
+                        Total License
+                    </p>
+                  
+                    <h2>{{TotalLicense}}</h2>
+                </div>
+                <div class="stat-card" style="background-color: #16C098;">
+                    <p>
+                        <img src="~/Client Onboarding/img/Group1.png" alt="Organization Icon" style="width:55px; height:55px; margin-bottom:10px;">
+                        Expire Soon License
+                    </p> 
+                    <h2>{{ExpiredSoon}}</h2>
+                </div>
+                <div class="stat-card" style="background-color: #FD6C75;">
+                    <p>
+                        <img src="~/Client Onboarding/img/Group3.png" alt="Organization Icon" style="width:55px; height:55px; margin-bottom:10px;">
+                        Expired License
+                    </p> 
+                    <h2>{{ExpiredLicense}}</h2>
+                </div>
+
+                <div class="filters" style="position: relative !important;" ng-init="BindBoardingMaster()">
+                    <h5> License Name</h5>
+                    <select ng-model="selectedLicenseName" >
+                        <option value="">Select</option>
+                        <option ng-repeat="x in LicenseNameList| unique:'LicenseName'" value="{{x.LicenseName}}"> {{x.LicenseName}}  </option>
+                    </select>
+                </div>
+            </div>
+
+        </section>
+        <br>
+
+        <section class="compliance-summary5" style="position: relative; background-color: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);">
+
+            <div class="table-container " style="height: 100%; display: flex; flex-direction: column;">
+
+                <table id="licenseregistration" class="table table-bordred table-hover unittbl tableFixHead" ng-init="LoadLicenseReg()">
+                    <thead class="bg-info">
+                        <tr class="noborder">
+                            <th style="width: 50px; text-align: center;">SrNo</th>
+                            <th>Store Code</th>
+                            <th>License name</th>
+                            <th>License Number</th>
+                            <th>Validity Start</th>
+                            <th>Validity End</th>
+                            <th>Days to Expire</th>
+                            <th>Expiry status</th>
+                            <th style="width: 13%;">Renewal Request</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myTable">
+
+                        <tr ng-repeat="licenseMaster in LoadMasterList | filter:exactLicenseFilter">
+                            <td> {{ licenseMaster.SrNo }} </td>
+                            <td> {{ licenseMaster.StoreCode }} </td>
+                            <td>{{ licenseMaster.LicenseName }}</td>
+                            <td>{{ licenseMaster.LicenseNumber }}</td>
+                            <td>{{ licenseMaster.ValidityStartDate }}</td>
+                            <td>{{ licenseMaster.ValidityEndDate }}</td>
+                            <td>{{ licenseMaster.DaysOfExpire }}</td>
+                            <td ng-class="{ 'text-danger': licenseMaster.ExpiryStatus === 'Expiring Soon' }">
+                                {{ licenseMaster.ExpiryStatus }}
+                            </td>
+                            <td class="text-center">
+                                <a class="btn btn-approved" ng-click="ApprovalRecord(licenseMaster.Id);ManageLog('Approve '+licenseMaster.StoreCode+' License name '+ licenseMaster.LicenseName)">Approve</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                  
+                    <tfoot>
+                        <tr>
+                            <th><input type="text" style=" width: 50px; min-width: 50px; max-width: 60px; text-align: center;" class="column-search" data-index="0" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="1" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="2" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="3" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="4" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="5" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="6" placeholder="Search"></th>
+                            <th><input type="text" class="column-search" data-index="7" placeholder="Search"></th>
+                            <th> </th>
+                        </tr>
+                    </tfoot>
+                </table>
+
+
+
+
+
+
+            </div>
+
+
+
+        </section>
+        <br>
+
+
+    </main>
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const inputs = document.querySelectorAll(".column-search");
+
+        inputs.forEach(input => {
+            input.addEventListener("keyup", function () {
+                let index = parseInt(this.getAttribute("data-index")); // Convert index to a number
+                let filter = this.value.toLowerCase();
+                let table = document.getElementById("myTable");
+                let rows = table.getElementsByTagName("tr");
+
+                for (let i = 0; i < rows.length; i++) { // Start from 1 to skip header row
+                    let cell = rows[i].getElementsByTagName("td")[index];
+                    if (cell) {
+                        let textValue = cell.textContent || cell.innerText;
+
+                        // Check if the cell contains an input field and get its value
+                        let inputField = cell.querySelector("input");
+                        if (inputField) {
+                            textValue = inputField.value || "";
+                        }
+
+                        if (textValue.toLowerCase().indexOf(filter) > -1) {
+                            rows[i].style.display = "";
+                        } else {
+                            rows[i].style.display = "none";
+                        }
+                    }
+                }
+            });
+        });
+    });
+
+
+</script>
+
+<script src="~/scripts/RetailJsLib/RetailDashboard.js?Ver=@ViewBag.Version"></script>

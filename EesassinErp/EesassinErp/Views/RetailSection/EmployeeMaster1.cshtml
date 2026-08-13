@@ -1,0 +1,778 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Retail";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+<link href="~/compliance/css/all.css" rel="stylesheet" />
+<link href="~/compliance/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.min.css" rel="stylesheet" />
+<link href="~/compliance/css/custom_theme.css" rel="stylesheet" />
+<link href="~/compliance/css/colorTheme/default.css" rel="stylesheet" />
+<link href="~/compliance/css/draggle.css" rel="stylesheet" />
+<link href="~/compliance/css/responsive.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.css" rel="stylesheet" />
+<script>
+    function ExportToExcel(type, fn, dl) {
+        var elt = document.getElementById('tbl_exporttable_to_xls');
+        var wb = XLSX.utils.table_to_book(elt, { sheet: "sheet1" });
+        return dl ?
+            XLSX.write(wb, { bookType: type, bookSST: true, type: 'base64' }) :
+            XLSX.writeFile(wb, fn || ('EmployeeSheet.' + (type || 'xlsx')));
+    }
+
+</script>
+<style>
+    .tblcss {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+    }
+</style>
+
+<script>
+    function printDiv() {
+        var divName = "tbl_exporttable_to_xls";
+
+        var printContents = document.getElementById(divName).innerHTML;
+        var originalContents = document.body.innerHTML;
+
+        document.body.innerHTML = printContents;
+
+        window.print();
+
+        document.body.innerHTML = originalContents;
+    }</script>
+<div class="container-fluid pagecontentbody" ng-show="EmployeeMasterGrid">
+    <div class="tab-content">
+        <div class="pagebody removebg-color">
+            <div class="col-md-12 pageheader pb-2">
+                <div class="row">
+                    <div class="col-md-9">
+                        <h4 class="mb-0"></h4>
+                    </div>
+                    <div class="col-sm-3 text-end">
+                        <a class="btn btn-warning" href="#" ng-click="ShowDivEmployeeMasterForm();GenerateEmployeeCode();ManageLog('click on New Employee button')"><span class="fas fa-plus"></span>&nbsp;&nbsp;New Employee</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="true">View</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab" aria-controls="tab2" aria-selected="false">Import</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <a href="#" class="btn btn-primary expbtn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="margin-top: 2px;">Export</a>
+                            <ul class="dropdown-menu escalul" aria-labelledby="escalbtnLink">
+                                @*<li><a onclick="ExportToExcel('xlsx')" class="dropdown-item" href="#">Export in Excel</a></li>
+
+                                    <li><a class="dropdown-item" onclick="printDiv();">Export in PDF</a></li>*@
+                                <li><a class="dropdown-item" ng-click="ExportExcel();ManageLog('click on Export in Excel button  Employee button')">Export in Excel</a></li>
+                                <li><a class="dropdown-item" ng-click="ExportPdf();ManageLog('click on Export in PDF button  Employee button')">Export in PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                            <div class="row mb-3">
+                                <div class="col-md-9 mt-3">
+                                    <ul class="filter-search">
+                                        <li class="p-0">
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="searchbox" value="" placeholder="Search">
+                                                <button class="btn btn-default" type="button" id="button-addon2"><span class="icons icon-magnifier"></span></button>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="col-md-3 mt-3">
+                                    <ul class="btngroup">
+                                        <li></li>
+                                        <li class="nav-item submenu">
+                                            <a class="btn btn-default" href="#" type="button" id="A1">Sort by <span class="fa fa-arrow-down"></span></a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="table-responsive nosearch">
+                                <table id="example" class="table table-bordred table-hover unittbl tableFixHead" ng-init="GetEmployeeMaster()">
+                                    <!-- Table header -->
+                                    <thead>
+                                        <tr>
+
+                                            <th width="12%">Employee Code</th>
+                                            <th>Ref EmployeeCode</th>
+                                            <th>Employee Name</th>
+                                            <th>Designation</th>
+                                            <th>D.O.J.</th>
+                                            <th>Department</th>
+                                            <th>Document Status</th>
+                                            @*<th width="8%">Status</th>*@
+                                            <th width="5%"></th>
+                                        </tr>
+                                    </thead>
+                                    <!-- Table body with data binding using ng-repeat -->
+                                    <tbody>
+                                        <tr ng-repeat="employee in EmployeeList">
+
+                                            <td class="text-success">{{ employee.EmployeeCode }}</td>
+                                            <td>{{ employee.RefEmployeeCode }}</td>
+                                            <td>{{ employee.EmployeeName }}</td>
+                                            <td>{{ employee.EmployeeDesignation }}</td>
+                                            <td>{{ employee.DisplayDOJ }}</td>
+                                            <td>{{ employee.EmployeeDepartment }}</td>
+                                            <td>
+                                                <div class="progress" data-percentage="{{ employee.DocumentStatus }}">
+                                                    <span class="progress-left">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <span class="progress-right">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <div class="progress-value">
+                                                        <div class="text-center">
+                                                            {{ employee.DocumentStatus}}%
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            @*<td>
+                                                    <div class="form-control2">
+                                                        <label class="switch">
+                                                            <div class="slider round">
+                                                                <span class="on">Active</span>
+                                                                <span class="off">Deactive</span>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </td>*@
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="modal" ng-click="openEmployeeModal(employee.Id)" data-bs-target="#profileview">
+                                                        <span class="fa fa-ellipsis-v"></span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                            <div class="py-5 mt-3 text-center">
+
+                                <a class="btn btn-warning btn-lg" href="~/DownloadMat/EmployeeMasterSampleSheet.xlsx" download><span class="fas fa-download"></span>&nbsp;&nbsp;Download Store Sample Sheet</a>
+                            </div>
+                            <div class="py-5 mt-3 text-center">
+                                <div class="input-box">
+                                    <input type="file" id="input-excel" onchange="angular.element(document).scope().DisplayExcel()" />
+                                    <div class="text-box-msg-r">
+                                    </div>
+                                </div>
+                                <div class="input-box">
+                                    <button id="btnValiadte" type="button" class="btn2 btn-common btn-3 btn-3d pe-7s-check" ng-click="SaveRecord();ManageLog('click on Save Record button  Employee button')">
+                                        Save Record
+                                    </button>
+                                </div>
+                                <div class="input-box" id="wrapper">
+
+                                </div>
+                            </div>
+
+                            <div class="dropbg">
+                                <form method="post" action="/upload">
+                                    <div class="row">
+                                        <div class="col-md-5 text-center">
+                                            <img src="~/compliance/images/dropf.png" />
+                                        </div>
+                                        <div class="col-md-7">
+                                            <h4 class="mt-5">Choose a Select [.csv] files</h4>
+                                            <p>
+                                                click   to select thorough your machine Accepted files type:.csv
+                                            </p>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid pagecontentbody" ng-show="EmployeeMasterForm">
+    <div class="tab-content">
+        <div class="pagebody removebg-color">
+            <div class="col-md-12 pageheader pb-2">
+                <div class="row">
+                    <div class="col-md-9">
+                        <h4 class="mb-0"></h4>
+                    </div>
+                    <div class="col-sm-3 text-end">
+                        <button onclick="window.location.href='../RetailSection/EmployeeMaster?EmployeesMaster'" class="btn btn-primary">
+                            Go Back
+                        </button>
+                        <a href="#" ng-click="ShowDivEmployeeMasterGrid();ManageLog('Submit in Employee Master ')" class="btn btn-warning">Submit</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+
+                        @*<div class="col-md-3">
+                                <label class="form-label">Party Type <span class="text-danger">*</span></label>
+                                <div class="input-box" ng-init="BindModuleTypeList()">
+                                    <select class="form-select form-control validate" id="ddlPartyType" ng-model="PartyTypeId" ng-change="AllPartySiteLoad(PartyTypeId)">
+                                        <option value="">Select</option>
+                                        <option ng-repeat="x in AllModuleTypeList" value="{{x.Id}}">{{x.Module_Type}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Select Party <span class="text-danger">*</span></label>
+                                <div class="input-box">
+                                    <select class="form-select form-control validate" id="ddlPartyId" ng-model="PartyId" ng-change="AllUserListsLoad(PartyId)">
+                                        <option value="">Select</option>
+                                        <option ng-repeat="x in AllPartyList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Select User</label>
+                                <div class="input-box">
+                                    <select class="form-select form-control" id="ddlUserList" ng-model="UserId" ng-change="BindSuperVisior1(UserId)">
+                                        <option value="">Select</option>
+                                        <option ng-repeat="x in AllUserList" value="{{x.LoginId}}">{{x.Name}}</option>
+                                    </select>
+                                </div>
+                            </div>*@
+                        <div class="col-md-3">
+                            <label class="form-label">Employee Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtEmployeeCode" ng-model="EmployeeCode" ng-disabled="true" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ref Employee Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtRefEmployeeCode" ng-model="RefEmployeeCode" />
+                        </div>
+
+
+                        <div class="col-md-3">
+                            <label class="form-label">Employee Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtEmployeeName" ng-model="EmployeeName" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Employee Designation  <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtEmployeeDesignation" ng-model="EmployeeDesignation" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Employee Department</label>
+                            <input type="text" class="form-control" id="txtEmployeeDepartment" ng-model="EmployeeDepartment" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Father/Husband Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtFatherHusbandName" ng-model="FatherHusbandName" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Gender <span class="text-danger">*</span></label>
+                            <div class="input-box" ng-init="BindGenderList()">
+                                <select class="form-select form-control validate" id="ddlGender" ng-model="Gender">
+                                    <option value="">Select</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Marital Status</label>
+                            <div class="input-box" ng-init="BindMaritalStatusList()">
+                                <select class="form-select form-control" id="ddlMaritalStatus" ng-model="MaritalStatus">
+                                    <option value="">Select</option>
+                                    <option value="Married">Married</option>
+                                    <option value="UnMarried">UnMarried</option>
+                                </select>
+                            </div>
+
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control validate" id="txtDateofBirth" ng-model="DateofBirth" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Present Address <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtPresentAddress" ng-model="PresentAddress" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Permanent Address <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtPermanentAddress" ng-model="PermanentAddress" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Adhar Card Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtAdharCardNumber" ng-model="AdharCardNumber" numeric-only dynamic-length maxlength="12" minlength="12" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">PAN Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtPANNumber" ng-model="PANNumber" dynamic-length maxlength="10" minlength="10" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtMobileNumber" ng-model="MobileNumber" onblur="validatePhoneNo('#txtMobileNumber')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Alternative Mobile Number </label>
+                            <input type="text" class="form-control " id="txtAlternativeMobileNumber" ng-model="AlternativeMobileNumber" onblur="validatePhoneNo('#txtAlternativeMobileNumber')" numeric-only dynamic-length maxlength="10" minlength="10" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Employee Email ID</label>
+                            <input type="email" class="form-control" id="txtEmployeeEmailID" ng-model="EmployeeEmailID" onblur="validateEmail('#txtEmployeeEmailID')" />
+
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Bank Account Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtBankAccountNumber" ng-model="BankAccountNumber" numeric-only />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Bank IFSC Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtBankIFSCCode" ng-model="BankIFSCCode" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">UAN No</label>
+                            <input type="text" class="form-control" id="txtPreviousUAN" ng-model="PreviousUAN" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Previous ESI <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtPreviousESI" ng-model="PreviousESI" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Gross Salary <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtGrossSalary" ng-model="GrossSalary" numeric-only />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">DOJ <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control validate" id="txtDOJ" ng-model="DOJ" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Name of Nominee <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtNameofNominee" ng-model="NameofNominee" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Address of Nominee <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtAddressofNominee" ng-model="AddressofNominee" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Relation of Nominee <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtRelationofNominee" ng-model="RelationofNominee" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">DOB of Nominee <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control validate" id="txtDOBofNominee" ng-model="DOBofNominee" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Store Code <span class="text-danger">*</span></label>
+                            <div class="input-box" ng-init="BindAllStoreList()">
+                                <select class="form-select form-control validate" id="ddlGender" ng-model="StoreCode">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in AllStoreList" value="{{x.StoreId}}">{{x.StoreCode}}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date of leaving<span class="text-danger">*</span></label>
+                            <input type="date" class="form-control validate" id="txtleavingDate" ng-model="LeavingDate" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">PF Account No.<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control validate" id="txtPFAccount" ng-model="PFAccount" />
+                        </div>
+
+                        <div class="col-md-3" ng-init="BindSuperVisior1" ng-show="{{loginType}}=='1'">
+                            <label class="form-label">Select Supervisior 1</label>
+                            <div class="input-box">
+                                <select class="form-select form-control" id="ddlUserList" ng-model="SuperVisior1" ng-change="BindSuperVisior2(SuperVisior1)">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in SuperVisiorList1" value="{{x.Id}}">{{x.Name}}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-init="BindSuperVisior2" ng-show="{{loginType}}=='1'">
+                            <label class="form-label">Select Supervisior 2</label>
+                            <div class="input-box">
+                                <select class="form-select form-control" id="ddlUserList" ng-model="SuperVisior2">
+                                    <option value="">Select</option>
+                                    <option ng-repeat="x in SuperVisiorList2" value="{{x.Id}}">{{x.Name}}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3 statuscus">
+                            <label for="status" class="form-label">Status  <span class="text-danger">*</span></label>
+                            <div class="form-control2">
+                                <select class="form-control validate" ng-model="IsActive">
+                                    <option value="">Select</option>
+                                    <option value="0">Deactive</option>
+                                    <option value="1">Active</option>
+                                </select>
+
+                            </div>
+                        </div>
+
+                        <div class="col-md-12" ng-show="EmployeeUploadDocs">
+                            <h6 class="subheading m-0">Upload Documents</h6>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">1. PAN Card <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(PANCardFilePath)"></i>
+                                <input type="file" class="form-control " id="fuPANCardFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('PANCardFilePath', this)" ng-model="PANCardFilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">2. Cheque/Passbook Copy <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(Cheque_Passbook_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuCheque_Passbook_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('Cheque_Passbook_FilePath', this)" ng-model="Cheque_Passbook_FilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">3. Educational Certificate <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(EducationCertificateFilePath)"></i>
+                                <input type="file" class="form-control " id="fuEducationCertificateFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('EducationCertificateFilePath', this)" ng-model="EducationCertificateFilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">4. Experience Certificate <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(ExperienceCertificateFilePath)"></i>
+                                <input type="file" class="form-control " id="fuExperienceCertificateFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('ExperienceCertificateFilePath', this)" ng-model="ExperienceCertificateFilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">5. Adhaar Card <small>(Front Side)</small> <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(AdhaarCard_FrontSide_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuAdhaarCard_FrontSide_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('AdhaarCard_FrontSide_FilePath', this)" ng-model="AdhaarCard_FrontSide_FilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">Adhaar Card <small>(Back Side)</small> <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(AdhaarCard_BackSide_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuAdhaarCard_BackSide_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('AdhaarCard_BackSide_FilePath', this)" ng-model="AdhaarCard_BackSide_FilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">6. Relieving Letter <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(RelievingLetterfFilePath)"></i>
+                                <input type="file" class="form-control " id="fuRelievingLetterfFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('RelievingLetterfFilePath', this)" ng-model="RelievingLetterfFilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">7. Payslips <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(PayslipsFilePath)"></i>
+                                <input type="file" class="form-control " id="fuPayslipsFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('PayslipsFilePath', this)" ng-model="PayslipsFilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">8. Photos <span class="text-danger"></span></label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(Photos_1_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuPhotos_1_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('Photos_1_FilePath', this)" ng-model="Photos_1_FilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(Photos_2_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuPhotos_2_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('Photos_2_FilePath', this)" ng-model="Photos_2_FilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(Photos_3_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuPhotos_3_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('Photos_3_FilePath', this)" ng-model="Photos_3_FilePath" />
+                            </div>
+                        </div>
+                        <div class="col-md-3" ng-show="EmployeeUploadDocs">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="fileupld">
+                                <i class="fa" ng-class="getFileIconClass(Photos_4_FilePath)"></i>
+                                <input type="file" class="form-control " id="fuPhotos_4_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('Photos_4_FilePath', this)" ng-model="Photos_4_FilePath" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal right fade createpop" id="profileview" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">X</button>
+            </div>
+            <form class="needs-validation" novalidate>
+                <div class="modal-body" style="padding-top: 0 !important;">
+                    <div class="popup-content-scroll popupheit">
+                        <div class="nano-content form-design">
+                            <div class="text-center prodit">
+                                <img src="/compliance/images/profile2.jpg" class="profileimg" />
+                                <h5>{{ employee.Name }}</h5>
+                                <span>DOJ: {{ employee.DOJ }}</span><br />
+                                <span>Ref Employee Code: {{ employee.RefEmployeeCode }}</span>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Contact</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <p><b>Email : </b>{{ employee.Email }}</p>
+                                    <p><b>Phone Number : </b>{{ employee.PhoneNumber }}</p>
+                                    <p><b>Address : </b>{{ employee.Address }}</p>
+                                    @*<p><b>City : </b>{{ employee.City }}</p>
+                                        <p><b>State/Region : </b>{{ employee.State }}</p>
+                                        <p><b>Zipcode : </b>{{ employee.ZipCode }}</p>*@
+                                </div>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Documents</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive">
+                                        <table class="cusmtbl">
+                                            <tr>
+                                                <td><b>Adhaar Card Front Side</b></td>
+                                                <td ng-click="FireDoc('AdhaarFront')">
+                                                    <span class="browtext">Browse</span>
+                                                    <div class="browtext" for="fuPANCardFilePath1">
+                                                        <input id="AdhaarFront" class="browbtn browtext1" type="file" onchange="angular.element(this).scope().UpdateDocument('AdhaarCard_FrontSide_FilePath', this);angular.element(this).scope().ManageLog('Adhaar Card Front Side in Employee Master'+ employee.Name)" ng-model="employee.AdhaarCard_FrontSide_FilePath" />
+
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <a href="#" ng-if="employee.AdhaarCard_FrontSide_FilePath !=null" class="viewlink" ng-click="viewDocument(employee.AdhaarCard_FrontSide_FilePath);ManageLog('View Aadhar front Card in Employee Master'+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Adhaar Card Back Side</b></td>
+                                                <td ng-click="FireDoc('AdhaarBack')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="AdhaarBack" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('AdhaarCard_BackSide_FilePath', this);angular.element(this).scope().ManageLog('Adhaar Card Back Side in Employee Master'+ employee.Name)" ng-model="employee.AdhaarCard_BackSide_FilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.AdhaarCard_BackSide_FilePath !=null" ng-click="viewDocument(employee.AdhaarCard_BackSide_FilePath);ManageLog('View Adhaar Card Back Side in Employee Master'+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>PAN Card</b></td>
+                                                <td ng-click="FireDoc('PANCardFilePath')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="PANCardFilePath" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('PANCardFilePath', this);angular.element(this).scope().ManageLog('PAN Card in Employee Master '+ employee.Name)" ng-model="employee.PANCardFilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.PANCardFilePath !=null" ng-click="viewDocument(employee.PANCardFilePath);ManageLog('PAN Card in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td><b>Education Certificate</b></td>
+                                                <td ng-click="FireDoc('Education')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="Education" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('EducationCertificateFilePath', this);angular.element(this).scope().ManageLog('Education Certificate in Employee Master '+ employee.Name)" ng-model="employee.EducationCertificateFilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.EducationCertificateFilePath !=null" ng-click="viewDocument(employee.EducationCertificateFilePath);ManageLog('Education Certificate in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Experience Certificate</b></td>
+                                                <td ng-click="FireDoc('Experience')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="Experience" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('ExperienceCertificateFilePath', this);;angular.element(this).scope().ManageLog('Experience Certificate in Employee Master '+ employee.Name)" ng-model="employee.ExperienceCertificateFilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.ExperienceCertificateFilePath !=null" ng-click="viewDocument(employee.ExperienceCertificateFilePath);ManageLog('Experience Certificate in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td><b>Relieving Letter</b></td>
+                                                <td ng-click="FireDoc('Relieving')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="Relieving" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('RelievingLetterfFilePath', this);;angular.element(this).scope().ManageLog('Relieving Letter in Employee Master '+ employee.Name)" ng-model="employee.RelievingLetterfFilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.RelievingLetterfFilePath !=null" ng-click="viewDocument(employee.RelievingLetterfFilePath);ManageLog('Relieving Letter in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Payslips</b></td>
+                                                <td ng-click="FireDoc('Payslips')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="Payslips" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('PayslipsFilePath', this);angular.element(this).scope().ManageLog('Payslips File in Employee Master '+ employee.Name)" ng-model="employee.PayslipsFilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.PayslipsFilePath !=null" ng-click="viewDocument(employee.PayslipsFilePath);ManageLog('Payslips File in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Photos</b></td>
+                                                <td ng-click="FireDoc('Photos')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="Photos" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('Photos_1_FilePath', this);angular.element(this).scope().ManageLog('Photos in Employee Master '+ employee.Name)" ng-model="employee.Photos_1_FilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.Photos_1_FilePath !=null" ng-click="viewDocument(employee.Photos_1_FilePath);ManageLog('Photos in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Cheque/Passbook</b></td>
+                                                <td ng-click="FireDoc('Cheque')">
+                                                    <span class="browtext">Browse</span>
+                                                    <input id="Cheque" type="file" class="browbtn browtext1" onchange="angular.element(this).scope().UpdateDocument('Cheque_Passbook_FilePath', this);angular.element(this).scope().ManageLog('Cheque/Passbook in Employee Master '+ employee.Name)" ng-model="employee.Cheque_Passbook_FilePath" />
+                                                </td>
+                                                <td>
+                                                    <a href="#" class="viewlink" ng-if="employee.Cheque_Passbook_FilePath !=null" ng-click="viewDocument(employee.Cheque_Passbook_FilePath);ManageLog('Cheque/Passbook in Employee Master '+ employee.Name)">View</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Transfer Logs</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive">
+                                        <table class="cusmtbl">
+                                            <tr>
+                                                <th></th>
+                                                <th class="text-center">Start Date</th>
+                                                <th class="text-center">End Date</th>
+                                            </tr>
+                                            <tr ng-repeat="x in  TransferLog">
+                                                <td><b class="text-success">{{x.UnitCode}}</b></td>
+                                                <td>{{x.StartDate}}</td>
+                                                <td>{{x.EndDate}}</td>
+                                            </tr>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="row w-100 justify-content-center">
+                        <div class="col-md-6 d-grid">
+                            <button style="display:{{employee.IsTransfer}}" type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#reportNotice">Transfer</button>
+                        </div>
+                        <div class="col-md-6 d-grid">
+                            <button type="submit" ng-click="EditEmployee(employee.Id);ManageLog('View More in Employee Master')" class="btn btn-warning">View More</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="reportNotice" tabindex="-1" aria-labelledby="reportNoticeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal1 noti2">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportNoticeModalLabel">
+                    Transfer Employee<br />
+                    <small class="subtextn">Transfer the empolyee to the unit you want</small>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <tr>
+                                    <td>
+                                        <div class="form-group iconsrch">
+                                            <i class="fa fa-search" style="bottom: 9px;"></i>
+                                            <input type="text" ng-model="StoreSearch" placeholder="Please Enter StoreCode " class="form-control" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-warning" ng-click="SearchStoreList()">Search</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Units</td>
+                                    <td></td>
+                                </tr>
+                                <tr ng-repeat="x in TransferStoreList">
+                                    <td>
+                                        <strong class="text-success">{{x.StoreCode}}</strong><br />
+                                        <small class="subtextn">{{x.TotalEmployee}}</small>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-warning" ng-click="SetTransfer(x.Id);ManageLog('Transfer' + x.StoreCode)">Transfer</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/scripts/RetailJsLib/RetailEmployeeMasterController.js?Ver=@ViewBag.Version"></script>
+<script>
+    $(document).ready(function () {
+        $('.ddfile').change(function () {
+            //console.log(this.files);
+            var f = this.files;
+            var el = $(this).parent();
+            if (f.length > 1) {
+                console.log(this.files, 1);
+                el.text('Sorry, multiple files are not allowed');
+                return;
+            }
+            // el.removeClass('focus');
+            el.html(f[0].name + '<br>' +
+                '<span class="sml">' +
+                'type: ' + f[0].type + ', ' +
+                Math.round(f[0].size / 1024) + ' KB</span>');
+        });
+
+        $('input[type=file]').on('focus', function () {
+            $(this).parent().addClass('focus');
+        });
+
+        $('input[type=file]').on('blur', function () {
+            $(this).parent().removeClass('focus');
+        });
+
+    });
+</script>

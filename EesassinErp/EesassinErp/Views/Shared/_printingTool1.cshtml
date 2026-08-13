@@ -1,0 +1,33 @@
+﻿<div class="print-menu-box2">
+    <div class="pull-left inline-block mr-15 dt-buttons">
+                @*<button class="dt-button buttons-pdf buttons-html5" tabindex="0" type="button" title="PDF"
+                        ng-click="Export('pdf')">
+                    <span>PDF</span>
+       
+                </button>*@
+        <button class="dt-button buttons-print" tabindex="0" type="button" title="Print"
+                ng-click="ddlDocOrientation_change();Export('print')">
+            <span>Print</span>
+        </button>
+    </div>
+    <select id="ddlDocSize" class="pull-left inline-block mr-15"
+            ng-model="DocSize" ng-init="DocSize='A4'">
+        <option value="A4">A4</option>
+        <option value="a3">A3</option>
+    </select>
+    <select id="ddlDocOrientation" class="pull-left inline-block mr-15"
+            ng-model="DocOrientation" ng-init="DocOrientation='Portrait'" ng-change="ddlDocOrientation_change();">
+        <option value="Portrait">Portrait</option>
+        <option value="landscape">Landscape</option>
+    </select>
+    <select id="ddlFonts" class="pull-left inline-block mr-15"
+            ng-model="FontSize" ng-init="FontSize='14'">
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+        <option value="13">13</option>
+        <option value="14">14</option>
+    </select>
+</div>

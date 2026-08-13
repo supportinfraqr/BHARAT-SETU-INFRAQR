@@ -1,0 +1,689 @@
+﻿@{
+    ViewBag.Title = "DashBoard";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/scripts/myjslib/ClientDashboardController.js?Ver=@ViewBag.Version"></script>
+<!-- Load Simple DataTables Stylesheet-->
+<link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" />
+<link href="~/Content/css/auditor-dashboard/styles.css" rel="stylesheet" />
+<link href="~/Content/css/client-dashboard/main.css" rel="stylesheet" />
+<link href="~/Content/css/auditor-dashboard/font-awesome.min.css" rel="stylesheet" />
+<!-- c3 CSS
+============================================ -->
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css">
+<!-- morrisjs CSS
+============================================ -->
+<link href="~/Content/css/auditor-dashboard/morrisjs/morris.css" rel="stylesheet" />
+<!-- animate CSS
+============================================ -->
+<link href="~/Content/css/auditor-dashboard/animate.css" rel="stylesheet" />
+<!-- Bootstrap CSS -->
+<link href="~/Content/css/auditor-dashboard/bootstrap.min.css" rel="stylesheet" />
+
+ <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">            
+<style>
+.product-status-wrap table th {
+    padding: 5px 5px;
+    font-size: 15px;
+    font-weight: bold;
+}
+.single-review-st-text img {
+    height: 80px;
+    width: 80px;
+    border-radius: 50%;
+    margin-right: 15px;
+    border: 1px solid #d5d5d5;
+}
+.dataTable-container table tr:hover {
+    box-shadow: 0 10px 20px rgb(184 184 255 / 50%);
+}
+.product-status-wrap table tr:hover {
+    box-shadow: 0 10px 20px rgb(184 184 255 / 50%);
+}
+.product-status-wrap table th {
+    padding: 5px 5px;
+	border-right: 1px solid #e9ecef;
+}
+.product-status-wrap table td {
+    border-right: 1px solid #e9ecef;
+}
+.user-auth-name-box {
+    float: left;
+    text-align: left;
+    margin: 0px !important;
+    padding: 0px !important;
+}
+    .product-status {
+    background-color:#fff;
+    }
+        .product-status .container-fluid {
+            background-color: #fff;
+        }
+    .c3-arc-Completed-Documents {
+        fill: #6dbaf0 !important;
+    }
+
+    .c3-arc.target-Pending-Documentes,
+    .custom-legend-color.is-neutral {
+        fill: #ffa197 !important;
+    }
+
+    .c3-arc.c3-target-Sent-Documents,
+    .custom-legend-color.is-bad {
+        fill: #46c9b7 !important;
+    }
+
+    .client-header {
+        background: #6200ea;
+        padding: 10px 10px;
+        color: #fff;
+    }
+
+    .profile-bg {
+          background-image: url(../../Content/img/banner.png);
+    padding: 10px 10px;
+    color: #fff;
+    background-size: 245%;
+    background-position: right;
+    }
+
+    .profile-row {
+        margin-bottom: 40px;
+    }
+
+    .profile-heading {
+        font-size: 18px;
+        margin-top: 30px;
+        float: left;
+		color: #000;
+    }
+
+    .edit-icon {
+        font-size: var(--pro-font-size) !important;
+		color: #000;
+        top: 20px;
+        position: absolute;
+        right: 20px;
+        color: #000;
+    }
+
+    .fa-star {
+    color: #f8b32d;
+    font-size: 10px;
+}
+	.Generate-btn {
+       background: #ffffff !important;
+    border: 2px solid #63a0f8;
+    color: #619ef6 !important;
+}
+.Generate-btn:hover{
+    background: #63a0f8 !important;
+    border: 2px solid #63a0f8;
+    color: #fff !important;
+}
+.vendor-select{
+width: 55%;
+    float: right;
+    padding: 2px 12px;
+}
+.dataTable-table > thead > tr > th {
+    vertical-align: bottom;
+    text-align: left;
+    border-bottom: none;
+    width: 17%;
+}
+
+.drop-box{
+	width: 92%;
+    position: absolute;
+    background-color: #ffffff;
+    z-index: 99;
+    top: 34px;
+	border: 1px solid #ccc;
+	max-height: 0px;
+	max-height: 150px;
+    overflow: auto;
+	}
+	#popupdivID{
+	    width: 100%;
+    position: relative;
+	}
+	.fa-clock{
+	color: #ccc;
+    margin-right: 10px;
+	}
+</style>
+<script>
+    $(".button").click(function (e) {
+        $(".dropdown").show();
+        e.stopPropagation();
+    });
+
+    $(".dropdown").click(function (e) {
+        e.stopPropagation();
+    });
+
+    $(document).click(function () {
+        $(".dropdown").hide();
+    });
+</script>
+<div class="container-fluid">
+    <div class="page-title-box">
+        <h4>Client Dashboard</h4>
+    </div>
+    <div class="row">
+        <div class="col-lg-8 mb-1 pr-0">
+            <div class="card card-raised">
+                <div class="card-header bg-transparent px-4" style="background-color:#6ea9fd!important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-4">
+                            <h2 class="card-title mb-0" style="color: #fff;font-size: 14px;">Invoice Compliance <div class="card-subtitle" style="color: #fff;margin: 0px 10px;font-size: 12px;float: right;"> (Compared to previous year)</div> </h2>
+
+                        </div>
+                        @*<div class="d-flex gap-2">
+                                <select id="selectbox" style="font-size: 12px;">
+                                    <option value="pt_1" style="font-size: 12px;">All Client</option>
+                                    <option value="pt_1" style="font-size: 12px;">Option 1</option>
+                                    <option value="pt_1" style="font-size: 12px;">Option 2</option>
+                                </select>
+                            </div>*@
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row gx-4">
+                        <div class="col-12 col-xxl-2">
+                            <div class="d-flex flex-column flex-md-row flex-xxl-column align-items-center align-items-xl-start justify-content-between">
+                                <div class="mb-0 text-center text-md-start">
+                                    <div class="h5 text-muted pr-1 pt-0">Overall Compliance</div>
+                                    <div class="display-5 fw-500" style="font-size: 20px !important;font-weight: bold !important;">00</div>
+                                </div>
+                                <div class="mb-0 text-center text-md-start">
+                                    <div class="h5 text-muted pr-1 pt-0">Vendor Completed invoice</div>
+                                    <div class="display-5 fw-500" style="font-size: 20px !important;font-weight: bold !important;">{{AllCompleteCount}}</div>
+                                </div>
+                                <div class="mb-0 text-center text-md-start">
+                                    <div class="h5 text-muted pr-1 pt-0">Goal</div>
+                                    <div class="display-5 fw-500 text-success" style="font-size: 20px !important;font-weight: bold !important;">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-xxl-10"><canvas id="dashboardBarChart" width="736" height="230" style="display: block; box-sizing: border-box; width: 589.438px; height: 294px;"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+            <div class="card w-100">
+                <div class="card-body p-0">
+                    <div class="single-review-st-item res-mg-t-30 table-mg-t-pro-n profile-bg">
+                        <div class="single-review-st-text">
+                            <div class="col-lg-4 col-md-4 col-sm-4 col-xs-4">
+                                <img ng-src={{Photo}} src="~/Content/img/vendor/profile.jpg" />
+                            </div>
+                            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+                                <span class="profile-heading">{{Name}}</span>
+                            </div>
+                            <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2">
+
+                                <a href="../DocumentMaster/OneTimeDocument"><i class="fa fa-pencil profile-icon-size"></i></a>
+                                @*<i class="fa fa-pencil profile-icon-size" style="position: absolute;"></i>*@
+
+                                <!-- <span class="pull-right"></span> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12" ng-init="HighlightsExpire()">
+                        <!-- <div id="g1" class="gauge" style="height: 150px;"></div> -->
+                        <!-- <p class="profile-chart-name">Document Expiry</p>
+
+                        <table class="ttable w100">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Document Name</th>
+                                    <th>Valid To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in ListOnetimeDocument">
+                                    <td>{{x.SNO}}</td>
+                                    <td>{{x.DocumentName}}</td>
+                                    <td>{{x.VaildTo}}</td>
+                                </tr>
+                                <tr ng-if="ListOnetimeDocument==undefined ">
+                                    <td>No Record Found</td>
+                                </tr>
+                            </tbody>
+                        </table>-->
+
+
+                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                            <div id="g1" class="gauge" style="height: 150px;"></div>
+                            <p class="profile-chart-name" style="text-align:center;">Profile Completion</p>
+                        </div>
+                        <!-- <hr class="name-of-your-vertical-line"/> -->
+
+                    </div>
+                    <!-- <hr class="name-of-your-vertical-line"/> -->
+                </div>
+
+                <div class="clear" style="margin-top: 3%;"></div>
+
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                    <div class="product-payment-inner-st box-show">
+
+                        <a href="../DocumentMaster/OneTimeDocument" class="btn w100
+                                    profile-chart-name pro-btton-color btn1">  Upload Document</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =============================== 2 ============================ -->
+    <!-- <div class="clear" style="margin-top: 3%;"></div> -->
+
+
+    <div class="col-lg-12 box-show p-0" ng-init="BindAuditor();">
+        <div class="col-lg-12 card pb-3 mb-4 pt-3" ng-init="BindVendor();">
+            <div class="page-title-box">
+                <h4>Compliance Report</h4>
+            </div>
+
+            <div class="d-block" ng-init="BindVendor();">
+                <div class="col-lg-3 col-md-3 col-xs-12 mb-5">
+                    <select class="form-control h-100" ng-change="BindClientInvoiceStatus()" ng-model="VendorId">
+                        <option value="" style="font-size: 12px;">All Vendor</option>
+                        <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-3  col-xs-12 mb-5">
+                    <select class="form-control h-100" ng-model="AuditorId" ng-change="BindClientInvoiceStatus()">
+                        <option value="" style="font-size: 12px;">All Auditor</option>
+                        <option ng-repeat="xx in AuditorList" value="{{xx.PartyId}}">{{xx.PartyName}}</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-3  col-xs-12 mb-5">
+                    @*<input id="txtInvoice" class="form-control mb-3 py-0 px-2 validate h-100" placeholder="Enter Invoice No" ng-model="InvoiceNo" />*@
+
+                    <input id="txtInvoice" class="form-control ng-pristine ng-untouched ng-valid ng-empty" placeholder="Enter Invoice No" ng-model="InvoiceNo"
+                           ng-keyup="CLSearchInvoice()" ng-click="CLSearchInvoice()" />
+                    <div class="drop-box">
+                        <div class="dropdown" ng-repeat="xx in ListOfInvoice">
+                            <div class="mb-3 py-0 px-2" ng-click="SetTextbox(xx.VendorInvNum,xx.ClientId)"><i class='fa fa-clock'></i> {{xx.Name}} </div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-3  col-xs-12 mb-5">
+                    <button type="button" class="btn pro-btton-color Generate-btn form-control p-0" ng-click="checkandgetreport()" style="padding: 0 !important;">
+                        Generate Report
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+
+            <div class="card w-100 invoice-box">
+
+                <div class="card-body">
+                    <div class="pull-right position-relative">
+                        <div id="g2" class="gauge" style="height: 100px;width:120px;"></div>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 mt-1">New Invoice</h4>
+                        <p class="text-muted mb-0">Counts: {{AllDraftCount}}</p>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Amount: <i class="fa fa-rupee"></i> {{AllDraftAmount}}
+                    </p>
+
+                </div>
+
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <div class="card w-100 invoice-box" ng-init="BindClientInvoiceStatus()">
+
+                <div class="card-body">
+                    <div class="pull-right position-relative">
+                        <div id="g3" class="gauge" style="height: 100px;width:120px;"></div>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 mt-1">Pending Invoice</h4>
+                        <p class="text-muted mb-0">Counts: {{AllPendingCount}}</p>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Amount: <i class="fa fa-rupee"></i> {{AllPendingAmount}}
+                    </p>
+
+                </div>
+
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+
+            <div class="card w-100 invoice-box">
+
+                <div class="card-body">
+                    <div class="pull-right position-relative">
+                        <div id="g4" class="gauge" style="height: 100px;width:120px;"></div>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 mt-1">Validate Invoice</h4>
+                        <p class="text-muted mb-0">Counts: {{ValidCount}}</p>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Amount: <i class="fa fa-rupee"></i> {{ValidAmount}}
+                    </p>
+
+                </div>
+
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+
+            <div class="card w-100 invoice-box">
+
+                <div class="card-body">
+                    <div class="pull-right position-relative">
+                        <div id="g5" class="gauge" style="height: 100px;width:120px;"></div>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 mt-1">Complete Invoice</h4>
+                        <p class="text-muted mb-0">Counts: {{AllCompleteCount}}</p>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Amount: <i class="fa fa-rupee"></i> {{AllCompleteAmount}}
+                    </p>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- ================================ 5 ============================== -->
+    <!-- <div class="clear" style="margin-top: 3%;"></div> -->
+    <div class="pro_comp_bg row pt-0 pb-0">
+
+
+
+
+        <div class="card card-raised" style="padding: 0;">
+            <div class="card-header bg-transparent px-4 p-0" style="background-color:#6ea9fd!important;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="me-4">
+                        <h2 class="card-title mb-0 text-white pt-3 pb-3">Work in Progress  <div class="card-subtitle" style="color: #fff;margin: 1px 10px;font-size: 12px;float: right;">(Details and history)</div> </h2>
+
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="dataTable-search">
+                            <select class="form-control h-200" ng-change="BindIndiviualAuditorCompliance()" ng-model="AVendorId">
+                                <option value="" style="font-size: 12px;">All Vendor</option>
+                                <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                            </select>
+                        </div>
+                        @*<i class="fa fa-download" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>
+                            <i class="fa fa-print" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>*@
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <!-- Simple DataTables example-->
+                <div class="dataTable-wrapper dataTable-loading no-footer sortable searchable fixed-columns" ng-init="BindAuditorCompliance()">
+                    <div class="dataTable-top">
+                        <div class="dataTable-dropdown">
+                            @*<select class="dataTable-selector"><option value="5">5</option><option value="10" selected="">10</option>
+                                <option value="15">15</option><option value="20">20</option><option value="25">25</option>
+                                </select> entries per page</label>*@
+                        </div>
+
+                    </div><div class="dataTable-container">
+                        <table id="datatablesSimple" class="dataTable-table">
+                            <thead>
+                                <tr><th data-sortable="" style="width: 26.6139%;"><a href="#" class="dataTable-sorter">S.No</a></th><th data-sortable="" style="width: 26.6139%;"><a href="#" class="dataTable-sorter">Vendor</a></th><th data-sortable=""><a href="#" class="dataTable-sorter">Total Location</a></th><th data-sortable="" style="width: 25.3552%;"><a href="#" class="dataTable-sorter">Total Sites</a></th><th data-type="date" data-format="YYYY/MM/DD" data-sortable="" style="width: 18.6118%;"><a href="#" class="dataTable-sorter">Complete Invoice</a></th><th data-sortable="" style="width: 18.342%;"><a href="#" class="dataTable-sorter">Compliance Score</a></th></tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in AuditorCompliance">
+                                    <td>{{x.SNO}}   </td>
+                                    <td>
+                                        {{x.PartyName}} <br />
+
+                                    </td>
+                                    <td>{{x.DraftInvoice}}</td>
+                                    <td>{{x.PendingInvoice}}</td>
+                                    <td>{{x.CompleteInvoice}}</td>
+                                    <td>{{x.Compliance}}</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    @*<div class="dataTable-bottom">
+                            <div class="dataTable-info">Showing 1 to 10 of 100 entries</div>
+                            <nav class="dataTable-pagination"><ul class="dataTable-pagination-list"><li class="active"><a href="#" data-page="1">1</a></li><li class=""><a href="#" data-page="2">2</a></li><li class=""><a href="#" data-page="3">3</a></li><li class=""><a href="#" data-page="4">4</a></li><li class=""><a href="#" data-page="5">5</a></li><li class=""><a href="#" data-page="6">6</a></li><li class=""><a href="#" data-page="7">7</a></li><li class="ellipsis"><a href="#">…</a></li><li class=""><a href="#" data-page="10">10</a></li><li class="pager" style="margin: 0;"><a href="#" data-page="2">›</a></li></ul></nav>
+                        </div>*@
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- ================================ 3 ============================== -->
+    <!-- <div class="clear" style="margin-top: 3%;"></div> -->
+    <div class="pro_comp_bg row pt-0">
+        <div class="card-header bg-transparent px-4 p-0" style="background-color:#6ea9fd!important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="me-4">
+                    <h2 class="card-title mb-0 text-white pt-3 pb-3">Highlights</h2>
+                </div>
+                <div class="d-flex gap-2">
+                    @*<i class="fa fa-download" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>
+                        <i class="fa fa-print" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>*@
+                </div>
+            </div>
+        </div>
+        <div class="product-status mg-b-15">
+            <div class="container-fluid" ng-init="HighlightsExpire()">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12
+                                col-xs-12">
+                        <div class="product-status-wrap">
+                            <div class="asset-inner m15 dataTable-table mt-4">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Party Name</th>
+                                            <th>Document Name</th>
+                                            <th>Expire On</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in ListOnetimeDocument">
+                                            <td>{{x.SNO}}</td>
+                                            <td>{{x.PartyName}}</td>
+                                            <td>{{x.DocumentName}}</td>
+                                            <td>{{x.VaildTo}}</td>
+                                            <td style="background-color:{{x.Color}}">{{x.Status}}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="pro_comp_bg row pt-0">
+        <div class="card-header bg-transparent px-4 p-0" style="background-color:#6ea9fd!important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="me-4">
+                    <h2 class="card-title mb-0 text-white pt-3 pb-3">Pending Vendor Document</h2>
+                </div>
+                <div class="d-flex gap-2">
+                    @*<i class="fa fa-download" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>
+                        <i class="fa fa-print" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>*@
+                </div>
+            </div>
+        </div>
+        <div class="product-status mg-b-15">
+            <div class="container-fluid" ng-init="PendingDocExpire()">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12
+                                col-xs-12">
+                        <div class="product-status-wrap">
+                            <div class="asset-inner m15 dataTable-table mt-4">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Vendor</th>
+                                            <th>InvoiceNo</th>
+
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in PendingDocList">
+                                            <td>{{x.SNO}}</td>
+                                            <td>{{x.VendorName}}</td>
+                                            <td>{{x.InvoiceNo}}</td>
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="pro_comp_bg row pt-0" ng-init="ClientDashboardSite();SetProjectManagement()" >
+        <div class="card-header bg-transparent px-4 p-0" style="background-color:#6ea9fd!important;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="me-4">
+                    <h2 class="card-title mb-0 text-white pt-3 pb-3">Project Management</h2>
+                </div>
+                <div class="d-flex gap-2">
+                    <select   ng-model="SiteId" ng-change="SetProjectManagement()"> 
+                        <option value="">Select</option>
+                        <option ng-repeat="x in AllPartySiteCList" value="{{x.SiteId}}">{{x.SiteName}}</option>
+                    </select>
+                    @*<i class="fa fa-download" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>*@
+                    <a href="../Retail/RetailProjectMaster">View All</a>
+                </div>
+            </div>
+        </div>
+        <div class="product-status mg-b-15">
+            <div class="container-fluid" >
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12
+                                col-xs-12">
+                        <div class="product-status-wrap">
+                            <div class="asset-inner m15 dataTable-table mt-4">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Site Name</th>
+                                            <th>Project Name</th>
+                                            <th>Size Capacity</th>
+                                            <th>Loan Agreements</th>
+                                            <th>Mortgage Amount</th>
+                                            <th>Tech Feasibility Status</th>
+                                            <th>Tech Person Name</th>
+                                            <th>Farmer Name</th>
+                                            <th>Khatedar Name</th>
+                                            <th>Village</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in ProjectManagementList">
+                                            <td>{{x.SiteName}}</td>
+                                            <td>{{x.ProjectName}}</td>
+                                            <td>{{x.SizeCapacity}}</td>
+                                            <td>{{x.LoanAgreements}}</td>
+                                            <td>{{x.MortgageAmount}}</td>
+                                            <td>{{x.TechFeasibilityStatus}}</td>
+                                            <td>{{x.TechPersonName}}</td>
+                                            <td>{{x.FarmerName}}</td>
+                                            <td>{{x.KhatedarName}}</td>
+                                            <td>{{x.Village}}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- ================================= 4 ============================== -->
+</div>
+ 
+      
+
+
+<!-- jquery
+       ============================================ -->
+<script src="~/Content/client-Js/vendor/jquery-1.12.4.min.js"></script>
+<script src="~/Content/client-Js/jquery.meanmenu.js"></script>
+<script src="~/Content/client-Js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.0/Chart.min.js"></script>
+<!--  c3chart
+============================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
+<!--  justgag
+============================================ -->
+<script src="~/Content/client-Js/raphael-2.1.4.min.js"></script>
+<script src="~/Content/client-Js/justgage.js"></script>
+<!-- morrisjs JS
+============================================ -->
+<script src="~/Content/client-Js/morrisjs/raphael-min.js"></script>
+<script src="~/Content/client-Js/morrisjs/morris.js"></script>
+<script src="~/Content/client-Js/morrisjs/morris-active.js"></script>
+<!-- morrisjs JS
+============================================ -->
+<!-- tab JS
+============================================ -->
+<script src="~/Content/client-Js/tab.js"></script>
+<script src="~/Content/css/client-dashboard/main.js"></script>
+
+
+
+<!-- Load Simple DataTables Scripts-->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+<script src="~/Content/client-Js/scripts.js"></script>
+<!--  Load Chart.js via CDN-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.0.0-beta.10/chart.min.js" crossorigin="anonymous"></script>
+<!--  Load Chart.js customized defaults-->
+<script src="~/Content/client-Js/charts/chart-defaults.js"></script>
+<!--  Load chart demos for this page-->
+<script src="~/Content/client-Js/charts/demos/chart-pie-demo.js"></script>
+@*
+    <script src="~/Content/client-Js/charts/demos/dashboard-chart-bar-grouped-demo.js"></script>*@
+<script src="~/Content/client-Js/clientcompliancegraph.js"></script>
+<!-- Load Simple DataTables Scripts-->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+<script src="~/Content/client-Js/datatables/datatables-simple-demo.js"></script>
+
+<script src="../assets.startbootstrap.com/js/sb-customizer.js"></script>
+<script src="~/Content/client-Js/datatables/datatables-simple-demo.js"></script>
+<script src="~/scripts/myjslib/PartySiteManagerController.js"></script>

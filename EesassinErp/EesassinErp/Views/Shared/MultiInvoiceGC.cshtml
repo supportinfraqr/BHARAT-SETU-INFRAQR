@@ -1,0 +1,172 @@
+﻿
+<div id="printDiv" ng-init="GetReportHeaderUsingCategory('General Report');">
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th {
+            background-color: #dddddd;
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        } 
+    </style>
+    <div id="ReportHeader" ng-bind-html="ReportHeader"></div>
+    <table>
+         
+        <tr>
+            <th>GC Code</th>
+            <th>Farmer</th>
+            <th>Farm</th>
+            <th>Batch No</th>
+            <th>GC DATE</th>
+            <th>Placement Date</th>
+            <th>PAN NO</th>
+        </tr>
+        <tr>
+            <td>{{GcCode}}</td>
+            <td>{{FarmerName }}</td>
+            <td>{{FarmCode}}</td>
+            <td>{{BatchNo}}</td>
+            <td>{{GCDATE}}</td>
+            <td>{{PlacementDate}}</td>
+            <td>{{PANNO}}</td>
+        </tr>
+
+    </table>
+    <br />
+    <h6>Birds Sold Details</h6>
+    <table>
+        <tr>
+            <th>Sr.No.	</th>
+            <th>Date</th>
+            <th>Mean Age</th>
+            <th>No Of Birds</th>
+            <th>Kg</th>
+            <th>Avg. Weight</th>
+            <th>Rate</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td>{{BirdsSoldDate}}</td>
+            <td>{{MeanAge}}</td>
+            <td>{{TotalBird}}</td>
+            <td>{{Kg}}</td>
+            <td>{{AvgWeight}}</td>
+            <td>{{Rate}}</td>
+            <td>{{Value}}</td>
+        </tr>
+    </table>
+    <br />
+    <h6>Details</h6>
+    <table>
+        <tr>
+            <th>Average Sale Rate</th>
+            <td>{{AverageSaleRate}}</td>
+            <td></td>
+            <td>EEF</td>
+            <td>{{EEF}}</td>
+        </tr>
+        <tr>
+            <th>Product Cost</th>
+            <td>{{ProductCost}}</td>
+            <td></td>
+            <td>CFCR</td>
+            <td>{{CFCR}}</td>
+        </tr>
+        <tr>
+            <th>Mortality</th>
+            <td>{{Mortality}}</td>
+            <td>{{Mortalityper}}</td>
+            <td>Day GAIN</td>
+            <td>{{DayGain}}</td>
+        </tr>
+        <tr>
+            <th>Shortage</th>
+            <td>{{Shortage}}</td>
+            <td></td>
+            <td>Medicine/Kg</td>
+            <td>{{MedicineKg}}</td>
+        </tr>
+        <tr>
+            <th>FCR</th>
+            <td>{{FCR}}</td>
+            <td></td>
+            <td>MeanAge</td>
+            <td>{{MeanAge}}</td>
+        </tr>
+    </table>
+    <br />
+    <h6>GC Calculation</h6>
+    <table>
+        <tr>
+            <th>
+                GC PER KG
+                Add: 1.79(10.0 RS/KG GC RATE FOR STANDARD COST 83 RS.)
+            </th>
+            <td>{{GCPERKG}}</td>
+            <td>{{GCPERKGTotoal}}</td>
+
+        </tr>
+        <tr>
+            <th>Market Incentive</th>
+            <td>{{MarketIncentive}}</td>
+            <td>{{MarketIncentiveTotal}}</td>
+        </tr>
+        <tr>
+            <th>Summer Incentive</th>
+            <td>{{SummerIncentive}}</td>
+            <td>{{SummerIncentiveTotal}}</td>
+        </tr>
+        <tr>
+            <th>Shoratge/Excess Deduction </th>
+            <td></td>
+            <td>{{ShoratgeExcess}}</td>
+        </tr>
+        <tr>
+            <th>Growing Charges	 </th>
+            <td></td>
+            <td>{{GrowingCharges}}</td>
+        </tr>
+        <tr>
+            <th>TDS(1%)	</th>
+            <td></td>
+            <td>{{TDS}}</td>
+
+        </tr>
+        <tr>
+            <th>Total GC Amount</th>
+            <td></td>
+            <td>{{GCAmount}}</td>
+        </tr>
+        <tr>
+            <th>Less : Bird Sold /Advance	</th>
+            <td></td>
+            <td>{{BirdSoldAdvance}}</td>
+
+        </tr>
+        <tr>
+            <th>Net Payable</th>
+            <td></td>
+            <td>{{NetPayable}}</td>
+        </tr> 
+    </table>
+    Remark : {{Narration}}  
+</div>
+
+
+
+
+
+
+

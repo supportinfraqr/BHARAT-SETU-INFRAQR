@@ -1,0 +1,520 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/LicenseRequestMasterController.js"></script>
+  
+<div class="pagecontentbody" ng-init="BindExecuter()">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader pb-2">
+            <div clasAssigned Executers="row">                
+                <div class="col-sm-12 text-end" Ng-if="NI_ViewFlag==1">
+                    <a class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reportNotice">Report Notice</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-9 mb-2">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="col-md-12 pageheader pb-2">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h4 class="mb-0">Store Compliance Status</h4>
+                                    </div>
+                                    <div class="col-sm-4 text-end">
+                                        <ul class="filter-search">
+                                            <li class="p-0">
+                                                <div class="preloader">
+                                                    <div class="input-group">
+                                                        <input class="form-control" list="StoreData" type="text" id="searchbox" ng-init="GetStoreMaster()" ng-keyup="SearchStore(SearchValue)" ng-model="SearchValue" placeholder="Search Store">
+                                                    </div>
+                                                    <div class="drop-box" style="height: 80px; overflow: auto;  position: absolute; width: 100%; z-index: 99; background-color: #eee;" ng-show="ISopen">
+                                                        <div class="dropdown" ng-repeat="xx in StoreList">
+                                                            <div class="mb-3 py-0 px-2" ng-click="ddlSelectStoreValue(xx.StoreId,xx.StoreCode)">{{xx.StoreCode}} </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive nosearch">
+                                <table class="table table-bordred tableFixHead">
+                                    <thead class="bg-warning">
+                                        <tr class="noborder">
+                                            <th>Type</th>
+                                            <th class="text-center">Yes</th>
+                                            <th class="text-center">No</th>
+                                            <th class="text-center">Attached</th>
+                                            <th></th>
+                                            <th class="text-center">Verify</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="licenseMaster in StoreComplianceStatusList">
+                                            <td> {{ licenseMaster.Type }} </td>
+                                            <td class="text-center">                                              
+                                                <input class="custchk" ng-disabled="licenseMaster.Isverify==1?true:false"   ng-click="ChkYES(licenseMaster.Id)"   ng-checked="licenseMaster.StatusYN==1" type="checkbox" />
+                                            </td>
+                                            <td class="text-center">
+                                                <input class="custchk" ng-disabled="licenseMaster.Isverify==1?true:false"  ng-click="ChkNo(licenseMaster.Id)"  ng-checked="licenseMaster.StatusYN==0" type="checkbox" />
+                                            </td>
+                                            <td class="text-center" style="width: 18%">
+                                                <div class="upload-btn-wrapper" ng-if="licenseMaster.Verify !=1" ng-show="licenseMaster.StatusYN==1">
+                                                    <button class="uploadbtn" ng-click="SetValue(licenseMaster.Id,'#fileupoad'+$index)">Upload Image</button>
+                                                    <input type="file" id="fileupoad{{$index}}" style="display:none" onchange="angular.element(this).scope().show(this, '#AlbumIcon')" />
+                                                </div>
+                                        
+                                                <div class="upload-btn-wrapper" ng-show="licenseMaster.Verify==1||licenseMaster.StatusYN==0">
+                                                    <button class="uploadbtn">Upload Image</button>
+                                                </div>
+                                            </td>
+                                            <td class="text-center" style="width: 7%"> <a href="{{licenseMaster.DocumentPath}}" ng-if="SCS_DownloadFlag==1 && licenseMaster.Dstatus==1" class="dwnlbtn" download><i class="fa fa-download"></i></a></td>
+                                            <td class="text-center" style="width: 9%">
+                                                <a ng-click="VerifyDoc(licenseMaster.Id)" ng-if="SCS_VerifyFlag==1 && licenseMaster.Dstatus==1 && licenseMaster.Isverify==0" class="btn btn-success">Verify</a>
+                                                <a ng-if="licenseMaster.Isverify==1" class="btn btn-success">Verified</a>                                              
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="col-md-12 pageheader pb-2">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h4 class="mb-0">Store code - {{ StoreCode }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-12 text-center mt-5 pt-5">
+                                <div id="canvas-holder" style="width:100%">
+                                    <canvas id="chart"></canvas>
+                                </div>
+                                <div class="pb-5 mt-5 mb-1">
+                                    <strong class="mb-2 mt-3">Document Upload</strong><br />
+                                    <b class="text-warning">{{TotalupoadDoc}}</b>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3" ng-if="LR_ViewFlag==1">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="col-md-12 pageheader pb-2">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h4 class="mb-0">License & Registration</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive nosearch" style="max-height: 335px;">
+                                <table class="table table-bordred tableFixHead" ng-if="!MasterList">
+                                    <thead class="bg-info">
+                                        <tr class="noborder">
+                                            <th></th>
+                                            <th>Store Code</th>
+                                            <th>License name</th>
+                                            <th>License Number</th>
+                                            <th>Validity Start</th>
+                                            <th>Validity End</th>
+                                            <th>Days to Expire</th>
+                                            <th>Expiry status</th>
+                                            <th style="width: 13%;">Renewal Request</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="licenseMaster in LoadMasterList">
+                                            <td><input type="checkbox" ng-model="licenseMaster.checked" /></td>
+                                            <td> {{ licenseMaster.StoreCode }} </td>
+                                            <td>{{ licenseMaster.LicenseName }}</td>
+                                            <td>{{ licenseMaster.LicenseNumber }}</td>
+                                            <td>{{ licenseMaster.ValidityStartDate }}</td>
+                                            <td>{{ licenseMaster.ValidityEndDate }}</td>
+                                            <td>{{ licenseMaster.DaysOfExpire }}</td>
+                                            <td ng-class="{ 'text-danger': licenseMaster.ExpiryStatus === 'expire soon' }">
+                                                {{ licenseMaster.ExpiryStatus }}
+                                            </td>
+                                            <td class="text-center">
+                                                <a ng-show="{{licenseMaster.ValidStatus}}==0" class="btn btn-approved" ng-click="ApprovalRecord(licenseMaster.Id)">Approve</a>
+
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                            </div>
+                            <div class="col-md-12 text-end">
+                                <a href="../RetailSection/LicenseMaster?License%20Master" class="text-purp" style="padding: 10px 50px;"><b>View All</b></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">                
+                <div class="col-md-9">
+                    <div class="card"  Ng-if="NI_ViewFlag==1">
+                        <div class="card-body">
+                            <div class="col-md-12 pageheader pb-2" ng-init="BindNoticeClient()">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h4 class="mb-0">Notices & Inspections</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive nosearch" style="max-height: 570px;">
+                                <table class="table table-bordred tableFixHead">
+                                    <thead class="nocolor">
+                                        <tr class="noborder">
+                                            <th></th>
+                                            <th class="text-center">Department</th>
+                                            <th class="text-center">Store Code</th>
+                                            <th class="text-center">Submitions</th>
+                                            <th></th>
+                                            <th class="text-center">Closer Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                        <tr class="noborder" ng-repeat="x in NoticeClientList" >
+                                            <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                            <td class="text-center">
+                                                <b>{{x.DepartmentName}} </b><br />
+                                                <a href="{{x.NoticeUpload}}" download><small>Notice &nbsp;<i class="fas fa-download"></i></small></a>
+                                                <p>{{x.ReceiptDate}}</p>
+                                            </td>
+                                            <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;{{x.StoreCode}}</b></td>
+                                            <td class="text-center">
+                                                <b>Reply Status</b><br />
+                                       <a href="{{x.ExecuterNoticeUpload}}" ng-if="x.NUStatus=='1'" download>
+                                           <small >Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                           <p>{{x.ExecuterReceiptDate}}</p>
+                                         </a>
+                                               <small ng-if="x.NUStatus=='0'">Pending</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <b>{{x.Percentage}}% done </b>
+                                                <br />
+                                                <progress id="file" class="hundredper" value="{{x.Percentage}}" max="100"></progress>
+                                            </td>
+                                            <td class="text-center">
+                                                <b>Final Status</b><br />
+                                                <a ng-if="x.FinalSubmittionbyExecuter !='-1'" href="{{x.FinalSubmittionbyExecuter}}" download>
+                                                    <small>Closed &nbsp;<i class="fas fa-download"></i></small>
+                                                    <p>{{x.FinalReceiptDate}}</p>
+                                                </a>
+                                                
+                                                <small ng-if="x.FinalSubmittionbyExecuter=='-1'" >Pending </small>
+                                            </td>
+                                        </tr>
+                                        <tr ng-if="NoticeClientList.Length<0">
+                                            <td colspan="5" style="text-align:center">No Record Found</td>
+                                        </tr>
+                                   
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3"  ng-init="BindEscalation()">
+                    <h5 class="btitle">Assigned Executer</h5>
+                    <div class="card blbox nbox">
+                        <div class="card-body">
+                            <div class="col-md-12">
+                                <img class="boximg" src="~/compliance/images/profile2.jpg" />
+                                <p class="text-center"><b>{{ExecuterName}}</b></p> 
+                                <p>Email ID : <b> {{ExecuterEmail}}</b></p>
+                                <p>Mobile No. : <b>{{ExecuterMobile}}</b></p>
+                            </div>
+                        </div>
+                    </div>
+                    <h5 class="btitle">Level 1 Escalation</h5>
+                    <div class="card orbox nbox">
+                        <div class="card-body">
+                            <div class="col-md-12">
+                                <img class="boximg" src="~/compliance/images/profile2.jpg" />
+                                <p class="text-center"><b>{{Escalation1Name}}</b></p> 
+                                <p>Email ID : <b>{{Escalation1Email}}</b></p>
+                                <p>Mobile No. : <b>{{Escalation1Mobile}}</b></p>
+                                <a class="btn btn-xs btn-light escalbtn dropdown-toggle" href="#" role="button" id="escalbtnLink" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Escalate
+                                </a>
+                                <ul class="dropdown-menu escalul" aria-labelledby="escalbtnLink">
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#escalet1">Matter related to compliance</a></li>
+                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#escalet2">Matter related to license</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <h5 class="btitle">Level 2 escalation</h5>
+                    <div class="card rebox nbox">
+                        <div class="card-body">
+                            <div class="col-md-12">
+                                <img class="boximg" src="~/compliance/images/profile2.jpg" />
+                                <p class="text-center"><b>{{Escalation2Name}}</b></p> 
+                                <p>Email ID : <b> {{Escalation2Email}}</b></p>
+                                <p>Mobile No. : <b>{{Escalation2Mobile}}</b></p>
+                                <a href="#" class="btn btn-xs btn-light escalbtn" data-bs-toggle="modal" data-bs-target="#escalet4">Escalate</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reportNotice" tabindex="-1" aria-labelledby="reportNoticeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportNoticeModalLabel">Report Notice</h5> 
+                <button  id="closeId" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row"> 
+                    <div class="col-md-12">
+                        <div class="form-group mb-3">
+
+                            <label class="mb-3"><b>Store Code</b></label>
+                            <select class="form-control form-select validate" ng-model="NStoreId"  ng-change="BindNoticeDepartment(NStoreId)">
+                                <option value="">Select</option> 
+                                <option ng-repeat="x in NoticeStoreList" value="{{x.StoreId}}">{{x.StoreCode}}</option>  
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-group mb-3" >
+                            <label class="mb-3"><b>Department</b></label>
+                            <select class="form-control form-select validate" ng-model="DepartmentId" ng-change="BindNoticeStoreStatus(DepartmentId)" >
+                                <option value="">Select</option>
+                                <option ng-repeat="x in NoticeDepartmentList" value="{{x.DepartmentId}}">{{x.DepartmentName}}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-12" ng-if="DocStage !='-1'">
+                        <div class="form-group mb-3">
+                            <label class="mb-3"><b>Document Stage</b></label>
+                            <input type="text" class="form-control" readonly ng-model="DocStage" />
+
+                        </div>
+                    </div>
+                    <div class="col-md-12" ng-if="DocStatus=='open'">
+                        <div class="form-group mb-3">
+                            <label class="mb-3"><b>Upload</b></label>
+                            <input type="file" class="form-control validate" id="fNoticeUpload"  onchange="angular.element(this).scope().BindNoticeUpload(this, '#AlbumIcon')" ng-model="NoticeUpload">
+                         </div>
+                    </div>
+                    @*<div class="col-md-12" ng-if="DocStatus=='open'">
+                        <div class="form-group mb-3">
+                            <label class="mb-3"><b>Date of receipt</b></label>
+                            <input id="txtReceiptDate" type="date" class="form-control validate" ng-model="ReceiptDate"   />
+                       
+                        </div>
+                    </div>*@
+                </div>
+                <div class="row justify-content-center postion-reletive mt-3 mb-1" ng-if="DocStatus=='open'">
+                    <div class="col-md-10 d-grid">
+                        <div class="btn btn-warning"   ng-click="SaveRecord()">Submit</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="escalet3" tabindex="-1" aria-labelledby="escalet3ModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal">
+            <img src="images/enlpopup.png" class="enlpopup" />
+            <div class="modal-header">
+                <h5 class="modal-title" id="escalet3ModalLabel"></h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-2 text-center pt-4">
+                        <i class="fas fa-thumbs-up fa-2x"></i>
+                    </div>
+                    <div class="col-md-10">
+                        <h5 class="mb-5">Regret you have faced issue, your escalation has been submitted and will get back in 24 hours</h5>
+                    </div>
+                    <div class="col-md-12 d-grid">
+                        <button class="btn btn-outline-light">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="escalet1" tabindex="-1" aria-labelledby="escalet1ModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="escalet1ModalLabel"></h5>
+                <button id="btnclose1" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group iconsrch mb-3" ng-init="BindIStore()" >
+                            <label class="text-warning mb-3" ><b>Store</b></label>
+                            <i class="fa fa-search"></i>
+                            <select class="form-control form-select form-control-lg custmsrch  " ng-model="eStoreId1"  >
+                                <option value="">Select</option>{{StoreList}}
+                                <option ng-repeat="x in eStoreList" value="{{x.Id}}">{{x.storecode}}</option> 
+                            </select>
+                        </div> 
+                        <div class="form-group iconsrch mb-5">
+                            <label class="text-warning mb-3"><b>Remark</b></label> 
+                            <br />
+                            <textarea id="Remark1"  ng-model="Remark1" class="form-control    form-control-lg custmsrch"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="row justify-content-center postion-reletive mb-1">
+                    <div class="col-md-6 d-grid">
+                        <button class="btn btn-warning btn-lg"  ng-click="SaveComplianceEsc()"  >Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="escalet2" tabindex="-1" aria-labelledby="escalet2ModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="escalet2ModalLabel"></h5>
+                <button id="btnclose2" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group iconsrch mb-3" ng-init="BindIStore()">
+                            <label class="text-warning mb-3"><b>Store</b></label>
+                            <i class="fa fa-search"></i>
+                            <select class="form-control form-select form-control-lg custmsrch" ng-model="eStoreId1" ng-change="BindILicence()">
+                                <option value="">Select</option>{{StoreList}}
+                                <option ng-repeat="x in eStoreList" value="{{x.Id}}">{{x.storecode}}</option>
+                            </select>
+                        </div>
+                        <div class="form-group iconsrch mb-2">
+                            <label class="text-warning mb-3"><b>Licence</b></label>
+                            <i class="fa fa-search"></i>
+                            <select class="form-control form-select form-control-lg custmsrch" ng-model="eLicenseId">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in eLicenceList" value="{{x.LicenseId}}">{{x.LicenseName}}</option>
+                            </select>
+                        </div>
+                        <div class="form-group iconsrch mb-5">
+                            <label class="text-warning mb-3"><b>Remark</b></label>
+                            <br />
+                            <textarea id="Remark2" ng-model="Remark2" class="form-control    form-control-lg custmsrch"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="row justify-content-center postion-reletive mb-1">
+                    <div class="col-md-6 d-grid">
+                        <button  class="btn btn-warning btn-lg" ng-click="SaveLicenceEsc()">Submit</button>
+                    </div>
+                    <div  id="showmsgid" data-bs-toggle="modal" data-bs-target="#sescalet" data-bs-dismiss="modal"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="escalet4" tabindex="-1" aria-labelledby="escalet4ModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="escalet4ModalLabel"></h5>
+                <button id="btnclose2" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group iconsrch mb-3" ng-init="BindTicket()">
+                            <label class="text-warning mb-3"><b>Ticket</b></label>
+                            <i class="fa fa-search"></i>
+                            <select class="form-control form-select form-control-lg custmsrch" ng-model="TicketId" ng-change="BindIDetail(TicketId)">
+                                <option value="">Select</option> 
+                                <option ng-repeat="x in TicketList" value="{{x.Id}}">{{x.Title}}</option>
+                            </select>
+                        </div>
+                        {{RemarkLevel2}}<br />{{Escalation1RemarkLevel2}}<br />{{Escalation2RemarkLevel2}}
+                      
+                    </div>
+                </div>
+                <div class="row justify-content-center postion-reletive mb-1">
+                    <div class="col-md-6 d-grid">
+                        <button class="btn btn-warning btn-lg" ng-click="SaveEscalation()">Escalation Level Two</button>
+                    </div>
+                    <div id="showmsgid" data-bs-toggle="modal" data-bs-target="#sescalet" data-bs-dismiss="modal"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="sescalet" tabindex="-1" aria-labelledby="sescaletModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content notiModal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sescaletModalLabel"></h5>
+                <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-2 text-center py-3">
+                        <i class="fas fa-thumbs-up fa-2x"></i>
+                    </div>
+                    <div class="col-md-10 mb-5">
+                        <br />
+                        <h5 class="mb-1">{{MessageReturn}}</h5> 
+                    </div>
+                    <div class="col-md-12 d-grid">
+                        <button class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    //$(document).mouseup(function (e) {
+    //    var container = $(".drop-box");
+    //    // if the target of the click isn't the container nor a descendant of the container
+    //    if (!container.is(e.target) && container.has(e.target).length === 0) {
+    //        container.hide();
+    //    }
+    //});
+
+    var mouse_is_inside = false;
+
+    $(document).ready(function () {
+        $('#searchbox').hover(function () {
+            mouse_is_inside = true;
+        }, function () {
+            mouse_is_inside = false;
+        });
+
+        $("#searchbox").mouseup(function () {
+            $('.drop-box').show();
+        });
+
+        $("body").mouseup(function () {
+            if (!mouse_is_inside) $('.drop-box').hide();
+        });
+    });
+</script>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Total Doc</title>
+    <style>
+           body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: rgba(0, 0, 0, 0.1);  /* Initial light background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            transition: background-color 0.1s ease;  /* Smooth transition */
+        }
+
+
+        .popup {
+            background-color: white;
+            width: 90%;
+            max-width: 900px;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .popup-header h1 {
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .popup-header .close-btn {
+            background-color: #FF4D4D;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+        }
+          /* Background Overlay */
+          .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);  /* Slightly darker background */
+            z-index: 1;
+            display: none;  /* Hidden by default */
+        }
+
+        /* Additional styles (your existing ones) */
+        /* ... */
+
+      
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            align-items: center;
+            
+        }
+
+        .filters select {
+            padding: 8px;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .filters button {
+            padding: 8px 16px;
+            background: #6f42c1;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 392px;
+        }
+
+        .tab-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tab-container button {
+            background-color: #F0F0F0;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .tab-container button.active {
+            background-color: #3F51B5;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #DAE7FF;
+        }
+
+        .sample-sheet-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #6C5DD3;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .sample-sheet-link .icon {
+            margin-right: 5px;
+            font-size: 16px;
+        }
+
+        .sample-sheet-link:hover {
+            text-decoration: underline;
+            color: #5C6BC0;
+        }
+
+        .download-btn, .upload-btn {
+            background-color: #6C5DD3;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            padding-right: 19px;
+            padding-left: 19px;
+        }
+
+        .status {
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .status.complete {
+            background-color: #16C098;
+            color: white;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status.pending {
+            background-color: #FD6C75;
+            color: #fffdfd;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+            padding: 5px;
+            padding-left: 19px;
+            padding-right: 19px;
+        }
+
+        .file-chooser {
+            display: inline-block;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #666;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            background-color: #f8f8f8;
+        }
+
+        .file-chooser.uploaded {
+            background-color: #A20867;
+            color: white;
+            font-weight: bold;
+         
+            padding: 8px 17px;
+
+
+        }
+
+        .file-chooser span {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-chooser input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+
+        input[type="date"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 100%;
+            max-width: 150px;
+        }
+
+        @media (max-width: 600px) {
+            th, td {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            .filter-container select {
+                max-width: 100%;
+            }
+
+            .download-btn, .upload-btn {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+
+            .status {
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+     <!-- Overlay to darken the background -->
+     <div class="overlay" id="background-overlay"></div>
+    <div class="popup">
+        <div class="popup-header">
+            <h1>Pending Document</h1>
+            <button class="close-btn" onclick="closePopup()">&times;</button>
+        </div>
+
+        <div class="filters">
+            <div>
+                <select id="state">
+                    <option>Select State</option>
+                    <option>Delhi</option>
+                    <option>Andhra Pradesh</option>
+                    <option>Haryana</option>
+                    <option>Assam</option>
+                </select>
+                <select id="year">
+                    <option>Select Year</option>
+                    <option>2023</option>
+                    <option>2024</option>
+                </select>
+                <select id="month">
+                    <option>Select Month</option>
+                    <option>October</option>
+                </select>
+            </div>
+            <button>Search</button>
+            
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Doc. Name</th>
+                    <th>Frequency</th>
+                    <th>Download Sample Sheet</th>
+                    <th>Upload Doc. File</th>
+                    <th>Uploaded Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>PF ECR</td>
+                    <td>Monthly</td>
+                    <td><a href="#" class="sample-sheet-link"><img src="img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+
+                    <td>
+                        <span class="file-chooser">
+                            <span>Choose File</span>
+                            <input type="file" accept=".pdf" onchange="handleFileUpload(this)">
+                        </span>
+                    </td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><span class="status pending">Pending</span></td>
+                <tr>
+                    <td>ESIC Challan</td>
+                    <td>Monthly</td>
+                    <td><a href="#" class="sample-sheet-link"><img src="img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+                    <td>
+                        <span class="file-chooser">
+                            <span>Choose File</span>
+                            <input type="file" accept=".pdf" onchange="handleFileUpload(this)">
+                        </span>
+                    </td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><span class="status pending">Pending</span></td>
+                </tr>
+                <tr>
+                    <td>Leave Register</td>
+                    <td>Monthly</td>
+                    <td><a href="#" class="sample-sheet-link"><img src="img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+
+                    <td>
+                        <span class="file-chooser">
+                            <span>Choose File</span>
+                            <input type="file" accept=".pdf" onchange="handleFileUpload(this)">
+                        </span>
+                    </td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><span class="status pending">Pending</span></td>
+                </tr>
+                <tr>
+                    <td>In Out Register</td>
+                    <td>Monthly</td>
+                    <td><a href="#" class="sample-sheet-link"><img src="img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+
+                    <td>
+                        <span class="file-chooser">
+                            <span>Choose File</span>
+                            <input type="file" accept=".pdf" onchange="handleFileUpload(this)">
+                        </span>
+                    </td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><span class="status pending">Pending</span></td>
+                </tr>
+                <tr>
+                    <td>In Out Register</td>
+                    <td>Monthly</td>
+                    <td><a href="#" class="sample-sheet-link"><img src="img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+
+                 
+                    <td>
+                        <span class="file-chooser">
+                            <span>Choose File</span>
+                            <input type="file" accept=".pdf" onchange="handleFileUpload(this)">
+                        </span>
+                    </td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><input type="date" value="2024-12-05"></td>
+                    <td><span class="status pending">Pending</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        function closePopup() {
+            document.body.style.display = 'none';
+        }
+
+        function handleFileUpload(input) {
+            const fileChooser = input.parentElement; // Get the file-chooser element
+            const file = input.files[0]; // Get the selected file
+
+            if (file && file.type === "application/pdf") { // Check if the file is a PDF
+                fileChooser.classList.add("uploaded"); // Change the background color
+                fileChooser.querySelector("span").textContent = "Uploaded"; // Set the text to "Uploaded"
+            } else {
+                alert("Please upload a valid PDF file.");
+                input.value = ""; // Reset the file input
+                fileChooser.querySelector("span").textContent = "Choose File"; // Reset text back to default
+                fileChooser.classList.remove("uploaded"); // Remove uploaded style if file is invalid
+            }
+        }
+
+        function closePopup() {
+    window.location.href = "index.html";  // Redirects to the index.html page
+}
+
+function closePopup() {
+            // Hide the overlay and close the popup
+            document.getElementById("background-overlay").style.display = "none";
+            document.body.style.backgroundColor = "rgba(0, 0, 0, 0.1)";  // Reset the background color
+            // Optionally, you can redirect the page here if needed (as mentioned in earlier responses)
+            window.location.href = "index.html";  // Redirects to the index.html page
+        }
+
+        // Function to open the popup and change background color
+        function openPopup() {
+            document.getElementById("background-overlay").style.display = "block";  // Show the overlay
+            document.body.style.backgroundColor = "rgba(0, 0, 0, 0.3)";  // Darken the background
+        }
+        // Optional: Trigger the popup on page load or based on a user action
+        openPopup();  // Call this when you want the popup to show up
+
+    </script>
+</body>
+</html>

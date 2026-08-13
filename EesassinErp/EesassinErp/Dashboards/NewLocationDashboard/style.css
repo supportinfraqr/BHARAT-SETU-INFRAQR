@@ -1,0 +1,414 @@
+﻿.locationDashPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 100vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ================= Container 1 ================= */
+
+.locationDashPage .locationDash-container1 {
+    background: var(--card-bg);
+    /*box-shadow: 0 2px 6px rgba(0,0,0,0.06);*/
+    padding: 0px 2px 10px 10px;
+    /*border-radius: 14px;*/
+}
+
+/* Header */
+.locationDashPage .locationDash-title {
+    color: var(--primary);
+    position: relative;
+    padding-bottom: 6px;
+}
+
+/* Buttons */
+.locationDashPage .locationDash-pdfBtn,
+.locationDashPage .locationDash-goBtn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-weight: 500;
+}
+
+.locationDashPage .locationDash-goBtn:hover,
+.locationDashPage .locationDash-pdfBtn:hover{
+    background: var(--primary-dark);
+
+}
+
+/* Filter inputs */
+.locationDashPage .locationDash-filter .form-control {
+    min-width: 130px;
+}
+
+/* KPI Cards */
+
+.locationDashPage .locationDash-kpiCard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px;
+    border-radius: 12px;
+    color: #fff;
+    height: 100%;
+}
+
+    /* Left side */
+    .locationDashPage .locationDash-kpiCard .kpi-left {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .locationDashPage .locationDash-kpiCard .kpi-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .locationDashPage .locationDash-kpiCard .kpi-percent {
+        font-size: 0.75rem;
+        opacity: 0.85;
+    }
+
+    /* Right side value */
+    .locationDashPage .locationDash-kpiCard .kpi-value {
+        font-size: 2rem;
+        font-weight: 400;
+        line-height: 1;
+    }
+
+.locationDashPage .kpi-active {
+    background: #E45D27;
+}
+
+.locationDashPage .kpi-inactive {
+    background: #23B480;
+}
+
+.locationDashPage .kpi-upcoming {
+    background: #7167AC;
+}
+
+.locationDashPage .kpi-total {
+    background: #FFCA82;
+}
+
+
+/* ================= Container 2 ================= */
+
+.locationDashPage .locationDash-container2 .locationDash-card {
+    background: var(--card-bg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 16px;
+    height: 100%;
+}
+
+/* Card header */
+.locationDashPage .locationDash-card-title {
+    color: var(--primary);
+}
+
+/* Smaller filter for half container */
+.locationDashPage .small-filter .form-control {
+    min-width: 110px;
+}
+
+/* ===== Mini KPI Cards ===== */
+.locationDashPage .locationDash-miniCard {
+    color: #fff;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 90px;
+}
+
+    .locationDashPage .locationDash-miniCard .mini-title {
+        font-size: 0.85rem;
+        font-weight: 400;
+    }
+
+.locationDashPage .locationDash-miniCard .mini-value {
+    font-size: 1.8rem;
+    font-weight: 400;
+    color: #fff;
+    line-height: 1;
+}
+
+/* Bullet list */
+.locationDashPage .locationDash-miniCard .mini-list {
+    margin: 6px 0 0;
+    padding-left: 14px;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.9);
+}
+.locationDashPage .locationDash-miniCard .mini-list li::marker {
+    color: rgba(255,255,255,0.8);
+}
+
+.locationDashPage .mini-list li {
+    margin-bottom: 2px;
+}
+
+/* 2x2 list layout inside Upcoming License */
+.locationDashPage .mini-list.grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px 20px;
+    padding-left: 14px;
+    margin-top: 6px;
+}
+
+
+
+/* ===== Charts ===== */
+.locationDashPage .locationDash-chartRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.locationDashPage .chart-box {
+    text-align: center;
+    flex: 1;
+}
+
+    .locationDashPage .chart-box canvas {
+        width: 140px !important;
+        height: 140px !important;
+        margin: 0 auto;
+    }
+
+.locationDashPage .chart-label {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+
+/* ================= Container 3 ================= */
+
+.locationDashPage .locationDash-container3 .locationDash-card {
+    background: var(--card-bg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 16px;
+    height: 100%;
+}
+
+/* Button dropdown filters */
+.locationDashPage .locationDash-btnFilters .btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .locationDashPage .locationDash-btnFilters .btn:hover {
+        background: var(--primary);
+        color:#fff;
+    }
+
+/* Reset option styles (best-effort, cross-browser safe) */
+.locationDashPage .locationDash-btnFilters select option {
+    color: #333;
+    background-color: #fff;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+.locationDashPage .locationDash-btnFilters select option:hover{
+    background: var(--card-bg) !important;
+    color: var(--primary) !important;
+}
+
+
+/* Chart wrapper */
+.locationDashPage .locationDash-chartWrap {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Chart sizes */
+.locationDashPage #locationDocumentChart {
+    width: 100% !important;
+    height: 260px !important;
+}
+
+.locationDashPage #locationDistributionChart {
+    width: 260px !important;
+    height: 260px !important;
+}
+
+
+/*================= Container 4 : Document Highlights =================*/
+.locationDashPage .locationDash-container4 .card-body {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    min-height: 320px;
+}
+
+/* Table wrapper and hide scrollbar visually */
+.locationDashPage .locationDash-container4 .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .locationDashPage .locationDash-container4 .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.locationDashPage .locationDash-container4 .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.locationDashPage .locationDash-container4 .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.8rem;
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.locationDashPage .locationDash-container4 .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* filter button */
+.locationDashPage .locationDash-container4 .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .locationDashPage .locationDash-container4 .filter-btn.active,
+    .locationDashPage .locationDash-container4 .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.locationDashPage .locationDash-container4 .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.locationDashPage .locationDash-container4 .export-btn, .download-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .locationDashPage .locationDash-container4 .export-btn:hover,
+    .locationDashPage .locationDash-container4 .download-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+
+/* Pagination area */
+.locationDashPage .locationDash-container4 .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .locationDashPage .locationDash-container4 .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .locationDashPage .locationDash-container4 .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.locationDashPage .locationDash-container4 #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .locationDashPage .locationDash-container4 #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+/* statuses */
+.locationDashPage .locationDash-container4 .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+}
+
+.locationDashPage .locationDash-container4 .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.locationDashPage .locationDash-container4 .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.locationDashPage .locationDash-container4 .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+.locationDashPage .locationDash-container4 td .badge {
+    display: inline-block;
+    min-width: 90px;
+    text-align: center;
+}

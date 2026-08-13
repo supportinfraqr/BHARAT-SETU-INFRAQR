@@ -1,0 +1,1028 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "NewWorkerRegistraton"; 
+  Layout = "~/Views/Common/Withoutlayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/WorkerRegistrationController.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+    /* ==========================
+       NAVBAR
+    ========================== */
+
+    .autoFillDocNavbar {
+        font-family: "Inter", sans-serif;
+        height: 68px;
+        background: #F4F9FF;
+        border-bottom: 1px solid #e3e8ef;
+        display: flex;
+        align-items: center;
+    }
+
+    .autoFillDocNavbarInner {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .autoFillDocLogo {
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+        .autoFillDocLogo .logoBlue {
+            color: #022B5E;
+        }
+
+        .autoFillDocLogo .logoOrange {
+            color: #E45D24;
+        }
+
+        .autoFillDocLogo .logoGreen {
+            color: #1D8F4E;
+        }
+
+    .autoFillDocSupportBtn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        color: #4b5563;
+        font-size: 15px;
+        font-weight: 500;
+        padding: 10px 16px;
+        border-radius: 12px;
+        transition: .25s;
+    }
+
+        .autoFillDocSupportBtn:hover {
+            background: #ffffff;
+            color: #022B5E;
+        }
+
+        .autoFillDocSupportBtn i {
+            font-size: 18px;
+        }
+
+    .workerRegistration {
+        font-family: "Inter", sans-serif;
+        --primary: #022B5E; /* theme accent */
+        --primary-dark: #002048;
+        --card-bg: #FEF3EC;
+        background: #FFF;
+        color: #223;
+        min-height: 84vh;
+    }
+
+    /* Labels */
+    .form-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 4px;
+    }
+
+    /* Inputs */
+    .form-control-sm,
+    .form-select-sm {
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    /* Section title */
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+    /* Upload Field (Aligned) */
+    .upload-field {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .upload-input-wrap {
+        position: relative;
+        flex: 1;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 8px;
+        padding: 6px 8px;
+        background: #fff;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+    }
+
+    .upload-input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .file-name {
+        font-size: 0.72rem;
+        color: #555;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .upload-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .upload-icon {
+        font-size: 0.9rem;
+        color: var(--primary);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+    }
+
+        .upload-icon:hover {
+            background: rgba(228,93,39,0.12);
+        }
+
+
+    /* Footer */
+    .employee-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 4px;
+    }
+
+    /* Save Button (Primary) */
+    .import-save-btn {
+        background: #022B5E !important; /* primary */
+        color: #fff !important;
+        border: none;
+        font-size: 0.9rem;
+        border-radius: 999px;
+        font-weight: 400;
+        padding: 4px 8px;
+        transition: 0.25s ease;
+    }
+
+        .import-save-btn:hover {
+            background: var(--primary-dark) !important;
+        }
+
+    /* Cancel button */
+    .cancel-btn {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+        border-radius: 999px;
+        font-size: 0.9rem;
+        font-weight: 400;
+        padding: 4px 8px;
+        transition: 0.25s ease;
+    }
+
+        .cancel-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    .hiddenfield {
+        display: none;
+    }
+
+    .cropper-view-box,
+    .cropper-face {
+        border-radius: 50%;
+    }
+</style>
+<script>
+
+    $(document).ready(function () {
+        $('.ddfile').change(function () {
+            //console.log(this.files);
+            var f = this.files;
+            var el = $(this).parent();
+            if (f.length > 1) {
+                console.log(this.files, 1);
+                el.text('Sorry, multiple files are not allowed');
+                return;
+            }
+            // el.removeClass('focus');
+            el.html(f[0].name + '<br>' +
+                '<span class="sml">' +
+                'type: ' + f[0].type + ', ' +
+                Math.round(f[0].size / 1024) + ' KB</span>');
+        });
+
+        $('input[type=file]').on('focus', function () {
+            $(this).parent().addClass('focus');
+        });
+
+        $('input[type=file]').on('blur', function () {
+            $(this).parent().removeClass('focus');
+        });
+
+    });
+</script>
+
+<!-- TOP NAVBAR -->
+<div class="autoFillDocNavbar">
+
+    <div class="autoFillDocNavbarInner">
+
+        <div class="autoFillDocLogo">
+
+            <span class="logoBlue">Bharat</span><span class="logoOrange">Shram</span><span class="logoGreen">Setu</span>
+
+        </div>
+
+        <a href="#" class="autoFillDocSupportBtn">
+
+            <i class="fa-solid fa-headset"></i>
+
+            <span>Support</span>
+
+        </a>
+
+    </div>
+
+</div>
+
+
+<div class="workerRegistration px-4 py-4">
+    <form>
+        <!-- Employee Details  -->
+        <h5 class="section-title" style="font-size:1.5rem;">Worker Registration </h5>
+        <hr />
+        <h6 class="section-title">Basic Detail</h6>
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Worker Code</label>
+                <input class="form-control form-control-sm"
+                       id="txtEmployeeCode"
+                       ng-model="EmployeeCode"
+                       disabled>
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Ref Worker Code</label>
+                <input class="form-control form-control-sm" id="txtRefEmployeeCode" ng-disabled="true" ng-model="RefEmployeeCode">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Worker Name  <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm validate" id="txtEmployeeName" ng-model="EmployeeName">
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield" ng-init="BindSiteList()">
+                <label class="form-label">Site Name</label>
+                <select class="form-select form-control-sm" ng-model="SiteId" ng-disabled="true">
+                </select>
+            </div>
+
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Designation</label>
+                <input class="form-control form-control-sm" id="txtEmployeeDesignation" ng-model="EmployeeDesignation">
+            </div>
+
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Department</label>
+                <input class="form-control form-control-sm" id="txtEmployeeDepartment" ng-model="EmployeeDepartment">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Father / Husband Name <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm validate" id="txtFatherHusbandName" ng-model="FatherHusbandName">
+            </div>
+            <div class="col-lg-3 col-md-6" ng-init="BindGenderList()">
+                <label class="form-label">Gender <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm validate"
+                        ng-model="Gender">
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6" ng-init="BindMaritalStatusList()">
+                <label class="form-label">Marital Status <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm validate"
+                        ng-model="MaritalStatus">
+                    <option value="">Select</option>
+                    <option value="Married">Married</option>
+                    <option value="UnMarried">UnMarried</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6  hiddenfield" ng-init="GetTransport()">
+                <label class="form-label">Allow Transport</label>
+                <select class="form-select form-select-sm" ng-model="Transport" ng-disabled="true" ng-change="openRoutetransport();GetTransport()">
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield" ng-show="OpenRoute">
+
+                <label class="form-label">Route<span class="text-danger">*</span></label>
+                <select class="form-select form-control-sm" ng-model="RouteId">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in TransportList" value="{{x.RouteID}}">{{x.RouteID}}-{{x.RouteName}}</option>
+                </select>
+            </div>
+            <!-- Dates & Status  -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                <input type="date" class="form-control form-control-sm validate" id="txtDateofBirth" ng-model="DateofBirth">
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Date of Joining</label>
+                <input type="date" class="form-control form-control-sm" ng-disabled="true" id="txtDOJ" ng-model="DOJ">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Blood Group<span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm validate" id="txtBloodGroup" ng-model="BloodGroup">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Status<span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm validate"
+                        ng-model="IsActive">
+                    <option value="">Select</option>
+                    <option value="0">Deactive</option>
+                    <option value="1">Active</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">I card Issue Date</label>
+                <input type="date" class="form-control form-control-sm" ng-disabled="true" id="txtissueDate" ng-model="IssueDate">
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">I card Valid Till</label>
+                <input type="date" class="form-control form-control-sm" ng-disabled="true" id="txtValidTill" ng-model="ValidTill">
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Worker Photo<span class="text-danger">*</span></label>
+
+
+                <input type="file" class="file-name"
+                       onchange="angular.element(this).scope().openCropper(this)" />
+                <img ng-if="EmployeePhotos" src="{{EmployeePhotos ? EmployeePhotos : '../DownloadMat/dummy.jpg'}}"
+                     style="width:80px;height:80px;border-radius:5px;margin-top:5px;" />
+
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Camp Number</label>
+                <input type="text" class="form-control form-control-sm" id="txtCampNumber" ng-model="CampNumber">
+            </div>
+
+        </div>
+
+        <!-- Contact  -->
+        <hr>
+        <h6 class="section-title">Contact & Address</h6>
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Mobile No. <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm validate"
+                       id="txtMobileNumber"
+                       ng-model="MobileNumber"
+                       ng-disabled="IsMobileDisabled"
+                       onblur="validatePhoneNo('#txtMobileNumber')"
+                       numeric-only
+                       dynamic-length
+                       maxlength="10"
+                       minlength="10">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Emergency Mobile No.</label>
+                <input class="form-control form-control-sm" id="txtAlternativeMobileNumber" ng-model="AlternativeMobileNumber" onblur="validatePhoneNo('#txtAlternativeMobileNumber')" numeric-only dynamic-length maxlength="10" minlength="10">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Email ID <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm validate"
+                       id="txtEmployeeEmailID"
+                       ng-model="EmployeeEmailID"
+                       ng-disabled="IsEmailDisabled"
+                       onblur="validateEmail('#txtEmployeeEmailID')">
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Present Address <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm validate" id="txtPresentAddress" ng-model="PresentAddress">
+            </div>
+            <div class="col-lg-3 col-md-6" ng-init="AllCountry()">
+                <label class="form-label">Country<span class="text-danger">*</span></label>
+                <select id="ddlCountry"
+                        class="select2 form-control"
+                        ng-change="AllState()"
+                        ng-model="Country">
+                    <option value="">Select Country</option>
+                    <option ng-repeat="x in AllCountryList" value="{{x.CountryId}}">
+                        {{x.CountryName}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6" ng-init="AllCity()">
+                <label class="form-label">State <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm validate"
+                        ng-model="State">
+                    <option value="">Select State</option>
+                    <option ng-repeat="x in AllCityList | unique:'STATE_NAME'"
+                            value="{{x.STATE_NAME}}">
+                        {{x.STATE_NAME}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">City <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm validate"
+                        ng-model="City">
+                    <option value="">Select City</option>
+                    <option ng-repeat="x in AllCityList | filter:{STATE_NAME: State}"
+                            value="{{x.CITY_NAME}}">
+                        {{x.CITY_NAME}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Pincode<span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm validate" id="txtPincode" ng-model="Pincode" numeric-only dynamic-length maxlength="6" minlength="6">
+            </div>
+            <div class="col-lg-12 col-md-12">
+                <input style="font-size:0.9rem" type="checkbox" ng-model="chksameas" ng-change="SameAs()" /> Same As Above Present Address.
+            </div>
+
+            <div class="col-lg-3">
+                <label class="form-label">Permanent Address <span class="text-danger">*</span></label>
+                <input class="form-control form-control-sm validate" id="txtPermanentAddress" ng-model="PermanentAddress">
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Country<span class="text-danger">*</span></label>
+                <select id="ddlCountry"
+                        class="select2 form-control"
+                        ng-change="AllState()"
+                        ng-model="PCountry">
+                    <option value="">Select Country</option>
+                    <option ng-repeat="x in AllCountryList" value="{{x.CountryId}}">
+                        {{x.CountryName}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6" ng-init="AllCity()">
+                <label class="form-label">State <span class="text-danger">*</span></label>
+
+                <select class="form-select form-select-sm validate"
+                        ng-model="PState">
+                    <option value="">Select State</option>
+                    <option ng-repeat="x in AllCityList | unique:'STATE_NAME'"
+                            value="{{x.STATE_NAME}}">
+                        {{x.STATE_NAME}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">City <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm validate"
+                        ng-model="PCity">
+                    <option value="">Select City</option>
+                    <option ng-repeat="x in AllCityList | filter:{STATE_NAME: PState}"
+                            value="{{x.CITY_NAME}}">
+                        {{x.CITY_NAME}}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Pincode<span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm validate" id="txtPincode" ng-model="PPincode" numeric-only dynamic-length maxlength="6" minlength="6">
+            </div>
+        </div>
+
+        <!-- Statutory Detail  -->
+        <hr>
+        <h6 class="section-title">Statutory Detail</h6>
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6"><label class="form-label">PAN No.</label><input class="form-control form-control-sm" id="txtPANNumber" ng-model="PANNumber" maxlength="10" minlength="10" style="text-transform:uppercase;"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Aadhaar No.</label><input type="text" class="form-control form-control-sm" id="txtAdharCardNumber" ng-keypress="onlyNumbers($event)" ng-model="AdharCardNumber" numeric-only dynamic-length maxlength="12b" minlength="12"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">UAN No.</label><input class="form-control form-control-sm" id="txtPreviousUAN" ng-model="PreviousUAN"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">ESIC No.</label><input class="form-control form-control-sm" id="txtPreviousESI" ng-model="PreviousESI"></div>
+            <div class="col-lg-3 col-md-6" style="display:none;"><label class="form-label">PF Account No.</label><input class="form-control form-control-sm" id="txtPFAccount" ng-model="PFAccount"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">LWF No.</label><input class="form-control form-control-sm" id="txtPFAccount" ng-model="LWF"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">WC Policy No.</label><input class="form-control form-control-sm" id="txtPFAccount" ng-model="WCPolicy"></div>
+
+        </div>
+
+        <!-- Bank Detail  -->
+        <hr>
+        <h6 class="section-title">Bank Detail</h6>
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6"><label class="form-label">Account Holder Name</label><input class="form-control form-control-sm" id="txtPFAccount" ng-model="acholdername"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Bank Name</label><input class="form-control form-control-sm" id="txtPFAccount" ng-model="bankname"></div>
+
+            <div class="col-lg-3 col-md-6"><label class="form-label">Account No.</label><input class="form-control form-control-sm" id="txtBankAccountNumber" ng-model="BankAccountNumber" numeric-only></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Bank IFSC Code</label><input class="form-control form-control-sm" id="txtBankIFSCCode" ng-model="BankIFSCCode"></div>
+
+            <div class="col-lg-3 col-md-6" style="display:none;"><label class="form-label">Gross Salary</label><input class="form-control form-control-sm" id="txtGrossSalary" ng-model="GrossSalary" numeric-only></div>
+        </div>
+
+        <!-- Nominee  -->
+        <hr>
+        <h6 class="section-title">Nominee Details</h6>
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6"><label class="form-label">Nominee Name  </label><input class="form-control form-control-sm" id="txtNameofNominee" ng-model="NameofNominee"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Relation  </label><input class="form-control form-control-sm" id="txtRelationofNominee validate" ng-model="RelationofNominee"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">DOB  </label><input type="date" class="form-control form-control-sm" id="txtDOBofNominee" ng-model="DOBofNominee"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Address</label><input class="form-control form-control-sm " id="txtAddressofNominee" ng-model="AddressofNominee"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Email ID</label><input class="form-control form-control-sm " id="txtNomineeEmeail" ng-model="NomineeEmeail" onblur="validateEmail('#txtNomineeEmeail')"></div>
+            <div class="col-lg-3 col-md-6"><label class="form-label">Mobile No.</label><input class="form-control form-control-sm" onblur="validatePhoneNo('#txtNomineeMobile')" numeric-only dynamic-length maxlength="10" minlength="10" id="txtNomineeMobile" ng-model="NomineeMobile"></div>
+            <div class="col-lg-3 col-md-6" hidden><label class="form-label">PAN No.</label><input class="form-control form-control-sm" maxlength="10" minlength="10" style="text-transform:uppercase;" id="txtNomineePan" ng-model="NomineePan"></div>
+            <div class="col-lg-3 col-md-6" hidden><label class="form-label">Aadhar No.</label><input class="form-control form-control-sm" ng-keypress="onlyNumbers($event)" id="txtNomineeAdhar" ng-model="NomineeAdhar" numeric-only dynamic-length maxlength="12" minlength="12"></div>
+
+            <div class="col-lg-3 col-md-6" hidden>
+                <label class="form-label">PAN Copy</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input"
+                               accept=".pdf,.jpg,.jpeg,.png"
+                               id="fuAdhaarCard_FrontSide_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('PANCopyFilePath', this)" ng-model="PANCopyFilePath">
+                        <span class="file-name">
+                            {{ PANCopyFileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="PANCopyFilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(PANCopyFilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(PANCopyFilePath,'PAN Card Copy')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6" hidden>
+                <label class="form-label">Aadhar Copy</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input"
+                               accept=".pdf,.jpg,.jpeg,.png"
+                               id="fuAdhaarCard_FrontSide_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('AdharCopy_FilePath', this)" ng-model="AdharCopy_FilePath">
+                        <span class="file-name">
+                            {{ AdharCopy_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="AdharCopy_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(AdharCopy_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(AdharCopy_FilePath,'Adhar Card Copy')"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Upload Documents  -->
+        <hr>
+        <h6 class="section-title">Upload Documents</h6>
+        <div class="row g-3">
+            <!-- PAN Card -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">PAN Card</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf,.jpg,.jpeg,.png" id="fuPANCardFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('PANCardFilePath', this)" ng-model="PANCardFilePath">
+                        <span class="file-name"> {{ PANCardFileName || 'No file chosen' }} </span>
+                    </div>
+                    <div class="upload-actions" ng-if="PANCardFilePath">
+                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(PANCardFilePath)"></i>
+                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(PANCardFilePath,'PAN Card')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Aadhaar Card</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input"
+                               accept=".pdf,.jpg,.jpeg,.png"
+                               id="fuAdhaarCard_FrontSide_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('AdhaarCard_FrontSide_FilePath', this)" ng-model="AdhaarCard_FrontSide_FilePath">
+                        <span class="file-name">
+                            {{ AdhaarCard_FrontSide_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="AdhaarCard_FrontSide_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(AdhaarCard_FrontSide_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(AdhaarCard_FrontSide_FilePath,'AdhaarCard_FrontSide')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">UAN Card</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf,.jpg,.jpeg,.png" id="fuAdhaarCard_BackSide_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('AdhaarCard_BackSide_FilePath', this)" ng-model="AdhaarCard_BackSide_FilePath">
+                        <span class="file-name"> {{ AdhaarCard_BackSide_FileName || 'No file chosen' }} </span>
+                    </div>
+                    <div class="upload-actions" ng-if="AdhaarCard_BackSide_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(AdhaarCard_BackSide_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(AdhaarCard_BackSide_FilePath,'AdhaarCard_BackSide')"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cheque/Passbook Copy -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Cheque/Passbook Copy</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf" id="fuCheque_Passbook_FilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('Cheque_Passbook_FilePath', this)" ng-model="Cheque_Passbook_FilePath">
+                        <span class="file-name">
+                            {{ Cheque_Passbook_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="Cheque_Passbook_FilePath">
+                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(Cheque_Passbook_FilePath)"></i>
+                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(Cheque_Passbook_FilePath,'ChequePassbookCopy')"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- Educational Certificate -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Educational Certificate</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf" id="fuEducationCertificateFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('EducationCertificateFilePath', this)" ng-model="EducationCertificateFilePath">
+                        <span class="file-name">{{ EducationCertificateFileName || 'No file chosen' }} </span>
+                    </div>
+                    <div class="upload-actions" ng-if="EducationCertificateFilePath">
+                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(EducationCertificateFilePath)"></i>
+                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(EducationCertificateFilePath,'Educational Certificate')"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- Experience Certificate -->
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Experience Certificate</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf" id="fuExperienceCertificateFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('ExperienceCertificateFilePath', this)" ng-model="ExperienceCertificateFilePath">
+                        <span class="file-name">
+                            {{ ExperienceCertificateFileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="ExperienceCertificateFilePath">
+                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(ExperienceCertificateFilePath)"></i>
+                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(ExperienceCertificateFilePath,'Experience Certificate')"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relieving Letter -->
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">BOCW Card</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf" id="fuRelievingLetterfFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('RelievingLetterfFilePath', this)" ng-model="RelievingLetterfFilePath">
+                        <span class="file-name">
+                            {{ RelievingLetterfFileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="RelievingLetterfFilePath">
+                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(RelievingLetterfFilePath)"></i>
+                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(RelievingLetterfFilePath,'Relieving Letter')"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payslip -->
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">ESIC Card</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".pdf" id="fuPayslipsFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('PayslipsFilePath', this)" ng-model="PayslipsFilePath">
+                        <span class="file-name"> {{ PayslipsFileName || 'No file chosen' }} </span>
+                    </div>
+                    <div class="upload-actions" ng-if="PayslipsFilePath">
+                        <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(PayslipsFilePath)"></i>
+                        <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(PayslipsFilePath,'Payslips')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Photo</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input" accept=".jpg,.jpeg,.png"
+                               id="fuPhotos_1_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('Photos_1_FilePath', this)"
+                               ng-model="Photos_1_FilePath" />
+                        <span class="file-name">
+                            {{ Photos_1_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="Photos_1_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(Photos_1_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(Photos_1_FilePath,'Photo-1')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 hiddenfield">
+                <label class="form-label">Appointment Letter</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input"
+                               accept=".jpg,.jpeg,.png"
+                               id="fuPhotos_2_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('Photos_2_FilePath', this)"
+                               ng-model="Photos_2_FilePath" />
+                        <span class="file-name">
+                            {{ Photos_2_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="Photos_2_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(Photos_2_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(Photos_2_FilePath,'Photo-2')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">TIC card</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input"
+                               accept=".jpg,.jpeg,.png"
+                               id="fuPhotos_3_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('Photos_3_FilePath', this)"
+                               ng-model="Photos_3_FilePath" />
+                        <span class="file-name">
+                            {{ Photos_3_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="Photos_3_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(Photos_3_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(Photos_3_FilePath,'Photo-3')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label">Signature</label>
+                <div class="upload-field">
+                    <div class="upload-input-wrap">
+                        <input type="file" class="upload-input"
+                               accept=".jpg,.jpeg,.png"
+                               id="fuPhotos_4_FilePath{{$index}}"
+                               onchange="angular.element(this).scope().uploadFile('Photos_4_FilePath', this)"
+                               ng-model="Photos_4_FilePath" />
+                        <span class="file-name">
+                            {{ Photos_4_FileName || 'No file chosen' }}
+                        </span>
+                    </div>
+                    <div class="upload-actions" ng-if="Photos_4_FilePath">
+                        <i class="bi bi-eye upload-icon"
+                           title="View"
+                           ng-click="ViewFileC(Photos_4_FilePath)"></i>
+                        <i class="bi bi-download upload-icon"
+                           title="Download"
+                           ng-click="DownloadFileC(Photos_4_FilePath,'Photo-4')"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div style="display:none;">
+            <!-- Wage & Compliance Configuration -->
+            <hr>
+            <h6 class="section-title">Wage & Compliance Configuration</h6>
+            <div class="row g-3">
+
+                <!-- Minimum Wages Category -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Applicable Minimum Wages Category</label>
+                    <select class="form-select form-select-sm"
+                            ng-model="MinimumWageCategory">
+                        <option value="">Select</option>
+                        <option value="Unskilled">Unskilled</option>
+                        <option value="Semi-Skilled">Semi-Skilled</option>
+                        <option value="Skilled">Skilled</option>
+                        <option value="Highly Skilled">Highly Skilled</option>
+                    </select>
+                </div>
+
+                <!-- Wage Type -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Wage Type</label>
+                    <select class="form-select form-select-sm"
+                            ng-model="WageType">
+                        <option value="">Select</option>
+                        <option value="Daily">Daily</option>
+                        <option value="Monthly">Monthly</option>
+                    </select>
+                </div>
+
+                <!-- Disbursement Mode -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Wage Disbursement Mode</label>
+                    <select class="form-select form-select-sm"
+                            ng-model="WageDisbursementMode">
+                        <option value="">Select</option>
+                        <option value="Bank Transfer Only">Bank Transfer Only</option>
+                        <option value="Cash">Cash (not recommended)</option>
+                    </select>
+                </div>
+
+            </div>
+
+
+            <!-- Safety & Security Requirements -->
+            <hr>
+            <h6 class="section-title">Safety & Security Requirements</h6>
+            <div class="row g-3">
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">PPE</label>
+                    <select class="form-select form-select-sm" ng-model="PPE">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Types of PPE Given</label>
+                    <input class="form-control form-control-sm"
+                           ng-model="PPEType">
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Safety Training Status</label>
+                    <select class="form-select form-select-sm" ng-model="SafetyTrainingStatus">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Training Date</label>
+                    <input type="date" class="form-control form-control-sm" id="txttrainingdt"
+                           ng-model="TrainingDate">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Trainer name</label>
+                    <input type="text" class="form-control form-control-sm" id="txttrannername"
+                           ng-model="TrannerName">
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Site Induction Status</label>
+                    <select class="form-select form-select-sm" ng-model="SiteInductionStatus">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Police Verification Status</label>
+                    <select class="form-select form-select-sm" ng-model="PoliceVerificationStatus">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <!-- Temporary ID -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Temporary Gate Pass Status</label>
+                    <select class="form-select form-select-sm" ng-model="TempIDStatus">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Temporary Gate Pass No.</label>
+                    <input class="form-control form-control-sm"
+                           ng-model="TempIDNumber">
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Temporary Gate Pass Date</label>
+                    <input type="date" class="form-control form-control-sm" id="txtTempIDDate"
+                           ng-model="TempIDDate">
+                </div>
+
+                <!-- Permanent ID -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Permanent Gate Pass Status</label>
+                    <select class="form-select form-select-sm" ng-model="PermanentIDStatus">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Permanent Gate Pass No.</label>
+                    <input class="form-control form-control-sm"
+                           ng-model="PermanentIDNumber">
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Permanent Gate Pass Date</label>
+                    <input type="date" id="txtPermanentIDDate" class="form-control form-control-sm"
+                           ng-model="PermanentIDDate">
+                </div>
+            </div>
+            <hr>
+            <h6 class="section-title">Medical Fitness</h6>
+            <div class="row g-3">
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Medical Examination</label>
+                    <select class="form-select form-select-sm" ng-model="MedicalStatus">
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Fitness Types</label>
+                    <select class="form-select form-select-sm" ng-model="FitnessTypes">
+                        <option value="">Select</option>
+                        <option value="Fit">Fit</option>
+                        <option value="UnFit">UnFit</option>
+                        <option value="Temporarily UnFit">Temporarily UnFit</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Next Medical Due</label>
+                    <input type="date" class="form-control form-control-sm" id="txtNextMedicalDue"
+                           ng-model="NextMedicalDue">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Medical Certificate</label>
+                    <div class="upload-field">
+                        <div class="upload-input-wrap">
+                            <input type="file" class="upload-input" accept=".pdf" id="fuMedicalCertificateFilePath{{$index}}" onchange="angular.element(this).scope().uploadFile('MedicalCertificateFilePath', this)" ng-model="MedicalCertificateFilePath">
+                            <span class="file-name"> {{ MedicalCertificateFileName || 'No file chosen' }} </span>
+                        </div>
+                        <div class="upload-actions" ng-if="MedicalCertificateFilePath">
+                            <i class="bi bi-eye upload-icon" title="View" ng-click="ViewFileC(MedicalCertificateFilePath)"></i>
+                            <i class="bi bi-download upload-icon" title="Download" ng-click="DownloadFileC(MedicalCertificateFilePath,'MedicalCertificate')"></i>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+    <hr />
+    <div class="employee-modal-footer">
+        <button class="btn cancel-btn" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn import-save-btn" ng-click="NewSaveEmployee();ManageLog('Submit Worker Registration Form')">
+            Submit
+        </button>
+    </div>
+    <!--===========Profile Crop Modal============-->
+    <div id="cropModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%; background:rgba(0,0,0,0.7);z-index:9999; justify-content:center;align-items:center;">
+
+        <div style="background:#fff;padding:10px;border-radius:10px;width:80%;text-align:center;">
+
+            <img id="cropImage" style="max-width:100%;max-height:300px;" />
+            <br><br>
+            <button class="btn cancel-btn" ng-click="closeCrop()">Cancel</button>
+            <button class="btn import-save-btn" ng-click="cropImageSave()">
+                Crop & Save
+            </button>
+        </div>
+    </div>
+</div>

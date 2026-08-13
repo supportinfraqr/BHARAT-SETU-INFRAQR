@@ -1,0 +1,525 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Audit Compliance Report";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<style>
+    #auditComplianceReport {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27;
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        color: #223;
+        min-height: 88vh;
+    }
+
+    .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    /* Section cards */
+    #auditComplianceReport .section-card {
+        background: transparent;
+        border: none;
+    }
+
+        #auditComplianceReport .section-card .card-body {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            min-height: 320px;
+        }
+
+    #auditComplianceReport #downloadReportBtn {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        #auditComplianceReport #downloadReportBtn:hover {
+            color: #fff;
+            background: var(--primary-dark);
+        }
+
+
+    #auditComplianceReport .audit-info-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.82rem;
+        flex-wrap: wrap;
+    }
+
+    #auditComplianceReport .audit-info-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    #auditComplianceReport .audit-label {
+        font-weight: 500;
+        color: #555;
+    }
+
+    #auditComplianceReport .audit-value {
+        font-weight: 600;
+        color: #223;
+    }
+
+    #auditComplianceReport .audit-info-divider {
+        width: 1px;
+        height: 18px;
+        background: #ddd;
+    }
+
+
+
+    /* KPI CARDS */
+    .kpi-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        border-left: 5px solid #E45D27;
+        transition: 0.2s ease;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+
+    .kpi-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #555;
+    }
+
+    .kpi-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-top: 4px;
+        color: #E45D27;
+    }
+
+
+    /* Table wrapper and hide scrollbar visually */
+    #auditComplianceReport .small-table-wrapper .table-responsive {
+        max-height: 75vh;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        scroll-behavior: smooth;
+        position: relative;
+    }
+
+        #auditComplianceReport .small-table-wrapper .table-responsive::-webkit-scrollbar {
+            display: none;
+        }
+
+    /* table header sticky */
+    #auditComplianceReport .small-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background-color: #F37437;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-align: left;
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 8px 10px;
+    }
+
+    /* table body */
+    #auditComplianceReport .small-table tbody td {
+        background-color: var(--card-bg);
+        font-size: 0.78rem;
+        vertical-align: middle;
+        text-align: left;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    /* hover */
+    #auditComplianceReport .small-table tbody tr:hover td {
+        background-color: #FFE8D9;
+    }
+
+
+    /* filter button */
+    #auditComplianceReport .filter-btn {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+        #auditComplianceReport .filter-btn.active,
+        #auditComplianceReport .filter-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* small inputs */
+    #auditComplianceReport .table-toolbar .form-control-sm {
+        height: 36px;
+        border-radius: 999px;
+        border-color: var(--primary);
+    }
+
+    /* Export button (rounded) */
+    #auditComplianceReport .export-btn {
+        border-radius: 999px;
+        color: #fff;
+        background: var(--primary);
+        padding: 6px 14px;
+        font-weight: 400;
+        font-size: 0.85rem;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+        #auditComplianceReport .export-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+        #auditComplianceReport .export-btn:focus,
+        #auditComplianceReport .export-btn:active {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+    /*Fix Search bar and button in toolbar*/
+    #auditComplianceReport .table-toolbar .input-group .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    #auditComplianceReport .table-toolbar .input-group .btn {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-color: var(--primary);
+    }
+
+
+    /* Table Buttons*/
+
+    .btn-upload, .btn-view, .btn-submit {
+        border-radius: 999px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        background: transparent;
+        padding: 4px 8px;
+        font-weight: 400;
+        font-size: 0.78rem;
+    }
+
+        .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Table Selects*/
+
+    #auditComplianceReport .form-control {
+        font-size: .78rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid #dcdcdc;
+        outline: none;
+        min-width: 200px;
+    }
+
+/* Compliance Status Dropdown inside table */
+    #auditComplianceReport .status-dropdown {
+        font-size: 0.78rem;
+        padding: 2px 4px;
+        border-radius: 6px;
+        border: 1px solid #dcdcdc;
+        background-color: #fff;
+        min-width: 140px;
+        height: 24px;
+    }
+
+        #auditComplianceReport .status-dropdown:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(228,93,39,0.15);
+        }
+
+</style>
+
+
+<div id="auditComplianceReport" class="px-4 py-2">
+    <div class="card section-card">
+
+        <div class="d-flex vertical-align-middle justify-content-between mb-3 top-bar">
+            <h4 style="color: #E45D27">Compliance Audit Report</h4>
+
+            <div>
+                <button class="btn btn-sm " id="downloadReportBtn" type="button">Download Report</button>
+            </div>
+        </div>
+ 
+        <!-- Audit Details  -->
+        <div class="audit-info-row ">
+            <div class="audit-info-item">
+                <span class="audit-label">Compliance Percentage :</span>
+                <span class="audit-value">49%</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            @*<div class="audit-info-item">
+                    <span class="audit-label">Compliance Score :</span>
+                    <span class="audit-value">44.55%</span>
+                </div>
+
+                <div class="audit-info-divider"></div>*@
+
+            <div class="audit-info-item">
+                <span class="audit-label">Date of Audit :</span>
+                <span class="audit-value">2025-11-21</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Vendor Name :</span>
+                <span class="audit-value">Vendor1</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Site Name :</span>
+                <span class="audit-value">Site1</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Document No. :</span>
+                <span class="audit-value">doc01/2025</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Document Date :</span>
+                <span class="audit-value">2025-11-21</span>
+            </div>
+
+            <div class="audit-info-divider"></div>
+
+            <div class="audit-info-item">
+                <span class="audit-label">Uploaded Date :</span>
+                <span class="audit-value">2025-11-21</span>
+            </div>
+
+
+        </div>
+
+        <!-- KPI Bar  -->
+        <div class="container my-4">
+            <div class="row g-3">
+
+                <!-- Compliance Score-->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">Compliance Score</div>
+                        <div class="kpi-value">230</div>
+                    </div>
+                </div>
+
+                <!-- High Risk -->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">High Risk</div>
+                        <div class="kpi-value">86</div>
+                    </div>
+                </div>
+
+                <!-- Medium Risk -->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">Medium Risk</div>
+                        <div class="kpi-value">68</div>
+                    </div>
+                </div>
+
+                <!-- Low Risk -->
+                <div class="col-md-3">
+                    <div class="kpi-card d-flex">
+                        <div class="kpi-title">Low Risk</div>
+                        <div class="kpi-value">25</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="card-body p-3 h-100 d-flex flex-column">
+
+            <!-- Table wrapper -->
+            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 small-table">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Act</th>
+                                <th>Forms/Description </th>
+                                <th>Nature of Compliance</th>
+                                <th>Risk</th>
+                                <th>Compliance Score</th>
+                                <th>Compliance Score achieved</th>
+                                <th>Compliance Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td><a href="#" class="text-success text-decoration-none">The Employees' State Insurance Act - 1948</a></td>
+                                <td>Half yearly return</td>
+                                <td>Return</td>
+                                <td>High</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td><a href="#" class="text-success text-decoration-none">Shops and Establishment Act</a></td>
+                                <td>Half yearly return</td>
+                                <td>Nature</td>
+                                <td>Medium</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td><a href="#" class="text-success text-decoration-none">Payemnt of Wages Act - 1936</a></td>
+                                <td>Half yearly return</td>
+                                <td>Nature</td>
+                                <td>Low</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td><a href="#" class="text-success text-decoration-none">The Employees' State Insurance Act - 1948</a></td>
+                                <td>Half yearly return</td>
+                                <td>Return</td>
+                                <td>High</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td><a href="#" class="text-success text-decoration-none">The Employees' State Insurance Act - 1948</a></td>
+                                <td>Half yearly return</td>
+                                <td>Return</td>
+                                <td>High</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>6</td>
+                                <td><a href="#" class="text-success text-decoration-none">The Employees' State Insurance Act - 1948</a></td>
+                                <td>Half yearly return</td>
+                                <td>Return</td>
+                                <td>High</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>7</td>
+                                <td><a href="#" class="text-success text-decoration-none">The Employees' State Insurance Act - 1948</a></td>
+                                <td>Half yearly return</td>
+                                <td>Return</td>
+                                <td>High</td>
+                                <td>1</td>
+                                <td>0.5</td>
+                                <td>
+                                    <select class="status-dropdown">
+                                        <option>Fully Complied</option>
+                                        <option selected>Partially Complied</option>
+                                        <option>Not Complied</option>
+                                        <option>Not Applicable</option>
+                                    </select>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

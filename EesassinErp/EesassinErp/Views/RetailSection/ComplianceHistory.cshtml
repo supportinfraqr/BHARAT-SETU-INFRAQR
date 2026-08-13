@@ -1,0 +1,58 @@
+﻿
+@{
+    ViewBag.Title = "ComplianceHistory";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+ 
+ 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+
+
+ 
+<div class="pagecontentbody" ng-init="LoadData()">
+    <div class="pagebody"> 
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <!-- Back Button -->
+                       
+
+                        <div class="card-body p-0">
+                            <div class="table-responsive nosearch" style="max-height: 310px;">
+                                <button class="btn btn-warning" ng-click="goBack()">Go Back</button>
+                             
+                                <table id="example" class="display nowrap table table-bordred table-hover tableFixHead unittbl datatable">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">S.No.</th>
+                                            <th class="text-center">Uploaded Date</th>
+                                            <th class="text-center">Document Name</th>
+                                            <th class="text-center">File</th>
+
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in ReportList">
+                                            <td class="text-center">{{x.SrNo}}</td>
+                                            <td class="text-center">{{x.Uploadedon}}</td>
+                                            <td class="text-center">{{x.ComplianceExcelName}}</td>
+                                            <td class="text-center">
+                                                <a href="#" ng-click="viewcsvFile(x.ComplianceExcelPath)" class="vdoc">Download Doc</a>
+                                            </td>
+
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="~/scripts/RetailJsLib/ComplianceDocController.js?Ver=@ViewBag.Version"></script>

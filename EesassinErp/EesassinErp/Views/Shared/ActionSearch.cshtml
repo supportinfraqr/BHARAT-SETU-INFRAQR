@@ -1,0 +1,20 @@
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+}
+
+
+<button type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search" 
+        ng-model="Search" ng-click="SearchRecord()" ng-disabled="disabledSearch" ng-init="disabledSearch=false">
+    <span class="triangle-box" title="Search"></span>
+    <span>Search </span>
+</button>
+
+
+
+
+
+
+
+
+
+

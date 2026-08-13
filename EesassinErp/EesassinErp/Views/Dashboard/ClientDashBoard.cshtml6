@@ -1,0 +1,421 @@
+﻿
+@{
+    ViewBag.Title = "DashBoard";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/scripts/myjslib/ClientDashboardController.js"></script>
+<!-- Load Simple DataTables Stylesheet-->
+<link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" />
+<link href="~/Content/css/auditor-dashboard/styles.css" rel="stylesheet" />
+<link href="~/Content/css/client-dashboard/main.css" rel="stylesheet" />
+<link href="~/Content/css/auditor-dashboard/font-awesome.min.css" rel="stylesheet" />
+<!-- c3 CSS
+============================================ -->
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css">
+<!-- morrisjs CSS
+============================================ -->
+<link href="~/Content/css/auditor-dashboard/morrisjs/morris.css" rel="stylesheet" />
+<!-- animate CSS
+============================================ -->
+<link href="~/Content/css/auditor-dashboard/animate.css" rel="stylesheet" />
+<!-- Bootstrap CSS -->
+<link href="~/Content/css/auditor-dashboard/bootstrap.min.css" rel="stylesheet" />
+
+
+<style>
+    .c3-arc-Completed-Documents {
+        fill: #6dbaf0 !important;
+    }
+
+    .c3-arc.target-Pending-Documentes,
+    .custom-legend-color.is-neutral {
+        fill: #ffa197 !important;
+    }
+
+    .c3-arc.c3-target-Sent-Documents,
+    .custom-legend-color.is-bad {
+        fill: #46c9b7 !important;
+    }
+</style>
+<div class="container-fluid">
+    <h3 style="font-weight: bold;">Client Dashboard</h3>
+    <div class="row">
+        <div class="col-lg-8 mb-5">
+            <div class="card card-raised h-100">
+                <div class="card-header bg-transparent px-4" style="background-color:#6200eb!important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="me-4">
+                            <h2 class="card-title mb-0" style="color: #fff;font-size: 20px;margin: 10px 0;">Invoice Compliance</h2>
+                            <div class="card-subtitle" style="color: #fff;margin: 5px 0;font-size: 12px;">Compared to previous year</div>
+                        </div>
+                        @*<div class="d-flex gap-2">
+                            <select id="selectbox" style="font-size: 12px;">
+                                <option value="pt_1" style="font-size: 12px;">All Client</option>
+                                <option value="pt_1" style="font-size: 12px;">Option 1</option>
+                                <option value="pt_1" style="font-size: 12px;">Option 2</option> 
+                            </select>
+                        </div>*@
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row gx-4">
+                        <div class="col-12 col-xxl-2">
+                            <div class="d-flex flex-column flex-md-row flex-xxl-column align-items-center align-items-xl-start justify-content-between">
+                                <div class="mb-4 text-center text-md-start">
+                                    <div class="text-xs font-monospace text-muted mb-1" style="font-size: 15px !important;">Overall Compliance</div>
+                                    <div class="display-5 fw-500" style="font-size: 20px !important;font-weight: bold !important;">00</div>
+                                </div>
+                                <div class="mb-4 text-center text-md-start">
+                                    <div class="text-xs font-monospace text-muted mb-1" style="font-size: 15px !important;">Vendor <br>Completed <br> invoice</div>
+                                    <div class="display-5 fw-500" style="font-size: 20px !important;font-weight: bold !important;">{{AllCompleteCount}}</div>
+                                </div>
+                                <div class="mb-4 text-center text-md-start">
+                                    <div class="text-xs font-monospace text-muted mb-1" style="font-size: 15px !important;">Goal</div>
+                                    <div class="display-5 fw-500 text-success" style="font-size: 20px !important;font-weight: bold !important;">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-xxl-10"><canvas id="dashboardBarChart" width="736" height="350" style="display: block; box-sizing: border-box; width: 589.438px; height: 294px;"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+            <div class="pro_comp_bg box-show">
+                <div class="single-review-st-item res-mg-t-30
+                            table-mg-t-pro-n">
+                    <div class="single-review-st-text">
+                        <div class="col-lg-3 col-md-3 col-sm-3 col-xs-3">
+                            <img src="~/Content/img/vendor/profile.jpg" />
+                        </div>
+                        <div class="col-lg-5 col-md-5 col-sm-5 col-xs-5">
+                            <span class="profile-heading">{{Name}}</span>
+                            <a href="#" class="link">Certificate Downlaod</a>
+                        </div>
+                        <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2">
+                            <div id="g1" class="gauge" style="height: 60px;width: 80px;">
+                                <a href="../DocumentMaster/OneTimeDocument"><i class="fa fa-pencil profile-icon-size"></i></a>
+                                @*<i class="fa fa-pencil profile-icon-size" style="position: absolute;"></i>*@
+                            </div>
+                            <!-- <span class="pull-right"></span> -->
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12"  ng-init="HighlightsExpire()">
+                        <!-- <div id="g1" class="gauge" style="height: 150px;"></div> -->
+                        <p class="profile-chart-name">Document Expiry</p>
+              
+                        <table class="ttable w100" >
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Document Name</th> 
+                                    <th>Valid To</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in ListOnetimeDocument">
+                                    <td>{{x.SNO}}</td>
+                                    <td>{{x.DocumentName}}</td> 
+                                    <td>{{x.VaildTo}}</td>
+                                </tr>
+                               <tr ng-if="ListOnetimeDocument==undefined ">
+                                   <td >No Record Found</td>
+                               </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- <hr class="name-of-your-vertical-line"/> -->
+                </div>
+
+            </div>
+            <div class="clear" style="margin-top: 3%;"></div>
+            <div class="row">
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                    <div class="product-payment-inner-st box-show">
+                       
+                        <a href="../DocumentMaster/OneTimeDocument" class="btn w100
+                                    profile-chart-name pro-btton-color btn1">  Upload Document</a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                    <p class="profile-chart-name">Compliance </p>
+                    <div class="product-payment-inner-st box-show">
+                        <input id="txtInvoice" class="form-control mb-3 py-0 px-2 validate" placeholder="Enter Invoice No" ng-model="InvoiceNo" />
+
+                        <a class="btn w100 pro-btton-color" ng-click="checkandgetreport()">Compliance Report</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+     
+    </div>
+    
+    <!-- =============================== 2 ============================ -->
+    <!-- <div class="clear" style="margin-top: 3%;"></div> -->
+   
+    <div class="row box-show" ng-init="BindAuditor();">
+        <div class="d-flex gap-2" ng-init="BindVendor();">
+            <select style="font-size: 12px;padding: 15px;border-radius: 5px; margin-bottom: 10px;width: 50%;" ng-change="BindClientInvoiceStatus()" ng-model="VendorId">
+                 <option value="" style="font-size: 12px;">All Vendor</option> 
+                <option ng-repeat="x in VendorList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+            </select>
+        
+            <select style="font-size: 12px;padding: 15px;border-radius: 5px; margin-bottom: 10px;width: 50%;" ng-model="AuditorId" ng-change="BindClientInvoiceStatus()">
+                <option value="" style="font-size: 12px;">All Auditor</option>
+                <option ng-repeat="xx in AuditorList" value="{{xx.PartyId}}">{{xx.PartyName}}</option>
+            </select>
+        </div>
+       
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <div style="background: #6200eb;padding: 5%;color: #fff;border-radius: 3%;">
+                <div style="border-bottom: 1px solid #8b8b8b;position: relative;margin-bottom: 15px;">
+                    <span style="font-size: 24px;width: 50%;">New <br>Invoice</span>
+                    <span style="float: right;font-size: 24px;position: absolute;top: -40%;right: 0;width: 50%;">
+                    <div id="g2" class="gauge" style="height: 100px;width:120px;"></div></span>
+                </div>
+                <div style="width: 100%;position: relative;">
+                    <span>
+                        <span style="width: 50%;font-size: 20px;width: 50%;color: #e6e2e2;">counts <br><span style="font-size: 24px;width: 50%;color: #fff !important;">{{AllDraftCount}}</span></span>
+                        <span style="width: 50%;float: right;font-size: 20px;width: 50%;color: #e6e2e2;position: absolute;top: 0;right: 0;text-align: end;">Amount<br><span style="font-size: 24px;width: 50%;color: #fff !important;"><i class="fa fa-rupee"></i> {{AllDraftAmount}}</span></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <div style="background: #d4ce14;padding: 5%;color: #fff;border-radius: 3%;" ng-init="BindClientInvoiceStatus()">
+                <div style="border-bottom: 1px solid #8b8b8b;position: relative;margin-bottom: 15px;">
+                    <span style="font-size: 24px;width: 50%;">Pending <br>Invoice</span>
+                    <span style="float: right;font-size: 24px;position: absolute;top: -40%;right: 0;width: 50%;"><div id="g3" class="gauge" style="height: 100px;width:120px;"></div></span>
+                </div>
+                <div style="width: 100%;position: relative;">
+                    <span style="">
+                        <span style="width: 50%;font-size: 20px;width: 50%;color: #e6e2e2;">counts <br><span style="font-size: 24px;width: 50%;color: #fff !important;">{{AllPendingCount}}</span></span>
+                        <span style="width: 50%;float: right;font-size: 20px;width: 50%;color: #e6e2e2;position: absolute;top: 0;right: 0;text-align: end;">Amount<br><span style="font-size: 24px;width: 50%;color: #fff !important;"><i class="fa fa-rupee"></i> {{AllPendingAmount}}</span></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <div style="background: #9c28b1;padding: 5%;color: #fff;border-radius: 3%;">
+                <div style="border-bottom: 1px solid #8b8b8b;position: relative;margin-bottom: 15px;">
+                    <span style="font-size: 24px;width: 50%;">Validate <br>Invoice</span>
+                    <span style="float: right;font-size: 24px;position: absolute;top: -40%;right: 0;width: 50%;"><div id="g4" class="gauge" style="height: 100px;width:120px;"></div></span>
+                </div>
+                <div style="width: 100%;position: relative;">
+                    <span style="">
+                        <span style="width: 50%;font-size: 20px;width: 50%;color: #e6e2e2;">counts <br><span style="font-size: 24px;width: 50%;color: #fff !important;">{{ValidCount}}</span></span>
+                        <span style="width: 50%;float: right;font-size: 20px;width: 50%;color: #e6e2e2;position: absolute;top: 0;right: 0;text-align: end;">Amount<br><span style="font-size: 24px;width: 50%;color: #fff !important;"><i class="fa fa-rupee"></i>{{ValidAmount}}</span></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12">
+            <div style="background: #08cbbb;padding: 5%;color: #fff;border-radius: 3%;">
+                <div style="border-bottom: 1px solid #8b8b8b;position: relative;margin-bottom: 15px;">
+                    <span style="font-size: 24px;width: 50%;">Complete <br>Invoice</span>
+                    <span style="float: right;font-size: 24px;position: absolute;top: -40%;right: 0;width: 50%;">
+                    <div id="g5" class="gauge" style="height: 100px;width:120px;"></div>
+                    </span>
+                </div>
+                <div style="width: 100%;position: relative;">
+                    <span style="">
+                        <span style="width: 50%;font-size: 20px;width: 50%;color: #e6e2e2;">counts <br><span style="font-size: 24px;width: 50%;color: #fff !important;">{{AllCompleteCount}}</span></span>
+                        <span style="width: 50%;float: right;font-size: 20px;width: 50%;color: #e6e2e2;position: absolute;top: 0;right: 0;text-align: end;">Amount<br><span style="font-size: 24px;width: 50%;color: #fff !important;"><i class="fa fa-rupee"></i> {{AllCompleteAmount}}</span></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ================================ 5 ============================== -->
+    <!-- <div class="clear" style="margin-top: 3%;"></div> -->
+    <div class="pro_comp_bg row">
+
+
+
+
+        <div class="card card-raised" style="padding: 0;">
+            <div class="card-header bg-transparent px-4" style="background-color:#6200eb!important;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="me-4">
+                        <h2 class="card-title mb-0" style="color: #fff;font-size: 20px;margin: 10px 0;">Auditor Compliance Summary</h2>
+                        <div class="card-subtitle" style="color: #fff;margin: 5px 0;font-size: 12px;">Details and history</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <i class="fa fa-download" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>
+                        <i class="fa fa-print" style="color: #fff;font-size: 15px;margin: 0 15px 0px 0px;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <!-- Simple DataTables example-->
+                <div class="dataTable-wrapper dataTable-loading no-footer sortable searchable fixed-columns" ng-init="BindAuditorCompliance()">
+                    <div class="dataTable-top"><div class="dataTable-dropdown"><label><select class="dataTable-selector"><option value="5">5</option><option value="10" selected="">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option></select> entries per page</label></div><div class="dataTable-search"><input class="dataTable-input" placeholder="Search..." type="text"></div></div><div class="dataTable-container">
+                        <table id="datatablesSimple" class="dataTable-table">
+                            <thead>
+                                <tr><th data-sortable="" style="width: 26.6139%;"><a href="#" class="dataTable-sorter">Vendor</a></th><th data-sortable="" style="width: 11.0592%;"><a href="#" class="dataTable-sorter">New Invoice</a></th><th data-sortable="" style="width: 25.3552%;"><a href="#" class="dataTable-sorter">Pending  Invoice</a></th><th data-type="date" data-format="YYYY/MM/DD" data-sortable="" style="width: 18.6118%;"><a href="#" class="dataTable-sorter">Complete Invoice</a></th><th data-sortable="" style="width: 18.342%;"><a href="#" class="dataTable-sorter">Compliance Score</a></th></tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="x in AuditorCompliance">
+                                    <td>
+                                     {{x.PartyName}}<i class="fa fa-star tabel-icon-size"></i><i class="fa fa-star tabel-icon-size"></i><i class="fa fa-star tabel-icon-size"></i><i class="fa fa-star tabel-icon-size"></i><i class="fa fa-pencil pro-tabel-icon-size" style="margin: 0 0 0 10px;"></i>
+                                    </td>
+                                    <td>{{x.DraftInvoice}}</td>
+                                    <td>{{x.PendingInvoice}}</td>
+                                    <td>{{x.CompleteInvoice}}</td>
+                                    <td>{{x.Compliance}}</td>
+                                </tr>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                    @*<div class="dataTable-bottom">
+                        <div class="dataTable-info">Showing 1 to 10 of 100 entries</div>
+                        <nav class="dataTable-pagination"><ul class="dataTable-pagination-list"><li class="active"><a href="#" data-page="1">1</a></li><li class=""><a href="#" data-page="2">2</a></li><li class=""><a href="#" data-page="3">3</a></li><li class=""><a href="#" data-page="4">4</a></li><li class=""><a href="#" data-page="5">5</a></li><li class=""><a href="#" data-page="6">6</a></li><li class=""><a href="#" data-page="7">7</a></li><li class="ellipsis"><a href="#">…</a></li><li class=""><a href="#" data-page="10">10</a></li><li class="pager" style="margin: 0;"><a href="#" data-page="2">›</a></li></ul></nav>
+                    </div>*@
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- ================================ 3 ============================== -->
+    <!-- <div class="clear" style="margin-top: 3%;"></div> -->
+    <div class="pro_comp_bg row">
+        <h3 class="profile-chart-name text-left">Work in Progress</h3>
+        <div class="product-status mg-b-15">
+            <div class="container-fluid" ng-init="BindDashBoardInvoice()">
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12
+                                col-xs-12">
+                        <div class="product-status-wrap">
+                            <div class="asset-inner m15">
+                                 <table>
+                                     <thead>
+                                         <tr>
+                                             <th>#</th>
+                                             <th>Invoice no.</th>
+                                             <th>Vendor Name</th>
+                                             <th>Status</th>
+                                             <th>Compliance Score</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody>
+                                         <tr ng-repeat="x in DashBoardInvoice">
+                                             <td>{{x.SNO}}</td>
+                                             <td>{{x.VendorInvNum}}</td>
+                                             <td>{{x.VendorName}}</td>
+                                             <td><label class="badge badge-warning">{{x.Status}}</label></td>
+                                             <td>{{x.totalComplianceScore}}</td>
+                                         </tr>
+                                     </tbody>
+                                 </table>
+                            </div>
+                            @*<div class="custom-pagination">
+                                <ul class="pagination">
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">Previous</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">1</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">2</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">3</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">Next</a>
+                                    </li>
+                                </ul>
+                            </div>*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- ================================= 4 ============================== -->
+</div>
+@*<div class="custom-pagination">
+        <ul class="pagination">
+            <li class="page-item">
+                <a class="page-link" href="#">Previous</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#">1</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#">2</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#">3</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        </ul>
+    </div>*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+<!-- ================================= 4 ============================== -->
+</div>
+
+
+<!-- jquery
+       ============================================ -->
+<script src="~/Content/client-Js/vendor/jquery-1.12.4.min.js"></script>
+<script src="~/Content/client-Js/jquery.meanmenu.js"></script>
+<script src="~/Content/client-Js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.0/Chart.min.js"></script>
+<!--  c3chart
+============================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
+<!--  justgag
+============================================ -->
+<script src="~/Content/client-Js/raphael-2.1.4.min.js"></script>
+<script src="~/Content/client-Js/justgage.js"></script>
+<!-- morrisjs JS
+============================================ -->
+<script src="~/Content/client-Js/morrisjs/raphael-min.js"></script>
+<script src="~/Content/client-Js/morrisjs/morris.js"></script>
+<script src="~/Content/client-Js/morrisjs/morris-active.js"></script>
+<!-- morrisjs JS
+============================================ -->
+<!-- tab JS
+============================================ -->
+<script src="~/Content/client-Js/tab.js"></script>
+<script src="~/Content/css/client-dashboard/main.js"></script>
+
+
+
+<!-- Load Simple DataTables Scripts-->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+<script src="~/Content/client-Js/scripts.js"></script>
+<!--  Load Chart.js via CDN-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.0.0-beta.10/chart.min.js" crossorigin="anonymous"></script>
+<!--  Load Chart.js customized defaults-->
+<script src="~/Content/client-Js/charts/chart-defaults.js"></script>
+<!--  Load chart demos for this page-->
+<script src="~/Content/client-Js/charts/demos/chart-pie-demo.js"></script>
+@*<script src="~/Content/client-Js/charts/demos/dashboard-chart-bar-grouped-demo.js"></script>*@
+<script src="~/Content/client-Js/clientcompliancegraph.js"></script>
+<!-- Load Simple DataTables Scripts-->
+<script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest" crossorigin="anonymous"></script>
+<script src="~/Content/client-Js/datatables/datatables-simple-demo.js"></script>
+
+<script src="../assets.startbootstrap.com/js/sb-customizer.js"></script>
+<script src="~/Content/client-Js/datatables/datatables-simple-demo.js"></script>
+ 

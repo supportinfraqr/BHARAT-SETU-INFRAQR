@@ -1,0 +1,308 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "NotificationDetails";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/NotificationDetails.js?Ver=@ViewBag.Version"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+    .notifDetailsPage {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27;
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        min-height: 85vh;
+    }
+
+        /* Wrapper (modal look) */
+        .notifDetailsPage .nd-wrapper {
+            background: #FFF1EB;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* Header */
+        .notifDetailsPage .nd-header {
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .notifDetailsPage .nd-logo-box img {
+            height: 42px;
+        }
+
+        /* Download */
+        .notifDetailsPage .nd-download-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+
+            .notifDetailsPage .nd-download-btn:hover {
+                background: var(--primary-dark);
+            }
+
+        /* Title bar */
+        .notifDetailsPage .nd-title {
+            background: var(--primary);
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Body */
+        .notifDetailsPage .nd-body {
+            padding: 16px;
+            font-size: 0.85rem;
+        }
+
+        /* Meta */
+        .notifDetailsPage .nd-meta-item label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: #555;
+            display: block;
+        }
+
+        .notifDetailsPage .nd-meta-item span {
+            font-size: 0.82rem;
+        }
+
+        .notifDetailsPage .nd-meta-item #govtReleaseBtn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            transition: background 0.2s;
+        }
+
+            .notifDetailsPage .nd-meta-item #govtReleaseBtn:hover {
+                background: var(--primary-dark);
+            }
+
+        /* Content */
+        .notifDetailsPage .nd-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 14px;
+            max-height: 45vh;
+            overflow-y: auto;
+            word-break: break-word;
+        }
+
+            .notifDetailsPage .nd-content * {
+                max-width: 100%;
+            }
+
+            .notifDetailsPage .nd-content table {
+                width: 100%;
+                table-layout: fixed;
+            }
+</style>
+<script>
+    function exportToPDF() {
+        const { jsPDF } = window.jspdf;
+        const element = document.getElementById('downloaddiv');
+
+        html2canvas(element, {
+            scale: 3,
+            useCORS: true,
+            allowTaint: true,
+            scrollX: 0,
+            scrollY: -window.scrollY,
+            windowWidth: element.scrollWidth,
+            backgroundColor: '#FFF1EB'
+        }).then(canvas => {
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+            const pdf = new jsPDF('p', 'mm', 'a4');
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const marginLeft = 10;
+            const marginBottom = 10;
+            let marginTop = 35;
+
+            var companyName = angular.element(document.body).scope().MapUser || '';
+            var generatedOn = new Date().toLocaleDateString('en-GB');
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(18);
+            pdf.text(companyName, pageWidth / 2, 12, { align: 'center' });
+
+            pdf.setFontSize(14);
+            pdf.text('Notification Detail', pageWidth / 2, 20, { align: 'center' });
+
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(9);
+            pdf.text('Generated on : ' + generatedOn, pageWidth / 2, 26, { align: 'center' });
+
+            const availableWidth = pageWidth - marginLeft * 2;
+            const availableHeight = pageHeight - marginTop - marginBottom;
+
+            const imgWidth = availableWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = marginTop;
+
+            pdf.addImage(imgData, 'JPEG', marginLeft, position, imgWidth, imgHeight);
+            heightLeft -= availableHeight;
+
+            while (heightLeft > 0) {
+                pdf.addPage();
+                position = marginTop - (imgHeight - heightLeft);
+                pdf.addImage(imgData, 'JPEG', marginLeft, position, imgWidth, imgHeight);
+                heightLeft -= availableHeight;
+            }
+
+            pdf.save('NotificationDetail.pdf');
+
+        }).catch(error => {
+            console.error('Error exporting to PDF:', error);
+        });
+    }
+</script>
+<div ng-controller="NotificationDetailsCtrl" class="notifDetailsPage px-4 py-4">
+    <div class="nd-wrapper">
+        <!-- HEADER -->
+        <div class="nd-header d-flex align-items-center justify-content-between">
+            <div class="nd-logo-box">
+                <img src="~/Masters/LocationMaster/logo.svg" alt="Logo" />
+            </div>
+            <div>
+                <button class="nd-download-btn" onclick="exportToPDF()" id="btndownload">
+                    Download <i class="bi bi-download ms-1"></i>
+                </button>
+                <button class="nd-download-btn" ng-click="ShowDetailsFunction()">
+                    Back
+                </button>
+            </div>
+        </div>
+        <!-- TITLE BAR -->
+        <div id="downloaddiv">
+            <div class="nd-title">
+                {{::newsletter[0].SubjectLine}}
+
+            </div>
+            <!-- BODY -->
+            <div class="nd-body">
+
+                <!-- META INFO -->
+                <div class="row g-3 nd-meta">
+
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+                            <label>State/Country Act Title </label>
+                            <span>
+                                {{::newsletter[0].StateCentralActtitle}}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+
+                            <label>Date of Notification  </label>
+                            <span>
+                                {{::newsletter[0].DateOfNotification | date:'dd/MM/yy'}}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+                            <label>
+                                State
+                            </label>
+                            <span>
+                                {{::newsletter[0].STATE_NM}}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+                            <label>Effective Date of Notification </label>
+                            <span>
+                                {{::newsletter[0].EffectiveDateOfNotification | date:'dd/MM/yy'}}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+                            <label>Notification Number </label>
+                            <span>
+                                {{::newsletter[0].NotificationNumber}}
+                            </span>
+
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+                            <label>Govt. Department   </label>
+                            <span>{{::newsletter[0].DepartmentName}}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="nd-meta-item">
+                            <label>Govt. Release</label>
+
+                            <!-- ✅ Attachment hai toh Download + View dikhao -->
+                            <span ng-if="newsletter[0].UploadDocPath" class="d-inline-flex align-items-center gap-3">
+                                <a href="#"
+                                   ng-click="DownloadFileC(newsletter[0].UploadDocPath,newsletter[0].SubjectLine)"
+                                   class="text-decoration-none">
+                                    <i class="bi bi-download text-danger" style="font-size:18px;"></i>
+                                </a>
+
+                                <a ng-href="#" ng-click="ViewFileC(newsletter[0].UploadDocPath)"
+                                   class="text-decoration-none">
+                                    <i class="bi bi-eye-fill text-danger" style="font-size:18px;"></i>
+                                </a>
+                            </span>
+
+                            <!-- ✅ Attachment nahi hai toh No Attachment dikhao -->
+                            <span ng-if="!newsletter[0].UploadDocPath" class="text-muted">
+                                <i class="bi bi-paperclip"></i> No Attachment
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <hr />
+
+                <h5 class="text-center">
+                    Summary
+                </h5>
+
+                <!-- CONTENT -->
+                <div class="nd-content mt-3"
+                     ng-bind-html="trustedSummary"
+                     id="editorcontent">
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+

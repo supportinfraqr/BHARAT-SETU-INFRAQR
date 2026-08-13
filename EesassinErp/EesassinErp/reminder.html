@@ -1,0 +1,177 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EZ Compliance Reminder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body style="margin:0; padding:0; background:#f4f4f4;">
+
+    <div style="background:#fff; text-align:center; padding:15px; border:1px solid #ddd; max-width:500px; margin:20px auto; font-family:Arial, sans-serif;">
+
+        <!-- Logo -->
+        <img src="https://login.ezcompliance.in/login/image/ezfulllogo%203.png"
+             alt="EZ Compliance Logo"
+             style="max-width:120px;">
+
+        <h1 style="font-size:16px; color:#555; margin-top:5px; font-weight:bold;">
+            Smart Compliance for a Seamless Future
+        </h1>
+
+        <!-- Header -->
+        <div style="background:linear-gradient(90deg,#f57c00,#f44336);color:white;padding:15px;margin-top:10px;border-radius:6px;">
+            <h2 style="margin:0;font-size:20px;">Important Reminder</h2>
+            <p style="margin:5px 0 0;font-size:13px;">
+                Timely compliance keeps your business safe and stress-free.
+            </p>
+            <hr style="border:0;height:1px;background:#fff;margin:10px 0;">
+            <p style="margin:0;font-size:13px;">
+                <strong>EZ COMPLIANCE</strong> 🌐
+                <a href="https://ezcompliance.in/" style="color:#fff;text-decoration:underline;">
+                    ezcompliance.in
+                </a>
+            </p>
+        </div>
+
+        <!-- Intro -->
+        <div style="padding:15px;text-align:left;">
+            <p style="font-size:14px;line-height:1.5;">
+                📌 Please find below the list of due/expiring documents. Kindly ensure timely filing.
+            </p>
+        </div>
+
+        <!-- Dynamic Compliance -->
+        <div id="complianceContainer"></div>
+
+        <!-- Footer Content -->
+        <div style="padding:15px;text-align:left;">
+            <p style="font-size:14px;">If already completed, please ignore this reminder.</p>
+            <p style="font-size:14px;">Thank you for your prompt action.</p>
+
+            <div style="text-align:center;margin:20px 0;">
+                <img src="https://login.ezcompliance.in/login/image/logo.png"
+                     alt="Talent Compliance India"
+                     style="max-width:150px;">
+            </div>
+
+            <div style="text-align:center;margin:20px 0;">
+                <a href="https://login.ezcompliance.in/"
+                   style="display:inline-block;background:#f57c00;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
+                    Redirect to Login
+                </a>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align:center;padding:20px;background:#e67624;color:#fff;border-radius:6px;">
+                <p style="font-size:18px;font-weight:bold;">
+                    Experience You Can Trust. Service You Can Count On.
+                </p>
+                <p style="font-size:14px;">
+                    We combine legal expertise with smart technology.
+                </p>
+                <p style="font-size:13px;">
+                    🔗 <a href="https://talentcomplianceindia.com/" style="color:#cce6ff;text-decoration:none;">
+                        talentcomplianceindia.com
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader"
+         style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+     background:rgba(255,255,255,0.8);z-index:9999;text-align:center;
+     padding-top:200px;font-size:20px;color:#f57c00;">
+        Loading...
+    </div>
+
+    <script>
+        $(document).ready(function () {
+
+            function getQueryParam(param) {
+                return new URLSearchParams(window.location.search).get(param);
+            }
+            debugger;
+            const mobileId = getQueryParam("Id");
+            if (!mobileId) {
+                alert("Invalid or missing link");
+                return;
+            }
+
+            $("#loader").show();
+
+            $.ajax({
+                url: "https://login.ezcompliance.in/Api/RetailSectionApi/ReminderNotification",
+                type: "POST",
+                data: { Id: mobileId },
+                dataType: "json",
+                success: function (res) {
+                    $("#loader").hide();
+                    $("#complianceContainer").empty();
+                    debugger;
+                    if (!res || !res.Result || res.Result.length === 0) {
+                        $("#complianceContainer").html(
+                            "<p style='text-align:center;font-size:14px;'>No pending compliance found.</p>"
+                        );
+                        return;
+                    }
+
+                    const grouped = {};
+
+                    res.Result.forEach(item => {
+                        const compliance = (item.ComplianceType || item.compliance || "Other").trim();
+                        const state = (item.State || "N/A").trim();
+
+                        if (!grouped[compliance]) grouped[compliance] = {};
+                        if (!grouped[compliance][state]) grouped[compliance][state] = [];
+
+                        grouped[compliance][state].push(item.Name || "Unnamed Compliance");
+                    });
+
+                    for (const comp in grouped) {
+                        let html = `
+                        <div style="margin:15px 0;text-align:left;">
+                            <h3 style="background:#f57c00;color:#fff;padding:6px;border-radius:4px;">
+                                ${getEmoji(comp)} ${comp} Compliance
+                            </h3>
+                    `;
+
+                        for (const st in grouped[comp]) {
+                            html += `<strong>${st}</strong><ul style="padding-left:15px;">`;
+                            grouped[comp][st].forEach(name => {
+                                html += `<li style="font-size:14px;margin:5px 0;">${name}</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+
+                        html += `</div>`;
+                        $("#complianceContainer").append(html);
+                    }
+                },
+                error: function () {
+                    $("#loader").hide();
+                    alert("Unable to load reminder data");
+                }
+            });
+
+            function getEmoji(type) {
+                switch (type.toLowerCase()) {
+                    case "labour": return "🛠";
+                    case "finance": return "💰";
+                    case "secretarial": return "📑";
+                    case "license": return "🛡";
+                    case "litigation": return "⚖";
+                    default: return "📌";
+                }
+            }
+
+        });
+    </script>
+
+</body>
+</html>

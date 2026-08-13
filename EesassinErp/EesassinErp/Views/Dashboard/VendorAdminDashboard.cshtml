@@ -1,0 +1,434 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Vendor Admin Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="~/Dashboards/VendorAdminDashboard/script.js"></script>
+<link href="~/Dashboards/VendorAdminDashboard/style.css" rel="stylesheet" />
+
+<div class="vendorAdminDashboard px-2 py-2">
+    <!-- ====== CONTAINER 1 : Filters + Summary Cards ====== -->
+    <div class="container-fluid mt-3" id="container1">
+        <div class="row g-2">
+
+            <!-- Filters -->
+            <div class="col-12">
+                <div class="row g-3 align-items-center vendor-c1-filters">
+                    <div class="d-flex align-items-center gap-2">
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Month
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Jan</a></li>
+                                <li><a class="dropdown-item" href="#">Feb</a></li>
+                                <li><a class="dropdown-item" href="#">Mar</a></li>
+                                <li><a class="dropdown-item" href="#">Apr</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Year
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">2024-25</a></li>
+                                <li><a class="dropdown-item" href="#">2025-26</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="col-12">
+                <div class="row g-3 my-2 vendor-c1-cards">
+
+                    <!-- Card 1 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#E45D27;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Compliance Created</h6>
+                                <p class="small-label">Total</p>
+                                <h5 class="metric-value">44</h5>
+                                <p class="sub-metric">This Month: <strong>5</strong></p>
+                            </div>
+
+                            <!-- Ring Placeholder -->
+                            <div class="vendor-c1-ring">
+                                <div class="vendor-c1-ring-inner">
+                                    <span>62%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#23B480;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Data Uploaded</h6>
+                                <p class="small-label">Files Uploaded</p>
+                                <h5 class="metric-value">560</h5>
+                                <p class="sub-metric">Pending: <strong>223</strong></p>
+                            </div>
+
+                            <!-- Ring Placeholder -->
+                            <div class="vendor-c1-ring">
+                                <div class="vendor-c1-ring-inner">
+                                    <span>71%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#7167AC;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Data Shared</h6>
+                                <p class="small-label">Shared Count</p>
+                                <h5 class="metric-value">10</h5>
+                                <p class="sub-metric">Awaiting Review: <strong>2</strong></p>
+                            </div>
+
+                            <!-- Ring Placeholder -->
+                            <div class="vendor-c1-ring">
+                                <div class="vendor-c1-ring-inner">
+                                    <span>83%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#FFCA82;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Active Clients</h6>
+                                <p class="small-label">Total Clients</p>
+                                <h5 class="metric-value">500</h5>
+                                <p class="sub-metric">Active This Month: <strong>420</strong></p>
+                            </div>
+
+                            <!-- Ring Placeholder -->
+                            <div class="vendor-c1-ring">
+                                <div class="vendor-c1-ring-inner">
+                                    <span>84%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+
+    <!-- ========================= CONTAINER 5 ========================= -->
+    <div class="container-fluid mt-3 p-0" id="container5">
+
+        <div class="row g-3 align-items-stretch">
+
+            <!-- LEFT SECTION (70%) -->
+            <div class="col-12 col-lg-9 d-flex flex-column gap-3">
+
+                <!-- CONTAINER 2 : Client-wise Progress -->
+                <div id="container2" class="custom-card p-3" style="height:320px;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-medium text-orange mb-0">
+                            Client-wise Compliance Progress
+                        </h5>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm view-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                View
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Top 5</a></li>
+                                <li><a class="dropdown-item" href="#">Top 10</a></li>
+                                <li><a class="dropdown-item" href="#">All Clients</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow-1 position-relative">
+                        <canvas id="clientProgressChart"></canvas>
+                    </div>
+                </div>
+
+
+                <!-- CONTAINER 3 : Tables -->
+                <div id="container3" class="custom-card d-flex flex-column flex-grow-1 min-height-0">
+                    <div class="d-flex gap-3 flex-grow-1 min-height-0">
+
+                        <!-- Pending Clients -->
+                        <div class="card flex-fill d-flex flex-column p-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-medium text-orange mb-0">Pending Clients</h6>
+                                <a href="#" class="arrow-btn">
+                                    <i class="bi bi-arrow-up-right-circle"></i>
+                                </a>
+                            </div>
+
+                            <div class="container3-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 text-center align-middle">
+                                    <thead class="container3-thead sticky-top">
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Due Date</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="container3-tbody">
+                                        <tr>
+                                            <td>ABC Pvt Ltd</td>
+                                            <td>25 Feb 2026</td>
+                                            <td><span class="status-badge pending">Pending</span></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>XYZ Ltd</td>
+                                            <td>28 Feb 2026</td>
+                                            <td><span class="status-badge pending">Pending</span></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Upload Status -->
+                        <div class="card flex-fill d-flex flex-column p-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-medium text-orange mb-0">Data Upload Status</h6>
+                                <a href="#" class="arrow-btn">
+                                    <i class="bi bi-arrow-up-right-circle"></i>
+                                </a>
+                            </div>
+
+                            <div class="container3-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 text-center align-middle">
+                                    <thead class="container3-thead sticky-top">
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Upload %</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="container3-tbody">
+                                        <tr>
+                                            <td>ABC Pvt Ltd</td>
+                                            <td>75%</td>
+                                            <td><span class="status-badge inprogress">In Progress</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>XYZ Ltd</td>
+                                            <td>100%</td>
+                                            <td><span class="status-badge complete">Complete</span></td>
+                                        </tr>
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTAINER 4: RIGHT SECTION (30%) -->
+            <div class="col-12 col-lg-3 d-flex">
+                <div id="container4" class="custom-card p-2 d-flex flex-column flex-grow-1 gap-3">
+
+                    <!-- Recent Activities -->
+                    <div class="flex-fill d-flex flex-column min-height-0 vendor-c4-recent">
+                        <h6 class="fw-medium text-orange mb-2">Recent Activities</h6>
+
+                        <div class="flex-grow-1 overflow-auto vendor-c4-list">
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-success"></span>
+                                <div>
+                                    <p class="mb-0">Invoice <strong>#INV-1023</strong> submitted</p>
+                                    <small>2 hours ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-warning"></span>
+                                <div>
+                                    <p class="mb-0">Compliance pending for <strong>EPF</strong></p>
+                                    <small>Yesterday</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-info"></span>
+                                <div>
+                                    <p class="mb-0">Document validated</p>
+                                    <small>2 days ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-danger"></span>
+                                <div>
+                                    <p class="mb-0">Audit overdue</p>
+                                    <small>3 days ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-success"></span>
+                                <div>
+                                    <p class="mb-0">xyzz</p>
+                                    <small>2 days ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-info"></span>
+                                <div>
+                                    <p class="mb-0">Document validated</p>
+                                    <small>2 days ago</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Required -->
+                    <div class="flex-fill d-flex flex-column min-height-0 vendor-c4-action">
+                        <h6 class="fw-medium text-orange mb-2">Report Action Required</h6>
+
+                        <div class="flex-grow-1 overflow-auto rounded-3">
+                            <table class="table table-sm mb-0 text-center align-middle vendor-c4-table">
+                                <thead>
+                                    <tr>
+                                        <th>Document</th>
+                                        <th>Month/Year</th>
+                                        <th>View</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    <tr>
+                                        <td>Document1</td>
+                                        <td>Oct 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Compliance Certificate</td>
+                                        <td>Sep 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Invoice</td>
+                                        <td>Jan 2026</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>InvoiceDemo</td>
+                                        <td>Dec 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Invoice2</td>
+                                        <td>Nov 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Agreement Document</td>
+                                        <td>Oct 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Compliance Certificate</td>
+                                        <td>Sep 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Agreement Document</td>
+                                        <td>Oct 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Compliance Certificate</td>
+                                        <td>Sep 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+
+                            </table>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>

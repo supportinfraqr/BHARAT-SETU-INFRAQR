@@ -1,0 +1,185 @@
+﻿@{
+    ViewBag.Title = "Communication";
+    Layout = "~/Views/Shared/_GeneralLayout.cshtml";
+}
+
+<div class="container-fluid pagecontentbody">
+    <div class="tab-content">
+        <div class="pagebody removebg-color">
+            <div class="col-md-12 pageheader pb-2">
+                <div class="row">
+                    <div class="col-md-10">
+                        <h4 class="mb-0 ps-4">
+                            <a href="@Url.Action("unit", "DashBoard")" class="backarow"><i class="fas fa-arrow-left"></i></a>
+                            Documents
+                            <small class="custsty mt-2">Dominos * 2056785</small>
+                        </h4>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <a class="viewrpt" href="@Url.Action("viewunitdocuments", "DashBoard")">View Reports</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12">
+               <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Code</label>
+                                    <select class="form-select">
+                                        <option>Search Code</option>
+                                        <option>-</option>
+                                        <option>-</option>
+                                        <option>-</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    <label>Search</label>
+                                    <input type="text" class="form-control" placeholder="Search by name, city, area" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="form-group">
+                                    <label>MM/YYYY</label>
+                                    <select class="form-select">
+                                        <option>MM/YYYY</option>
+                                        <option>01/2022</option>
+                                        <option>02/2022</option>
+                                        <option>03/2022</option>
+                                        <option>04/2022</option>
+                                        <option>05/2022</option>
+                                        <option>06/2022</option>
+                                        <option>07/2022</option>
+                                        <option>08/2022</option>
+                                        <option>09/2022</option>
+                                        <option>10/2022</option>
+                                        <option>11/2022</option>
+                                        <option>12/2022</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-9 mb-3">
+                                <div class="form-group">
+                                    <label>Act</label>
+                                    <input type="text" class="form-select" placeholder="Search Act..." />
+                                </div>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <div class="form-group d-grid">
+                                    <label>&nbsp;</label>
+                                    <a class="btn btn-warning"><span class="icons icon-magnifier"></span>&nbsp;Search</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 upldoc">
+                            <div class="col-md-12 mb-3">
+                                <h6 class="subheading m-0">Upload Documents</h6>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">1. Employees State Insurance Act,1948</label>
+                                <div class="viewfile">
+                                    <a href="@Url.Action("unitdocumentsDetails", "DashBoard")">
+                                        <img src="~/Content/general/images/demoimg.png" />
+                                        <div class="filedit"><span>5/5</span>&nbsp;&nbsp; Dcuments Uploaded</div>
+                                    </a>
+                                </div>
+                                @*<div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>*@
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">2. The Minimum Wages Act, 1948</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">3. The Payment of Wages Act, 1936</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">4. The Equal Remuneration Act, 1976</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">5. The Payment of Bonus Act, 1965</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">6. Employment Exchange (Compulsory Notification of Vacancies) Act,1959</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">7. The Maternity Benefir Act, 1961</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">8. The Payment of Gratuity Act, 1972</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">9. National & Festival holiday Act</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">10. The Sexual Harassment of women at workplace (Prevention, Prohibition & Redressal) Act 2013</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">11. Labour Welfare Fund Act</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">12. The Child Labour (Prohibition & Regulation) Act 1986</label>
+                                <div class="fileupld">
+                                    <i class="fa fa-plus"></i>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 justify-content-end">
+                            <div class="col-md-2 d-grid">
+                                <a href="@Url.Action("unit", "DashBoard")" class="btn btn-warning">Save</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

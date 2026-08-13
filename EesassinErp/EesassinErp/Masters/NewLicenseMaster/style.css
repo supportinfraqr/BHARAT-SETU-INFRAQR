@@ -1,0 +1,497 @@
+﻿.licenseMasterPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 100vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* KPI CARDS */
+.licMaster-kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+.licMaster-kpi-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .licMaster-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.licMaster-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.licMaster-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+.kpi-view-btn {
+    background: transparent;
+    border: none;
+    color: #E45D27;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0;
+    cursor: pointer;
+}
+    .kpi-view-btn:hover {
+        color: var(--primary-dark);
+    }
+
+/* Toggle pill - single capsule container */
+/*.licenseMasterPage .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}*/
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    /*.licenseMasterPage .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 8px 18px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+    }*/
+
+        /* active pill */
+        /*.licenseMasterPage .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+        }*/
+
+        /* ensure focus ring for accessibility (subtle) */
+        /*.licenseMasterPage .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }*/
+
+/* Section cards */
+.licenseMasterPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .licenseMasterPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        min-height: 320px;
+    }
+
+/* Table wrapper and hide scrollbar visually */
+.licenseMasterPage .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .licenseMasterPage .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.licenseMasterPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.licenseMasterPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.licenseMasterPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+.licenseMasterPage .small-table tbody td .store-code-link,
+.licenseMasterPage .small-table tbody td .event-link {
+    text-decoration: none;
+}
+
+.small-table-wrapper .checkbox-cell {
+    vertical-align: middle;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+    .small-table-wrapper .checkbox-cell input[type="checkbox"] {
+        vertical-align: middle;
+        margin-right: 2px;
+    }
+
+    .small-table-wrapper .checkbox-cell span {
+        vertical-align: middle;
+        font-size: 0.875rem; /* matches .table-sm text */
+        line-height: 1.5;
+    }
+
+/* ================= Page-style Tooltip ================= */
+.licenseMasterPage .tooltip {
+    --bs-tooltip-bg: var(--card-bg); /* same as cards */
+    --bs-tooltip-color: #333; /* same as inputs */
+    --bs-tooltip-opacity: 1;
+}
+
+    /* Tooltip content */
+    .licenseMasterPage .tooltip .tooltip-inner {
+        max-width: 360px;
+        padding: 8px 10px;
+        font-family: "Inter", sans-serif; /* same as page */
+        font-size: 0.85rem; /* matches table inputs */
+        line-height: 1.4;
+        text-align: left;
+        background: var(--card-bg);
+        color: #333;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    /* Tooltip arrow */
+    .licenseMasterPage .tooltip .tooltip-arrow::before {
+        border-top-color: var(--card-bg);
+    }
+
+
+/* action menu */
+.licenseMasterPage .action-menu {
+    position: relative;
+    width: 48px;
+    text-align: right;
+    background-color: var(--card-bg);
+}
+
+    .licenseMasterPage .action-menu .btn {
+        color: var(--primary);
+    }
+
+    .licenseMasterPage .action-menu .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+/* filter button */
+.licenseMasterPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .licenseMasterPage .filter-btn.active,
+    .licenseMasterPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.licenseMasterPage .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.licenseMasterPage .export-btn, .download-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .licenseMasterPage .export-btn:hover,
+    .licenseMasterPage .download-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+
+/* Pagination area */
+.licenseMasterPage .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .licenseMasterPage .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .licenseMasterPage .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.licenseMasterPage #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .licenseMasterPage #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+/* License Copy column icons */
+.licenseMasterPage .license-copy-cell.uploaded {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.licenseMasterPage .license-copy-cell .btn-icon {
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    cursor: pointer;
+}
+
+    .licenseMasterPage .license-copy-cell .btn-icon:hover {
+        color: var(--primary-dark);
+        transform: scale(1.1);
+    }
+
+
+
+/* statuses */
+.licenseMasterPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.licenseMasterPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.licenseMasterPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.licenseMasterPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .licenseMasterPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .licenseMasterPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .licenseMasterPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .licenseMasterPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+/* Table Buttons*/
+
+.btn-upload, .btn-view, .btn-submit {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+.btn-close {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .btn-close:hover {
+        background: var(--primary-dark);
+    }
+
+/* Table Selects*/
+.licenseMasterPage #licMasterTable .form-select,
+.licenseMasterPage #licMasterTable .form-control {
+    font-size: .78rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #dcdcdc;
+    outline: none;
+    width: 120px;
+}
+
+/* ============License Master Modal========== */
+.licenseMasterPage .licMaster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--primary);
+    border-bottom: 1px solid #eee;
+}
+
+    .licenseMasterPage .licMaster-header .licMaster-back-btn {
+        border: none;
+        background: transparent;
+        font-size: 1.2rem;
+        color: #fff;
+        transition: transform .18s ease, background .18s ease;
+    }
+
+        .licenseMasterPage .licMaster-header .licMaster-back-btn:hover {
+            transform: translateX(-4px);
+            background: var(--card-bg);
+            color: var(--primary);
+        }
+
+    .licenseMasterPage .licMaster-header .modal-title {
+        flex-grow: 0; /* Prevent the title from stretching */
+        width: 100%;
+        padding-right: 3rem;
+        text-align: center; /* Keep the heading centered */
+    }
+
+/* ===== License Modal Sections ===== */
+.licenseMasterPage .lic-section {
+    margin-top: 1.2rem;
+}
+
+.licenseMasterPage .lic-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.6rem;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+/* ===== Upload Field with Actions ===== */
+.licenseMasterPage .lic-upload-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.licenseMasterPage .lic-upload-actions {
+    display: flex;
+    gap: 6px;
+}
+
+    .licenseMasterPage .lic-upload-actions i {
+        font-size: 1rem;
+        cursor: pointer;
+        color: var(--primary);
+        opacity: 0.8;
+        transition: opacity .15s ease, transform .15s ease;
+    }
+
+        .licenseMasterPage .lic-upload-actions i:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+
+.licenseMasterPage #saveBtn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .licenseMasterPage #saveBtn:hover {
+        background: var(--primary-dark);
+    }

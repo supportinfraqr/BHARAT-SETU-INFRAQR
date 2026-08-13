@@ -1,0 +1,469 @@
+﻿<!DOCTYPE html>
+<html>
+<!-- InstanceBegin template="/Templates/template.dwt" codeOutsideHTMLIsLocked="false" -->
+<head>
+    <!-- InstanceBeginEditable name="doctitle" -->
+    <title>Admin</title>
+    <!-- InstanceEndEditable -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="favicon.png" />
+    <link href="css/bootstrap.css" rel='stylesheet' />
+    <link href="css/all.css" rel="stylesheet" />
+    <link href="css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+    <link href="css/datepicker.min.css" rel='stylesheet' />
+    <link href="css/custom_theme.css" rel='stylesheet' />
+    <link href="css/colorTheme/default.css" rel='stylesheet' />
+    <link href="css/draggle.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel='stylesheet' />
+    <link href="css/datepicker.css" rel="stylesheet" />
+    <link href="css/sweetalert2.css" rel="stylesheet" />
+    <!-- InstanceBeginEditable name="head" -->
+    <!-- InstanceEndEditable -->
+</head>
+<body class="dashbg newtemp">
+    <div class="contentwraper">
+        <header class="header">
+            <div class="container-fluid">
+                <div class="row cmmenu">
+                    <div class="col col-md-12">
+                        <div class="row">
+                            <div class="col">
+                                <h4 class="moudlename">
+                                    <div class="list-control">
+                                        <a class="sidemenutoggle">
+                                            <span class="fa fa-ellipsis-v"></span>
+                                        </a>
+                                        <span class="pagehed">License Status Dashboard</span>
+                                        <div class="menusidebar">
+                                            <div class="profiletitle">
+                                                <!--<img src="images/dash-logo.png" alt="" class="dash-logo" />-->
+                                            </div>
+                                            <div class="menuscrollwrap">
+                                                <div class="nano-content">
+                                                    <!--<span class="profiletxt">General</span>-->
+                                                    <ul class="navsidebar">
+                                                        <li class="nav-item active">
+                                                            <a href="dasboard.html">
+                                                                <span class="icons icon-grid"></span>Dashboard
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="storeMaster.html">
+                                                                <span class="icons icon-home"></span>Store Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="complianceDoc.html">
+                                                                <span class="icons icon-globe"></span>Compliance Doc.
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="licenseMaster.html">
+                                                                <span class="icons icon-docs"></span>License Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="employeeMaster.html">
+                                                                <span class="icons icon-user"></span>Employees Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item seprat">
+                                                            <a href="#">
+                                                                <span class="icons icon-login"></span>Logout
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </h4>
+                            </div>
+                            <div class="col col-md-auto">
+                                <div class="nav-item dropdown d-inline me-3">
+                                    <a href="#" class="micon dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="fas fa-bell"></span>
+                                        <span class="notifi"></span>
+                                    </a>
+                                    <ul class="dropdown-menu" id="notification_event" aria-labelledby="navbarDropdown">
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="#" class="micon me-3"><span class="fas fa-cog"></span></a>
+                                <a href="profile.html" class="micon"><span class="fas fa-user-circle"></span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- InstanceBeginEditable name="Content Area" -->
+        <div class="pagecontentbody">
+            <div class="pagebody">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-3 px-1">
+                            <div class="rbox box">
+                                <div class="bhed"><b>Region</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-3 mnh px-1"><span class="badge bg-danger">East</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-danger">North</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-danger">South</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-danger">West</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-danger">(Blank)</span></div>
+                                </div>
+                            </div>
+                            <div class="lgbox box">
+                                <div class="bhed"><b>Status</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 65px">
+                                    <div class="col-6 mnh px-1"><span class="badge bg-lsuccess">Applied</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-lsuccess">Documents Pending</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-lsuccess">Hold</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-lsuccess">Isuued</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-lsuccess">Not Applicable</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-lsuccess">Pending Application</span></div>
+                                </div>
+                            </div>
+                            <div class="grbox box">
+                                <div class="bhed"><b>Fresh/Renewal</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 25px">
+                                    <div class="col-4 mnh px-1"><span class="badge bg-secondary">Amendment</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-secondary">Fresh</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-secondary">Modification</span></div>
+                                </div>
+                            </div>
+                            <div class="orngbox box">
+                                <div class="bhed"><b>Client Name</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">3Plate Foods Pvt Ltd</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Airport authority of India</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">APT Network</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">AS Traders</span></div>
+                                </div>
+                            </div>
+                            <div class="lgbox box">
+                                <div class="bhed"><b>Invoice Status</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Done</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Pending</span></div>
+                                </div>
+                            </div>
+                            <div class="lrbox box">
+                                <div class="bhed"><b>Payment Status</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-12 mnh px-1"><span class="badge bg-ldanger">Done</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-ldanger">Pending</span></div>
+                                </div>
+                            </div>
+                            <div class="lgbox box">
+                                <div class="bhed"><b>Average Days for LIC.</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 85px">
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">0</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">8</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">20</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">8</span></div>
+                                </div>
+                            </div>
+                            <div class="lrngbox box">
+                                <div class="bhed"><b>Outlet Name</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 125px">
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Kamla Nagar</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Vasundhara</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Supply Chain center/Warehouse</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Himayat Nagar</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Gurukul</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Pacific Mall Jasola</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Kamla Nagar</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Vasundhara</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Supply Chain center/Warehouse</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Himayat Nagar</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Gurukul</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">Pacific Mall Jasola</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 px-1">
+                            <div class="dbox">
+                                <div id="main" style="width: 100%; height: 400px;"></div>
+                            </div>
+                            <div class="lorngbox box">
+                                <div class="bhed"><b>State</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 70px">
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Delhi</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Uttar Pradesh</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Telangana</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Maharashtra</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Gujarat</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Rajasthan</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Madhya Pradesh</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">West Bengal</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">Uttrakhand</span></div>
+                                </div>
+                            </div>
+                            <div class="lrngbox box">
+                                <div class="bhed"><b>TAT(doc-Sub)</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-45125</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-1440</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-1426</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-1425</span></div>
+                                </div>
+                            </div>
+                            <div class="lrngbox box">
+                                <div class="bhed"><b>TAT(applied)</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-450</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-449</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-449</span></div>
+                                    <div class="col-6 mnh px-1"><span class="badge bg-warning">-447</span></div>
+                                </div>
+                            </div>
+                            <div class="lrngbox box">
+                                <div class="bhed"><b>TAT(issued)</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">5</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">6</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">7</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">8</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">9</span></div>
+                                    <div class="col-4 mnh px-1"><span class="badge bg-warning">10</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 px-1">
+                            <div class="lgbox box">
+                                <div class="bhed"><b>Address of the store</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 500px">
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop 6030,1 UB, Mandelia Raod, Block UB, Jawahar Nagar, Kamla Nagar,New Delhi-110007</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No-1, Ground Floor,Plot No-12/508, Sector-12, Vasundhara, Ghaziabad, U-P-201012</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Ground Floor Shop No-28, Phase-2, Okhla Indusrial Area,Okhla Industrail Area Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No- 3-6-517/3, Sai Datta Arcade, Himayat Nagar, Hyderabad, Telangana - 500029</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Unit-1, 3rd Floor, K-Star Mall, Sion Trobay Road, Opp Barista, Chembur, Mumbai, Maharashtra- 400071</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">G7VH+JP4, Mathura Rd,Okhla Disposal Area, Jasola,New Delhi, Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop 6030,1 UB, Mandelia Raod, Block UB, Jawahar Nagar, Kamla Nagar,New Delhi-110007</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No-1, Ground Floor,Plot No-12/508, Sector-12, Vasundhara, Ghaziabad, U-P-201012</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Ground Floor Shop No-28, Phase-2, Okhla Indusrial Area,Okhla Industrail Area Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No- 3-6-517/3, Sai Datta Arcade, Himayat Nagar, Hyderabad, Telangana - 500029</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Unit-1, 3rd Floor, K-Star Mall, Sion Trobay Road, Opp Barista, Chembur, Mumbai, Maharashtra- 400071</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">G7VH+JP4, Mathura Rd,Okhla Disposal Area, Jasola,New Delhi, Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop 6030,1 UB, Mandelia Raod, Block UB, Jawahar Nagar, Kamla Nagar,New Delhi-110007</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No-1, Ground Floor,Plot No-12/508, Sector-12, Vasundhara, Ghaziabad, U-P-201012</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Ground Floor Shop No-28, Phase-2, Okhla Indusrial Area,Okhla Industrail Area Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No- 3-6-517/3, Sai Datta Arcade, Himayat Nagar, Hyderabad, Telangana - 500029</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Unit-1, 3rd Floor, K-Star Mall, Sion Trobay Road, Opp Barista, Chembur, Mumbai, Maharashtra- 400071</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">G7VH+JP4, Mathura Rd,Okhla Disposal Area, Jasola,New Delhi, Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop 6030,1 UB, Mandelia Raod, Block UB, Jawahar Nagar, Kamla Nagar,New Delhi-110007</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No-1, Ground Floor,Plot No-12/508, Sector-12, Vasundhara, Ghaziabad, U-P-201012</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Ground Floor Shop No-28, Phase-2, Okhla Indusrial Area,Okhla Industrail Area Delhi 110020</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Shop No- 3-6-517/3, Sai Datta Arcade, Himayat Nagar, Hyderabad, Telangana - 500029</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Unit-1, 3rd Floor, K-Star Mall, Sion Trobay Road, Opp Barista, Chembur, Mumbai, Maharashtra- 400071</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">G7VH+JP4, Mathura Rd,Okhla Disposal Area, Jasola,New Delhi, Delhi 110020</span></div>
+                                </div>
+                            </div>
+                            <div class="lrbox box">
+                                <div class="bhed"><b>Action</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 45px">
+                                    <div class="col-12 mnh px-1"><span class="badge bg-ldanger">As Per TAT</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-ldanger">Blank</span></div>
+                                </div>
+                            </div>
+                            <div class="lgbox box">
+                                <div class="bhed"><b>Assign Employee</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 100px">
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">(Blank)</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Aradhana</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Gaurav Butola</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Himani</span></div>
+                                    <div class="col-12 mnh px-1"><span class="badge bg-lsuccess">Komal</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12 px-1">
+                            <div class="orngbox box">
+                                <div class="bhed"><b>Type of License</b></div>
+                                <div class="row m-0 bscroll" style="max-height: 100px">
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">FSSAI License</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Trade License/ Health Trade</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Shop & Establishment Registration</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">PPL (upto 20 seating Capacity)</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Advertisement/ Signage License</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Eating House</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Weight & Measurement</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Police Permission</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">PTEC & PTRC Registration</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">CLRA License</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Central FSSAI</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">PT Registration</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">ISMW</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">BOCW</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Central CLRA</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Signage</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Packaging License</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Fire NOC</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">ISO Certificate</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Lift License</span></div>
+                                    <div class="col-3 mnh px-1"><span class="badge bg-warning">Electrical Contractor License</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- InstanceEndEditable -->
+    </div>
+
+    <script type="text/javascript" src="js/jquery-min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/jquery.nanoscroller.min.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script type="text/javascript" src="js/datepicker.en.js"></script>
+    <script type="text/javascript" src="js/builder.js"></script>
+    <script type="text/javascript" src="js/beautifyhtml.js"></script>
+    <script type="text/javascript" src="js/dragble.js"></script>
+    <script type="text/javascript" src="js/sweetalert2.js"></script>
+    <script type="text/javascript" src="js/theme-script.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+
+    <!-- InstanceBeginEditable name="for-javascript" -->
+    <script type="text/javascript" src="js/echarts.min.js"></script>
+    <script>
+        //import * as echarts from 'echarts';
+
+        var chartDom = document.getElementById('main');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        option = {
+            title: {
+                text: 'Number of Licenses',
+                x: 'center'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                axisTick: {
+                    alignWithLabel: true
+                },
+                axisLabel: {
+                    rotate: 60
+                },
+                data: ['Advertisement/Signage License', 'BOCW', 'Central CLRA', 'Central FSSAI', 'CLRA License', 'CLRA RC', 'Eating House', 'Electrical Contractor License', 'Factory License', 'Fire NOC', 'FSSAI License', 'ISMW', 'ISO Certificate', 'Lift License', 'Packaging License', 'Police Permission', 'PPL (upto 20 seating Capacity)', 'PT Registration', 'PTEC & PTRC Registration', 'Shop & Establishment Registration', 'Signage', 'Trade License/ Health Trade', 'Weight & Measurement', 'Blank']
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: [
+                {
+                    name: 'Value',
+                    type: 'bar',
+                    stack: 'Total',
+                    label: {
+                        show: true,
+                        position: 'top'
+                    },
+                    data: [1, 2, 13, 2, 175, 7, 1, 2, 4, 1, 71, 5, 1, 1, 1, 2, 6, 4, 1, 97, 3, 43, 15, 0]
+                }
+            ]
+        };
+
+        option && myChart.setOption(option);
+
+
+    </script>
+    <!-- InstanceEndEditable -->
+</body>
+<!-- InstanceEnd -->
+</html>

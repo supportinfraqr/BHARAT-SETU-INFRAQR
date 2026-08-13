@@ -1,0 +1,589 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Addcompliancefile";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<link href="~/compliance/css/all.css" rel="stylesheet" />
+<link href="~/compliance/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.min.css" rel="stylesheet" />
+<link href="~/compliance/css/custom_theme.css" rel="stylesheet" />
+<link href="~/compliance/css/colorTheme/default.css" rel="stylesheet" />
+<link href="~/compliance/css/draggle.css" rel="stylesheet" />
+<link href="~/compliance/css/responsive.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.css" rel="stylesheet" />
+<style>
+    .download-btn {
+        display: inline-flex;
+        align-items: center;
+        background: var(--primary);
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .download-btn i {
+            margin-right: 8px;
+        }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="~/scripts/RetailJsLib/AddcomplianceFileController.js"></script>
+<div class="pagecontentbody">
+
+    <div class="pagebody">
+        <div class="col-md-12 pageheader" style=" margin-left: 7% !important; margin-top: 2%;">
+            <h4 class="mb-4 " style="color: var(--primary)">Establishment Compliance </h4>
+            <a href="~/DownloadMat/MasterSheet.xlsx" class="download-btn" download>
+                <i class="bi bi-download"> </i> Download Template
+            </a>
+            <div class="row mb-3">
+                <a href=""> </a>
+                <div class="row g-3 align-items-end">
+                    <!-- Financial Year -->
+                    <div class="col-md-2">
+                        <div class="form-group" ng-init="BindFinacialYear();">
+                            <label for="ddlFinancialYear" class="form-label"> Financial Year</label>
+                            <select id="ddlFinancialYear" class="form-control form-select validate" ng-model="FY" ng-change="AllData()">
+                                <option value=""> Select</option>
+                                <option ng-repeat="x in finacialyearList" value="{{x.FinancialName}}">
+                                    {{x.FinancialName}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Month -->
+                    <div class="col-md-2">
+                        <div class="form-group" ng-init="BindMonth();">
+                            <label for="CMonth" class="form-label">Month</label>
+                            <select id="CMonth" class="form-control form-select validate" ng-model="CMonth" ng-change="AllData()">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">
+                                    {{x.MonthName}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Category -->
+                    <!-- Main Sheet Upload -->
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="input-excel" class="form-label">Upload Master Sheet</label>
+                            <input type="file" id="input-excel" class="form-control"
+                                   onchange="angular.element(this).scope().DisplayExcel()" />
+                        </div>
+                    </div>
+
+                    <!-- Signature Upload -->
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="signatureFile" class="form-label">Signature</label>
+                            <input type="file" id="signatureFile" class="form-control" />
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="col-md-2" ng-init="AllState();LoadStore()">
+                        <div class="form-group">
+                            <label class="form-label d-block">&nbsp;</label>
+                            <button type="button" class="btn btn-sm filter-btn active" ng-click="SaveRecord()">Submit</button>
+                        </div>
+                    </div>
+                </div>
+
+
+
+            </div>
+
+
+            <div class="input-box" id="wrapper" style="max-height:500px; overflow-x:auto; overflow-y:auto; padding:10px;">
+            </div>
+            <div class="input-box" id="miscellaneousSection" style="max-height:500px; overflow-x:auto; overflow-y:auto; padding:10px;">
+            </div>
+            <p ng-show="Panel">
+                Last Updated file on : {{ AllList[0].Createdon | date:"yyyy-MM-dd hh:mm a" }} <button ng-click="OpenPanel()">View</button>
+            </p>
+            <div class="input-box" ng-show="existSection" style="max-height:500px; overflow-x:auto; overflow-y:auto; border:1px solid #ccc;
+padding:10px;">
+
+                <h4>Attendence Section</h4>
+                <table class="table table-bordered table-striped" style="width:max-content;">
+                    <thead>
+                        <tr>
+                            <th>
+                                EmployeeId
+                            </th>
+                            <th>Day1</th>
+                            <th>Day2</th>
+                            <th>Day3</th>
+                            <th>Day4</th>
+                            <th>Day5</th>
+                            <th>Day6</th>
+                            <th>Day7</th>
+                            <th>Day8</th>
+                            <th>Day9</th>
+                            <th>Day10</th>
+                            <th>Day11</th>
+                            <th>Day12</th>
+                            <th>Day13</th>
+                            <th>Day14</th>
+                            <th>Day15</th>
+                            <th>Day16</th>
+                            <th>Day17</th>
+                            <th>Day18</th>
+                            <th>Day19</th>
+                            <th>Day20</th>
+                            <th>Day21</th>
+                            <th>Day22</th>
+                            <th>Day23</th>
+                            <th>Day24</th>
+                            <th>Day25</th>
+                            <th>Day26</th>
+                            <th>Day27</th>
+                            <th>Day28</th>
+                            <th>Day29</th>
+                            <th>Day30</th>
+                            <th>Day31</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="x in AllList">
+                            <td>
+                                {{x.EmployeeId}}
+                            </td>
+                            <td>{{x.Day1}}</td>
+                            <td>{{x.Day2}}</td>
+                            <td>{{x.Day3}}</td>
+                            <td>{{x.Day4}}</td>
+                            <td>{{x.Day5}}</td>
+                            <td>{{x.Day6}}</td>
+                            <td>{{x.Day7}}</td>
+                            <td>{{x.Day8}}</td>
+                            <td>{{x.Day9}}</td>
+                            <td>{{x.Day10}}</td>
+                            <td>{{x.Day11}}</td>
+                            <td>{{x.Day12}}</td>
+                            <td>{{x.Day13}}</td>
+                            <td>{{x.Day14}}</td>
+                            <td>{{x.Day15}}</td>
+                            <td>{{x.Day16}}</td>
+                            <td>{{x.Day17}}</td>
+                            <td>{{x.Day18}}</td>
+                            <td>{{x.Day19}}</td>
+                            <td>{{x.Day20}}</td>
+                            <td>{{x.Day21}}</td>
+                            <td>{{x.Day22}}</td>
+                            <td>{{x.Day23}}</td>
+                            <td>{{x.Day24}}</td>
+                            <td>{{x.Day25}}</td>
+                            <td>{{x.Day26}}</td>
+                            <td>{{x.Day27}}</td>
+                            <td>{{x.Day28}}</td>
+                            <th>{{x.Day29}}</th>
+                            <th>{{x.Day30}}</th>
+                            <th>{{x.Day31}}</th>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="input-box" ng-show="existSection" style="max-height:500px; overflow-x:auto; overflow-y:auto; border:1px solid #ccc;
+padding:10px;">
+
+                <h4>OtherColumn Section</h4>
+                <table class="table table-bordered table-striped" style="width:max-content;">
+                    <thead>
+                        <tr>
+                            <th>Uid</th>
+                            <th>StoreCode</th>
+                            <th> ComplianceCategory</th>
+                            <th>Employee_Code</th>
+                            <th>Employee_Name</th>
+                            <th>Gender</th>
+                            <th>Father_Name</th>
+                            <th>Date_of_Birth</th>
+                            <th>Age</th>
+                            <th>Date_Of_Joining</th>
+                            <th>Date_Of_Leaving</th>
+                            <th>Designation</th>
+                            <th>Department</th>
+                            <th>Shift</th>
+                            <th>Branch_Address</th>
+                            <th>Address</th>
+                            <th>Location</th>
+                            <th>State</th>
+                            <th>Month</th>
+                            <th>Account_No</th>
+                            <th>Bank_Name</th>
+                            <th>Name_of_contractor</th>
+                            <th>Address_of_contractor</th>
+                            <th>Nature_ofWork_contractor</th>
+                            <th>Tenure_of_Employement</th>
+                            <th>Bank_transaction_ID</th>
+                            <th>UAN_No</th>
+                            <th>ESIC_No</th>
+                            <th>Name_of_Dispensary</th>
+                            <th>Wage_Paid</th>
+                            <th>Month_end_to</th>
+                            <th>Month_Starts_From</th>
+                            <th>NO_ofunit_Per_Piece</th>
+                            <th>Total_Days_Worked</th>
+                            <th>Interval_From</th>
+                            <th>Interval_To</th>
+                            <th>Payment_Mode</th>
+                            <th>Festival</th>
+                            <th>Absent_Days</th>
+                            <th>Weekoff</th>
+                            <th>Arrears_Days</th>
+                            <th>Total_workhours</th>
+                            <th>Work_Hours_from</th>
+                            <th>Work_Hours_to</th>
+                            <th>Loss_of_pay_LOP</th>
+                            <th>Fixed_Basic_Wages</th>
+                            <th>House_rent_Allowance</th>
+                            <th>Dearness_Allowance</th>
+                            <th>Special_Allowance</th>
+                            <th>Statutory_Bonus</th>
+                            <th>Medical</th>
+                            <th>Other_allowance</th>
+                            <th>Fixed_Gross</th>
+                            <th> Earned_Basic_Wages   </th>
+                            <th>Arrear_of_Basic_Wages</th>
+                            <th>Earned_Dearness_Allowance</th>
+                            <th>Arrear_of_Dearness_Allowance</th>
+                            <th>Earned_House_Rent_Allowance</th>
+                            <th>Arrear_of_House_rent_Allowance</th>
+                            <th>Earned_Special_Allowance</th>
+                            <th>Arr_of_Special_Allowance</th>
+                            <th>Overtime_Allowance</th>
+                            <th>Other_Allowances</th>
+                            <th>EarnedCity_Compensation_Allowance</th>
+                            <th>Meal_Payouts</th>
+                            <th>Earned_Gratuity</th>
+                            <th>Gross_Wages</th>
+                            <th>PF_Deductions</th>
+                            <th>Arrear_of_PF</th>
+                            <th>VPF_Deduction</th>
+                            <th>Arr_VPF</th>
+                            <th>ESIC_Deductions</th>
+                            <th>Arrear_of_ESIC</th>
+                            <th>PT_Deductions</th>
+                            <th>Lwf_Deductions</th>
+                            <th>TDS_Deductions</th>
+                            <th>Medical_Deduction</th>
+                            <th>Society</th>
+                            <th>Insurance</th>
+                            <th>Fine_Deduction</th>
+                            <th>Overtime_deduction</th>
+                            <th>Salary_Advance</th>
+                            <th>Other_Deduction</th>
+                            <th>Total_Deductions</th>
+                            <th>Recoveries</th>
+                            <th>Net_Salary</th>
+                            <th>Recovery_Type</th>
+                            <th>Particulars</th>
+                            <th>Date_of_Damage</th>
+                            <th>Recovery_Amount</th>
+                            <th>Show_Cause_Issued</th>
+                            <th>Explanation_Heard_By</th>
+                            <th>Installments_Count</th>
+                            <th>First_Month_Year</th>
+                            <th>Last_Month_Year</th>
+                            <th>Recovery_Complete_Date</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Place</th>
+                            <th>Accident_Cause</th>
+                            <th>Injury_Nature</th>
+                            <th>Injured_Person_Activity</th>
+                            <th>Notice_Given_Name</th>
+                            <th>Witness_Name</th>
+                            <th>Witness_Address</th>
+                            <th>Witness_Occupation</th>
+                            <th>Injured_Return_Date</th>
+                            <th>Injured_Absent_Days</th>
+                            <th>Fine_Offence_Nature</th>
+                            <th>Fine_Offence_Date</th>
+                            <th>Fine_Show_Cause_Date</th>
+                            <th>Fine_Realised_Date</th>
+                            <th>Fine_Amount</th>
+                            <th>Fine_heardBY</th>
+                            <th>Deduction_Amount</th>
+                            <th>Loss_Caused</th>
+                            <th>Deduction_Show_Cause_Date</th>
+                            <th>Deduction_Date</th>
+                            <th>Deduction_Installments</th>
+                            <th>Deduction_Realised_Date</th>
+                            <th>Overtime_from</th>
+                            <th>Overtime_To</th>
+                            <th>Overtime_Date</th>
+                            <th>Overtime_Extent</th>
+                            <th>Overtime_Total</th>
+                            <th>Normal_Hours</th>
+                            <th>Normal_Rate</th>
+                            <th>Overtime_Rate</th>
+                            <th>Normal_Earnings</th>
+                            <th>Overtime_Earnings</th>
+                            <th>Total_Earnings</th>
+                            <th>Overtime_Payment_Date</th>
+                            <th>Advance_Amount</th>
+                            <th>Advance_Date</th>
+                            <th>Advance_Purpose</th>
+                            <th>Advance_Installments</th>
+                            <th>Advance_Postponements</th>
+                            <th>Advance_Repaid_Date</th>
+                            <th>Advance_Repaid_Amount</th>
+                            <th>Date_of_Application</th>
+                            <th>Leave_starts_From</th>
+                            <th>TO_Leave</th>
+                            <th>Annual_Leave</th>
+                            <th>Paternity_Leave</th>
+                            <th>Sick_Leaves</th>
+                            <th>Casual_Leaves</th>
+                            <th>Privilieged_Leaves</th>
+                            <th>if_Leave_Refuses</th>
+                            <th>Reason_LeaveRefuses</th>
+                            <th>Previous_Balance_Leave</th>
+                            <th>Credit_Leave</th>
+                            <th>Earned_Leave</th>
+                            <th>Nature_of_Leave</th>
+                            <th>Total_Leave</th>
+                            <th>Balance_Leave</th>
+                            <th>Maternity</th>
+                            <th>Maternity_Leave_Type</th>
+                            <th>Maternity_From</th>
+                            <th>Maternity_To</th>
+                            <th>Date_Women_notice_Under_Sec6</th>
+                            <th>Date_of_Discharge</th>
+                            <th>Date_proofof_pregnancy</th>
+                            <th>Birth_date_of_child</th>
+                            <th>Date_of_Miscarriage</th>
+                            <th>Date_of_illness</th>
+                            <th>Date_and_Amount_inadvance_Delievery</th>
+                            <th>Date_and_Amount_for_maternity_Beneift</th>
+                            <th>Amount_ifpaid_section8</th>
+                            <th>Amountof_wages_Paid_section9</th>
+                            <th>Amountof_wages_Paidleave_section10</th>
+                            <th>Nominated_person</th>
+                            <th>Women_dies_Date_and_beneift_person</th>
+                            <th>if_mother_dies_child_survive_beneift</th>
+                            <th>Deduction_Incentive</th>
+                            <th>Holiday_List</th>
+                            <th>Holiday_Day</th>
+                            <th>Holiday_Date</th>
+                            <th>Earned_Statutory_Bonus</th>
+                            <th>Earned_Medical</th>
+                            <th>Name_of_Employer</th>
+                            <th>IsActive</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="y in AllerdList">
+                            <td>{{y.Uid}}</td>
+                            <td>{{y.StoreCode}}</td>
+                            <td>{{y.ComplianceCategory}}</td>
+                            <td>{{y.Employee_Code}}</td>
+                            <td>{{y.Employee_Name}}</td>
+                            <td>{{y.Gender}}</td>
+                            <td>{{y.Father_Name}}</td>
+                            <td>{{y.Date_of_Birth}}</td>
+                            <td>{{y.Age}}</td>
+                            <td>{{y.Date_Of_Joining}}</td>
+                            <td>{{y.Date_Of_Leaving}}</td>
+                            <td>{{y.Designation}}</td>
+                            <td>{{y.Department}}</td>
+                            <td>{{y.Shift}}</td>
+                            <td>{{y.Branch_Address}}</td>
+                            <td>{{y.Address}}</td>
+                            <td>{{y.Location}}</td>
+                            <td>{{y.State}}</td>
+                            <td>{{y.Month}}</td>
+                            <td>{{y.Account_No}}</td>
+                            <td>{{y.Bank_Name}}</td>
+                            <td>{{y.Name_of_contractor}}</td>
+                            <td>{{y.Address_of_contractor}}</td>
+                            <td>{{y.Nature_ofWork_contractor}}</td>
+                            <td>{{y.Tenure_of_Employement}}</td>
+                            <td>{{y.Bank_transaction_ID}}</td>
+                            <td>{{y.UAN_No}}</td>
+                            <td>{{y.ESIC_No}}</td>
+                            <td>{{y.Name_of_Dispensary}}</td>
+                            <td>{{y.Wage_Paid}}</td>
+                            <td>{{y.Month_end_to}}</td>
+                            <td>{{y.Month_Starts_From}}</td>
+                            <td>{{y.NO_ofunit_Per_Piece}}</td>
+                            <td>{{y.Total_Days_Worked}}</td>
+                            <td>{{y.Interval_From}}</td>
+                            <td>{{y.Interval_To}}</td>
+                            <td>{{y.Payment_Mode}}</td>
+                            <td>{{y.Festival}}</td>
+                            <td>{{y.Absent_Days}}</td>
+                            <td>{{y.Weekoff}}</td>
+                            <td>{{y.Arrears_Days}}</td>
+                            <td>{{y.Total_workhours}}</td>
+                            <td>{{y.Work_Hours_from}}</td>
+                            <td>{{y.Work_Hours_to}}</td>
+                            <td>{{y.Loss_of_pay_LOP}}</td>
+                            <td>{{y.Basic_Wages}}</td>
+                            <td>{{y.House_rent_Allowance}}</td>
+                            <td>{{y.Dearness_Allowance}}</td>
+                            <td>{{y.Special_Allowance}}</td>
+                            <td>{{y.Statutory_Bonus}}</td>
+                            <td>{{y.Medical}}</td>
+                            <td>{{y.Other_allowance}}</td>
+                            <td>{{y.Fixed_Gross}}</td>
+                            <td>{{y.Earned_Basic_Wages}}</td>
+
+                            <td>{{y.Arrear_of_Basic_Wages}}</td>
+                            <td>{{y.Earned_Dearness_Allowance}}</td>
+                            <td>{{y.Arrear_of_Dearness_Allowance}}</td>
+                            <td>{{y.Earned_House_Rent_Allowance}}</td>
+                            <td>{{y.Arrear_of_House_rent_Allowance}}</td>
+                            <td>{{y.Earned_Special_Allowance}}</td>
+                            <td>{{y.Arr_of_Special_Allowance}}</td>
+                            <td>{{y.Overtime_Allowance}}</td>
+                            <td>{{y.Other_Allowances}}</td>
+                            <td>{{y.EarnedCity_Compensation_Allowance}}</td>
+                            <td>{{y.Meal_Payouts}}</td>
+                            <td>{{y.Earned_Gratuity}}</td>
+                            <td>{{y.Gross_Wages}}</td>
+                            <td>{{y.PF_Deductions}}</td>
+                            <td>{{y.Arrear_of_PF}}</td>
+                            <td>{{y.VPF_Deduction}}</td>
+                            <td>{{y.Arr_VPF}}</td>
+                            <td>{{y.ESIC_Deductions}}</td>
+                            <td>{{y.Arrear_of_ESIC}}</td>
+                            <td>{{y.PT_Deductions}}</td>
+                            <td>{{y.Lwf_Deductions}}</td>
+                            <td>{{y.TDS_Deductions}}</td>
+                            <td>{{y.Medical_Deduction}}</td>
+                            <td>{{y.Society}}</td>
+                            <td>{{y.Insurance}}</td>
+                            <td>{{y.Fine_Deduction}}</td>
+                            <td>{{y.Overtime_deduction}}</td>
+                            <td>{{y.Salary_Advance}}</td>
+                            <td>{{y.Other_Deduction}}</td>
+                            <td>{{y.Total_Deductions}}</td>
+                            <td>{{y.Recoveries}}</td>
+                            <td>{{y.Net_Salary}}</td>
+                            <td>{{y.Recovery_Type}}</td>
+                            <td>{{y.Particulars}}</td>
+                            <td>{{y.Date_of_Damage}}</td>
+                            <td>{{y.Recovery_Amount}}</td>
+                            <td>{{y.Show_Cause_Issued}}</td>
+                            <td>{{y.Explanation_Heard_By}}</td>
+                            <td>{{y.Installments_Count}}</td>
+                            <td>{{y.First_Month_Year}}</td>
+                            <td>{{y.Last_Month_Year}}</td>
+                            <td>{{y.Recovery_Complete_Date}}</td>
+                            <td>{{y.Date}}</td>
+                            <td>{{y.Time}}</td>
+                            <td>{{y.Place}}</td>
+                            <td>{{y.Accident_Cause}}</td>
+                            <td>{{y.Injury_Nature}}</td>
+                            <td>{{y.Injured_Person_Activity}}</td>
+                            <td>{{y.Notice_Given_Name}}</td>
+                            <td>{{y.Witness_Name}}</td>
+                            <td>{{y.Witness_Address}}</td>
+                            <td>{{y.Witness_Occupation}}</td>
+                            <td>{{y.Injured_Return_Date}}</td>
+                            <td>{{y.Injured_Absent_Days}}</td>
+                            <td>{{y.Fine_Offence_Nature}}</td>
+                            <td>{{y.Fine_Offence_Date}}</td>
+                            <td>{{y.Fine_Show_Cause_Date}}</td>
+                            <td>{{y.Fine_Realised_Date}}</td>
+                            <td>{{y.Fine_Amount}}</td>
+                            <td>{{y.Fine_heardBY}}</td>
+                            <td>{{y.Deduction_Amount}}</td>
+                            <td>{{y.Loss_Caused}}</td>
+                            <td>{{y.Deduction_Show_Cause_Date}}</td>
+                            <td>{{y.Deduction_Date}}</td>
+                            <td>{{y.Deduction_Installments}}</td>
+                            <td>{{y.Deduction_Realised_Date}}</td>
+                            <td>{{y.Overtime_from}}</td>
+                            <td>{{y.Overtime_To}}</td>
+                            <td>{{y.Overtime_Date}}</td>
+                            <td>{{y.Overtime_Extent}}</td>
+                            <td>{{y.Overtime_Total}}</td>
+                            <td>{{y.Normal_Hours}}</td>
+                            <td>{{y.Normal_Rate}}</td>
+                            <td>{{y.Overtime_Rate}}</td>
+                            <td>{{y.Normal_Earnings}}</td>
+                            <td>{{y.Overtime_Earnings}}</td>
+                            <td>{{y.Total_Earnings}}</td>
+                            <td>{{y.Overtime_Payment_Date}}</td>
+                            <td>{{y.Advance_Amount}}</td>
+                            <td>{{y.Advance_Date}}</td>
+                            <td>{{y.Advance_Purpose}}</td>
+                            <td>{{y.Advance_Installments}}</td>
+                            <td>{{y.Advance_Postponements}}</td>
+                            <td>{{y.Advance_Repaid_Date}}</td>
+                            <td>{{y.Advance_Repaid_Amount}}</td>
+                            <td>{{y.Date_of_Application}}</td>
+                            <td>{{y.Leave_starts_From}}</td>
+                            <td>{{y.TO_Leave}}</td>
+                            <td>{{y.Annual_Leave}}</td>
+                            <td>{{y.Paternity_Leave}}</td>
+                            <td>{{y.Sick_Leaves}}</td>
+                            <td>{{y.Casual_Leaves}}</td>
+                            <td>{{y.Privilieged_Leaves}}</td>
+                            <td>{{y.if_Leave_Refuses}}</td>
+                            <td>{{y.Reason_LeaveRefuses}}</td>
+                            <td>{{y.Previous_Balance_Leave}}</td>
+                            <td>{{y.Credit_Leave}}</td>
+                            <td>{{y.Earned_Leave}}</td>
+                            <td>{{y.Nature_of_Leave}}</td>
+                            <td>{{y.Total_Leave}}</td>
+                            <td>{{y.Balance_Leave}}</td>
+                            <td>{{y.Maternity}}</td>
+                            <td>{{y.Maternity_Leave_Type}}</td>
+                            <td>{{y.Maternity_From}}</td>
+                            <td>{{y.Maternity_To}}</td>
+                            <td>{{y.Date_Women_notice_Under_Sec6}}</td>
+                            <td>{{y.Date_of_Discharge}}</td>
+                            <td>{{y.Date_proofof_pregnancy}}</td>
+                            <td>{{y.Birth_date_of_child}}</td>
+                            <td>{{y.Date_of_Miscarriage}}</td>
+                            <td>{{y.Date_of_illness}}</td>
+                            <td>{{y.Date_and_Amount_inadvance_Delievery}}</td>
+                            <td>{{y.Date_and_Amount_for_maternity_Beneift}}</td>
+                            <td>{{y.Amount_ifpaid_section8}}</td>
+                            <td>{{y.Amountof_wages_Paid_section9}}</td>
+                            <td>{{y.Amountof_wages_Paidleave_section10}}</td>
+                            <td>{{y.Nominated_person}}</td>
+                            <td>{{y.Women_dies_Date_and_beneift_person}}</td>
+                            <td>{{y.if_mother_dies_child_survive_beneift}}</td>
+                            <td>{{y.Deduction_Incentive}}</td>
+                            <td>{{y.Holiday_List}}</td>
+                            <td>{{y.Holiday_Day}}</td>
+                            <td>{{y.Holiday_Date}}</td>
+                            <td>{{y.Earned_Statutory_Bonus}}</td>
+                            <td>{{y.Earned_Medical}}</td>
+                            <td>{{y.Name_of_Employer}}</td>
+                            <td>
+                                {{y.IsActive}}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
+
+        </div>
+
+
+
+    </div>
+
+
+</div>
+

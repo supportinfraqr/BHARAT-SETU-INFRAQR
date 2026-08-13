@@ -1,0 +1,68 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Retail";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html ng-app="myLoginApp" ng-controller="myLoginController">
+<!-- InstanceBegin template="/Templates/template.dwt" codeOutsideHTMLIsLocked="false" -->
+<head>
+    <!-- InstanceBeginEditable name="doctitle" -->
+    <title>Retail</title>
+    <!-- InstanceEndEditable -->
+    <meta charset="utf-8" />
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+
+    <link rel="shortcut icon" href="favicon.png" />
+    <link href="~/compliance/css/bootstrap.css" rel="stylesheet" />
+
+    <link href="~/compliance/css/all.css" rel="stylesheet" />
+    <link href="~/compliance/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+    <link href="~/compliance/css/datepicker.min.css" rel="stylesheet" />
+    <link href="~/compliance/css/custom_theme.css" rel="stylesheet" />
+    <link href="~/compliance/css/colorTheme/default.css" rel="stylesheet" />
+    <link href="~/compliance/css/draggle.css" rel="stylesheet" />
+    <link href="~/compliance/css/responsive.css" rel="stylesheet" />
+    <link href="~/compliance/css/datepicker.css" rel="stylesheet" />
+    <link href="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css" rel="stylesheet" />
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/jscolor.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/moment.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+     
+    
+    
+    <style>
+        .menumarginleft {
+            margin-left: 12px;
+        }
+
+        .contentwraper {
+            padding-top: 22px !important;
+        }
+    </style>
+</head>
+<body class="dashbg" oncontextmenu="return false;">
+    <div class="contentwraper menumarginleft" ng-init="SetRolePermission();LoadPageName();">
+        @RenderBody()
+    </div>
+
+
+</body>
+
+
+<!-- InstanceEnd -->
+</html>
+<script src="~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.js"></script>

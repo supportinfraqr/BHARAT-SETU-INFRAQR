@@ -1,0 +1,1794 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Vendor Registration";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<style>
+    .vendorRegistration {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27;
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        min-height: 100vh;
+    }
+
+    /* STEP TRACKER */
+    .stepper-modern {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+        /* LINE */
+        .stepper-modern::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #e5e7eb;
+            transform: translateY(-50%);
+            z-index: 0;
+        }
+
+    /* STEP ITEM */
+    .step-item {
+        position: relative;
+        z-index: 1;
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        flex: 1;
+    }
+
+        /* DOT */
+        .step-item::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            background: #d1d5db;
+            border-radius: 50%;
+            display: block;
+            margin: 0 auto 6px;
+            transition: all 0.2s ease;
+        }
+
+        /* ACTIVE */
+        .step-item.active {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+            .step-item.active::before {
+                background: var(--primary);
+                transform: scale(1.4);
+            }
+
+        /* COMPLETED */
+        .step-item.completed::before {
+            background: #22c55e;
+        }
+
+    /* CARD */
+    .entity-card {
+        border-radius: 14px;
+        background: var(--card-bg);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        border: none;
+    }
+
+    .form-label {
+        font-size: 12px;
+    }
+
+    .form-control, .form-select {
+        font-size: 13px;
+        height: 36px;
+    }
+
+    .entity-footer {
+        border-top: 1px solid #eee;
+        padding-top: 12px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.05rem rgba(228, 93, 39, 0.25);
+        outline: none;
+    }
+
+    .form-select {
+        height: 36px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        transition: all 0.15s ease;
+    }
+
+        /* Hover feel */
+        .form-select:hover {
+            border-color: var(--primary);
+        }
+
+    /* Arrow color tweak (modern browsers) */
+    .form-select {
+        background-color: #fff;
+    }
+
+    .multi-select-dropdown {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 13px;
+        animation: fadeIn 0.15s ease;
+    }
+
+        /* Hover item */
+        .multi-select-dropdown label:hover {
+            background: #FFF1EB !important;
+        }
+
+        /* Checkbox spacing */
+        .multi-select-dropdown input {
+            margin-right: 6px;
+        }
+
+    /* Animation */
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* GRID */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+
+    @@media (max-width:1200px) {
+        .form-grid {
+            grid-template-columns: repeat(3,1fr);
+        }
+    }
+
+    @@media (max-width:992px) {
+        .form-grid {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+    @@media (max-width:576px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* BUTTON */
+    .save-btn {
+        background: var(--primary);
+        color: #fff;
+        border-radius: 999px;
+        padding: 6px 14px;
+        border: none;
+        transition: all 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+        /* Hover */
+        .save-btn:hover {
+            background: var(--primary-dark);
+            color: #fff;
+        }
+
+        /* Click (press effect) */
+        .save-btn:active {
+            transform: scale(0.96);
+            background: var(--primary-dark);
+        }
+
+            /* Remove ugly default focus */
+            .save-btn:focus,
+            .save-btn:active:focus {
+                outline: none;
+                box-shadow: none;
+            }
+
+    /* MULTI SELECT */
+    .multi-select {
+        position: relative;
+    }
+
+    .multi-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        max-height: 180px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+        .multi-select-dropdown label {
+            display: block;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+            .multi-select-dropdown label:hover {
+                background: #f5f5f5;
+            }
+
+    .save-btn,
+    .save-btn:focus,
+    .save-btn:active,
+    .save-btn:visited {
+        background: var(--primary) !important;
+        color: #fff !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+        /* Hover (keep same feel) */
+        .save-btn:hover {
+            background: var(--primary-dark) !important;
+            color: #fff !important;
+        }
+
+        /* Prevent bootstrap active flash */
+        .save-btn:active:focus,
+        .save-btn:active:hover {
+            background: var(--primary-dark) !important;
+            color: #fff !important;
+            box-shadow: none !important;
+        }
+
+    /* Remove default click highlight (mobile too) */
+    .save-btn {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .view-btn {
+        background: transparent;
+        color: var(--primary) !important;
+        border: 1px solid var(--primary) !important;
+        border-radius: 999px;
+        padding: 6px 14px;
+        transition: all 0.15s ease;
+    }
+
+        /* Hover */
+        .view-btn:hover {
+            background: var(--primary);
+            color: #fff !important;
+        }
+
+        /* Click (press effect) */
+        .view-btn:active {
+            transform: scale(0.96);
+            background: var(--primary) !important;
+            color: #fff !important;
+        }
+
+
+    /* LEGAL BOX */
+    .legal-box {
+        max-height: 220px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 13px;
+        line-height: 1.6;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+        /* Scrollbar (optional modern feel) */
+        .legal-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .legal-box::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 10px;
+        }
+
+    /* AGREEMENT AREA */
+    .legal-agree {
+        padding: 10px 12px;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        background: #FFF7F3;
+    }
+
+        /* Checkbox spacing */
+        .legal-agree input {
+            margin-right: 6px;
+        }
+
+    .declaration-list {
+        /* max-height: 300px;*/
+        overflow-y: auto;
+        padding-right: 6px;
+    }
+
+    .decl-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card-bg);
+        border: 1px solid #eee;
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .status {
+        font-size: 11px;
+        margin-top: 4px;
+    }
+
+        .status.pending {
+            color: #f59e0b;
+        }
+
+        .status.done {
+            color: #22c55e;
+        }
+
+    .modal-header {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .modal-body {
+        background: var(--card-bg);
+    }
+
+    .modal-footer {
+        background: var(--card-bg);
+    }
+    .modal-backdrop {
+        display: none !important;
+    }
+</style>
+ 
+<script src="~/scripts/RetailJsLib/NewVendorRegistrationController.js"></script> 
+<div class="vendorRegistration p-3" ng-init="BindDeclaration()">
+
+    <h4 style="color:var(--primary)">Vendor Registration</h4>
+
+    <!-- STEPPER -->
+    <div class="stepper-modern my-3">
+        <div class="step-item active">Basic</div>
+        <div class="step-item">Registration</div>
+        <div class="step-item">Compliance</div>
+        <div class="step-item">Financial</div>
+        <div class="step-item">Service</div>
+        <div class="step-item">Experience</div>
+        <div class="step-item">Documents</div>
+        <div class="step-item">Declarations</div>
+        <div class="step-item">Final</div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="form-step" data-step="1" ng-init="BindRegistration()">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Basic Company Details</h5>
+
+            <div class="form-grid mt-3">
+
+                <div>
+                    <label class="form-label">Name of the Agency</label>
+                    <input type="text" class="form-control" ng-model="AgencyName">
+                </div>
+
+                <div>
+                    <label class="form-label">Registered Office Address</label>
+                    <input type="text" class="form-control" ng-model="RegisteredAddress">
+                </div>
+
+                <div>
+                    <label class="form-label">Corporate Office Address</label>
+                    <input type="text" class="form-control" ng-model="CorporateAddress">
+                </div>
+
+                <div>
+                    <label class="form-label">Contact Person Name</label>
+                    <input type="text" class="form-control" ng-model="ContactPerson">
+                </div>
+
+                <div>
+                    <label class="form-label">Designation</label>
+                    <input type="text" class="form-control" ng-model="Designation">
+                </div>
+
+                <div>
+                    <label class="form-label">Mobile Number</label>
+                    <input type="text" class="form-control" ng-model="Mobile" maxlength="10" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                </div>
+
+                <div>
+                    <label class="form-label">Email ID</label>
+                    <input type="email" id="txtEmail" class="form-control" ng-model="Email" onblur="validateEmail('#txtEmail')">
+                </div>
+
+                <div>
+                    <label class="form-label">Website</label>
+                    <input type="text" class="form-control" ng-model="Website">
+                </div>
+
+                <div>
+                    <label class="form-label">Year of Establishment</label>
+                    <input type="text" maxlength="4" class="form-control" ng-model="YearEstablishment" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                </div>
+
+                <!-- MULTI SELECT -->
+                @*<div class="multi-select"  style="position:relative; width:300px;">
+                    <label class="form-label">Type of Organization</label>
+                    <input type="text" readonly class="form-control" id="multiDisplay" placeholder="Select" ng-model="Organization">
+
+                    <div class="multi-select-dropdown" id="multiDropdown">
+
+                        <label><input type="checkbox" value="Proprietorship"> Proprietorship</label>
+                        <label><input type="checkbox" value="Partnership"> Partnership</label>
+                        <label><input type="checkbox" value="LLP"> LLP</label>
+                        <label><input type="checkbox" value="Pvt Ltd"> Pvt Ltd</label>
+                        <label><input type="checkbox" value="Public Ltd"> Public Ltd</label>
+                    </div>
+                </div>*@
+
+                <div class="multi-select" style="position:relative; width:300px;">
+
+                    <label class="form-label">Type of Organization</label>
+
+                    <input type="text"
+                           readonly id="multiDisplay"
+                           class="form-control multi-input"
+                           data-target="industriesDropdown1"
+                           placeholder="Select"
+                           style="width:100%; padding:6px; cursor:pointer;" ng-model="Organization" />
+
+                    <div id="industriesDropdown1"
+                         class="multi-select-dropdown"
+                         style="display:none; position:absolute; background:#fff; border:1px solid #ccc; width:100%; max-height:150px; overflow:auto; z-index:999; padding:5px;">
+
+                        <label><input type="checkbox" value="Proprietorship"> Proprietorship</label>
+                        <label><input type="checkbox" value="Partnership"> Partnership</label>
+                        <label><input type="checkbox" value="LLP"> LLP</label>
+                        <label><input type="checkbox" value="Pvt Ltd"> Pvt Ltd</label>
+                        <label><input type="checkbox" value="Public Ltd"> Public Ltd</label>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                <button class="btn save-btn prev-btn d-none">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+                   
+                    <button class="btn save-btn next-btn" ng-click="SaveStep1()">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="form-step" data-step="2" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Business Registration Details</h5>
+
+            <div class="form-grid mt-3">
+
+                <div>
+                    <label class="form-label">PAN</label>
+                    <input type="text" class="form-control" id="pan" maxlength="10" ng-model="PanNo">
+                    <small class="text-muted validation-msg" id="panMsg"></small>
+                </div>
+
+                <div>
+                    <label class="form-label">TAN</label>
+                    <input type="text" class="form-control" id="tan" maxlength="10" ng-model="TAN">
+                    <small class="text-muted validation-msg" id="tanMsg"></small>
+                </div>
+
+                <div>
+                    <label class="form-label">GSTIN</label>
+                    <input type="text" class="form-control" id="gst" maxlength="15" ng-model="GSTIN">
+                    <small class="text-muted validation-msg" id="gstMsg"></small>
+                </div>
+
+                <div>
+                    <label class="form-label">CIN / LLPIN</label>
+                    <input type="text" class="form-control" id="cin" ng-model="CIN">
+                    <small class="text-muted validation-msg" id="cinMsg"></small>
+                </div>
+
+                <div>
+                    <label class="form-label">Shop & Establishment Registration</label>
+                    <input type="text" class="form-control" ng-model="SHOPREGI">
+                </div>
+
+                <div>
+                    <label class="form-label">MSME (Udyam) Registration</label>
+                    <input type="text" class="form-control" ng-model="MSME">
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+
+                    <button class="btn save-btn next-btn" ng-click="SaveStep2()">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="form-step" data-step="3" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Statutory & Labour Law Compliance</h5>
+
+            <div class="form-grid mt-3">
+
+                <div>
+                    <label class="form-label">EPF Registration No.</label>
+                    <input type="text" class="form-control" ng-model="EPFREGNO">
+                </div>
+
+                <div>
+                    <label class="form-label">ESIC Registration No.</label>
+                    <input type="text" class="form-control" ng-model="ESICREGNO">
+                </div>
+
+                <div>
+                    <label class="form-label">Professional Tax Registration</label>
+                    <input type="text" class="form-control" ng-model="ProfessionalREGNO">
+                </div>
+
+                <div>
+                    <label class="form-label">Labour Welfare Fund Registration</label>
+                    <input type="text" class="form-control" ng-model="LabourREGNO">
+                </div>
+
+                <div>
+                    <label class="form-label">Contract Labour Registration No.</label>
+                    <input type="text" class="form-control" ng-model="ContractREGNO">
+                </div>
+
+                <!-- License Number -->
+                <div>
+                    <label class="form-label">Labour License No.</label>
+                    <input type="text" class="form-control" ng-model="LabourLicenseNO">
+                </div>
+
+                <!-- License Validity -->
+                <div>
+                    <label class="form-label">License Validity</label>
+                    <input type="date" class="form-control" id="licenseDate" ng-model="LicenseValidity">
+                    <small id="licenseMsg" class="text-muted"></small>
+                </div>
+
+                <!-- Employee Count -->
+                <div>
+                    <label class="form-label">License Employee Count</label>
+                    <input type="text" class="form-control" id="empCount" min="0" ng-model="LicenseEmployeeCount"  onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                    <small id="empMsg" class="text-muted"></small>
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+                   
+                    <button class="btn save-btn next-btn" ng-click="SaveStep3()">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="form-step" data-step="4" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Financial Details</h5>
+
+            <div class="form-grid mt-3">
+
+                <div>
+                    <label class="form-label">Bank Name</label>
+                    <input type="text" class="form-control" ng-model="BankName">
+                </div>
+
+                <div>
+                    <label class="form-label">Account Number</label>
+                    <input type="text" class="form-control" id="accountNo" ng-model="AccountNumber" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                    <small id="accMsg" class="text-muted"></small>
+                </div>
+
+                <div>
+                    <label class="form-label">IFSC Code</label>
+                    <input type="text" class="form-control" id="ifsc" maxlength="11" ng-model="IFSCCode">
+                    <small id="ifscMsg" class="text-muted"></small>
+                </div>
+
+                <!-- Cancelled Cheque -->
+                <div>
+                    <label class="form-label d-block">Cancelled Cheque</label>
+
+                    <div class="d-flex gap-3 mt-1" >
+                        <select ng-model="CancelledCheque" class="form-select">
+                            <option value="">Select</option>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                        </select>
+                     
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+
+                    <button class="btn save-btn next-btn" ng-click="SaveStep4()">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="form-step" data-step="5" style="display: none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Service Profile</h5>
+
+            <div class="form-grid mt-3">
+
+                <!-- Services Offered -->
+                
+                <div class="multi-select" style="position:relative; width:300px;">
+
+                    <label>Services Offered</label>
+
+                    <input type="text"
+                           id="ServicesOffered"
+                           readonly  class="form-control"
+                           placeholder="Select"
+                           style="width:100%; padding:6px; cursor:pointer;" />
+
+                    <div id="serviceDropdown" class="multi-select-dropdown"
+                         style="display:none; position:absolute; background:#fff; border:1px solid #ccc; width:100%; max-height:150px; overflow:auto; z-index:999;">
+
+                        <label><input type="checkbox" value="Manpower Supply"> Manpower Supply</label><br>
+                        <label><input type="checkbox" value="Facility Management"> Facility Management</label><br>
+                        <label><input type="checkbox" value="Security Services"> Security Services</label><br>
+                        <label><input type="checkbox" value="Housekeeping"> Housekeeping</label><br>
+                        <label><input type="checkbox" value="IT Services"> IT Services</label><br>
+                        <label><input type="checkbox" value="Consulting"> Consulting</label><br>
+
+                    </div>
+
+                </div>
+
+                <!-- Industries Served -->
+                <div class="multi-select" style="position:relative; width:300px;">
+
+                    <label class="form-label">Industries Served</label>
+
+                    <input type="text"
+                           readonly id="IndustriesServed"
+                           class="form-control multi-input"
+                           data-target="industriesDropdown"
+                           placeholder="Select"
+                           style="width:100%; padding:6px; cursor:pointer;" />
+
+                    <div id="industriesDropdown"
+                         class="multi-select-dropdown"
+                         style="display:none; position:absolute; background:#fff; border:1px solid #ccc; width:100%; max-height:150px; overflow:auto; z-index:999; padding:5px;">
+
+                        <label><input type="checkbox" value="Manufacturing"> Manufacturing</label><br>
+                        <label><input type="checkbox" value="IT"> IT</label><br>
+                        <label><input type="checkbox" value="Healthcare"> Healthcare</label><br>
+                        <label><input type="checkbox" value="Retail"> Retail</label><br>
+                        <label><input type="checkbox" value="Banking"> Banking</label><br>
+                        <label><input type="checkbox" value="Logistics"> Logistics</label><br>
+
+                    </div>
+                </div>
+
+                <!-- Total Employees -->
+                <div>
+                    <label class="form-label">Total Employees</label>
+                    <input type="text" class="form-control" id="totalEmp" ng-model="TotalEmployees" min="0" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                    <small id="totalEmpMsg" class="text-muted"></small>
+                </div>
+
+                <!-- Operational Locations -->
+                <div>
+                    <label class="form-label">Operational Locations</label>
+                    <input type="text" class="form-control" placeholder="e.g. Mumbai, Delhi, Bangalore" ng-model="OperationalLocations" >
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">                     
+                    <button class="btn save-btn next-btn" ng-click="SaveStep5()">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="form-step" data-step="6" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Experience & References</h5>
+
+            <div class="form-grid mt-3">
+
+                <div>
+                    <label class="form-label">Years of Experience</label>
+                    <input type="text" class="form-control" id="expYears" min="0" ng-model="YearsOfExperience" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                    <small id="expMsg" class="text-muted"></small>
+                </div>
+
+                <div>
+                    <label class="form-label">Key Clients</label>
+                    <input type="text" class="form-control" placeholder="e.g. TalentCompliance, Ezcompliance" ng-model="KeyClients" />
+                </div>
+
+                <div>
+                    <label class="form-label">Similar Contracts (if any)</label>
+                    <input type="text" class="form-control" ng-model="SimilarContracts" />
+                </div>
+
+                <!-- Uploads -->
+                <div>
+                    <label class="form-label">Upload Copy 1</label>
+                    <input type="file"
+                           class="form-control"
+                           file-model="File1"
+                           on-change="saveFile('File1',7)" />
+                    <a ng-if="File1"
+                       href="javascript:void(0)"
+                       class="icon-link me-2"
+                       ng-click="ViewFileC(File1,'Upload Copy 1')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File1"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File1,'Upload Copy 1')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div>
+                    <label class="form-label">Upload Copy 2</label>
+                    <input type="file"
+                           class="form-control"
+                           file-model="File2"
+                           on-change="saveFile('File2',9)" />
+                    <a ng-if="File2"
+                       href="javascript:void(0)"
+                       class="icon-link me-2"
+                       ng-click="ViewFileC(File2,'Upload Copy 2')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File2"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File2,'Upload Copy 2')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div>
+                    <label class="form-label">Upload Copy 3</label>
+                    <input type="file"
+                           class="form-control"
+                           file-model="File3"
+                           on-change="saveFile('File3',10)" />
+                    <a ng-if="File3"
+                       href="javascript:void(0)"
+                       class="icon-link me-2"
+                       ng-click="ViewFileC(File3,'Upload Copy 3')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File3"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File3,'Upload Copy 3')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- REFERENCES  -->
+
+            <hr class="my-4">
+
+            <h6 style="color:var(--primary)">Reference 1</h6>
+            <div class="form-grid mt-2">
+
+                <input type="text" class="form-control"  ng-model="NameOrganization1" placeholder="Name of Organisation">
+                <input type="text" class="form-control"  ng-model="ServiceType1" placeholder="Type of Service">
+                <input type="text" class="form-control"  ng-model="ConcernPerson1" placeholder="Concern Person Name">
+                <input type="text" class="form-control"  ng-model="Designation1" placeholder="Designation">
+                <input type="text" class="form-control"  ng-model="MobileNo1" placeholder="Mobile No."  onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                <input type="email" id="txtEmail1" class="form-control"  ng-model="EmailId1" placeholder="Email ID" onblur="validateEmail('#txtEmail1')">
+
+            </div>
+
+            <h6 class="mt-4" style="color:var(--primary)">Reference 2</h6>
+            <div class="form-grid mt-2">
+
+                <input type="text" class="form-control" ng-model="NameOrganization2" placeholder="Name of Organisation">
+                <input type="text" class="form-control" ng-model="ServiceType2" placeholder="Type of Service">
+                <input type="text" class="form-control" ng-model="ConcernPerson2" placeholder="Concern Person Name">
+                <input type="text" class="form-control" ng-model="Designation2" placeholder="Designation">
+                <input type="text" class="form-control" ng-model="MobileNo2" placeholder="Mobile No."  onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                <input type="email" id="txtEmail2" class="form-control" ng-model="EmailId2" placeholder="Email ID" onblur="validateEmail('#txtEmail2')">
+
+            </div>
+
+            <h6 class="mt-4" style="color:var(--primary)">Reference 3</h6>
+            <div class="form-grid mt-2">
+                <input type="text" class="form-control" ng-model="NameOrganization3" placeholder="Name of Organisation">
+                <input type="text" class="form-control" ng-model="ServiceType3" placeholder="Type of Service">
+                <input type="text" class="form-control" ng-model="ConcernPerson3" placeholder="Concern Person Name">
+                <input type="text" class="form-control" ng-model="Designation3" placeholder="Designation">
+                <input type="text" class="form-control" ng-model="MobileNo3" placeholder="Mobile No."  onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                <input type="email" id="txtEmail3" class="form-control" ng-model="EmailId3" placeholder="Email ID" onblur="validateEmail('#txtEmail3')">
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-4">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+
+                    <button class="btn save-btn next-btn" ng-click="SaveStep6()">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="form-step" data-step="7" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Documents Checklist</h5>
+
+            <p class="text-muted mb-2">Upload these:</p>
+
+            <div class="form-grid mt-2">
+
+                <!-- ITEM -->
+                <div class="doc-item">
+                    <label>PAN Card</label>
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File4"
+                           on-change="saveFile('File4',11)" />
+                    <a ng-if="File4"
+                       href="javascript:void(0)"
+                       class="icon-link me-2"
+                       ng-click="ViewFileC(File4,'PAN Card')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File4"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File4,'PAN Card')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>GST Certificate</label>
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File5"
+                           on-change="saveFile('File5',12)" />  <a ng-if="File5"
+                                                                   href="javascript:void(0)"
+                                                                   class="icon-link me-2"
+                                                                   ng-click="ViewFileC(File5,'GST Certificate')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File5"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File5,'Upload Copy 2')">
+                        <i class="bi bi-download"></i>
+                    </a>
+
+                </div>
+
+                <div class="doc-item">
+                    <label>Incorporation Certificate</label>
+                   
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File6"
+                           on-change="saveFile('File6',13)" />  <a ng-if="File6"
+                                                                   href="javascript:void(0)"
+                                                                   class="icon-link me-2"
+                                                                   ng-click="ViewFileC(File6,'Incorporation Certificate')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File6"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File6,'Incorporation Certificate')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>EPF & ESIC Certificates</label>
+                   
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File7"
+                           on-change="saveFile('File7',14)" />  <a ng-if="File7"
+                                                                   href="javascript:void(0)"
+                                                                   class="icon-link me-2"
+                                                                   ng-click="ViewFileC(File7,'EPF & ESIC Certificates')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File7"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File7,'EPF & ESIC Certificates')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Labour License</label>
+                  
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File8"
+                           on-change="saveFile('File8',15)" />  <a ng-if="File8"
+                                                                   href="javascript:void(0)"
+                                                                   class="icon-link me-2"
+                                                                   ng-click="ViewFileC(File8,'Labour License')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File8"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File8,'Labour License')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Cancelled Cheque</label>
+                
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File9"
+                           on-change="saveFile('File9',16)" />  <a ng-if="File9"
+                                                                   href="javascript:void(0)"
+                                                                   class="icon-link me-2"
+                                                                   ng-click="ViewFileC(File9,'Cancelled Cheque')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File9"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File9,'Cancelled Cheque')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>ITR 1</label>
+                
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File10"
+                           on-change="saveFile('File10',17)" />  <a ng-if="File10"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File10,'ITR 1')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File10"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File10,'ITR 1')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>ITR 2</label>
+                  
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File11"
+                           on-change="saveFile('File11',18)" />  <a ng-if="File11"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File11,'ITR 2')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File11"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File11,'ITR 2')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>ITR 3</label>
+                 
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File12"
+                           on-change="saveFile('File12',19)" />  <a ng-if="File12"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File12,'ITR 3')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File12"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File12,'ITR 3')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Financial Statements 1</label>
+                
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File13"
+                           on-change="saveFile('File13',20)" />  <a ng-if="File13"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File13,'Financial Statements 1')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File13"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File13,'Financial Statements 1')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Financial Statements 2</label>
+                  
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File14"
+                           on-change="saveFile('File14',21)" />  <a ng-if="File14"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File14,'Financial Statements 2')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File14"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File14,'Financial Statements 2')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Financial Statements 3</label>
+                 
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File15"
+                           on-change="saveFile('File15',22)" />  <a ng-if="File15"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File15,'Financial Statements 3')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File15"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File15,'Financial Statements 3')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>PF/ESIC Challans</label>
+             
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File16"
+                           on-change="saveFile('File16',23)" />  <a ng-if="File16"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File16,'PF/ESIC Challans')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File16"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File16,'PF/ESIC Challans')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Client Agreements 1</label>
+                
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File17"
+                           on-change="saveFile('File17',24)" />  <a ng-if="File17"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File17,'Client Agreements 1')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File17"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File17,'Client Agreements 1')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Client Agreements 2</label>
+                 
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File18"
+                           on-change="saveFile('File18',25)" />  <a ng-if="File18"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File18,'Client Agreements 2')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File18"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File18,'Client Agreements 2')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div class="doc-item">
+                    <label>Insurance Policy</label>
+                  
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File19"
+                           on-change="saveFile('File19',26)" />  
+                    <a ng-if="File19"  href="javascript:void(0)"   class="icon-link me-2" ng-click="ViewFileC(File19,'Insurance Policy')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File19"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File19,'Insurance Policy')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="entity-footer d-flex justify-content-between mt-4">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+                
+                    <button class="btn save-btn next-btn">Next</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 8 -->
+    <div class="form-step" data-step="8" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">Declarations</h5>
+
+            <div class="declaration-list">
+
+                <div class="decl-item" data-id="indemnity">
+                    <div>
+                        <strong>Indemnity Clause</strong>
+                        <div class="status"
+                             ng-class="Dec1==1 ? 'done' : 'pending'">
+                            {{ Dec1==1 ? 'Done' : 'Pending' }}
+                        </div>
+                    </div>
+                    <button class="btn view-btn open-decl" ng-hide="Dec1==1"  ng-click="openDeclaration('Indemnity Clause')" >View & Accept</button>
+                </div>
+
+                <div class="decl-item" data-id="confidentiality">
+                    <div>
+                        <strong>Confidentiality Agreement</strong>
+                        <div class="status"
+                             ng-class="Dec2==1 ? 'done' : 'pending'">
+                            {{ Dec2==1 ? 'Done' : 'Pending' }}
+                        </div>
+                    </div>
+                    <button class="btn view-btn open-decl"  ng-hide="Dec2==1"  ng-click="openDeclaration('Confidentiality Agreement')">View & Accept</button>
+                </div>
+
+                <div class="decl-item" data-id="conduct">
+                    <div>
+                        <strong>Code of Conduct</strong>
+                        <div class="status"
+                             ng-class="Dec3==1 ? 'done' : 'pending'">
+                            {{ Dec3==1 ? 'Done' : 'Pending' }}
+                        </div>
+                    </div>
+                    <button class="btn view-btn open-decl"  ng-hide="Dec3==1"  ng-click="openDeclaration('Code of Conduct')">View & Accept</button>
+                </div>
+
+                <div class="decl-item" data-id="aml">
+                    <div>
+                        <strong>AML Declaration</strong>
+                        <div class="status"
+                             ng-class="Dec4==1 ? 'done' : 'pending'">
+                            {{ Dec4==1 ? 'Done' : 'Pending' }}
+                        </div>
+                    </div>
+                    <button class="btn view-btn open-decl"  ng-hide="Dec4==1"  ng-click="openDeclaration('AML Declaration')">View & Accept</button>
+                </div>
+
+                <div class="decl-item" data-id="abc">
+                    <div>
+                        <strong>Anti-Bribery</strong>
+                        <div class="status"
+                             ng-class="Dec5==1 ? 'done' : 'pending'">
+                            {{ Dec5==1 ? 'Done' : 'Pending' }}
+                        </div>
+                    </div>
+                    <button class="btn view-btn open-decl"  ng-hide="Dec5==1"  ng-click="openDeclaration('Anti-Bribery')">View & Accept</button>
+                </div>
+
+                <div class="decl-item" data-id="dpdp">
+                    <div>
+                        <strong>DPDP Declaration</strong>
+                        <div class="status"
+                             ng-class="Dec6==1 ? 'done' : 'pending'">
+                            {{ Dec6==1 ? 'Done' : 'Pending' }}
+                        </div>
+                    </div>
+                    <button class="btn view-btn open-decl"  ng-hide="Dec6==1"  ng-click="openDeclaration('DPDP Declaration')" >View & Accept</button>
+                </div>
+
+            </div>
+
+            <div class="entity-footer d-flex justify-content-between mt-3">
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+                    <button class="btn save-btn" id="declNext" ng-click="validateDeclarations()">Next</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- STEP 14 -->
+    <div class="form-step" data-step="9" style="display:none;">
+
+        <div class="card entity-card p-3">
+
+            <h5 style="color:var(--primary)">General Undertaking</h5>
+
+            <div class="mt-3" style="font-size:13px; line-height:1.6; color:#444;">
+
+                <p>I/We hereby declare that:</p>
+
+                <ul>
+                    <li>All information provided is true and correct</li>
+                    <li>We comply with all applicable Indian labour laws</li>
+                    <li>We accept all terms, policies, and declarations mentioned above</li>
+                </ul>
+
+            </div>
+
+            <!-- SIGNATURE SECTION -->
+            <div class="form-grid mt-3">
+
+                <div>
+                    <label class="form-label">Authorized Signatory Name</label>
+                    <input type="text" class="form-control" ng-model="SignatoryName">
+                </div>
+        
+                <div>
+                    <label class="form-label">Designation</label>
+                    <input type="text" class="form-control" ng-model="SignatoryDesignation">
+                </div>
+
+                <div>
+                    <label class="form-label">Signature (Upload)</label>
+                 
+
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File20"
+                           on-change="saveFile('File20',35)" />  <a ng-if="File20"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File20,'Signature')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File20"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File20,'Signature')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div>
+                    <label class="form-label">Company Seal (Upload)</label>
+                  
+
+                    <input type="file"
+                           class="form-control mt-1"
+                           file-model="File21"
+                           on-change="saveFile('File21',36)" />  <a ng-if="File21"
+                                                                    href="javascript:void(0)"
+                                                                    class="icon-link me-2"
+                                                                    ng-click="ViewFileC(File21,'Company Seal ')">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a ng-if="File21"
+                       href="javascript:void(0)"
+                       ng-click="DownloadFileC(File21,'Company Seal')">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+
+                <div>
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="txtGeneralDate" ng-model="GeneralDate">
+                </div>
+
+            </div>
+
+            <!-- FINAL ACTION -->
+            <div class="entity-footer d-flex justify-content-between mt-4">
+
+                <button class="btn save-btn prev-btn">Previous</button>
+
+                <div class="ms-auto d-flex gap-2">
+                    @*<button class="btn save-btn">Save Draft</button>*@
+                    <button class="btn save-btn next-btn" ng-click="FinalSave()">Submit</button>
+                    @*<button class="btn save-btn" id="finalSubmit">Submit</button>*@         
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!--Modal for Declaration-->
+    <div class="modal fade" id="declModal" tabindex="-1" >
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h6 class="modal-title" id="declTitle"></h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="legal-box" id="declContent"></div>
+
+                    <div class="legal-agree mt-3">
+                        <label>
+                            <input type="checkbox" id="declAgree">
+                            I agree
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn save-btn" id="confirmDecl" ng-click="confirmDeclaration()" >Confirm</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let currentStep = 1;
+    const totalSteps = 9;
+
+    /* STEP SWITCH */
+    const stepIndicators = document.querySelectorAll(".step-item");
+
+    function showStep(step) {
+
+        document.querySelectorAll(".form-step").forEach(s => s.style.display = "none");
+        document.querySelector(`[data-step="${step}"]`).style.display = "block";
+
+        stepIndicators.forEach((el, index) => {
+            el.classList.remove("active", "completed");
+
+            if (index + 1 < step) {
+                el.classList.add("completed");
+            }
+            else if (index + 1 === step) {
+                el.classList.add("active");
+            }
+        });
+
+        document.querySelector(".prev-btn").classList.toggle("d-none", step === 1);
+    }
+
+    document.addEventListener("click", function (e) {
+
+        if (e.target.classList.contains("next-btn")) {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                showStep(currentStep);
+            }
+        }
+
+        if (e.target.classList.contains("prev-btn")) {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+    });
+
+    /* MULTI SELECT */
+    const display = document.getElementById("multiDisplay");
+    const dropdown = document.getElementById("multiDropdown");
+
+    display.addEventListener("click", () => {
+        dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    });
+
+    dropdown.addEventListener("change", () => {
+        const checks = dropdown.querySelectorAll("input[type=checkbox]");
+        const selected = [];
+
+        checks.forEach(c => {
+            if (c.checked && c.value !== "all") {
+                selected.push(c.value);
+            }
+        });
+
+        display.value = selected.join(", ");
+    });
+
+    /* CLOSE ON OUTSIDE CLICK */
+    document.addEventListener("click", function (e) {
+        if (!e.target.closest(".multi-select")) {
+            dropdown.style.display = "none";
+        }
+    });
+
+    showStep(currentStep);
+</script>
+<script>
+
+    /* PAN VALIDATION */
+    document.getElementById("pan").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+        const msg = document.getElementById("panMsg");
+
+        if (val.length === 10) {
+            msg.innerText = regex.test(val) ? "Valid PAN " : "Invalid PAN ";
+            msg.style.color = regex.test(val) ? "green" : "red";
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+    /* TAN VALIDATION */
+    //document.getElementById("tan").addEventListener("input", function () {
+    //    const val = this.value.toUpperCase();
+    //    this.value = val;
+
+    //    const regex = /^[A-Z]{4}[0-9]{5}[A-Z]{1}$/;
+    //    const msg = document.getElementById("tanMsg");
+
+    //    if (val.length === 10) {
+    //        msg.innerText = regex.test(val) ? "Valid TAN " : "Invalid TAN ";
+    //        msg.style.color = regex.test(val) ? "green" : "red";
+    //    } else {
+    //        msg.innerText = "";
+    //    }
+    //});
+
+    /* GSTIN VALIDATION */
+    document.getElementById("gst").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+        const msg = document.getElementById("gstMsg");
+
+        if (val.length === 15) {
+            msg.innerText = regex.test(val) ? "Valid GSTIN " : "Invalid GSTIN ";
+            msg.style.color = regex.test(val) ? "green" : "red";
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+    /* CIN / LLPIN AUTO DETECT */
+    document.getElementById("cin").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const msg = document.getElementById("cinMsg");
+
+        const cinRegex = /^[A-Z0-9]{21}$/;   // CIN
+        const llpRegex = /^[A-Z]{3}-[0-9]{4}$/; // LLPIN
+
+        if (val.length > 0) {
+            if (cinRegex.test(val)) {
+                msg.innerText = "Detected: CIN (Company) ";
+                msg.style.color = "green";
+            }
+            else if (llpRegex.test(val)) {
+                msg.innerText = "Detected: LLPIN (LLP) ";
+                msg.style.color = "green";
+            }
+            else {
+                msg.innerText = "Invalid format ";
+                msg.style.color = "red";
+            }
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+</script>
+<script>
+
+    
+
+    /*Combined step 8 declartions*/
+    const declData = {
+        indemnity: `
+        <p>Vendor agrees to indemnify...</p>
+        <ul>
+            <li>Non-compliance with laws</li>
+            <li>Non-payment of dues</li>
+        </ul>
+    `,
+        confidentiality: `
+        <p>Vendor acknowledges access to confidential info...</p>
+        <ul>
+            <li>No disclosure</li>
+            <li>Use only for service</li>
+        </ul>
+    `,
+        conduct: `<p>Code of conduct details...</p>`,
+        aml: `<p>AML declaration...</p>`,
+        abc: `<p>Anti-bribery declaration...</p>`,
+        dpdp: `<p>DPDP compliance...</p>`
+    };
+
+    let currentDecl = null;
+    const completedDecl = new Set();
+
+    /* OPEN MODAL */
+    document.querySelectorAll(".open-decl").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const parent = this.closest(".decl-item");
+            const id = parent.dataset.id;
+
+            currentDecl = id;
+
+            document.getElementById("declTitle").innerText = parent.querySelector("strong").innerText;
+            document.getElementById("declContent").innerText = declData[id];
+
+            document.getElementById("declAgree").checked = false;
+            enableScrollCheck();
+
+            new bootstrap.Modal(document.getElementById("declModal")).show();
+        });
+    });
+
+    function enableScrollCheck() {
+        const box = document.getElementById("declContent");
+        const checkbox = document.getElementById("declAgree");
+
+        checkbox.disabled = true;
+
+        box.scrollTop = 0;
+
+        // If content is small → enable directly
+        if (box.scrollHeight <= box.clientHeight + 10) {
+            checkbox.disabled = false;
+            return;
+        }
+
+        box.onscroll = function () {
+            if (box.scrollTop + box.clientHeight >= box.scrollHeight - 5) {
+                checkbox.disabled = false;
+            }
+        };
+    }
+
+    /* CONFIRM */
+    document.getElementById("confirmDecl").addEventListener("click", function () {
+
+        if (!document.getElementById("declAgree").checked) return;
+
+        completedDecl.add(currentDecl);
+
+        const item = document.querySelector(`.decl-item[data-id="${currentDecl}"]`);
+        item.querySelector(".status").innerText = "Done";
+        item.querySelector(".status").classList.remove("pending");
+        item.querySelector(".status").classList.add("done");
+
+        bootstrap.Modal.getInstance(document.getElementById("declModal")).hide();
+    });
+
+    document.getElementById("declNext").addEventListener("click", function () {
+
+        const total = document.querySelectorAll(".decl-item").length;
+
+        //if (completedDecl.size !== total) {
+        //    alert("Please complete all declarations");
+        //    return;
+        //}
+
+        currentStep++;
+        showStep(currentStep);
+    });
+
+
+</script>
+<script>
+    window.onload = function () {
+
+        var input = document.getElementById("ServicesOffered");
+        var dropdown = document.getElementById("serviceDropdown");
+
+        // open dropdown
+        input.addEventListener("click", function (e) {
+            e.stopPropagation();
+            dropdown.style.display = "block";
+        });
+
+        // checkbox change
+        dropdown.addEventListener("change", function () {
+            var selected = [];
+            var checkboxes = dropdown.querySelectorAll("input[type='checkbox']");
+
+            checkboxes.forEach(function (cb) {
+                if (cb.checked) {
+                    selected.push(cb.value);
+                }
+            });
+
+            input.value = selected.join(", ");
+        });
+
+        // close on outside click
+        document.addEventListener("click", function (e) {
+            if (!dropdown.contains(e.target) && e.target !== input) {
+                dropdown.style.display = "none";
+            }
+        });
+
+    };
+</script>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // OPEN DROPDOWN
+        document.querySelectorAll(".multi-input").forEach(function (input) {
+            input.addEventListener("click", function (e) {
+                e.stopPropagation();
+
+                // close all first
+                document.querySelectorAll(".multi-select-dropdown").forEach(d => d.style.display = "none");
+
+                var targetId = this.getAttribute("data-target");
+                document.getElementById(targetId).style.display = "block";
+            });
+        });
+
+        // SELECT VALUES
+        document.querySelectorAll(".multi-select-dropdown").forEach(function (dropdown) {
+
+            dropdown.addEventListener("change", function () {
+                var selected = [];
+
+                dropdown.querySelectorAll("input[type='checkbox']").forEach(function (cb) {
+                    if (cb.checked) selected.push(cb.value);
+                });
+
+                // find linked input
+                var input = document.querySelector('[data-target="' + dropdown.id + '"]');
+                input.value = selected.join(", ");
+            });
+
+        });
+
+        // CLOSE ON OUTSIDE CLICK
+        document.addEventListener("click", function () {
+            document.querySelectorAll(".multi-select-dropdown").forEach(d => d.style.display = "none");
+        });
+
+    });
+</script>

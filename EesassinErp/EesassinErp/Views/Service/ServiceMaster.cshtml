@@ -1,0 +1,144 @@
+﻿
+@{
+    ViewBag.Title = "Service Master";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/ckeditor/ckeditor.js"></script>
+<script src="~/Content/ckfinder/ckfinder.js"></script>
+<script src="~/Scripts/myjslib/ServiceMasterController.js?Ver=@ViewBag.Version"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        File.prototype.convertToBase64 = function (callback) {
+            var reader = new FileReader();
+            reader.onloadend = function (e) {
+                callback(e.target.result, e.target.error);
+            };
+            reader.readAsDataURL(this);
+        };
+        $("#DrFile").on('change', function () { 
+            var selectedFile = this.files[0];
+            var ext = selectedFile.name.split('.').pop();
+            if (this.files && this.files[0] && this.files[0].name.match(/\.(jpg|jpeg|png)$/)) {
+                if (selectedFile != "" && selectedFile != null) {
+                    selectedFile.convertToBase64(function (base64) {
+                        $("#hidByte1").val(base64);
+                        $("#hidFileName1").val(ext);
+                    });
+                }
+                else {
+                    $("#hidByte1").val('');
+                    $("#DrFile").val(null);
+                    $("#hidFileName1").val('');
+                }
+            } else {
+                $("#hidByte1").val('');
+                $("#DrFile").val(null);
+                $("#hidFileName1").val('');
+                //alert('This is not an image file!');
+                showMsgBox('This is not an image file!');
+            }
+        });
+    });
+</script>
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Service Master</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Service Master</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15" ng-init="GetServiceCode()">
+                                            <label class="control-label">Service Code<span class="vd_red">*</span></label>
+                                            <div class="input-box"> 
+                                                <input class="form-control clear validate" id="txtServiceCode" ng-model="ServiceCode" type="text" placeholder="Service Code" ng-disabled="true" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Service Title<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtServiceTitle", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "ServiceTitle" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-4 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Service Icon<span class="vd_red">(Required Only JPEG or PNG)</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("DrFile", "", new { type = "file", @class = "form-control clear", @ng_model = "sericons" })
+                                                @Html.TextBox("hidByte1", "", new { type = "hidden", @class = "clear", @ng_model = "iconstrbyt" })
+                                                <input type="hidden" id="hidFileName1">
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Service Description<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextArea("txtHeaderTemplate", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "HeaderTemplate", @name = "txtHeaderTemplate", @id = "txtHeaderTemplate", @rows = "8", @cols = "80" })
+                                                <script>$(document).ready(function () { CKEDITOR.replace('txtHeaderTemplate'); });</script>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15" style="display:none;">
+                                            <label class="control-label">Is Active<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.Partial("ddlActive")
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>
+

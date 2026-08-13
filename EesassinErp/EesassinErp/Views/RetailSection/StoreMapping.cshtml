@@ -1,0 +1,191 @@
+﻿@{
+    ViewBag.Title = "StoreMapping";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/RetailStoreMappingController.js"></script>
+<style>
+    .input-box {
+        position: relative;
+    }
+
+    .form-control {
+        width: 100%;
+        height: 34px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 5px;
+        font-size: 14px;
+        color: #333;
+        background-color: #fff;
+        cursor: pointer;
+        outline: none;
+    }
+
+        .form-control[multiple] {
+            height: auto;
+        }
+
+            .form-control[multiple] option[selected] {
+                background-color: #007bff;
+                color: #fff;
+            }
+
+            .form-control[multiple] option:hover {
+                background-color: #f5f5f5;
+            }
+</style>
+
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Store Mapping</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Store Mapping</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-lg-4 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Party Type<span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="BindModuleTypeList()">
+                                                <select id="ddlModuleType" autocomplete='address-level2' class="select2 form-control validate" ng-model="PartyTypeId" ng-change="AllPartySiteLoad()">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in AllModuleTypeList" value="{{x.Id}}">{{x.Module_Type}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select PartyName<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlCustomerId" class="form-control validate" ng-model="PartyId"   ng-change="AllUserListsLoad(PartyId);">
+                                                    <option  value="">Select</option>
+                                                    <option ng-repeat="x in AllPartyList" value="{{x.PartyId}}"> {{x.PartyName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select User<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select autocomplete='address-level2' class="select2 form-control validate" id="ddlUserList" ng-model="UserId" ng-change="BindAllStoreList()">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in AllUserList" value="{{x.LoginId}}">{{x.Name}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15" ng-show="IsOpen">
+                                            <label class="control-label">Store List<span class="vd_red">*</span></label>
+                                            <div class="input-box"> 
+                                                <table id="tblNavMenu" class="table compact table-hover table-striped table-bordered nowrap ng-scope"
+                                                       ng-model="NavMenuModel" style="width:100%">
+                                                    <thead>
+                                                        <tr>
+
+                                                            <th class="text-center w-50-p">
+                                                                <div class="checkbox checkbox-primary table-check-wt">
+                                                                    <input ng-disabled="!UserId" type="checkbox" class="clear" ng-model="chkAll" ng-change="chkAllRow()" />
+                                                                    <label></label>
+                                                                </div>
+                                                            </th>
+                                                            <th class="srno">S.No.</th>
+                                                            <th>Store Code</th>  
+                                                            <th>Ref. StoreCode</th> 
+                                                            <th>Store Name</th> 
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+
+
+                                                        <tr ng-repeat="x in OverallStoresList" repeat-done>
+                                                            <td class="text-center">
+                                                                <div class="checkbox checkbox-primary table-check-wt">
+                                                                    <input ng-disabled="!UserId" type="checkbox" class="clear" id="chkAllow" ng-model="x.IsAllow" ng-checked="x.IsAllow"
+                                                                           ng-change="chkRowAll($index)" />
+
+                                                                    <label></label>
+                                                                </div>
+                                                            </td>
+                                                            <td class="srno">
+                                                                {{$index+1}}
+                                                                <input type="hidden" id="hfMenuId" value="{{x.StoreId}}" />
+                                                            </td>
+                                                            <td>{{x.StoreCode}}</td> 
+                                                            <td>{{x.RefStoreCode}}</td> 
+                                                            <td>{{x.StoreName}}</td> 
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                        @*<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Start Date<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <input id="txtStartDate" type="date" class="form-control clear validate" ng-model="StartDate" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">End Date</label>
+                                            <div class="input-box">
+                                                <input id="txtEndDate" type="date" class="form-control clear" ng-model="EndDate" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>*@
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>

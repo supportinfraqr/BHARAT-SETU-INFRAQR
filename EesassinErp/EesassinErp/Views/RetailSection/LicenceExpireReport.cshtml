@@ -1,0 +1,62 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/RetailDashboard.js"></script>
+<div class="row mt-3" ng-if="LR_ViewFlag==1">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="col-md-12 pageheader pb-2" ng-init="LoadLicenseReg()">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h4 class="mb-0">License & Registration</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive nosearch" >
+                    @*ng-if="!MasterList"*@
+                    <table id="licenseregistration" class="table table-bordred tableFixHead datatable" ng-if="!MasterList">
+                        <thead class="bg-info">
+                            <tr class="noborder">
+                                <th>SrNo</th>
+                                <th>Store Code</th>
+                                <th>License name</th>
+                                <th>License Number</th>
+                                <th>Validity Start</th>
+                                <th>Validity End</th>
+                                <th>Days to Expire</th>
+                                <th>Expiry status</th>
+                                <th style="width: 13%;">Renewal Request</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="licenseMaster in LoadMasterList">
+                                <td>{{ licenseMaster.SrNo}} </td>
+                                <td> {{ licenseMaster.StoreCode }} </td>
+                                <td>{{ licenseMaster.LicenseName }}</td>
+                                <td>{{ licenseMaster.LicenseNumber }}</td>
+                                <td>{{ licenseMaster.ValidityStartDate }}</td>
+                                <td>{{ licenseMaster.ValidityEndDate }}</td>
+                                <td>{{ licenseMaster.DaysOfExpire }}</td>
+                                <td ng-class="{ 'text-danger': licenseMaster.ExpiryStatus === 'expire soon' }">
+                                    {{ licenseMaster.ExpiryStatus }}
+                                </td>
+                                <td class="text-center">
+                                    @*commented by pradeep there is no validstatus*@
+                                    @*<a ng-show="{{licenseMaster.ValidStatus}}==0" class="btn btn-approved" ng-click="ApprovalRecord(licenseMaster.Id)">Approve</a>*@
+                                    <a class="btn btn-approved" ng-click="ApprovalRecord(licenseMaster.Id)">Approve</a>
+
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                </div>
+              
+            </div>
+        </div>
+    </div>
+</div>

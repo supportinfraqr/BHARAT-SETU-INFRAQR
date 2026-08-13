@@ -1,0 +1,617 @@
+
+/****** Object:  StoredProcedure [RTL].[USP_LSDashboard]    Script Date: 29-10-2024 14:21:55 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ 
+ALTER PROCEDURE  [RTL].[USP_LSDashboard]
+@Id int =null, 
+@loginType varchar(10)=null, 
+@RegionId  varchar(10)=null, 
+@DocumentStatus  varchar(10)=null, 
+@LicenceStatus  varchar(Max)=null, 
+@ExpiryStatus  varchar(Max)=null, 
+@LicenceType  varchar(10)=null, 
+@PartyId  varchar(10)=null, 
+@Client  varchar(10)=null,
+@UserId  varchar(10)=null,
+@PaymentStatus  varchar(10)=null, 
+@InvoiceStatus varchar(10)=null, 
+@StoreId varchar(10)=null, 
+@LicenceId varchar(10)=null, 
+@State varchar(10)=null, 
+@Address varchar(Max)=null, 
+@Action int = null,
+@Result varchar(Max)='' Output 
+AS
+BEGIN  
+         Set @loginType= (select LoginType  from LoginTable where LoginId=@PartyId)
+     if(@Action=1)
+	 Begin 
+	
+			Set @RegionId=isnull(@RegionId,'-1') 
+			Set @DocumentStatus=isnull(@DocumentStatus,'-1') 
+			Set @LicenceStatus=isnull(@LicenceStatus,'-1')
+			Set @ExpiryStatus=isnull(@ExpiryStatus,'-1') 
+			Set @LicenceType=isnull(@LicenceType,'-1') 
+			Set @Client=isnull(@Client,'-1') 
+			Set @PaymentStatus=isnull(@PaymentStatus,'-1') 
+			Set @InvoiceStatus=isnull(@InvoiceStatus,'-1')
+			Set @StoreId=isnull(@StoreId,'-1')
+			set @LicenceId =isnull(@LicenceId,'-1')
+			set @State =isnull(@State,'-1')
+			set @Address =isnull(@Address,'-1')
+			if(@loginType='1')
+	   Begin
+		 	select LicenseName,count(lm.LicenseId)Number from  [RTL].StoreLicences SL
+					Left JOIN RTL.LicenceRequest LR ON LR.StoreLicenceId=SL.ID
+					INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId
+					INNER JOIN [RTL].LicenseMaster LM 	ON LM.LicenseId = SL.LicenseId  
+					INNER JOIN  RTL.StoreMapping SMM ON SMM.StoreId=SM.ID
+					left join evm.TBL_CITY c on c.CITY_CODE=SM.CityId 
+					--group by LicenseName
+			WHERE 
+			@RegionId= CASE WHEN @RegionId='-1' then @RegionId else RegionId End
+			and  
+			@DocumentStatus= CASE WHEN @DocumentStatus='-1' then @DocumentStatus else isnull(SL.Status,3) End 
+			and
+			@LicenceStatus= case when @LicenceStatus='-1' then @LicenceStatus
+			when @LicenceStatus='Applied' then ApplicationStatus
+			when @LicenceStatus='Not Applied' then ApplicationStatus
+			when @LicenceStatus='Issued' then LicenseStatus  end 
+			and
+			 @ExpiryStatus = CASE 
+                WHEN @ExpiryStatus = '-1' THEN @ExpiryStatus 
+                WHEN @ExpiryStatus = 'Expired' THEN 
+                CASE WHEN ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'') <> '01/01/1900'  and convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103) THEN 'Expired' END
+                WHEN @ExpiryStatus = 'Expiring Soon' THEN 
+                    CASE WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) > 0 and DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' END
+            END
+			and
+			@LicenceType= case when @LicenceType='-1' then @LicenceType else LStatus end 
+			and 
+			@Client= case when @Client='-1' then @Client else SMM.PartyId end 
+			and 
+			@PaymentStatus= case when @PaymentStatus='-1' then @PaymentStatus else isnull(PaymentStatus,'UnPaid') end 
+			and 
+			@InvoiceStatus= case when @InvoiceStatus='-1' then @InvoiceStatus else InvoiceStatus end 
+			and
+			@StoreId= case when @StoreId='-1' then @StoreId else SL.StoreId end 
+			and
+			@LicenceId =case when @LicenceId='-1' then @LicenceId else LM.LicenseId end
+			and
+			@State =case when @State='-1' then @State else C.STATE_ID end
+			and
+			@Address =case when @Address='-1' then @Address else SM.CompleteAddress end
+			GROUP BY LicenseName
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+		select LicenseName,count(lm.LicenseId)Number from  [RTL].StoreLicences SL
+					Left JOIN RTL.LicenceRequest LR ON LR.StoreLicenceId=SL.ID
+					INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId
+					INNER JOIN [RTL].LicenseMaster LM 	ON LM.LicenseId = SL.LicenseId  
+					INNER JOIN  RTL.StoreMapping SMM ON SMM.StoreId=SM.ID
+					left join evm.TBL_CITY c on c.CITY_CODE=SM.CityId 
+			WHERE 
+			@RegionId= CASE WHEN @RegionId='-1' then @RegionId else RegionId End
+			and  
+			@DocumentStatus= CASE WHEN @DocumentStatus='-1' then @DocumentStatus else isnull(SL.Status,3) End 
+			and
+			@LicenceStatus= case when @LicenceStatus='-1' then @LicenceStatus
+			when @LicenceStatus='Applied' then ApplicationStatus
+			when @LicenceStatus='Not Applied' then ApplicationStatus
+			when @LicenceStatus='Issued' then LicenseStatus  end 
+			and
+			@ExpiryStatus = CASE 
+                WHEN @ExpiryStatus = '-1' THEN @ExpiryStatus 
+               WHEN @ExpiryStatus = 'Expired' THEN 
+                CASE WHEN ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'') <> '01/01/1900'  and convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103) THEN 'Expired' END
+                WHEN @ExpiryStatus = 'Expiring Soon' THEN 
+                    CASE WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) > 0 and DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' END
+            END
+			and
+			@LicenceType= case when @LicenceType='-1' then @LicenceType else LStatus end 
+			and 
+			@Client= case when @Client='-1' then @Client else SMM.PartyId end 
+			and 
+			@PaymentStatus= case when @PaymentStatus='-1' then @PaymentStatus else isnull(PaymentStatus,'UnPaid') end 
+			and 
+			@InvoiceStatus= case when @InvoiceStatus='-1' then @InvoiceStatus else InvoiceStatus end 
+			and
+			@StoreId= case when @StoreId='-1' then @StoreId else SM.Id end 
+			and
+			@LicenceId =case when @LicenceId='-1' then @LicenceId else LM.LicenseId end
+			and
+			@State =case when @State='-1' then @State else C.STATE_ID end
+			and
+			@Address =case when @Address='-1' then @Address else SM.CompleteAddress end
+			
+		  and smm.PARTYId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId) 
+		  GROUP BY LicenseName
+		 End
+			else
+			Begin
+			select LicenseName,count(lm.LicenseId)Number from  [RTL].StoreLicences SL
+					Left JOIN RTL.LicenceRequest LR ON LR.StoreLicenceId=SL.ID
+					INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId
+					INNER JOIN [RTL].LicenseMaster LM 	ON LM.LicenseId = SL.LicenseId  
+					INNER JOIN  RTL.StoreMapping SMM ON SMM.StoreId=SM.ID
+					left join evm.TBL_CITY c on c.CITY_CODE=SM.CityId 
+			WHERE 
+			@RegionId= CASE WHEN @RegionId='-1' then @RegionId else RegionId End
+			and  
+		@DocumentStatus= CASE WHEN @DocumentStatus='-1' then @DocumentStatus else isnull(SL.Status,3) End 
+			and
+			@LicenceStatus= case when @LicenceStatus='-1' then @LicenceStatus
+			when @LicenceStatus='Applied' then ApplicationStatus
+			when @LicenceStatus='Not Applied' then ApplicationStatus
+			when @LicenceStatus='Issued' then LicenseStatus  end 
+			and
+			@ExpiryStatus = CASE 
+                WHEN @ExpiryStatus = '-1' THEN @ExpiryStatus 
+                WHEN @ExpiryStatus = 'Expired' THEN 
+                CASE WHEN ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'') <> '01/01/1900'  and convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103) THEN 'Expired' END
+                WHEN @ExpiryStatus = 'Expiring Soon' THEN 
+                    CASE WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) > 0 and DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' END
+            END
+			and
+			@LicenceType= case when @LicenceType='-1' then @LicenceType else LStatus end 
+			and 
+			@Client= case when @Client='-1' then @Client else SMM.PartyId end 
+			and 
+			@PaymentStatus= case when @PaymentStatus='-1' then @PaymentStatus else isnull(PaymentStatus,'UnPaid') end 
+			and 
+			@InvoiceStatus= case when @InvoiceStatus='-1' then @InvoiceStatus else InvoiceStatus end 
+			and
+			@StoreId= case when @StoreId='-1' then @StoreId else SM.Id end 
+			and
+			@LicenceId =case when @LicenceId='-1' then @LicenceId else LM.LicenseId end
+			and
+			@State =case when @State='-1' then @State else C.STATE_ID end
+			and
+			@Address =case when @Address='-1' then @Address else SM.CompleteAddress end
+			and SMM.UserId=@PartyId
+			GROUP BY LicenseName
+			End
+	   End 
+			
+	 End
+	 if(@Action=2)-------------For Region
+	 Begin
+	   if(@loginType='1')
+	   Begin
+		select Distinct RegionId,Case When Isnull(RM.Name,'-1')='-1' then 'Blank' else RM.Name End  Name from RTL.StoreMaster SM Left JOIN 
+		RTL.RegionMaster RM ON SM.REGIONID=RM.ID 
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+		 select Distinct RegionId,Case When Isnull(RM.Name,'-1')='-1' then 'Blank' else RM.Name End  Name from 
+			RTL.StoreMaster SM 
+			inner join rtl.StoreMapping SMM ON SMM.StoreId=SM.ID
+			Left JOIN RTL.RegionMaster RM ON SM.REGIONID=RM.ID 
+			where SMM.PartyId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)
+		 End
+			else
+			Begin
+			select Distinct RegionId,Case When Isnull(RM.Name,'-1')='-1' then 'Blank' else RM.Name End  Name from 
+			RTL.StoreMaster SM 
+			inner join rtl.StoreMapping SMM ON SMM.StoreId=SM.ID
+			Left JOIN RTL.RegionMaster RM ON SM.REGIONID=RM.ID 
+			where SMM.UserId=@PartyId 
+			End
+	   End
+	   
+	 
+	 End
+	 if(@Action=3)------------For 
+	 Begin
+	  select * from RTL.StoreLicences SM  
+	 End
+	  if(@Action=4)-------For Status
+	 Begin
+	  select  Distinct case when Isnull(Status,'-1')='-1' then '3'else Status end Status, 
+	  Case When Isnull(Status,'-1')='-1' then 'Pending' 
+	  When Status=0 then 'Draft'  When Status=1 then 'Saved' End DocumentStatusList from rtl.StoreLicences
+	 End
+ if(@Action=5)-------For Payment Status
+	 Begin
+	      if(@loginType='1')
+	   Begin
+		   select Distinct Case When PaymentStatus='SUCCESS' then 'Paid' else 'UnPaid' end PaymentStatus,isnull(PaymentStatus,'UnPaid') Payment     from rtl.LicenceRequest
+		   where PaymentStatus!=''
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+		   select Distinct Case When PaymentStatus='SUCCESS' then 'Paid' else 'UnPaid' end PaymentStatus ,isnull(PaymentStatus,'UnPaid') Payment   
+		   from rtl.LicenceRequest LR INNER JOIN  RTL.StoreLicences SL ON SL.Id =LR.StoreLicenceId
+          INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+		  WHERE PARTYId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId) and     PaymentStatus!=''
+		 End
+			else
+			Begin
+			  select Distinct Case When PaymentStatus='SUCCESS' then 'Paid' else 'UnPaid' end PaymentStatus   ,isnull(PaymentStatus,'UnPaid') Payment 
+		   from rtl.LicenceRequest LR INNER JOIN  RTL.StoreLicences SL ON SL.Id =LR.StoreLicenceId
+          INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+		  WHERE UserId=@PartyId and    PaymentStatus!=''
+			End
+	   End
+	
+	 End
+	 if(@Action=6)-------For Licence Type 
+	 Begin
+	   if(@loginType='1')
+	   Begin
+		   select Distinct CASE WHEN LStatus =1 then 'Fresh'
+		   WHEN LStatus =2 then 'Old'
+		   ELSE 'Renewed' END LicenseType,LStatus from rtl.LicenceRequest
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+			select Distinct CASE WHEN LStatus =1 then 'Fresh'
+		   WHEN LStatus =2 then 'Old'
+		   ELSE 'Renewed' END LicenseType,LStatus from
+			rtl.LicenceRequest LR INNER JOIN  RTL.StoreLicences SL ON SL.LicenseId =LR.StoreLicenceId
+			INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+		  WHERE  PARTYId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId) 
+		 End
+			else
+			Begin
+				select Distinct CASE WHEN LStatus =1 then 'Fresh'
+		   WHEN LStatus =2 then 'Old'
+		   ELSE 'Renewed' END LicenseType,LStatus from
+				rtl.LicenceRequest LR INNER JOIN  RTL.StoreLicences SL ON SL.LicenseId =LR.StoreLicenceId
+				INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+				WHERE UserId =@PartyId
+			End
+	   End 
+	 End
+	  if(@Action=7)-------For  Client Name
+	 Begin
+	   if(@loginType='1')
+	   Begin
+		 	  select  Distinct PM.PartyId MapId,PartyName  from rtl.Storemapping SM  
+	 INNER JOIN [EVM].[TBL_PartyMaster] PM ON PM.PartyId= SM.PartyId
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+			select  Distinct PM.PartyId MapId,PartyName  from rtl.Storemapping SM  
+			INNER JOIN [EVM].[TBL_PartyMaster] PM ON PM.PartyId= SM.PartyId
+			where SM.partyId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)
+		 End
+			else
+			Begin
+				select  Distinct PM.PartyId MapId,PartyName  from rtl.Storemapping SM  
+				INNER JOIN [EVM].[TBL_PartyMaster] PM ON PM.PartyId= SM.PartyId
+				where SM.USERID =@PartyId
+			End
+	   End 
+ 	 End
+	   if(@Action=8)-------For  iNVOICE Status
+	 Begin
+	   if(@loginType='1')
+	   Begin
+		 
+	   select   Distinct 
+case when isnull(invoiceStatus,'-1')='-1' then 'Pending'
+when InvoiceStatus='' then 'Pending' else invoiceStatus end invoiceStatus   from rtl.LicenceRequest where ISNULL(invoiceStatus,'-1')!='-1'  and invoiceStatus !=''
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin		   
+			select   Distinct 
+case when isnull(invoiceStatus,'-1')='-1' then 'Pending'
+when InvoiceStatus='' then 'Pending' else invoiceStatus end invoiceStatus   from rtl.LicenceRequest LR
+			INNER JOIN  RTL.StoreLicences SL ON SL.Id =LR.StoreLicenceId
+			INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+			WHERE PARTYId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)  and ISNULL(invoiceStatus,'-1')!='-1'  and invoiceStatus !=''
+	  End
+			else
+			Begin
+			select   Distinct 
+case when isnull(invoiceStatus,'-1')='-1' then 'Pending'
+when InvoiceStatus='' then 'Pending' else invoiceStatus end invoiceStatus  from rtl.LicenceRequest LR
+			INNER JOIN  RTL.StoreLicences SL ON SL.Id =LR.StoreLicenceId
+			INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+			WHERE UserId=@PartyId  --and ISNULL(invoiceStatus,'-1')!='-1'  and invoiceStatus !=''
+	  
+			End
+	   End
+
+
+	 
+	 End
+	 if(@Action=9)-------For  Store  Name
+	 Begin
+	  if(@loginType='1')
+	   Begin 
+	   select  distinct StoreId Id,StoreName,CompleteAddress   from rtl.StoreMapping  SM inner join 
+	   Rtl.StoreMaster S ON SM.STOREID =S.ID
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+			select  distinct StoreId Id,StoreName,CompleteAddress   from rtl.StoreMapping  SM inner join 
+			Rtl.StoreMaster S ON SM.STOREID =S.ID
+			where sm.PartyId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)
+		 End
+			else
+			Begin
+			select  distinct StoreId Id,StoreName,CompleteAddress   from rtl.StoreMapping  SM inner join 
+			Rtl.StoreMaster S ON SM.STOREID =S.ID
+			where sm.UserId =@PartyId
+			End
+	   End 
+	 End
+	  	   if(@Action=10)-------For  Client Name
+	 Begin
+	     if(@loginType='1')
+	   Begin 
+	   select  DISTINCT STATE_NAME,STATE_ID   from  Rtl.StoreMaster ss
+	   inner Join  [EVM].[TBL_CITY] C on C.CITY_CODE=ss.CityId 
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin 
+				select  DISTINCT STATE_NAME,STATE_ID   from  Rtl.StoreMaster ss
+				inner Join  [EVM].[TBL_CITY] C on C.CITY_CODE=ss.CityId 
+				inner join rtl.storemapping SMM ON SMM.STOREID=SS.ID
+				WHERE SMM.PARTYID IN (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)
+		 End
+			else
+			Begin
+				select  DISTINCT STATE_NAME,STATE_ID   from  Rtl.StoreMaster ss
+				inner Join  [EVM].[TBL_CITY] C on C.CITY_CODE=ss.CityId 
+				inner join rtl.storemapping SMM ON SMM.STOREID=SS.ID
+				WHERE SMM.UserId=@PartyId
+			End
+	   End
+
+	 End
+	 IF(@Action=11)
+	 Begin
+	   if(@loginType='1')
+	   Begin
+	   SELECT DISTINCT LicenseName,SL.LicenseId FROM [RTL].StoreLicences SL 
+	   INNER JOIN  [RTL].[LicenseMaster] LM ON LM.LicenseId=SL.LicenseId
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+		 			 SELECT DISTINCT LicenseName,SL.LicenseId FROM [RTL].StoreLicences SL 
+	   INNER JOIN  [RTL].[LicenseMaster] LM ON LM.LicenseId=SL.LicenseId
+			INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+		  WHERE PARTYId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId) 
+		 End
+			else
+			Begin
+				SELECT DISTINCT LicenseName,SL.LicenseId FROM [RTL].StoreLicences SL 
+				INNER JOIN  [RTL].[LicenseMaster] LM ON LM.LicenseId=SL.LicenseId
+				INNER JOIN  RTL.STOREMAPPING SMM ON SMM.STOREID = SL.STOREID
+				WHERE SMM.UserId=@PartyId
+				End
+	   End 
+	 End
+	  if(@Action=12)-------For  Store  Name
+	 Begin
+	  if(@loginType='1')
+	   Begin 
+	   select  distinct CompleteAddress   from rtl.StoreMapping  SM inner join 
+	   Rtl.StoreMaster S ON SM.STOREID =S.ID
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+			select  distinct CompleteAddress   from rtl.StoreMapping  SM inner join 
+			Rtl.StoreMaster S ON SM.STOREID =S.ID
+			where sm.PartyId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)
+		 End
+			else
+			Begin
+			select  distinct CompleteAddress   from rtl.StoreMapping  SM inner join 
+			Rtl.StoreMaster S ON SM.STOREID =S.ID
+			where sm.UserId =@PartyId
+			End
+	   End 
+	 End
+	  if(@Action=13)
+	 Begin 
+	
+			Set @RegionId=isnull(@RegionId,'-1') 
+			Set @DocumentStatus=isnull(@DocumentStatus,'-1') 
+			Set @LicenceStatus=isnull(@LicenceStatus,'-1') 
+			Set @LicenceType=isnull(@LicenceType,'-1') 
+			Set @Client=isnull(@Client,'-1') 
+			Set @PaymentStatus=isnull(@PaymentStatus,'-1') 
+			Set @InvoiceStatus=isnull(@InvoiceStatus,'-1')
+			Set @StoreId=isnull(@StoreId,'-1')
+			set @LicenceId =isnull(@LicenceId,'-1')
+			set @State =isnull(@State,'-1')
+			set @Address =isnull(@Address,'-1')
+			Set @ExpiryStatus=isnull(@ExpiryStatus,'-1') 
+			if(@loginType='1')
+	   Begin
+				select RM.Name RegionName,
+				CASE WHEN ISNULL(STATUS,'-1')='-1' THEN 'Pending'
+				WHEN STATUS=0THEN 'Draft'
+				WHEN STATUS=1 THEN 'Saved' end DocumentStatus,
+				ApplicationStatus LApplicationStatus,LicenseStatus,
+				CASE WHEN LStatus =1 then 'Fresh'
+				WHEN LStatus =2 then 'Old'
+				ELSE 'Renewed' END FreshReneval,StoreName,InvoiceStatus,
+				Case When PaymentStatus='SUCCESS' then 'Paid' else 'UnPaid' end PaymentStatus,
+				PARTYNAME,LM.LicenseName,CompleteAddress Address from  [RTL].StoreLicences SL
+				Left JOIN RTL.LicenceRequest LR ON LR.StoreLicenceId=SL.ID
+				INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId
+				INNER JOIN [RTL].LicenseMaster LM 	ON LM.LicenseId = SL.LicenseId  
+				INNER JOIN  RTL.StoreMapping SMM ON SMM.StoreId=SM.ID
+				inner join evm.TBL_CITY c on c.CITY_CODE=SM.CityId 
+				inner join RTL.RegionMaster RM on RM.Id=SM.RegionId
+				INNER JOIN [EVM].[TBL_PartyMaster] PM ON PM.PartyId= SMM.PartyId
+					--group by LicenseName
+			WHERE 
+			@RegionId= CASE WHEN @RegionId='-1' then @RegionId else RegionId End
+			and  
+			@DocumentStatus= CASE WHEN @DocumentStatus='-1' then @DocumentStatus else isnull(SL.Status,3) End 
+			and
+			@LicenceStatus= case when @LicenceStatus='-1' then @LicenceStatus
+			when @LicenceStatus='Applied' then ApplicationStatus
+			when @LicenceStatus='Not Applied' then ApplicationStatus
+			when @LicenceStatus='Issued' then LicenseStatus  end 
+			 and
+			 @ExpiryStatus = CASE 
+                WHEN @ExpiryStatus = '-1' THEN @ExpiryStatus 
+               WHEN @ExpiryStatus = 'Expired' THEN 
+                CASE WHEN ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'') <> '01/01/1900'  and convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103) THEN 'Expired' END
+                WHEN @ExpiryStatus = 'Expiring Soon' THEN 
+                    CASE WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) > 0 and DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' END
+            END
+			and
+			@LicenceType= case when @LicenceType='-1' then @LicenceType else LStatus end 
+			and 
+			@Client= case when @Client='-1' then @Client else SMM.PartyId end 
+			and 
+			@PaymentStatus= case when @PaymentStatus='-1' then @PaymentStatus else isnull(PaymentStatus,'UnPaid') end 
+			and 
+			@InvoiceStatus= case when @InvoiceStatus='-1' then @InvoiceStatus else InvoiceStatus end 
+			and
+			@StoreId= case when @StoreId='-1' then @StoreId else SL.StoreId end 
+			and
+			@LicenceId =case when @LicenceId='-1' then @LicenceId else LM.LicenseId end
+			and
+			@State =case when @State='-1' then @State else C.STATE_ID end
+			and
+			@Address =case when @Address='-1' then @Address else SM.CompleteAddress end 
+	   End
+	   else if(@loginType='4')
+	   Begin
+	     if exists(select 1 from rtl.assignExecuter where ExecuterId=@PartyId)
+		 Begin
+			select RM.Name RegionName,
+			CASE WHEN ISNULL(STATUS,'-1')='-1' THEN 'Pending'
+			WHEN STATUS=0THEN 'Draft'
+			WHEN STATUS=1 THEN 'Saved' end DocumentStatus,
+			ApplicationStatus LApplicationStatus,LicenseStatus,
+			CASE WHEN LStatus =1 then 'Fresh'
+			WHEN LStatus =2 then 'Old'
+			ELSE 'Renewed' END FreshReneval,StoreName,InvoiceStatus,
+			Case When PaymentStatus='SUCCESS' then 'Paid' else 'UnPaid' end PaymentStatus,
+			PARTYNAME,LM.LicenseName,CompleteAddress Address from  [RTL].StoreLicences SL
+			Left JOIN RTL.LicenceRequest LR ON LR.StoreLicenceId=SL.ID
+			INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId
+			INNER JOIN [RTL].LicenseMaster LM 	ON LM.LicenseId = SL.LicenseId  
+			INNER JOIN  RTL.StoreMapping SMM ON SMM.StoreId=SM.ID
+			inner join evm.TBL_CITY c on c.CITY_CODE=SM.CityId 
+			inner join RTL.RegionMaster RM on RM.Id=SM.RegionId
+			INNER JOIN [EVM].[TBL_PartyMaster] PM ON PM.PartyId= SMM.PartyId 
+			WHERE 
+			@RegionId= CASE WHEN @RegionId='-1' then @RegionId else RegionId End
+			and  
+			@DocumentStatus= CASE WHEN @DocumentStatus='-1' then @DocumentStatus else isnull(SL.Status,3) End 
+			and
+			@LicenceStatus= case when @LicenceStatus='-1' then @LicenceStatus
+			when @LicenceStatus='Applied' then ApplicationStatus
+			when @LicenceStatus='Not Applied' then ApplicationStatus
+			when @LicenceStatus='Issued' then LicenseStatus  end 
+			and
+			@ExpiryStatus = CASE 
+                WHEN @ExpiryStatus = '-1' THEN @ExpiryStatus 
+                WHEN @ExpiryStatus = 'Expired' THEN 
+                CASE WHEN ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'') <> '01/01/1900'  and convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103) THEN 'Expired' END
+                WHEN @ExpiryStatus = 'Expiring Soon' THEN 
+                    CASE WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) > 0 and DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' END
+            END
+			and
+			@LicenceType= case when @LicenceType='-1' then @LicenceType else LStatus end 
+			and 
+			@Client= case when @Client='-1' then @Client else SMM.PartyId end 
+			and 
+			@PaymentStatus= case when @PaymentStatus='-1' then @PaymentStatus else isnull(PaymentStatus,'UnPaid') end 
+			and 
+			@InvoiceStatus= case when @InvoiceStatus='-1' then @InvoiceStatus else InvoiceStatus end 
+			and
+			@StoreId= case when @StoreId='-1' then @StoreId else SM.Id end 
+			and
+			@LicenceId =case when @LicenceId='-1' then @LicenceId else LM.LicenseId end
+			and
+			@State =case when @State='-1' then @State else C.STATE_ID end
+			and
+			@Address =case when @Address='-1' then @Address else SM.CompleteAddress end
+			
+		  and smm.PARTYId in (select PartyId from rtl.assignExecuter where ExecuterId=@PartyId)  
+		 End
+			else
+			Begin
+			select RM.Name RegionName,
+			CASE WHEN ISNULL(STATUS,'-1')='-1' THEN 'Pending'
+			WHEN STATUS=0THEN 'Draft'
+			WHEN STATUS=1 THEN 'Saved' end DocumentStatus,
+			ApplicationStatus LApplicationStatus,LicenseStatus,
+			CASE WHEN LStatus =1 then 'Fresh'
+			WHEN LStatus =2 then 'Old'
+			ELSE 'Renewed' END FreshReneval,StoreName,InvoiceStatus,
+			Case When PaymentStatus='SUCCESS' then 'Paid' else 'UnPaid' end PaymentStatus,
+			PARTYNAME,LM.LicenseName,CompleteAddress Address from  [RTL].StoreLicences SL
+			Left JOIN RTL.LicenceRequest LR ON LR.StoreLicenceId=SL.ID
+			INNER JOIN [RTL].StoreMaster SM ON SM.ID = SL.StoreId
+			INNER JOIN [RTL].LicenseMaster LM 	ON LM.LicenseId = SL.LicenseId  
+			INNER JOIN  RTL.StoreMapping SMM ON SMM.StoreId=SM.ID
+			inner join evm.TBL_CITY c on c.CITY_CODE=SM.CityId 
+			inner join RTL.RegionMaster RM on RM.Id=SM.RegionId
+			INNER JOIN [EVM].[TBL_PartyMaster] PM ON PM.PartyId= SMM.PartyId
+			WHERE 
+			@RegionId= CASE WHEN @RegionId='-1' then @RegionId else RegionId End
+			and  
+		@DocumentStatus= CASE WHEN @DocumentStatus='-1' then @DocumentStatus else isnull(SL.Status,3) End 
+			and
+			@LicenceStatus= case when @LicenceStatus='-1' then @LicenceStatus
+			when @LicenceStatus='Applied' then ApplicationStatus
+			when @LicenceStatus='Not Applied' then ApplicationStatus
+			when @LicenceStatus='Issued' then LicenseStatus  end 
+			and
+			@ExpiryStatus = CASE 
+                WHEN @ExpiryStatus = '-1' THEN @ExpiryStatus 
+                WHEN @ExpiryStatus = 'Expired' THEN 
+                CASE WHEN ISNULL(CONVERT(VARCHAR(23), ValidityEndDate,103),'') <> '01/01/1900'  and convert(datetime,ValidityEndDate,103) < convert(datetime,GETDATE(),103) THEN 'Expired' END
+                WHEN @ExpiryStatus = 'Expiring Soon' THEN 
+                    CASE WHEN DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) > 0 and DATEDIFF(DAY, GETDATE(),convert(datetime,ValidityEndDate,103) ) <= SM.DaysOfExpire THEN 'Expiring Soon' END
+            END
+			and
+			@LicenceType= case when @LicenceType='-1' then @LicenceType else LStatus end 
+			and 
+			@Client= case when @Client='-1' then @Client else SMM.PartyId end 
+			and 
+			@PaymentStatus= case when @PaymentStatus='-1' then @PaymentStatus else isnull(PaymentStatus,'UnPaid') end 
+			and 
+			@InvoiceStatus= case when @InvoiceStatus='-1' then @InvoiceStatus else InvoiceStatus end 
+			and
+			@StoreId= case when @StoreId='-1' then @StoreId else SM.Id end 
+			and
+			@LicenceId =case when @LicenceId='-1' then @LicenceId else LM.LicenseId end
+			and
+			@State =case when @State='-1' then @State else C.STATE_ID end
+			and
+			@Address =case when @Address='-1' then @Address else SM.CompleteAddress end
+			and SMM.UserId=@PartyId 
+			End
+	   End 
+			
+	 End
+
+END

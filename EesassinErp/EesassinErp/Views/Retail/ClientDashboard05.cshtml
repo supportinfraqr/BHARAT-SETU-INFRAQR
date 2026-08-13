@@ -1,0 +1,903 @@
+﻿
+@{
+    ViewBag.Title = "Client Onboarding";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="~/scripts/RetailJsLib/ComplianceDashboardController.js?Ver=@ViewBag.Version"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link href="~/compliance/css/all.css" rel="stylesheet" />
+<link href="~/compliance/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.min.css" rel="stylesheet" />
+<link href="~/compliance/css/custom_theme.css" rel="stylesheet" />
+<link href="~/compliance/css/colorTheme/default.css" rel="stylesheet" />
+<link href="~/compliance/css/draggle.css" rel="stylesheet" />
+<link href="~/compliance/css/responsive.css" rel="stylesheet" />
+<link href="~/compliance/css/datepicker.css" rel="stylesheet" />
+<style>
+    input[type="date"] {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        width: 100%;
+        max-width: 150px;
+    }
+
+    .status {
+        font-weight: bold;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-align: center;
+        display: inline-block;
+    }
+
+        .status.complete {
+            background-color: #16C098;
+            color: white;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status.pending {
+            background-color: #FD6C75;
+            color: #fffdfd;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+            padding: 5px;
+            padding-left: 19px;
+            padding-right: 19px;
+        }
+
+    .download-btn, .upload-btn {
+        background-color: #6C5DD3;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        padding-right: 19px;
+        padding-left: 19px;
+    }
+
+    body {
+        font-size: 12px !important;
+    }
+
+    th {
+        background-color: #DAE7FF !important;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    th {
+        display: table-cell;
+        vertical-align: inherit;
+        font-weight: bold;
+        text-align: -internal-center;
+        unicode-bidi: isolate;
+    }
+
+    .filters {
+        display: ruby-text;
+        justify-content: space-between;
+        padding: 8px;
+        align-items: center;
+    }
+
+        .filters select {
+            padding: 8px;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .filters button {
+            padding: 8px 16px;
+            background: #6f42c1;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 392px;
+        }
+
+    .popup-header .close-btn {
+        background-color: #FF4D4D;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        color: white;
+        font-size: 16px;
+    }
+    /* Popup container styling */
+    .popup {
+        position: fixed;
+        max-height: -webkit-fill-available;
+        height: 529px;
+        overflow: overlay;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        max-width: 965px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Background overlay */
+    .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none; /* Initially hidden */
+    }
+
+    /* Popup header styling */
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+        .popup-header h1 {
+            margin: 0;
+        }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    .recontainer {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+</style>
+<style>
+
+    /* Sidebar */
+    .sidebar {
+        width: 250px;
+        background-color: #ffffff;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        height: 100vh;
+        position: fixed;
+    }
+
+        .sidebar .logo {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+            .sidebar .logo img {
+                width: 100px;
+            }
+
+        .sidebar nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+            .sidebar nav ul li {
+                padding: 15px 20px;
+            }
+
+                .sidebar nav ul li a {
+                    text-decoration: none;
+                    color: #333;
+                    font-size: 16px;
+                    display: flex;
+                    align-items: center;
+                }
+
+                    .sidebar nav ul li a i {
+                        margin-right: 10px;
+                    }
+
+                .sidebar nav ul li.active a {
+                    color: #007bff;
+                    font-weight: bold;
+                }
+
+    .logout-btn {
+        width: calc(100% - 40px);
+        margin: 20px;
+        padding: 10px;
+        background-color: #ff4d4f;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+        .logout-btn:hover {
+            background-color: #e04143;
+        }
+
+    /* Main Content */
+    main {
+        /*    margin-left: 250px;
+        padding: 20px;
+        width: calc(100% - 250px);*/
+    }
+
+        main header {
+            margin-bottom: 20px;
+        }
+
+            main header h1 {
+                color: #333;
+            }
+
+    .summary {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px; /* Set gap to 0% */
+        margin-bottom: 20px;
+    }
+
+
+    .box {
+        width: calc(20.33%); /* Updated to ensure tiles fit within the container */
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .box h2 {
+            font-size: 26px;
+            margin: 10px 0;
+            color: #007bff;
+        }
+
+        .box p {
+            font-size: 16px;
+            color: #666;
+        }
+
+        .box a {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+    /* Table Section */
+    .table-section {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        /*max-height: 300px;*/ /* Set the maximum height */
+        overflow-y: auto; /* Add vertical scroll bar if content exceeds the height */
+    }
+
+        .table-section table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+            .table-section table th, .table-section table td {
+                padding: 10px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .table-section table th {
+                background-color: #f8f9fa;
+                color: #333;
+            }
+
+        .table-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+    /* Table Section */
+    .table-section {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        /*  max-height: 429px;*/
+    }
+
+        .table-section h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+
+    .filters select {
+        /*  padding: 7px 30px;*/
+        border: 1px solid #007bff;
+        background-color: #fff;
+        color: #333;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+        .filters select:hover {
+            /* background-color: #007bff;*/
+            /*   color: #fff; */
+        }
+
+
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+        table th, table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+    .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+        .pagination button {
+            padding: 10px 15px;
+            border: 1px solid #007bff;
+            background-color: #fff;
+            color: #007bff;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+            .pagination button:hover {
+                background-color: #007bff;
+                color: #fff;
+            }
+
+        .pagination select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+
+
+    input[type="date"] {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        width: 100%;
+        max-width: 150px;
+    }
+
+    .stats {
+        display: flex;
+        justify-content: space-between;
+        margin: 20px;
+        height: 110px;
+        gap: 6%;
+        /*width: 1100px;*/
+    }
+
+    .stat-card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        flex: 1;
+        margin: 0 10px;
+        text-align: left;
+        position: relative;
+    }
+
+        .stat-card h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #efeded;
+            position: absolute; /* Position the heading */
+            bottom: 30px; /* Adjust spacing to accommodate the line */
+            left: 10px;
+        }
+
+            .stat-card h2::after {
+                content: "";
+                display: block;
+                width: 100%; /* Full width of the heading container */
+                height: 3px; /* Height of the red line */
+                background-color: red; /* Red color for the line */
+                position: absolute;
+                bottom: -10px; /* Position the line slightly below the heading */
+                left: 0;
+            }
+
+        .stat-card p {
+            margin: 0 0 20px;
+            font-size: 13px;
+            color: #fdf7f7;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+            .stat-card p img {
+                position: absolute; /* Position the image absolutely */
+                top: 10px; /* Adjust spacing from the top */
+                right: 0px; /* Adjust spacing from the right */
+                width: 24px;
+                height: 24px;
+            }
+
+
+
+    .upload-btn1 {
+        padding: 10px 45px;
+        border: 1px solid #007bff;
+        background-color: #007bff49;
+        color: #007bff;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    .upload-btn {
+        padding: 10px 45px;
+        border: 1px solid #dededf;
+        background: linear-gradient(90deg, #FFB7F5, #6C5DD3); /* Gradient background */
+
+        color: #fafbfd;
+        border-radius: 20px;
+        cursor: pointer;
+        margin-bottom: 10px;
+        font-weight: bold;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Add shadow */
+        transition: 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .sample-sheet-link {
+        color: #6C5DD3;
+    }
+</style>
+
+<div class="recontainer">
+    <section>
+        <div class="stats" ng-init="BindClientOnboardingTiles()">
+            <div class="stat-card" style="background-color: #4D4CAC;">
+                <p>
+                    <img src="~/Client Onboarding/img/Group2.png" alt="Organization Icon" style="width: 55px; height:55px; padding-bottom: 4px;">
+                    Total Document
+                </p>
+                <a onclick="openTPopup()" style="color: #ffffff; font-size: 14px; text-decoration: underline; display: inline-block; margin-bottom: 90px; margin-left: 61%; font-weight: bold; margin-top: 25px;">View All</a>
+                <h2>{{TotalCount}}</h2>
+            </div>
+            <div class="stat-card" style="background-color: #16C098;">
+                <p>
+                    <img src="~/Client Onboarding/img/Group1.png" alt="Organization Icon" style="width:55px; height:55px; margin-bottom:10px;">
+                    Uploaded Document
+                </p>
+                <a onclick="openCPopup()" style="color: #ffffff; font-size: 14px; text-decoration: underline; display: inline-block; margin-bottom: 90px; margin-left: 61%; font-weight: bold; margin-top: 25px;">View All</a>
+
+                <h2>{{CompleteCount}}</h2>
+            </div>
+            <div class="stat-card" style="background-color: #FD6C75;">
+                <p>
+                    <img src="~/Client Onboarding/img/Group3.png" alt="Organization Icon" style="width:55px; height:55px; margin-bottom:10px;">
+                    Pending  Document
+                </p>
+                <a onclick="openIPopup()" style="color: #ffffff; font-size: 14px; text-decoration: underline; display: inline-block; margin-bottom: 90px; margin-left: 61%; font-weight: bold; margin-top: 25px;">View All</a>
+
+                <h2>{{PendingCount}}</h2>
+            </div>
+
+            <div class="filters" style="position: relative !important;" ng-init="BindBoardingMaster()">
+                <h5> Boarding Type  </h5>
+                <select ng-model="BoardingType" ng-change="BindWholeDashboard()">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in BoardingList" value="{{x.Id}}"> {{x.BoardingType}}  </option>
+                </select>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- Table Section -->
+    <section class="table-section" style="position: relative !important;" ng-init="BindClientOnboardingDoc()">
+        <h2>Labour Law Compliance</h2>
+
+        <div class="filters">
+            <div ng-init="BindClientFilter()">
+                <select ng-model="State" ng-change="BindClientOnboardingDoc()">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                </select>
+                <select ng-model="Month" ng-change="BindClientOnboardingDoc()">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                </select>
+                <select ng-model="Year" ng-change="BindClientOnboardingDoc()">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in YearsList" value="{{x}}"> {{x}}  </option>
+                </select>
+            </div>
+            <button class="upload-btn1" ng-click="downloadAll()">Download All</button>
+        </div>
+
+
+        <table>
+            <thead>
+                <tr>
+
+                    <th>Document</th>
+                    <th>Frequency</th>
+                    <th>Download Sample Sheet</th>
+                    <th>Upload Doc. File</th>
+                    <th>Uploaded File</th>
+                    <th>Uploaded Date</th>
+                    <th>Due Date</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr ng-repeat="x in Doclist ">
+
+                    <td>
+                        {{x.DocumentName}}
+                    </td>
+                    <td>
+                        {{x.Frequency}}
+                    </td>
+
+                    <td><a href="#" ng-click="viewFile(x.SampleFile)" class="sample-sheet-link"><img src="~/Client Onboarding/img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+                    <td>
+                        <button class="download-btn" ng-click="SetValue(x,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">Choose File</button>
+                        <input type="file" style="display:none" id="fileupoad{{$index}}" ng-model="UploadFile" onchange="angular.element(this).scope().fileSelected(this.files)" />
+
+                    </td>
+                    <td><button ng-show="{{x.isopen}}=='1'" class="download-btn" ng-click="viewFile(x.UploadFile)">Download</button></td>
+                    <td> {{x.ASD}}  </td>
+                    <td> {{x.DueDate}}  </td>
+                </tr>
+
+
+                <!-- Add more rows as needed -->
+            </tbody>
+        </table>
+    </section>
+    @*//-----------------------Open total--------------*@
+    <div class="popup-overlay" id="popupOverlay"></div>
+
+    <div class="popup" id="Tpopup">
+        <div class="popup-header">
+            <h4>Compliance Total Document</h4>
+            <button class="close-btn" onclick="closeTPopup()">&times;</button>
+        </div>
+        <div class="filters">
+            <div ng-init="BindClientFilter()">
+                <select ng-model="State">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                </select>
+                <select ng-model="Month">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                </select>
+                <select ng-model="Year">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in YearsList" value="{{x}}"> {{x}}  </option>
+                </select>
+            </div>
+            <button ng-click="BindClientOnboardingDocfilter()">Search</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+
+                    <th>Document</th>
+                    <th>Frequency</th>
+                    <th>Download Sample Sheet</th>
+                    <th>Upload Doc. File</th>
+                    <th>Download File</th>
+                    <th>Uploaded Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr ng-repeat="x in totalDoclist">
+
+                    <td>
+                        {{x.DocumentName}}
+                    </td>
+                    <td>
+                        {{x.Frequency}}
+                    </td>
+
+                    <td><a href="#" ng-click="viewFile(x.SampleFile)" class="sample-sheet-link"><img src="~/Client Onboarding/img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+                    <td>
+                        <button class="download-btn" ng-click="SetValue(x,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">Choose File</button>
+                        <input type="file" style="display:none" id="fileupoad{{$index}}" ng-model="UploadFile" onchange="angular.element(this).scope().fileSelected(this.files)" />
+
+                    </td>
+                    <td><button ng-show="{{x.isopen}}=='1'" class="download-btn" ng-click="viewFile(x.UploadFile)">Download</button></td>
+                    <td> {{x.ASD}}  </td>
+                    <td> {{x.DueDate}}  </td>
+                    <td>
+                        <span ng-show="{{x.isopen}}=='1'" class="status complete">Complete</span>
+                        <span ng-show="{{x.isopen}}=='0'" class="status pending">Pending</span>
+                    </td>
+                </tr>
+
+
+                <!-- Add more rows as needed -->
+            </tbody>
+        </table>
+    </div>
+
+
+    <div class="popup" id="Cpopup">
+        <div class="popup-header">
+            <h4>Compliance Complete Document</h4>
+            <button class="close-btn" onclick="closeCPopup()">&times;</button>
+        </div>
+        <div class="filters">
+            <div ng-init="BindClientFilter()">
+                <select ng-model="State">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                </select>
+                <select ng-model="Month">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                </select>
+                <select ng-model="Year">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in YearsList" value="{{x}}"> {{x}}  </option>
+                </select>
+            </div>
+            <button ng-click="BindClientOnboardingDocfilter()">Search</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+
+                    <th>Document</th>
+                    <th>Frequency</th>
+                    <th>Download Sample Sheet</th>
+                    <th>Upload Doc. File</th>
+                    <th>Download File</th>
+                    <th>Uploaded Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr ng-repeat="x in totalDoclist | filter:{isopen : '1'}">
+
+                    <td>
+                        {{x.DocumentName}}
+                    </td>
+                    <td>
+                        {{x.Frequency}}
+                    </td>
+
+                    <td><a href="#" ng-click="viewFile(x.SampleFile)" class="sample-sheet-link"><img src="~/Client Onboarding/img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+                    <td>
+                        <button class="download-btn" ng-click="SetValue(x,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">Choose File</button>
+                        <input type="file" style="display:none" id="fileupoad{{$index}}" ng-model="UploadFile" onchange="angular.element(this).scope().fileSelected(this.files)" />
+
+                    </td>
+                    <td><button ng-show="{{x.isopen}}=='1'" class="download-btn" ng-click="viewFile(x.UploadFile)">Download</button></td>
+                    <td> {{x.ASD}}  </td>
+                    <td> {{x.DueDate}}  </td>
+                    <td>
+                        <span ng-show="{{x.isopen}}=='1'" class="status complete">Complete</span>
+                        <span ng-show="{{x.isopen}}=='0'" class="status pending">Pending</span>
+                    </td>
+                </tr>
+
+
+                <!-- Add more rows as needed -->
+            </tbody>
+        </table>
+    </div>
+
+
+    <div class="popup" id="Ipopup">
+        <div class="popup-header">
+            <h4>Compliance Pending Document</h4>
+            <button class="close-btn" onclick="closeIPopup()">&times;</button>
+        </div>
+        <div class="filters">
+            <div ng-init="BindClientFilter()">
+                <select ng-model="State">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                </select>
+                <select ng-model="Month">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in MasterList  | unique:'Month'" value="{{x.Month}}"> {{x.MonthName}}  </option>
+                </select>
+                <select ng-model="Year">
+                    <option value="">Select</option>
+                    <option ng-repeat="x in YearsList" value="{{x}}"> {{x}}  </option>
+                </select>
+            </div>
+            <button ng-click="BindClientOnboardingDocfilter()">Search</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+
+                    <th>Document</th>
+                    <th>Frequency</th>
+                    <th>Download Sample Sheet</th>
+                    <th>Upload Doc. File</th>
+                    <th>Download File</th>
+                    <th>Uploaded Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr ng-repeat="x in totalDoclist | filter:{isopen : '0'}">
+
+                    <td>
+                        {{x.DocumentName}}
+                    </td>
+                    <td>
+                        {{x.Frequency}}
+                    </td>
+
+                    <td><a href="#" ng-click="viewFile(x.SampleFile)" class="sample-sheet-link"><img src="~/Client Onboarding/img/down.png" alt="Icon" style="width: 20px; height: 20px; margin-right: 5px;">Sample Sheet</a></td>
+                    <td>
+                        <button class="download-btn" ng-click="SetValue(x,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">Choose File</button>
+                        <input type="file" style="display:none" id="fileupoad{{$index}}" ng-model="UploadFile" onchange="angular.element(this).scope().fileSelected(this.files)" />
+
+                    </td>
+                    <td><button ng-show="{{x.isopen}}=='1'" class="download-btn" ng-click="viewFile(x.UploadFile)">Download</button></td>
+                    <td> {{x.ASD}}  </td>
+                    <td> {{x.DueDate}}  </td>
+                    <td>
+                        <span ng-show="{{x.isopen}}=='1'" class="status complete">Complete</span>
+                        <span ng-show="{{x.isopen}}=='0'" class="status pending">Pending</span>
+                    </td>
+                </tr>
+
+
+                <!-- Add more rows as needed -->
+            </tbody>
+        </table>
+    </div>
+    @*<script>
+            function closePopup() {
+                document.body.style.display = 'none';
+            }
+
+            function handleFileUpload(input) {
+                const fileChooser = input.parentElement; // Get the file-chooser element
+                const file = input.files[0]; // Get the selected file
+
+                if (file && file.type === "application/pdf") { // Check if the file is a PDF
+                    fileChooser.classList.add("uploaded"); // Change the background color
+                    fileChooser.querySelector("span").textContent = "Uploaded"; // Set the text to "Uploaded"
+                } else {
+                    alert("Please upload a valid PDF file.");
+                    input.value = ""; // Reset the file input
+                    fileChooser.querySelector("span").textContent = "Choose File"; // Reset text back to default
+                    fileChooser.classList.remove("uploaded"); // Remove uploaded style if file is invalid
+                }
+            }
+
+            function closePopup() {
+                window.location.href = "index.html";  // Redirects to the index.html page
+            }
+
+            function closePopup() {
+                // Hide the overlay and close the popup
+                document.getElementById("background-overlay").style.display = "none";
+                document.body.style.backgroundColor = "rgba(0, 0, 0, 0.1)";  // Reset the background color
+                // Optionally, you can redirect the page here if needed (as mentioned in earlier responses)
+                window.location.href = "index.html";  // Redirects to the index.html page
+            }
+
+            // Function to open the popup and change background color
+            function openPopup() {
+                document.getElementById("background-overlay").style.display = "block";  // Show the overlay
+                document.body.style.backgroundColor = "rgba(0, 0, 0, 0.3)";  // Darken the background
+            }
+            // Optional: Trigger the popup on page load or based on a user action
+            openPopup();  // Call this when you want the popup to show up
+
+        </script>*@
+</div>
+
+
+<script>
+    // Function to open the popup
+    function openTPopup() {
+        document.getElementById('Tpopup').style.display = 'block';
+        document.getElementById('popupOverlay').style.display = 'block';
+    }
+
+    // Function to close the popup
+    function closeTPopup() {
+        document.getElementById('Tpopup').style.display = 'none';
+        document.getElementById('popupOverlay').style.display = 'none';
+    }
+
+    function openCPopup() {
+        document.getElementById('Cpopup').style.display = 'block';
+        document.getElementById('popupOverlay').style.display = 'block';
+    }
+
+    // Function to close the popup
+    function closeCPopup() {
+        document.getElementById('Cpopup').style.display = 'none';
+        document.getElementById('popupOverlay').style.display = 'none';
+    }
+
+    function openIPopup() {
+        document.getElementById('Ipopup').style.display = 'block';
+        document.getElementById('popupOverlay').style.display = 'block';
+    }
+
+    // Function to close the popup
+    function closeIPopup() {
+        document.getElementById('Ipopup').style.display = 'none';
+        document.getElementById('popupOverlay').style.display = 'none';
+    }
+
+</script>

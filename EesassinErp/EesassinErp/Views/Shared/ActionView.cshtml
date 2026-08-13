@@ -1,0 +1,47 @@
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+}
+
+<script src="~/Scripts/myjslib/authorization.js?Ver=@ViewBag.Version"></script>
+
+<button id="btnSave" type="button" value="Save" class="btn2 btn-common btn-3 btn-3d pe-7s-check" name="saveButton" 
+        ng-model="Save" ng-init="Save='Save'" ng-click="CheckSavePermission();SaveRecord()"  >
+    <span class="triangle-box" title="Save"></span>
+    <span id="btnSavetxt" ng-bind="Save">Save</span>
+</button>
+@*ng-disabled="disableAdd" ng-show="visibleAdd"*@
+
+<button id="btnSearch" type="button" value="Search" class="btn2 btn-common btn-3 btn-3d pe-7s-search" name="searchButton" data-toggle="collapse" 
+        data-target="#CollapseSearchTableList" aria-expanded="false" aria-controls="CollapseSearchTableList" 
+        ng-model="Search" ng-click="SearchRecord()" ng-disabled="disableSearch"  ng-show="visibleSearch">
+    <span class="triangle-box" title="Search"></span>
+    <span>Search </span>
+</button>
+
+<button id="btnDelete" type="button" value="Delete" class="btn2 btn-common btn-3 btn-3d pe-7s-trash"
+         name="deleteButton" ng-model="Delete" ng-click="DeleteRecord()" ng-disabled="disableDelete" disabled
+          ng-show="visibleDelete">
+    <span class="triangle-box" title="Delete"></span>
+    <span>Delete </span>
+</button>
+
+<button id="btnPrint" type="button" value="Print" class="btn2 btn-common btn-3 btn-3d pe-7s-print" 
+        name="printButton" ng-model="Print" ng-disabled="disablePrint" ng-click="PrintRecord()" disabled
+        ng-show="visiblePrint">
+    <span class="triangle-box" title="Print"></span>
+    <span>Print </span>
+</button>
+
+<button id="btnClear" type="button" value="Clear" class="btn2 btn-common btn-3 btn-3d pe-7s-refresh-2" 
+        name="clearButton" ng-model="Clear" ng-disabled="disableClear" ng-click="ClearControl()"
+         ng-show="visibleClear">
+    <span class="triangle-box" title="Clear"></span>
+    <span>Clear </span>
+</button>
+
+
+
+
+
+
+

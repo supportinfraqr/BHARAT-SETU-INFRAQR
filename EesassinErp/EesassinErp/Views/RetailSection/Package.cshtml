@@ -1,0 +1,283 @@
+﻿
+@{
+    ViewBag.Title = "Package";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/ckeditor/ckeditor.js"></script>
+<script src="~/ckfinder/ckfinder.js"></script>
+<script src="~/Scripts/myjslib/PackageMasterController.js?Ver=@ViewBag.Version"></script>
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Package Master</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Package Master</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Destinations </label>
+                                            <div class="input-box">
+                                                <select id="ddlSection" class="select2 form-control" ng-model="Destinations">
+                                                    <option value="">Select Section</option>
+                                                    <option value="Uttrakhand">Uttrakhand</option>  
+                                                    <option value="Ladakh">Ladakh</option>
+                                                    <option value="Himachal">Himachal Pradesh</option>
+                                                    <option value="VaishnoDevi">Vaishno Devi</option>
+                                                    <option value="Goa Tour">Goa Tour</option>
+                                                   
+                                                    <option value="Jammu">Jammu</option>  
+                                                    <option value="Goa">Goa</option>
+                                                    <option value="Bhubaneshwar">Bhubaneshwar</option>
+                                                    <option value="Andaman ">Andaman </option>
+                                                    <option value="uttarpradesh">Uttar Pradesh </option>
+                                                    <option value="Punjab">Punjab</option> 
+                                                </select>  
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Region </label>
+                                            <div class="input-box">
+                                                <select id="ddlSection" class="select2 form-control" ng-model="Region">  
+                                                    <option value="">Select Section</option>
+                                                        <option value="NorthIndia">North India</option>
+                                                        <option value="SouthIndia">South India</option>
+                                                        <option value="WestIndia">West India</option>
+                                                        <option value="CentralIndia">Central India</option>
+                                                    
+                                                        <option value="EastIndia">East India</option>
+                                                        <option value="NorthEast">North East</option> 
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Section </label>
+                                            <div class="input-box">
+                                                <select id="ddlSection" class="select2 form-control" ng-model="Section">
+                                                    <option value="">Select Section</option>
+                                                    <option value="Adventure">Adventure </option>
+                                                    <option value="Religious ">Religious</option>
+                                                    <option value="Honeymoon ">Honeymoon </option> 
+                                                    <option value="Wildlife">Wildlife </option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Trip & Tour </label>
+                                            <div class="input-box">
+                                                <select id="ddlSection" class="select2 form-control" ng-model="TripTour">
+                                                    <option value="">Select Section</option>
+                                                    <option value="Bike">Bike Tours </option>
+                                                    <option value="Honeymoon ">Honeymoon </option>
+                                                    <option value="Backwaters">Backwaters</option>
+                                                    <option value="Culture">Culture</option>
+                                                    <option value="Wildlife">Wildlife </option>
+                                                    <option value="Ashrams">Ashrams </option>
+                                                    <option value="Ayurveda ">Ayurveda</option>
+                                                    <option value="Religious ">Religious</option>
+                                                    <option value="Forts">Forts & Palaces</option>
+                                                    <option value="Adventure">Adventure </option>
+                                                    <option value="Beaches">Beaches </option>
+                                                    <option value="Luxury">Luxury </option>                                                    
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Recommended time to visit </label>
+                                            <div class="input-box">
+                                                <select id="ddlSection" class="select2 form-control" ng-model="RecommendedTime">
+                                                    <option value="">Select Section</option>
+                                                    <option value="BestTimeHimachal">Best Time to Visit Himachal Pradesh</option>
+                                                    <option value="BestTimeUttrakhand">Best Time to Visit Uttrakhand</option>
+                                                    <option value="BestTimeLadakh">Best Time to Visit Ladakh</option>
+                                                    <option value="BestTimekashmir">Best Time to Visit kashmir</option>
+                                                    <option value="BestTimekashmir">Best Time to Visit Jammu</option>
+                                                    <option value="BestTimeGoa">Best Time to Visit Goa</option>
+                                                    <option value="BestTimeBhubaneshwar">Best Time to Visit Bhubaneshwar </option>
+                                                    <option value="BestTimeAndaman">Best Time to Visit Andaman </option>
+                                                    <option value="BestTimeUttarPradesh">Best Time to Visit Uttar Pradesh </option>
+                                                    <option value="BestTimePunjab">Best Time to Visit Punjab </option>
+                                             
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Month </label>
+                                            <div class="input-box">
+                                                <select id="ddlSection" class="select2 form-control" ng-model="Month">
+                                                    <option value="">Select Section</option>
+                                                    <option value="January">January</option>
+                                                    <option value="February">February</option>
+                                                    <option value="March">March</option>
+                                                    <option value="April">April</option>
+                                                    <option value="May">May</option>
+                                                    <option value="May">June</option> 
+                                                    <option value="July">July</option>
+                                                    <option value="August">August</option>
+                                                    <option value="September">September</option>
+                                                    <option value="October">October</option>
+                                                    <option value="November">November</option>
+                                                    <option value="December">December</option>
+
+                                                   
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Duration<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlDuration" class="select2 form-control validate" ng-model="Duration" ng-init="BindDuration();">
+                                                    <option value="">Select Duration</option>
+                                                    <option ng-repeat="x in DurationList" value="{{x.Id}}">{{x.Duration}}</option>
+                                                </select>
+
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Theme<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                <select id="ddlTheme" class="select2 form-control validate" ng-model="Theme" ng-init="BindTheme();">
+                                                    <option value="">Select Theme</option>
+                                                    <option value="GoldenTriangle">  Golden Triangle</option>
+                                                    <option value="PilgrimageTour">PilgrimageTour</option>
+                                                    <option value="Himalaya">Himalaya</option>
+                                                    <option value="Budget">Budget</option>
+                                                    <option value="Family">Family</option>
+                                                    <option value="Summer">Summer</option>
+                                                    <option value="Winter">Winter</option>
+                                                    <option value="PilgrimageTours">   Pilgrimage Tours</option>
+                                                    <option value="HillStation">Hill Station</option>
+                                                    <option value="Honeymoon">Honeymoon</option>
+                                                    <option value="Wildlife">Wildlife</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label"> Meta Title<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtMetaTitle", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "MetaTitle" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label"> Meta Description<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtMetaDescription", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "MetaDescription" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Slug<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtSlug", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "Slug" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Title<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtTitle", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "Title" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                      
+                                        
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Price<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtPrice", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "Price" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Location<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtLocation", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "Location" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Photo</label>
+                                            <div class="input-box">
+                                                <img id="Photo" src="~/Content/Photos/no-image.png" ng-src="{{Photo}}" />
+                                                <input type="file" id="txtPhoto" onchange="angular.element(this).scope().Photoshow(this, '#AlbumIcon')" ng-model="Photo">
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Description<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextArea("txtHeaderTemplate", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "Description", @name = "txtHeaderTemplate", @id = "txtHeaderTemplate", @rows = "10", @cols = "80" })
+                                                <script>$(document).ready(function () {CKEDITOR.replace('txtHeaderTemplate');});</script>
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>
+
+

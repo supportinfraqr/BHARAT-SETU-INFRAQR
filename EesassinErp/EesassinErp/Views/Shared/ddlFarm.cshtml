@@ -1,0 +1,4 @@
+﻿<select id="ddlFarm" class="select2 form-control" ng-model="FarmCode" ng-init="BindFarm();" ng-change="BindBatchNo();">
+    <option value="">Select</option>
+    <option ng-repeat="x in FarmList" value="{{x.FarmCode}}">{{x.FarmCode}}</option>
+</select>

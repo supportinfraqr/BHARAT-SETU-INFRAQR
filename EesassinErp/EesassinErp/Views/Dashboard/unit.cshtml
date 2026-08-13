@@ -1,0 +1,320 @@
+﻿@{
+    ViewBag.Title = "Unit";
+    Layout = "~/Views/Shared/_GeneralLayout.cshtml";
+}
+
+<div class="container-fluid pagecontentbody">
+    <div class="tab-content">
+        <div class="pagebody removebg-color">
+            <div class="col-md-12 pageheader pb-2">
+                <div class="row">
+                    <div class="col-md-9">
+                        <h4 class="mb-0">Unit</h4>
+                    </div>
+                    <div class="col-sm-3 text-end">
+                        <a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#create-unit"><span class="fas fa-plus"></span>&nbsp;&nbsp;New Unit</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="true">View</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab" aria-controls="tab2" aria-selected="false">Import</button>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <a href="#" class="btn btn-warning my-1"><span class="fas fa-external-link-alt"></span>&nbsp;&nbsp;Export</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                            <div class="row mb-3">
+                                <div class="col-md-9 mt-3">
+                                    <ul class="filter-search">
+                                        <li class="p-0">
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="searchbox" value="" placeholder="Search">
+                                                <button class="btn btn-default" type="button" id="button-addon2"><span class="icons icon-magnifier"></span></button>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-3 mt-3">
+                                    <ul class="btngroup">
+                                        <li></li>
+                                        <li class="nav-item submenu"><a class="btn btn-default" type="button" id="A1">Short by <span class="fa fa-arrow-down"></span></a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="table-responsive nosearch">
+                                <table class="table table-bordred table-hover unittbl datatable">
+                                    <thead>
+                                        <th>
+                                            <input type="checkbox" /></th>
+                                        <th width="12%">Unit Code</th>
+                                        <th>Unit Name</th>
+                                        <th>Location (City)</th>
+                                        <th>Unit Manager Name</th>
+                                        <th>Unit Manager Email</th>
+                                        <th>Unit Manager Contact No.</th>
+                                        <th width="8%">Status</th>
+                                        <th width="5%"></th>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td><a class="text-success" href="@Url.Action("unitdocuments", "DashBoard")"><b>123456</b></a></td>
+                                            <td>Dominos</td>
+                                            <td>Noida</td>
+                                            <td>Sanjdeep Kumar</td>
+                                            <td>s.deep@gmail.com</td>
+                                            <td>0958756426</td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="themeskin" checked>
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><span class="fa fa-ellipsis-v"></span></a>
+                                                    <div class="dropdown-menu"><a class="dropdown-item" href="#"><span class="far fa-eye"></span> Show Details</a> <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#create-unit"><span class="far fa-edit"></span> Edit</a></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td><a href="#" class="text-success" href="@Url.Action("unitdocuments", "DashBoard")"><b>123456</b></a></td>
+                                            <td>Dominos</td>
+                                            <td>Noida</td>
+                                            <td>Sanjdeep Kumar</td>
+                                            <td>s.deep@gmail.com</td>
+                                            <td>0958756426</td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="Checkbox1">
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><span class="fa fa-ellipsis-v"></span></a>
+                                                    <div class="dropdown-menu"><a class="dropdown-item" href="#"><span class="far fa-eye"></span> Show Details</a> <a href="#" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#create-unit"><span class="far fa-edit"></span> Edit</a></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                            <div class="py-5 mt-3 text-center">
+                                <a class="btn btn-warning btn-lg"><span class="fas fa-download"></span>&nbsp;&nbsp;Download Department Sheet</a>
+                            </div>
+                            <div class="dropbg">
+                                <form method="post" action="/upload">
+                                    <div class="row">
+                                        <div class="col-md-5 text-center">
+                                            <img src="~/Content/general/images/dropf.png" />
+                                        </div>
+                                        <div class="col-md-7">
+                                            <h4 class="mt-5">Drop or Select files</h4>
+                                            <p>
+                                                Drop files here or click
+                                                   <input type="file" multiple>
+                                                to select thorough your machine Accepted files type:.xlsx
+                                            </p>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal right fade createpop" id="create-unit" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Creat a new Unit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form class="needs-validation" novalidate>
+                <div class="modal-body">
+                    <div class="popup-content-scroll">
+                        <div class="nano-content form-design">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Location (State) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Location (City) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Head Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Head Mobile No. <span class="text-danger">*</span></label>
+                                    <select class="form-select form-control">
+                                        <option value="">Select</option>
+                                        <option>-</option>
+                                        <option>-</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Head Email <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Regional Head Name <span class="text-danger">*</span></label>
+                                    <select class="form-select form-control">
+                                        <option value="">Select</option>
+                                        <option>-</option>
+                                        <option>-</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Regional Head Mobile No. <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Regional Head Email <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">State Head Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">State Head Mobile No. <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">State Head Email <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">National Head Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">National Head Mobile No. <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">National Head Email <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Corporate Head Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Corporate Head Mobile No. <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Corporate Head Email <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+
+                                <div class="col-md-3 statuscus">
+                                    <label for="status" class="form-label">Status  <span class="text-danger">*</span></label>
+                                    <div class="form-control2">
+                                        <label class="switch">
+                                            <input type="checkbox" id="Checkbox2">
+                                            <div class="slider round">
+                                                <!--ADDED HTML -->
+                                                <span class="on">Active</span>
+                                                <span class="off">Deactive</span>
+                                                <!--END-->
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="row w-100">
+                        <div class="col-md-2 d-grid">
+                            <button type="submit" class="btn btn-warning">Creat Unit</button>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="reset" class="btn btn-light">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        $('input[type=file]').change(function () {
+            //console.log(this.files);
+            var f = this.files;
+            var el = $(this).parent();
+            if (f.length > 1) {
+                console.log(this.files, 1);
+                el.text('Sorry, multiple files are not allowed');
+                return;
+            }
+            // el.removeClass('focus');
+            el.html(f[0].name + '<br>' +
+                    '<span class="sml">' +
+                    'type: ' + f[0].type + ', ' +
+                    Math.round(f[0].size / 1024) + ' KB</span>');
+        });
+
+        $('input[type=file]').on('focus', function () {
+            $(this).parent().addClass('focus');
+        });
+
+        $('input[type=file]').on('blur', function () {
+            $(this).parent().removeClass('focus');
+        });
+
+    });
+</script>

@@ -1,0 +1,51 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace BAL
+{
+    public partial class TblPartyMaster : BCommon
+    {
+        public string Description { get; set; }
+        public int Id { get; set; }
+        public string Location { get; set; }
+        public int VendorId { get; set; }
+        public int ClientSiteId { get; set; }
+        public int AuditorId { get; set; }
+        public int EmployeeId { get; set; }
+        public int ClientId { get; set; }
+        public int GradeId { get; set; }
+        public int ActionType { get; set; }
+        public int PartyId { get; set; }
+        public string PartyType { get; set; }
+        public string PartyName { get; set; }
+        //public string Address { get; set; }
+        //public string EmailId { get; set; }
+        public string Pincode { get; set; }
+        //public string ContactNo { get; set; }
+        //public string IsActive { get; set; }
+        public string BankDetails { get; set; }
+        public string RegistrationType { get; set; }
+        public string Panitno { get; set; }
+        public string Gstinuin { get; set; }
+        public DateTime? CreatedOn { get; set; }
+        public DateTime? UpdateOn { get; set; }
+        public int? LastLoginId { get; set; }
+        //public int? CreatedBy { get; set; }
+
+        public string LastUpdateBy { get; set; }
+        public string Descritpion { get; set; }
+        public string ContactMobile { get; set; }
+
+        public string ContactPerson { get; set; }
+        public string Attribute1 { get; set; }
+        public string Attribute2 { get; set; }
+        public string Attribute3 { get; set; }
+        public string Attribute4 { get; set; }
+        public string Attribute5 { get; set; }
+        public string Attribute6 { get; set; }
+        public bool? IsDeleted { get; set; }
+
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+    }
+}

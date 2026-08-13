@@ -1,0 +1,785 @@
+﻿
+@{
+    ViewBag.Title = "Labour Code";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/LabourCodeController.js?Ver=@ViewBag.Version"></script>
+<link rel="stylesheet" href="~/ComplianceDashboard/css/style.css">
+<link rel="stylesheet" href="~/ComplianceDashboard/css/style.css">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<!-- AngularJS -->
+@*<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <script src="~/scripts/angular.min.js"></script>*@
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+<script>
+    app.directive('fileModel', ['$parse', function ($parse) {
+        return {
+            restrict: 'A',
+            scope: {
+                fileModel: '=',
+                rowContext: '=' // passing the row object
+            },
+            link: function (scope, element, attrs) {
+                element.bind('change', function () {
+                    scope.$parent.fileSelected(element[0].files, scope.rowContext);
+                });
+            }
+        };
+    }]);
+
+
+</script>
+
+<style>
+    .filters button {
+        padding: 8px 16px;
+        background: #6f42c1;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 3px !important;
+    }
+
+
+    .tile {
+        width: calc(18% - -42px) !important;
+        color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .table th, .table td {
+        text-align: left;
+        padding: 4px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    input#Remark {
+        font-size: 10px;
+    }
+
+    .form-control {
+        padding: 0.075rem 0.25rem !important;
+    }
+
+    #complianceTable thead th {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 10;
+    }
+
+    .table > thead > tr > th, .table > tbody > tr > td {
+        font-size: 12px;
+    }
+    /* Styling the container */
+    .file-upload-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    /* Hide the default file input */
+    input[type="file"] {
+        display: none;
+    }
+
+    /* Style the label that looks like a button */
+    .file-upload-label {
+        display: inline-block;
+        background-color: #4CAF50;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+        /* Hover effect for the label */
+        .file-upload-label:hover {
+            background-color: #45a049;
+        }
+
+        /* Optional: Add some text or icon next to the label for better UX */
+        .file-upload-label:before {
+            content: "📄 ";
+        }
+
+    .compliance-summary5 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: -22px;
+        width: 100%;
+        height: 100% !important
+    }
+
+
+    tbody td {
+        height: 35px !important;
+        font-size: 12px !important;
+        vertical-align: middle !important;
+        padding: 4px 6px !important;
+    }
+
+    /*****Added by shipra*****/
+
+
+    /* Remark Modal ko sabse upar le jao */
+    #remarkModal {
+        z-index: 1060 !important;
+    }
+
+    .modal-backdrop.remark-backdrop {
+        z-index: 1059 !important;
+    }
+
+
+
+
+    /* Second modal ko upar lane ke liye */
+    #complianceModal {
+        z-index: 1060 !important;
+    }
+
+        #complianceModal + .modal-backdrop {
+            z-index: 1055 !important;
+        }
+</style>
+<style>
+    .search-row {
+        position: sticky;
+        top: 35px; /* Adjust based on the height of your header row */
+        background: #fff;
+        z-index: 10;
+    }
+
+    thead tr:last-child {
+        position: sticky;
+        top: 0;
+        background: #f1f1f1;
+        z-index: 11;
+    }
+
+    #complianceTable th,
+    #complianceTable td {
+        height: 40px;
+        vertical-align: middle;
+    }
+    /***********************Added by shipra***************************/
+    .dashboard {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: stretch;
+        padding: 19px;
+    }
+
+    .tile {
+        width: calc(20% - -42px);
+        color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+        .tile i {
+            font-size: 20px;
+            position: absolute;
+            top: 24px;
+            right: 12px;
+            opacity: 0.3;
+        }
+
+        .tile h2 {
+            margin: 0 0 10px;
+            font-size: 20px;
+        }
+
+        .tile p {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .tile a {
+            color: #fff;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-top: auto;
+        }
+
+    .tile-green {
+        background-color: #23B480;
+    }
+
+    .tile-red {
+        background-color: #F66659;
+    }
+
+    .tile-yellow {
+        background-color: #FFCB82;
+    }
+
+    .tile-dark {
+        background-color: #402530;
+    }
+
+
+    .compliance-tile {
+        position: relative;
+    }
+
+    .tile-count {
+        margin: 0;
+    }
+
+    .tile-percentage {
+        position: absolute;
+        bottom: 8px;
+        right: 10px;
+        font-weight: bold;
+        color: white;
+        font-size: 16px;
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <!-- Overview Cards -->
+        <!-- Graphs and Statistics -->
+        <!-- Statutory Due Dates Summary -->
+        <section class="compliance-summary5" style="position:relative">
+
+            <div class="container">
+                <!-- Tabs -->
+                <div class="tabs">
+                    @*<div class="tab active" data-tab="statutory">Statutory Due Dates</div>*@
+                    @*<div class="tab" data-tab="internal">Internal Due Dates</div>*@
+                </div>
+
+                <!-- Statutory Content -->
+                <div class="content active" id="statutory" ng-init="BindFilter();BindSearch();BindFORTILESSearch()">
+                    <!-- Filters -->
+
+
+                    @*<div class="filters" style="margin-top:15px;  gap:10px; flex-wrap:wrap; align-items:center;">
+
+                        <div ng-init="BindFilter();BindSearch();BindFORTILESSearch()">
+                            <select ng-model="State">
+                                <option value="">Select State</option>
+                                <option ng-repeat="x in SMasterList  | unique:'State'" value="{{x.State}}"> {{x.STATE_NM}}  </option>
+                            </select>
+                            <select ng-model="Month">
+                                <option value="">Select Month</option>
+                                <option ng-repeat="x in SMasterList  | unique:'Month'" value="{{x.Month}}"> {{x.Month}}  </option>
+                            </select>
+                            <select ng-model="Year">
+                                <option value="">Select Year</option>
+                                <option ng-repeat="x in YearsList | orderBy: '-'" value="{{x}}"> {{x}}  </option>
+                            </select>
+                        </div>
+                        <button ng-click="BindSearch();BindFORTILESSearch()">Search</button>
+                        <div style=" color: #fff; border: none; border-radius: 5px; background: #6f42c1; ">
+                            <a href="#" class="btn expbtn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="margin-top: 2px; color: #fff; background: #6f42c1; ">Export</a>
+                            <ul class="dropdown-menu escalul" aria-labelledby="escalbtnLink">
+                                <li><a ng-click="ExportTableToExcel();ManageLog('Export in Excel')" class="dropdown-item">Export in Excel</a></li>
+
+                                <li><a class="dropdown-item" ng-click="PrintTable();ManageLog('Export in PDF')">Export in PDF</a></li>
+                            </ul>
+                        </div>
+
+
+
+
+                    </div>*@
+
+
+                    <div class="dashboard">
+
+
+
+
+
+
+
+                        <!-- Tile 3: Complied Docs -->
+                        <div class="tile tile-green compliance-tile">
+                            <i class="fas fa-file-alt"></i>
+                            <h2> Code on Wages (<strong>{{totalComplied}}</strong>)</h2>
+
+                            <span class="tile-percentage">
+                                {{compliedPercentage}}%
+                            </span>
+                            <a class="fa fa-eye" style="cursor: pointer; color: white" ng-click="openModal('The Code on Wages, 2019')"></a>
+                        </div>
+
+
+                        <!-- Tile 2: Pending Docs -->
+                        <div class="tile tile-red compliance-tile">
+                            <i class="fas fa-hourglass-half"></i>
+                            <h2>Industrial Relations Code  (<strong>{{totalNonComplied}}</strong>)</h2>
+
+                            <span class="tile-percentage">
+                                {{nonCompliedPercentage}}%
+                            </span>
+                            <a class="fa fa-eye" style="cursor: pointer; color: white" ng-click="openModal('The Industrial Relations Code, 2020')"></a>
+                        </div>
+
+
+                        <!-- Tile 2: Pending Docs -->
+                        <div class="tile tile-yellow compliance-tile">
+                            <i class="fas fa-check-circle"></i>
+                            <h2>OSH Code (<strong>{{totalDelayComplied}}</strong>)</h2>
+                            <span class="tile-percentage">{{delayCompliedPercentage}}%</span>
+                            <a class="fa fa-eye" style="cursor: pointer; color: white" ng-click="openModal('The Occupational Safety, Health and Working Conditions Code, 2020')"></a>
+                        </div>
+
+
+
+                        <!-- Tile 4: Delayed Docs -->
+                        <div class="tile tile-dark compliance-tile">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h2>Social Security Code (<strong>{{totalPending}}</strong>)</h2>
+
+                            <span class="tile-percentage">
+                                {{pendingPercentage}}%
+                            </span>
+
+                            <a class="fa fa-eye" style="cursor:pointer; color:white" ng-click="openModal('The Code on Social Security, 2020')"></a>
+                        </div>
+
+
+                        <!-- Tile 2: Pending Docs -->
+                        @*<div class="tile tile-green compliance-tile" style="background-color ='#6f42c1'">
+                            <i class="fas fa-check-circle"></i>
+                            <h2>Verified Docs (<strong>{{totalVerified}}</strong>)</h2>
+                            <span class="tile-percentage">{{verifiedPercentage}}%</span>
+                            <a class="fa fa-eye" style="cursor: pointer; color: white" ng-click="openModal('Verified')"></a>
+                        </div>*@
+
+
+
+
+
+
+
+
+                    </div>
+
+
+                    <!-- Table -->
+                    <div style="max-height: 700px; overflow-y: auto;">
+                        @*<button ng-click="BindAllSearch();" style="text-align: right; padding: 8px 16px; background: #6f42c1; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; float: inline-end; ">View All State</button>*@
+                        <table id="complianceTable" class="table table-bordered table-striped display">
+                            <thead>
+                                <tr>
+                                    <th>SNo</th>
+                                    <th>Act Name</th>
+                                    <th>Compliance Name</th>
+                                    @*<th>Month</th>
+                                    <th>State Name</th>
+                                    <th>DueDate</th>
+                                    <th>Status</th>
+                                    <th>Actual Submission Date</th>
+                                    <th>Delay Days</th>
+                                    <th ng-if="IsExecuter=='Executer'">UploadFile</th>
+                                    <th>Upload Date</th>
+                                    <th class="no-print">Remark </th>
+                                    <TH>IsVerified</TH>
+                                    <th>View File</th>
+                                    <th class="no-print">Action</th>*@
+                                </tr>
+
+                            </thead>
+                            <tbody>
+
+                                <tr ng-repeat="row in complianceRows  | filter:search">
+                                    <td>{{row.SNo}}</td>
+                                    <td>{{row.Act}}</td>
+                                    <td style="cursor:pointer; color:#007bff;" ng-click="openComplianceModal(row)">{{row.ComplianceName}}</td>
+                                    @*<td>{{row.Month}}</td>
+                                    <td>{{row.STATE_NM}}</td>
+                                    <td>
+                                        {{row.DueDate}}
+                                    </td>
+
+
+                                    <td>{{row.CStatus}}</td>
+                                    <td>
+                                        <input date-input type="date" style="width:auto" class="form-control no-print" id="ActualSubmissionDate{{$index}}" ng-model="row.ActualSubmissionDate" ng-disabled="IsExecuter!='Executer'  || row.Flag=='1'">
+                                        <p ng-show="false">{{ row.ActualSubmissionDate | date:'yyyy-MM-dd' }}</p>
+                                    </td>
+
+
+
+
+                                    <td>{{row.DelayDays}}</td>
+                                    <td ng-if="IsExecuter=='Executer'">
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15  no-print">
+                                            <div class="input-box">
+                                                <div style="display: flex; align-items: center;">
+                                                    <button class="uploadbtn" ng-disabled="row.Flag=='1'"
+                                                            ng-click="SetValue(row,'#fileupoad'+$index);ManageLog('Upload File'+row.Act)">
+                                                        Choose File
+                                                    </button>
+
+                                                    <input type="file"
+                                                           id="fileupoad{{$index}}"
+                                                           file-model="row.UploadFile"
+                                                           ng-change="fileSelected(row.UploadFile, row)"
+                                                           ng-model="row.UploadFile" />
+
+
+                                                    <i class="fa fa-upload" ng-click="DownloadFile(row.UploadFile)"
+                                                       style="color: green; margin-left: 10px;"
+                                                       ng-if="row.UploadFile"></i>
+                                                </div>
+
+
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p ng-show="false">
+                                            {{ row.UploadFile ? 'Uploaded' : 'Not Uploaded' }}
+                                        </p>
+                                    </td>
+
+                                    <td>{{row.CreateOn}}</td>
+                                    <td class="no-print">
+                                        <input ng-if="IsExecuter!='Executer'" ng-model="row.CRemark1" type="text" id="CRemark" style="font-size:10px" />
+                                        <input ng-if="IsExecuter=='Executer'" ng-model="row.VRemark1" type="text" id="VRemark" style="font-size:10px" ng-disabled="row.Flag=='1'" />
+                                        <p ng-if="IsExecuter=='Executer' && row.CRemark !='' ">
+                                            {{row.UserName}} (Reviewer) Remarks :
+                                            <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.CRemark,'Client Remark')"></i>
+                                        </p>
+                                        <p ng-if="IsExecuter!='Executer' && row.VRemark !=''">
+                                            {{row.UserName}} Executer Remark :
+                                            <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.VRemark,'Executer Remark')"></i>
+                                        </p>
+                                    </td>
+                                    <td class="no-print">
+
+
+                                        <select class="form-control no-print" ng-model="row.IsVerified" ng-if="IsExecuter !='Executer'">
+                                            <option value="">Select</option>
+                                            <option value="Verified">Verified</option>
+                                            <option value="Clarify">Under Clarification</option>
+                                        </select>
+                                        <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Verified' && row.Flag=='1'" class="status completed">Verified</span>
+                                        <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Clarify' && IsExecuter=='Executer'" class="status pending">Under Clarification</span>
+                                    </td>
+                                    <td ng-show="false">
+                                        {{row.IsVerified}}
+                                    </td>
+                                    <td><a href="#" class="view" ng-show="row.openthis=='1'" ng-click="viewFile(row)">{{ row.openthis == '1' ? 'View' : '' }}</a> </td>
+                                    <td class="no-print">
+
+                                        <input ng-if="IsExecuter=='Executer' && row.Flag!='1'" type="button" value="Submit" ng-click="AfterverifyRecord(row )" />
+                                        <input ng-if="IsExecuter !='Executer' && row.IV =='' " type="button" value="Submit" ng-click="AfterverifyRecord(row )" />
+
+                                    </td>*@
+                                </tr>
+
+                            </tbody>
+                        </table>
+
+                    </div>
+                    <div class="modal fade" id="LicenseFormop" tabindex="-1" aria-labelledby="LicenseFormopModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content modalbr" style="margin-left: -68px; width: 900px; margin-top: -3%;">
+                                <div class="modal-header licencefrmhed">
+                                    <div class="row">
+                                        <div class="col-md-1">
+                                            <a href="#" class="btnarrow" data-bs-dismiss="modal" id="closemodalLicenseForm" aria-label="Close">
+                                                <i class="fa fa-arrow-left"></i>
+                                            </a>
+                                        </div>
+                                        <div class="col-md-7 text-center">
+                                            <img src="https://talentcompliance.in/wp-content/uploads/2024/07/talent-new-logo-2-1.png" style="FLOAT: LEFT; width: 62%;">
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <h3 class="modal-title mt-2" style="background-color: #a20867;">
+                                                {{ModalTitle}}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="table table-bordered table-striped" style="font-size:10PX">
+                        <tfoot>
+                            <tr class="search-row">
+                                <th><input type="text" ng-model="search.Act" placeholder="Act" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.ComplianceName" placeholder="Compliance" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                @*<th><input type="text" ng-model="search.STATE_NM" placeholder="State" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.DueDate" placeholder="Due Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+
+                                <th><input type="text" ng-model="search.ActualSubmissionDate" placeholder="Actual Submission Date" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.DelayDays" placeholder="Delay Days" class="form-control input-sm" style="font-size: 12px;" /></th>
+                                <th><input type="text" ng-model="search.CreateOn" placeholder="Uploaded Date" class="form-control input-sm" style="font-size: 12px;" /></th>*@
+
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                </div>
+
+                <!-- Icon in the table -->
+                <!-- Modal Structure -->
+                <div class="modal fade" id="remarkModal" tabindex="-1" role="dialog" aria-labelledby="remarkModalLabel">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h4 class="modal-title" id="remarkModalLabel">{{HeaderRemark}}</h4>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close" ng-click="closeRemarkModal()">
+                                    &times;
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div ng-bind-html="selectedRemark"></div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+        <br>
+
+    </main>
+</div>
+
+<div class="modal fade" id="complianceModal" tabindex="-1" role="dialog" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content" style="border-radius: 10px; overflow: hidden; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+
+            <!-- Header -->
+            <div class="modal-header" style="background: linear-gradient(to right,  #E67624); padding: 14px 20px; ">
+                <h5 class="modal-title" id="modalTitle" style="font-size: 1.5rem; font-weight: 700; color: white; margin: 0;">
+                    Compliance Details
+                </h5>
+
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body" ng-if="selectedCompliance" style="background: #fff; padding: 20px;">
+
+                <div class="row mb-3">
+                    <div class="col-md-6"><strong style="color:#444;">Rule:</strong> <span style="color:#007bff;">{{selectedCompliance.Rule}}</span></div>
+                    <div class="col-md-6"><strong style="color:#444;">Section:</strong> <span style="color:#007bff;">{{selectedCompliance.Section}}</span></div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6"><strong style="color:#444;">Form No.:</strong> <span style="color:#007bff;"> {{selectedCompliance.FormNo}} </span></div>
+                    <div class="col-md-6"><strong style="color:#444;">Risk:</strong> <span style="color: red; font-weight: bold;">{{selectedCompliance.Risk}}</span></div>
+                </div>
+               
+                <div>
+                    <strong style="color:#444;">Attachment:</strong><br>
+                    <div ng-if="selectedCompliance.UploadedFilePath">
+                        <a class="btn btn-sm btn-primary mt-2" href="#" ng-click="DownloadFile(selectedCompliance.UploadedFilePath)">
+                            <i class="fa fa-download"></i> Download File
+                        </a>
+                    </div>
+                    <div ng-if="!selectedCompliance.UploadedFilePath" style="color: #888; margin-top: 5px;">
+                        No file uploaded.
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <strong style="color:#444;">Detailed Compliance :</strong>
+                    <p style="margin: 5px 0; font-size: 14px; color: #555;">{{selectedCompliance.DetailedCompliance || 'No Detailed Compliance available'}}</p>
+                </div>
+                <div class="mb-3">
+                    <strong style="color:#444;">Impact on Employer (Narrative) :</strong>
+                    <p style="margin: 5px 0; font-size: 14px; color: #555;">{{selectedCompliance.ImpactEmployer || 'No Impact on Employer (Narrative)  available'}}</p>
+                </div>
+
+                <div class="mb-3">
+                    <strong style="color:#444;">Description:</strong>
+                    <p style="margin: 5px 0; font-size: 14px; color: #555;">{{selectedCompliance.Description || 'No description available'}}</p>
+                </div>
+
+
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer" style="background: #f9f9f9; padding: 12px 20px; border-top: 1px solid #eee;">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="closeModal()" style="border-radius: 6px; padding: 6px 16px;">Close</button>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+
+<!-- Independent Modal for Tiles -->
+<div class="modal fade" id="tileDataModal" tabindex="-1" role="dialog" aria-labelledby="tileModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document" style="max-width: 95%;">
+        <div class="modal-content">
+
+            <div class="modal-header" style="background: linear-gradient(to right, #E67624, #E67624); ">
+                <h5 class="modal-title" style="font-size: 1.5rem; font-weight: 700; color: white; margin: 0;" id="tileModalTitle">{{modalTitle}}  </h5>
+
+                <button type="button" class="close" ng-click="closeTileModal()">&times;</button>
+            </div>
+
+            <div class="modal-body" style="background: #fff; padding: 10px;">
+                <!-- Table -->
+                <div style="max-height: 700px; overflow-y: auto;">
+                    <table id="modalComplianceTable" class="table table-bordered table-striped display">
+                        <thead>
+                            <tr>
+                                @*<th>SNo</th>*@
+                                <th>Act Name</th>
+                                <th>Compliance Name</th>
+                                @*<th>Month</th>
+        <th>State Name</th>
+        <th>DueDate</th>
+        <th>Status</th>
+        <th>Actual Submission Date</th>
+        <th>Delay Days</th>
+        <th ng-if="IsExecuter=='Executer'">UploadFile</th>
+        <th>Upload Date</th>
+        <th class="no-print">Remark</th>
+        <th>IsVerified</th>
+        <th>View File</th>
+        <th class="no-print">Action</th>*@
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="row in modalData">
+                                @*<td>{{row.SNo}}</td>*@
+                                <td>{{row.Act}}</td>
+                                <td style="cursor:pointer; color:#007bff;" ng-click="openComplianceModal(row)">{{row.ComplianceName}}</td>
+                                <!--<td>{{row.Month}}</td>
+                                <td>{{row.STATE_NM}}</td>
+                                <td>{{row.DueDate}}</td>-->
+                                @*<td>
+                                        <select class="form-control no-print"
+                                                ng-model="row.CStatus"
+                                                ng-disabled="IsExecuter!='Executer' || row.Flag=='1'"
+                                                ng-change="updateTileCounts()">
+                                            <option value="">Select</option>
+                                            <option value="Complied">Complied</option>
+                                            <option value="Non Complied">Non Complied</option>
+                                            <option value="Delay complied">Delay complied</option>
+                                            <option value="Non-Applicable">Non-Applicable</option>
+                                        </select>
+                                    </td>*@
+
+                                <!--<td>{{row.CStatus}}</td>
+                                <td>
+                                    <input date-input type="date" style="width:auto" class="form-control no-print" id="ActualSubmissionDate{{$index}}" ng-model="row.ActualSubmissionDate" ng-disabled="IsExecuter!='Executer'  || row.Flag=='1'">
+                                    <p ng-show="false">{{ row.ActualSubmissionDate | date:'yyyy-MM-dd' }}</p>
+                                </td>
+
+
+
+
+                                <td>{{row.DelayDays}}</td>
+                                <td ng-if="IsExecuter=='Executer'">
+                                    <div style="display: flex; align-items: center;">
+                                        <button class="uploadbtn"
+                                                ng-disabled="row.Flag=='1'"
+                                                ng-click="SetValue(row,'#fileupoad_modal'+$index);ManageLog('Upload File'+row.Act)">
+                                            Choose File
+                                        </button>
+                                        <input type="file"
+                                               id="fileupoad_modal{{$index}}"
+                                               file-model="row.UploadFile"
+                                               ng-change="fileSelected(row.UploadFile, row)"
+                                               ng-model="row.UploadFile" />
+                                        <i class="fa fa-upload" style="color: green; margin-left: 10px;" ng-if="row.UploadFile"></i>
+                                    </div>
+                                </td>
+                                <td>{{row.CreateOn}}</td>
+                                <td class="no-print">
+                                    <input ng-if="IsExecuter!='Executer'" ng-model="row.CRemark1" type="text" style="font-size:10px" />
+                                    <input ng-if="IsExecuter=='Executer'" ng-model="row.VRemark1" type="text" style="font-size:10px" ng-disabled="row.Flag=='1'" />
+                                    <p ng-if="IsExecuter=='Executer' && row.CRemark !='' " style="font-size:10px">
+                                        {{row.UserName}} (Reviewer) Remarks :
+                                        <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.CRemark,'Client Remark')"></i>
+                                    </p>
+                                    <p ng-if="IsExecuter!='Executer' && row.VRemark !=''" style="font-size:10px">
+                                        {{row.UserName}} Executer Remark :
+                                        <i class="fa fa-eye" style="cursor:pointer; color:blue" ng-click="openRemarkModal(row.VRemark,'Executer Remark')"></i>
+                                    </p>
+
+
+
+
+
+                                </td>
+                                <td class="no-print">
+                                    <select class="form-control" ng-model="row.IsVerified" ng-if="IsExecuter !='Executer'">
+                                        <option value="">Select</option>
+                                        <option value="Verified">Verified</option>
+                                        <option value="Clarify">Under Clarification</option>
+                                    </select>
+                                    <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Verified' && row.Flag=='1'" class="status completed">Verified</span>
+                                    <span ng-if="IsExecuter=='Executer'" ng-show="row.IsVerified=='Clarify'" class="status pending">Under Clarification</span>
+                                </td>
+                                <td><a href="#" class="view" ng-show="row.openthis=='1'" ng-click="viewFile(row)">View</a></td>
+                                <td class="no-print">
+                                    <input ng-if="IsExecuter=='Executer' && row.Flag!='1'" type="button" value="Submit" ng-click="AfterverifyRecord(row)" />
+                                    <input ng-if="IsExecuter !='Executer' && row.IV =='' " type="button" value="Submit" ng-click="AfterverifyRecord(row)" />
+                                </td>-->
+                            </tr>
+                            <tr ng-if="modalData.length === 0">
+                                <td colspan="15" class="text-center">No records found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+        });
+    });
+</script>

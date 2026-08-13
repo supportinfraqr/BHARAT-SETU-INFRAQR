@@ -1,0 +1,653 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+} 
+
+<script src="~/scripts/RetailJsLib/Commondashboardcontroller.js"></script>
+ 
+<!-- Bootstrap JS -->
+<div class="dashboard px-2 py-2" >
+    <!-- ====== CONTAINER 1 ====== -->
+    <div class="container-fluid mt-1" id="container1">
+        <div class="container1 p-2" style="height: 497px; background-color: #FFFFFF;">
+            <div class="row g-3 h-100">
+                <!-- LEFT SECTION -->
+                <div class="col-md-8 d-flex flex-column gap-3 h-100">
+                    <!-- Top row: Compliance + Calendar -->
+                    <div class="row g-3 flex-grow-1 mb-1" style="height: 50%;">
+                        <!-- Compliance Card -->
+                        <div class="col-md-7 h-100">
+                            <div class="custom-card h-100 d-flex flex-column p-4" ng-init="BindTiles();BindLabourCompliance();Bindcompliance()">
+                                <h2 class="fw-medium mb-3" style="color: #E43A29; font-size: 1.2rem;">Compliance Overview</h2>
+                                <div class="row g-2 flex-grow-1">
+                                    <div class="col-6">
+                                        <div class="metric-card p-4 rounded-3" style="background-color: #E45D27;">
+                                            <span class="small fw-medium">Total Compliance</span>
+                                            <span class="fw-semibold">{{TotalComplied}}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="metric-card p-4 rounded-3" style="background-color: #23B480;">
+                                            <span class="small fw-medium">Complied</span>
+                                            <span class="fw-semibold">{{Complied}}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="metric-card p-4 rounded-3" style="background-color: #7167AC;">
+                                            <span class="small fw-medium">Not Complied</span>
+                                            <span class="fw-semibold">{{NonComplied}}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="metric-card p-4 rounded-3" style="background-color: #FFCA82;">
+                                            <span class="small fw-medium">Pending Compliance</span>
+                                            <span class="fw-semibold">{{Pending}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calendar Card -->
+                        <!-- Calendar Card (Dynamic) -->
+                        <div class="col-md-5 h-100">
+                            <div class="custom-card h-100 d-flex flex-column p-0 overflow-hidden">
+                                <div class="calendar-header d-flex align-items-center justify-content-between px-3 py-2 text-white fw-semibold"
+                                     style="background-color: #F37437; font-size: 0.9rem;">
+                                    <button id="prevMonth" class="btn btn-sm text-white border-0 p-0 opacity-75 hover-brighten" style="background: none;">
+                                        <i class="bi bi-chevron-left fs-6"></i>
+                                    </button>
+                                    <span id="calendarMonthYear">Month Year</span>
+                                    <button id="nextMonth" class="btn btn-sm text-white border-0 p-0 opacity-75 hover-brighten" style="background: none;">
+                                        <i class="bi bi-chevron-right fs-6"></i>
+                                    </button>
+                                </div>
+
+                                <div class="calendar-body flex-fill p-3 d-flex flex-column"
+                                     style="background-color: #FEF3EC; overflow: hidden;">
+                                    <div class="d-grid mb-2"
+                                         style="grid-template-columns: repeat(7, 1fr); font-size: 0.75rem; color: #F37437; text-align:center;">
+                                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                                    </div>
+
+                                    <div id="calendarDays"
+                                         class="d-grid flex-grow-1 align-content-start"
+                                         style="grid-template-columns: repeat(7, 1fr); gap: 6px; text-align:center; font-size: 0.8rem;">
+                                        <!-- Days dynamically generated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+
+                    <!-- Bottom row: Small Table (50%) -->
+                    <div class="flex-grow-1" style="height: 50%;">
+                        <div class="custom-card h-100 p-3 d-flex flex-column">
+                            <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 flex-nowrap">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm filter-btn" ng-class="{'active': ActiveFilter==='Today'}" ng-click="filterByStatus('Today')">Today</button>
+                                    <button class="btn btn-sm filter-btn" ng-class="{'active': ActiveFilter==='Upcoming'}" ng-click="filterByStatus('Upcoming')">Upcoming</button>
+                                    <button class="btn btn-sm filter-btn" ng-class="{'active': ActiveFilter==='Overdue'}" ng-click="filterByStatus('Overdue')">Overdue</button>
+
+                                    <!-- RESET -->
+                                    <button class="btn btn-sm btn-secondary" ng-click="resetFilters()">Reset</button>
+                                </div>
+                                <div class="ms-auto me-2" style="width: 180px;">
+
+                                    <input type="text" class="form-control form-control-sm" placeholder="Search..." ng-model="SearchText" ng-change="filterBySearch()" />
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">  {{ SelectedState || 'Select Location' }}</button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="" ng-click="filterByState('All')">All</a></li>
+                                            <li ng-repeat="s in uniqueStates">
+                                                <a class="dropdown-item" href="" ng-click="filterByState(s)">{{ s }}</a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">     {{ SelectedCompliance || 'Select Compliance' }}</button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="" ng-click="filterByCompliance('All')">All</a></li>
+                                            <li ng-repeat="c in uniqueCompliances">
+                                                <a class="dropdown-item" href="" ng-click="filterByCompliance(c)">{{ c }}</a>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div ng-if="ActiveFilter" class="mb-2">
+                                <small class="text-muted">
+                                    Active Filter:
+                                    <b ng-if="ActiveFilter==='state'">State → {{ SelectedState }}</b>
+                                    <b ng-if="ActiveFilter==='compliance'">Compliance → {{ SelectedCompliance }}</b>
+                                    <b ng-if="ActiveFilter==='search'">Search → {{ SearchText }}</b>
+                                    <b ng-if="ActiveFilter==='Today' || ActiveFilter==='Upcoming' || ActiveFilter==='Overdue'">{{ ActiveFilter }}</b>
+                                    <b ng-if="ActiveFilter==='calendar'">Date → {{ ActiveDate }}</b>
+                                </small>
+                            </div>
+                            <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 small-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Act Name</th>
+                                            <th>Compliance Name</th>
+                                            <th>State Name</th>
+                                            <th>Due Date</th>
+                                            <th>Submission Date</th>
+                                            <th>Days Delay</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                        <tr ng-repeat="x in FilteredCompliance"
+                                            title="Compliance: {{x.ComplianceName}} | Act: {{x.Act}} | State: {{x.STATE_NM}}">
+                                            <td>{{x.Act}}</td>
+                                            <td>{{x.ComplianceName}} </td>
+                                            <td>{{x.STATE_NM}} </td>
+                                            <td>{{x.DueDate  | date:'yyyy-MM-dd' }} </td>
+                                            <td>{{x.ActualSubmissionDate}} </td>
+                                            <td>{{x.DelayDays}}</td>
+                                            <td>{{x.CStatus}}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT SIDE -->
+                <div class="col-md-4 ps-3">
+                    <div class="right-card">
+                        <!-- Header -->
+                        <div class="rc-header">
+                            <button id="prevCompliance" class="rc-arrow"><i class="bi bi-arrow-left"></i></button>
+                            <h5 id="complianceTitle" class="rc-title mb-0">Payroll Compliance</h5>
+                            <button id="nextCompliance" class="rc-arrow"><i class="bi bi-arrow-right"></i></button>
+                        </div>
+
+                        <!-- Toolbar Buttons -->
+                        <div id="complianceButtons" class="rc-toolbar"></div>
+
+                        <!-- Filters (Fixed for all) -->
+                        @*<div class="rc-filterbar d-flex align-items-center justify-content-between mb-2">
+                            <select ng-model="selectedState" ng-change="getFilteredLabourRows()"
+                                    ng-options="state for state in availableStates"
+                                    class="form-select form-select-sm w-50 me-2">
+                                <option value="">All States</option>
+                            </select>
+
+                            <select ng-model="selectedReg"
+                                    ng-options="reg for reg in availableRegs"
+                                    class="form-select form-select-sm w-50">
+                                <option value="">All Registrations</option>
+                            </select>
+                        </div>*@
+
+                        <!-- Table -->
+                        <div class="rc-table-wrapper">
+                            <table class="table table-sm rc-table mb-0 text-center align-middle">
+                                <thead id="complianceThead">
+                                    <tr>
+                                        <th ng-repeat="header in section.data[section.activeButton || section.defaultButton].headers">
+                                            {{header}}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="complianceTbody">
+                                    <tr ng-repeat="row in getFilteredLabourRows()">
+                                 
+                                        <td ng-repeat="col in row">{{col}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ========================= CONTAINER 2 ========================= -->
+    <div class="container-fluid mt-4" id="container2">
+        <div class="custom-card p-3" style="height: 320px;">
+            <div class="row h-100 g-0">
+
+                <!-- LEFT: LICENSES OVERVIEW -->
+                <div class="col-md-7 d-flex flex-column justify-content-between border-end border-orange pe-3">
+                    <h5 class="fw-medium text-orange mb-2">Licenses Overview</h5>
+
+                    <div class="chart-wrapper flex-grow-1">
+                        <canvas id="licensesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- RIGHT: LICENSE APPLICABILITY -->
+                <div class="col-md-5 d-flex flex-column ps-3 position-relative">
+                    <!-- Arrow Button -->
+                    <a href="#" class="position-absolute top-0 end-0 m-2 text-orange arrow-btn">
+                        <i class="bi bi-arrow-up-right-circle"></i>
+                    </a>
+
+                    <h5 class="fw-medium text-orange mb-3">License Applicability</h5>
+
+                    <!-- Dropdown Toolbar -->
+                    <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                        <div class="d-flex gap-2 mb-3">
+
+                            <!-- State Filter -->
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-orange dropdown-toggle"
+                                        data-bs-toggle="dropdown">
+                                    {{selectedState || 'State'}}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" 
+                                           ng-click="selectFilter('state', '')">All</a>
+                                    </li>
+                                    <li ng-repeat="state in uniqueStatesl">
+                                        <a class="dropdown-item"  
+                                           ng-click="selectFilter('state', state)">{{state}}</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- License Filter -->
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-orange dropdown-toggle"
+                                        data-bs-toggle="dropdown">
+                                    {{selectedLicense || 'License'}}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" 
+                                           ng-click="selectFilter('license', '')">All</a>
+                                    </li>
+                                    <li ng-repeat="license in uniqueLicensesl">
+                                        <a class="dropdown-item"  
+                                           ng-click="selectFilter('license', license)">{{license}}</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Location Filter -->
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-orange dropdown-toggle"
+                                        data-bs-toggle="dropdown">
+                                    {{selectedLocation || 'Location'}}
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item"
+                                           ng-click="selectFilter('location', '')">All</a>
+                                    </li>
+                                  
+                                    <li ng-repeat="location in uniqueLocationsl">
+                                        <a class="dropdown-item"
+                                           ng-click="selectFilter('location', location)">{{location}}</a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                        </div>
+                        <!-- Go & Download Buttons -->
+                        @*<button class="btn btn-sm btn-orange">Go</button>
+                        <button class="btn btn-sm btn-orange ms-auto px-3">Download</button>*@
+                    </div>
+
+                    <!-- Table -->
+                    <div class="container2-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                        <table class="table table-sm mb-0 text-center align-middle">
+                            <thead class="container2-thead sticky-top">
+                                <tr>
+                                    
+                                    <th>License</th>
+                                    <th>State</th>
+                                    <th>Location</th>
+                                  
+                                </tr>
+                            </thead>
+                            <tbody class="container2-tbody" ng-repeat="x in filteredLicenses">
+                                <tr>
+                                    <td>{{x.LicenseName}}</td> 
+                                    <td>{{x.STATE_NAME}}</td>
+                                    <td>{{x.RefStoreCode}}</td>
+                                   
+                                </tr>
+                              
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============== REQUIRED CDNs =============== -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <!-- ========================= CONTAINER 3 ========================= -->
+    <div class="container-fluid mt-4" id="container3">
+        <div class="custom-card p-3">
+            <div class="row h-100 g-3">
+
+                <!-- ===== 1. Location Overview ===== -->
+                <div class="col-md-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-medium text-orange mb-0">Location Overview</h5>
+                        <a href="#" class="text-orange arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                    </div>
+
+                    <div class="row g-2 flex-grow-1">
+                        <div class="col-6">
+                            <div class="mini-card bg-success text-white d-flex justify-content-between align-items-center px-3 py-2 rounded-3 shadow-sm">
+                                <span>Active</span><span>{{Active}}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mini-card bg-danger text-white d-flex justify-content-between align-items-center px-3 py-2 rounded-3 shadow-sm">
+                                <span>Inactive</span><span>{{InActive}}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mini-card bg-warning text-white d-flex justify-content-between align-items-center px-3 py-2 rounded-3 shadow-sm">
+                                <span>Upcoming</span><span>{{Upcoming}}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mini-card bg-orange text-white d-flex justify-content-between align-items-center px-3 py-2 rounded-3 shadow-sm">
+                                <span>Total</span><span>{{TotalStores}}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mini-card bg-dark text-white d-flex justify-content-between align-items-center px-3 py-2 rounded-3 shadow-sm">
+                                <span>Total States</span><span>{{TotalStates}}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mini-card bg-primary text-white d-flex justify-content-between align-items-center px-3 py-2 rounded-3 shadow-sm">
+                                <span>Total Cities</span><span>{{TotalCities}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== 2. Applicable Act ===== -->
+                <div class="col-md-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-medium text-orange mb-0">Applicable Act</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" class="form-control form-control-sm search-input bg-transparent"   ng-model="searchText"  placeholder="Search">
+                            <a href="#" class="text-orange arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper flex-grow-1 overflow-auto rounded-3 shadow-sm">
+                        <table class="table table-sm mb-0 text-center align-middle">
+                            <thead class="thead-orange sticky-top">
+                                <tr>
+                                    <th>Applicable Act</th>
+                                    <th>State Name</th>
+                                    <th>Overview</th>
+                                   
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                <tr ng-repeat="x in ApplicableActList | filter:searchText">
+                                    <td>{{x.Act}}</td>
+                                    <td>{{x.STATE_NM}}</td>
+                                    <td>
+                                        <i class="bi bi-eye text-orange"
+                                           data-toggle="tooltip"
+                                           data-placement="top"
+                                           title="{{x.ActOverview}}">
+                                        </i>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ===== 3. Document Expiry ===== -->
+                <div class="col-md-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-medium text-orange mb-0">Document Expiry</h5>
+                        <a href="#" class="text-orange arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                    </div>
+
+                    <div class="table-wrapper flex-grow-1 overflow-auto rounded-3 shadow-sm">
+                        <table  id ="" class="new table table-sm mb-0 text-center align-middle">
+                            <thead class="thead-orange sticky-top">
+                                <tr>
+                                    <th>Store Code</th>
+                                    <th>Document Name</th>
+                                    <th>Days to Expire</th>
+                                    <th>Expiry Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                              
+                                <tr ng-repeat="xx in DocumentExpireList">
+                                    <td>
+                                        {{xx.StoreCode}}
+                                    </td>
+                                    <td>
+                                        {{xx.DocumentType}}
+                                    </td>
+                                    <td>
+                                        {{xx.DayExpire}}
+                                    </td>
+                                    <td>
+                                        {{xx.ExpiryStatus}}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- ================= CONTAINER 4 ================= -->
+    <div class="container-fluid mt-4" id="container4">
+        <div class="custom-card p-3">
+            <div class="row h-100 g-3">
+
+                <!-- LEFT SECTION (70%) -->
+                <div class="col-lg-8 d-flex flex-column">
+
+                    <!-- UPPER LEFT (Notices | Risk Matrix) -->
+                    <div class="upper-wrapper d-flex gap-3" style="flex:1; min-height:0;">
+                        <!-- Notices & Inspections (left) -->
+                        <div class="col-left card flex-fill d-flex flex-column p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="fw-medium text-orange mb-0">Notices & Inspections</h5>
+                                <a href="#" class="arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                            </div>
+
+                            <div class="table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 text-center align-middle">
+                                    <thead class="thead-orange sticky-top">
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Store Code</th>
+                                            <th>Submission</th>
+                                            <th>Closer Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in NoticeLIst">
+                                            <td>{{x.DepartmentName}}</td>
+                                            <td>{{x.StoreCode}}</td>
+                                            <td>
+                                                {{x.ReceiptDate}}
+                                            </td>
+                                            <td>
+                                                {{x.Submitions}}
+                                            </td>
+                                        </tr>                                                                              
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Risk Matrix (right) -->
+                        <div class="col-right card flex-fill d-flex flex-column p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2" ng-init="getriskmatrix(0)">
+                                <h5 class="fw-medium text-orange mb-0">Risk Matrix</h5>
+                                <select id="ddlrisk"
+                                        class="form-select form-select-sm w-50 mb-3"
+                                        ng-model="Risk"
+                                        ng-change="getriskmatrix(Risk)">
+                                   
+                                    <option value="0">Litigation</option>
+                                    <option value="1">Notice</option>
+                                </select>
+                                <a href="#" class="arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                            </div>
+
+                            <div class="d-flex align-items-center flex-grow-1 gap-3" style="min-height:0;" >
+                                <!-- donut canvas -->
+                                <div class="donut-wrap d-flex align-items-center justify-content-center" style="width:100%; min-height:0; height:100%;">
+                                    <canvas id="riskMatrixChart" style="width:100%; height:100%;"></canvas>
+                                </div>
+
+                                <!-- legend side-by-side -->
+                                @*<div class="legend-wrap text-orange small fw-semibold" style="width:40%;">
+                                    <div class="d-flex align-items-center mb-2"><span class="legend-dot me-2" style="background:#E45D27"></span> Less than 50%</div>
+                                    <div class="d-flex align-items-center mb-2"><span class="legend-dot me-2" style="background:#8BC34A"></span> 51% – 75%</div>
+                                    <div class="d-flex align-items-center"><span class="legend-dot me-2" style="background:#FFC107"></span> Above 75%</div>
+                                </div>*@
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LOWER LEFT (Litigation Overview | Case Status) -->
+                    <div class="lower-wrapper d-flex gap-3 mt-2" style="flex:1; min-height:0;">
+                        <!-- Litigation Overview (left) -->
+                        <div class="card flex-fill d-flex flex-column p-3" style="flex:1 1 0;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="fw-medium text-orange mb-0">Litigation Overview</h5>
+                                <a href="#" class="arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                            </div>
+                             	 	 	 	  
+                            <div class="mini-grid flex-grow-1">
+                                <div class="mini-card text-center p-2 bg-light-yellow">
+                                    <div class="small">Case Filing</div><div class="fw-bold">{{CaseFiling}}</div>
+                                </div>
+                                <div class="mini-card text-center p-2 bg-light-green">
+                                    <div class="small">Total Pleadings</div><div class="fw-bold">{{Pleadings}}</div>
+                                </div>
+                                <div class="mini-card text-center p-2 bg-light-red">
+                                    <div class="small">Orders & Judgements</div><div class="fw-bold">{{Orders}}</div>
+                                </div>
+                                <div class="mini-card text-center p-2 bg-light-blue">
+                                    <div class="small">Hearings</div><div class="fw-bold">{{Hearing}}</div>
+                                </div>
+
+                                <div class="mini-card text-center p-2 bg-light-orange">
+                                    <div class="small">Total Cases</div><div class="fw-bold">{{TotalCases}}</div>
+                                </div>
+                                <div class="mini-card text-center p-2 bg-light-purple">
+                                    <div class="small">Appeal</div><div class="fw-bold">{{Appeal}}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Case Status (right) -->
+                        <div class="card flex-fill d-flex flex-column p-3" style="flex:1 1 0;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="fw-medium text-orange mb-0">Case Status</h5>
+                                <a href="#" class="arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                            </div>
+
+                            <div class="case-status-wrapper flex-grow-1 overflow-auto">
+                                <table class="table table-sm mb-0 align-middle">
+                                    <tbody>
+                                        <tr ng-repeat="x in CaseStatusList">
+                                        <!-- Case Status Name -->
+                                    <td class="small text-muted">
+                                        {{x.CaseStatus}}
+                                    </td>
+
+                                    <!-- Progress Bar -->
+                                    <td style="width:70%;">
+                                        <div class="progress" style="height:6px; background-color:#f1f1f1;">
+                                            <div class="progress-bar bg-orange"
+                                                 role="progressbar"
+                                                 style="width:{{x.TotalCases}}%;"
+                                                 aria-valuenow="{{x.TotalCases}}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Numeric Value -->
+                                    <td class="small fw-semibold text-end">
+                                        {{x.TotalCases}}%
+                                    </td>
+                                    </tr> 
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+
+                <!-- RIGHT SECTION (30%) -->
+                <div class="col-lg-4 d-flex flex-column">
+                    <div class="container4-right flex-grow-1 d-flex flex-column p-3 rounded-3" style="background-color:#fbfbfb;">
+                        <div class="d-flex justify-content-between align-items-center mb-2" ng-init="getfinancialchart(0)">
+                            <h5 class="fw-medium text-orange mb-0">Financial Impact</h5>
+                            <a href="#" class="arrow-btn"><i class="bi bi-arrow-up-right-circle"></i></a>
+                        </div>
+
+                        <select id="ddlrisk"
+                                class="form-select form-select-sm w-50 mb-3"
+                                ng-model="financial"
+                                ng-change="getfinancialchart(financial)"> 
+                            <option value="0">Litigation</option>
+                            <option value="1">Notice</option>
+                        </select>
+
+                        <div class="chart-placeholder flex-grow-1 d-flex align-items-center justify-content-center rounded-3" style="min-height:0;">
+                            <canvas id="financialImpactChart" style="width:100%;height:100%"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+</div>

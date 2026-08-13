@@ -1,0 +1,1111 @@
+﻿<!DOCTYPE html>
+<html>
+<!-- InstanceBegin template="/Templates/template.dwt" codeOutsideHTMLIsLocked="false" -->
+<head>
+    <!-- InstanceBeginEditable name="doctitle" -->
+    <title>Admin</title>
+    <!-- InstanceEndEditable -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="favicon.png" />
+    <link href="css/bootstrap.css" rel='stylesheet' />
+    <link href="css/all.css" rel="stylesheet" />
+    <link href="css/dataTables.bootstrap5.min.css" rel='stylesheet' />
+    <link href="css/datepicker.min.css" rel='stylesheet' />
+    <link href="css/custom_theme.css" rel='stylesheet' />
+    <link href="css/colorTheme/default.css" rel='stylesheet' />
+    <link href="css/draggle.css" rel="stylesheet" />
+    <link href="css/jquery.dropdown.css" rel="stylesheet" />
+    <link href="css/responsive.css" rel='stylesheet' />
+    <link href="css/jquery-ui.css" rel="stylesheet" />
+    <link href="css/datepicker.css" rel="stylesheet" />
+    <link href="css/sweetalert2.css" rel="stylesheet" />
+    <!-- InstanceBeginEditable name="head" -->
+    <!-- InstanceEndEditable -->
+</head>
+<body class="dashbg newtemp">
+    <div class="contentwraper menumarginleft">
+        <header class="header menuheader-width">
+            <div class="container-fluid">
+                <div class="row cmmenu">
+                    <div class="col col-md-12">
+                        <div class="row">
+                            <div class="col">
+                                <h4 class="moudlename">
+                                    <div class="list-control">
+                                        <a class="sidemenutoggle">
+                                            <span class="fa fa-ellipsis-v"></span>
+                                        </a>
+                                        <span class="pagehed">Dashboard</span>
+                                        <div class="menusidebar menusidebar-width">
+                                            <div class="profiletitle">
+                                                <img src="images/dash-logo.png" alt="" class="dash-logo" />
+                                            </div>
+                                            <div class="menuscrollwrap">
+                                                <div class="nano-content">
+                                                    <!--<span class="profiletxt">General</span>-->
+                                                    <ul class="navsidebar">
+                                                        <li class="nav-item active">
+                                                            <a href="dasboard.html">
+                                                                <span class="icons icon-grid"></span>Dashboard
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="storeMaster.html">
+                                                                <span class="icons icon-home"></span>Store Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="complianceDoc.html">
+                                                                <span class="icons icon-globe"></span>Compliance Doc.
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="licenseMaster.html">
+                                                                <span class="icons icon-docs"></span>License Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <a href="employeeMaster.html">
+                                                                <span class="icons icon-user"></span>Employees Master
+                                                            </a>
+                                                        </li>
+                                                        <li class="nav-item seprat">
+                                                            <a href="#">
+                                                                <span class="icons icon-login"></span>Logout
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </h4>
+                            </div>
+                            <div class="col col-md-auto">
+                                <div class="nav-item dropdown d-inline me-3">
+                                    <a href="#" class="micon dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="fas fa-bell"></span>
+                                        <span class="notifi"></span>
+                                    </a>
+                                    <ul class="dropdown-menu" id="notification_event" aria-labelledby="navbarDropdown">
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item preview-item" href="#" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                                <div class="preview-thumbnail">
+                                                    <img src="images/profile2.jpg" class="img-circle" alt="User Image">
+                                                </div>
+                                                <div class="preview-item-content">
+                                                    <p class="preview-subject font-weight-medium mb-2"><strong>Dennis Nerdy</strong>commented on <strong>Isla Nublar SOC2 compliance report</strong></p>
+                                                    <p class="preview-subject mb-0 text-warning"><strong>Last Wednesday at 9:42 AM </strong></p>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <a href="#" class="micon me-3"><span class="fas fa-cog"></span></a>
+                                <a href="profile.html" class="micon"><span class="fas fa-user-circle"></span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- InstanceBeginEditable name="Content Area" -->
+        <div class="pagecontentbody">
+            <div class="pagebody">
+                <div class="col-md-12 pageheader pb-2">
+                    <div class="row">
+                        <div class="col-md-9">
+                        </div>
+                        <div class="col-sm-3 text-end">
+                            <a class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reportNotice">Report Notice</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-9 mb-2">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="col-md-12 pageheader pb-2">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <h4 class="mb-0">Store Compliance Status</h4>
+                                            </div>
+                                            <div class="col-sm-4 text-end">
+                                                <ul class="filter-search">
+                                                    <li class="p-0">
+                                                        <div class="input-group">
+                                                            <input class="form-control" type="text" id="searchbox" value="" placeholder="Search Store">
+                                                            <button class="btn btn-default" type="button" id="button-addon2"><span class="icons icon-magnifier"></span></button>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive nosearch" style="max-height: 335px;">
+                                        <table class="table table-bordred tableFixHead">
+                                            <thead class="bg-warning">
+                                                <tr class="noborder">
+                                                    <th></th>
+                                                    <th>Type</th>
+                                                    <th class="text-center">Yes</th>
+                                                    <th class="text-center">No</th>
+                                                    <th class="text-center">Attached</th>
+                                                    <th></th>
+                                                    <th class="text-center">Verify</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Abstract Displyed</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center" style="width: 18%">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center" style="width: 7%"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center" style="width: 9%"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Notice Board</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Visitor In/Out register</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Employees In/Out register</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Inspection Book</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Fire Extingisher</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Fire Exit Plan</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Open and close time</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Weekly off day</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Lunch Break hour</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">Inspector Name</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">S&E certificate displayed</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td><span class="typtxt">FSSAi license displayed</span></td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <input class="custchk" type="checkbox" />
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="upload-btn-wrapper">
+                                                            <button class="uploadbtn">Upload Image</button>
+                                                            <input type="file" name="myfile" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center"><a href="#" class="dwnlbtn"><i class="fa fa-download"></i></a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-success">Verified</a></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="col-md-12 pageheader pb-2">
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <h4 class="mb-0">Store code - 123456</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 text-center">
+                                        <div class="py-5">
+                                            <div class="row">
+                                                <div class="col-12 text-center pb-2">
+                                                    <b class="text-warning">50</b>
+                                                </div>
+                                            </div>
+                                            <img src="images/speedom.svg" />
+                                            <div class="row">
+                                                <div class="col-6 text-start tc">
+                                                    <b class="text-warning" style="padding-left: 10px;">0</b>
+                                                </div>
+                                                <div class="col-6 text-end tc">
+                                                    <b class="text-warning" style="padding-right: 5px;">100</b>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="pb-5">
+                                            <strong class="mb-2">Document Upload</strong><br />
+                                            <b class="text-warning">0</b>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="col-md-12 pageheader pb-2">
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <h4 class="mb-0">License & Registration</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive nosearch" style="max-height: 335px;">
+                                        <table class="table table-bordred tableFixHead">
+                                            <thead class="bg-info">
+                                                <tr class="noborder">
+                                                    <th></th>
+                                                    <th>Store Code</th>
+                                                    <th>License name</th>
+                                                    <th>License Number</th>
+                                                    <th>Validity Start</th>
+                                                    <th>Validity End</th>
+                                                    <th>Days to Expire</th>
+                                                    <th>Expiry status</th>
+                                                    <th style="width: 13%;">Renewal Request</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td>
+                                                        <input type="checkbox" />
+                                                        <b class="text-warning">All</b>
+                                                    </td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td><b class="text-danger">Expiring Soon</b></td>
+                                                    <td class="text-center" style="width: 9%"><a href="#" class="btn btn-purbtn" onclick="succesmsg()">Approv</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td>
+                                                        <input type="checkbox" />
+                                                        <b>123456</b>
+                                                    </td>
+                                                    <td>FSSAI License</td>
+                                                    <td>111111111111111</td>
+                                                    <td>01/04/2023</td>
+                                                    <td>16/06/2023</td>
+                                                    <td>30</td>
+                                                    <td><b class="text-danger">Expiring Soon</b></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-approved" onclick="succesmsg()">Approv</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td>
+                                                        <input type="checkbox" />
+                                                        <b>123456</b>
+                                                    </td>
+                                                    <td>Trade License</td>
+                                                    <td>111111111111111</td>
+                                                    <td>01/04/2023</td>
+                                                    <td>16/06/2023</td>
+                                                    <td>30</td>
+                                                    <td><b class="text-danger">Expiring Soon</b></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-purbtn" onclick="succesmsg()">Approv</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td>
+                                                        <input type="checkbox" />
+                                                        <b>123456</b>
+                                                    </td>
+                                                    <td>Signage License</td>
+                                                    <td>111111111111111</td>
+                                                    <td>01/04/2023</td>
+                                                    <td>16/06/2023</td>
+                                                    <td>30</td>
+                                                    <td><b class="text-danger">Expiring Soon</b></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-purbtn" onclick="succesmsg()">Approv</a></td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td></td>
+                                                    <td>
+                                                        <input type="checkbox" />
+                                                        <b>123456</b>
+                                                    </td>
+                                                    <td>Pollution NOC</td>
+                                                    <td>111111111111111</td>
+                                                    <td>01/04/2023</td>
+                                                    <td>16/06/2023</td>
+                                                    <td>30</td>
+                                                    <td><b class="text-danger">Expiring Soon</b></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-purbtn" onclick="succesmsg()">Approv</a></td>
+                                                </tr>                                                
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-12 text-end">
+                                       <a href="licenseMaster.html" class="text-purp" style="padding: 10px 50px;"><b>View All</b></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="col-md-12 pageheader pb-2">
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <h4 class="mb-0">Notices & Inspections</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive nosearch" style="max-height: 570px;">
+                                        <table class="table table-bordred tableFixHead">
+                                            <thead class="nocolor">
+                                                <tr class="noborder">
+                                                    <th></th>
+                                                    <th class="text-center">Department</th>
+                                                    <th class="text-center">Store Code</th>
+                                                    <th class="text-center">Submitions</th>
+                                                    <th></th>
+                                                    <th class="text-center">Closer Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>100% done </b>
+                                                        <br />
+                                                        <progress id="file" class="hundredper" value="100" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Closed &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="penddings"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>PF Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>0%  </b>
+                                                        <br />
+                                                        <progress id="file" value="0" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>ESIC Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="file" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="Progress1" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="Progress2" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="Progress3" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="Progress4" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="Progress5" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                                <tr class="noborder">
+                                                    <td class="text-center"><a class="submiteds"><i class="fas fa-book-reader"></i></a></td>
+                                                    <td class="text-center">
+                                                        <b>Labor Department</b><br />
+                                                        <small>Notice &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center"><b><i class="fas fa-store-alt"></i>&nbsp;12345678</b></td>
+                                                    <td class="text-center">
+                                                        <b>Reply Status</b><br />
+                                                        <small>Submitted &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>50% done </b>
+                                                        <br />
+                                                        <progress id="Progress6" value="50" max="100"></progress>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <b>Final Status</b><br />
+                                                        <small>Pendding &nbsp;<i class="fas fa-download"></i></small>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h5 class="btitle">Assigned Executer</h5>
+                            <div class="card blbox nbox">
+                                <div class="card-body">
+                                    <div class="col-md-12">
+                                        <img class="boximg" src="images/profile2.jpg" />
+                                        <p class="text-center"><b>Kirti Yadav</b></p>
+                                        <p>Employee ID : <b>SJC008</b></p>
+                                        <p>Email ID : <b>kirti@talentcompilance.in</b></p>
+                                        <p>Mobile No. : <b>+91 0000000000</b></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="btitle">Escalation Level 1</h5>
+                            <div class="card orbox nbox">
+                                <div class="card-body">
+                                    <div class="col-md-12">
+                                        <img class="boximg" src="images/profile2.jpg" />
+                                        <p class="text-center"><b>Komal Singh</b></p>
+                                        <p>Employee ID : <b>TC012</b></p>
+                                        <p>Email ID : <b>komal@talentcompilance.in</b></p>
+                                        <p>Mobile No. : <b>+91 0000000000</b></p>
+                                        <a class="btn btn-xs btn-light escalbtn dropdown-toggle" href="#" role="button" id="escalbtnLink" data-bs-toggle="dropdown" aria-expanded="false">Escalate
+                                        </a>
+                                        <ul class="dropdown-menu escalul" aria-labelledby="escalbtnLink">
+                                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#escalet1">Matter related to compliance</a></li>
+                                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#escalet1">Matter related to license</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="btitle">Escalation Level 1</h5>
+                            <div class="card rebox nbox">
+                                <div class="card-body">
+                                    <div class="col-md-12">
+                                        <img class="boximg" src="images/profile2.jpg" />
+                                        <p class="text-center"><b>Shankar Kumar</b></p>
+                                        <p>Employee ID : <b>TC100</b></p>
+                                        <p>Email ID : <b>shankar@talentcompilance.in</b></p>
+                                        <p>Mobile No. : <b>+91 0000000000</b></p>
+                                        <a href="#" class="btn btn-xs btn-light escalbtn" data-bs-toggle="modal" data-bs-target="#escalet2">Escalate</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content notiModal">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notificationModalLabel">News</h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>News Title</h4>
+                        <p class="mb-5">In publishing and graphic design, Lorem ipsum is a placeholder text commonly used to demonstrate the visual form of a document or a typeface without relying on meaningful content. Lorem ipsum may be used as a placeholder before final copy is available</p>
+                        <p>Today 10:30 PM</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="reportNotice" tabindex="-1" aria-labelledby="reportNoticeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content notiModal1">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="reportNoticeModalLabel">Report Notice</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="mb-3"><b>Store Code</b></label>
+                                    <select class="form-control form-select">
+                                        <option>Search Store</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="mb-3"><b>Department</b></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="mb-3"><b>Uplad</b></label>
+                                    <input type="file" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="mb-3"><b>Date of receipt</b></label>
+                                    <input type="text" class="form-control datepicker-here" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row justify-content-center postion-reletive mt-3 mb-1">
+                            <div class="col-md-10 d-grid">
+                                <button class="btn btn-warning" data-bs-dismiss="modal">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="escalet2" tabindex="-1" aria-labelledby="escalet2ModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content notiModal">
+                    <img src="images/enlpopup.png" class="enlpopup" />
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="escalet2ModalLabel"></h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-2 text-center pt-4">
+                                <i class="fas fa-thumbs-up fa-2x"></i>
+                            </div>
+                            <div class="col-md-10">
+                                <h5 class="mb-5">Regret you have faced issue, your escalation has been submitted and will get back in 24 hours</h5>
+                            </div>
+                            <div class="col-md-12 d-grid">
+                                <button class="btn btn-outline-light">OK</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="escalet1" tabindex="-1" aria-labelledby="escalet1ModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content notiModal1">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="escalet1ModalLabel"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group iconsrch mb-5">
+                                    <label class="text-warning mb-3"><b>Select Store & Submit</b></label>
+                                    <i class="fa fa-search"></i>
+                                    <select class="form-control form-select form-control-lg custmsrch">
+                                        <option>Search Store</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                        <option>12045867</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row justify-content-center postion-reletive mb-1">
+                            <div class="col-md-6 d-grid">
+                                <button class="btn btn-warning btn-lg" data-bs-toggle="modal" data-bs-target="#sescalet" data-bs-dismiss="modal">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="sescalet" tabindex="-1" aria-labelledby="sescaletModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content notiModal">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sescaletModalLabel"></h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close">✖</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-2 text-center py-3">
+                                <i class="fas fa-thumbs-up fa-2x"></i>
+                            </div>
+                            <div class="col-md-10 mb-5">
+                                <h5 class="mb-1">{Store Code}</h5>
+                                <strong>{12045867}</strong>
+                            </div>
+                            <div class="col-md-12 d-grid">
+                                <button class="btn btn-outline-light" data-bs-dismiss="modal">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- InstanceEndEditable -->
+    </div>
+
+
+    <script type="text/javascript" src="js/mock.js"></script>
+    <script type="text/javascript" src="js/jquery-min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+    <script type="text/javascript" src="js/jquery.nanoscroller.min.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="js/dataTables.bootstrap5.min.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script type="text/javascript" src="js/datepicker.en.js"></script>
+    <script type="text/javascript" src="js/builder.js"></script>
+    <script type="text/javascript" src="js/beautifyhtml.js"></script>
+    <script type="text/javascript" src="js/dragble.js"></script>
+    <script type="text/javascript" src="js/jquery.dropdown.js"></script>
+    <script type="text/javascript" src="js/sweetalert2.js"></script>
+    <script type="text/javascript" src="js/theme-script.js"></script>
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/datepicker.js"></script>
+    <script>
+        var Random = Mock.Random;
+        var json1 = Mock.mock({
+            "data|10-50": [{
+                name: function () {
+                    return Random.name(true)
+                },
+                "id|+1": 1,
+                "disabled|1-2": true,
+                groupName: 'Group Name',
+                "groupId|1-4": 1,
+                "selected": false
+            }]
+        });
+
+        $('.dropdown-mul-1').dropdown({
+            data: json1.data,
+            limitCount: 40,
+            multipleMode: 'label',
+            choice: function () {
+                // console.log(arguments,this);
+            }
+        });
+    </script>
+    <!-- InstanceBeginEditable name="for-javascript" -->
+    <script>
+        $(document).ready(function () {
+            $('input[type=file]').change(function () {
+                //console.log(this.files);
+                var f = this.files;
+                var el = $(this).parent();
+                if (f.length > 1) {
+                    console.log(this.files, 1);
+                    el.text('Sorry, multiple files are not allowed');
+                    return;
+                }
+                // el.removeClass('focus');
+                el.html(f[0].name + '<br>' +
+                    '<span class="sml">' +
+                    'type: ' + f[0].type + ', ' +
+                    Math.round(f[0].size / 1024) + ' KB</span>');
+            });
+
+            $('input[type=file]').on('focus', function () {
+                $(this).parent().addClass('focus');
+            });
+
+            $('input[type=file]').on('blur', function () {
+                $(this).parent().removeClass('focus');
+            });
+
+        });
+    </script>
+    <script>
+        function succesmsg() {
+            Swal.fire('Your Approval Request sent Sucssefully')
+        }
+    </script>
+    <!-- InstanceEndEditable -->
+</body>
+<!-- InstanceEnd -->
+</html>

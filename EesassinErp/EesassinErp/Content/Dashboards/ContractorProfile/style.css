@@ -1,0 +1,889 @@
+﻿.contractorProfile {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #fff;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+    /* TOP */
+
+    .contractorProfile .contractorProfileHeading {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+    .contractorProfile .btn-edit {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+        border-radius: 12px;
+        padding: 6px 12px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.25s ease;
+    }
+
+        .contractorProfile .btn-edit:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* SIDEBAR */
+
+    .contractorProfile .contractorProfileSidebar {
+        background: #fff;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+        height: 100%;
+    }
+
+    .contractorProfile .contractorProfileCompanyCard {
+        background: var(--primary);
+        padding: 18px;
+        color: #fff;
+    }
+
+    .contractorProfile .contractorProfileLogo {
+        width: 76px;
+        height: 76px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.28);
+        border: 2px solid rgba(255,255,255,0.5);
+        flex-shrink: 0;
+    }
+
+    .contractorProfile .contractorProfileCompanyName {
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1;
+    }
+
+    .contractorProfile .contractorProfileCompanyCode {
+        font-size: 0.9rem;
+        margin-top: 6px;
+        opacity: 0.95;
+    }
+
+    .contractorProfile .contractorProfileRatingWrapper {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .contractorProfile .contractorProfileVerified {
+        color: #11d05f;
+        font-size: 0.9rem;
+    }
+
+.contractorProfile .contractorProfileStars {
+    color: #FFE91A;
+    display: flex;
+    gap: 2px;
+    font-size: 0.9rem;
+}
+
+.contractorProfile .contractorProfileRatingText {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.contractorProfile .contractorProfileReviewCount {
+    font-size: 0.9rem;
+    opacity: 0.85;
+}
+
+    .contractorProfile .contractorProfileDivider {
+        width: 100%;
+        height: 1px;
+        background: rgba(255,255,255,0.4);
+        margin: 18px 0;
+    }
+
+    .contractorProfile .contractorProfileContactList {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .contractorProfile .contractorProfileContactItem {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.9rem;
+    }
+
+        .contractorProfile .contractorProfileContactItem i {
+            font-size: 0.9rem;
+        }
+
+    /* MENU */
+
+    .contractorProfile .contractorProfileMenuWrapper {
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+.contractorProfile .contractorProfileMenuBtn {
+    border: none;
+    width: 100%;
+    background: #f8f9fd;
+    border-radius: 14px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: 0.25s ease;
+}
+
+        .contractorProfile .contractorProfileMenuBtn i {
+            opacity: 0.6;
+        }
+
+    .contractorProfile .contractorProfileMenuBtn:hover {
+        background: #D5E3FF;
+    }
+
+    .contractorProfile .contractorProfileMenuBtn.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+            .contractorProfile .contractorProfileMenuBtn.active i {
+                opacity: 1;
+            }
+
+    /* RIGHT CONTENT */
+
+    .contractorProfile .contractorProfileContentCard {
+        background: #fff;
+        border-radius: 22px;
+        padding: 28px 32px;
+        /*min-height: 100%;*/
+        box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    }
+
+    .contractorProfile .contractorProfileSectionTitle {
+        color: var(--primary);
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-bottom: 24px;
+    }
+
+    /* FIELD */
+
+    .contractorProfile .contractorProfileLabel {
+        color: #757575;
+        font-size: 0.95rem;
+        /*margin-bottom: 4px;*/
+        font-weight: 500;
+    }
+
+    .contractorProfile .contractorProfileValue {
+        color: #222;
+        font-size: 1rem;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    /* TABS */
+
+    .contractorProfile .contractorProfileTab {
+        display: none;
+    }
+
+        .contractorProfile .contractorProfileTab.active {
+            display: block;
+        }
+
+/* RESPONSIVE */
+
+@media (max-width: 991px) {
+
+    .contractorProfile .contractorProfileContentCard {
+        padding: 24px 20px;
+    }
+
+    .contractorProfile .contractorProfileMenuBtn {
+        font-size: 1rem;
+    }
+
+    .contractorProfile .contractorProfileCompanyName {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 767px) {
+
+    .contractorProfile {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+        .contractorProfile .contractorProfileTopBar {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 12px;
+        }
+
+        .contractorProfile .btn-edit {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .contractorProfile .contractorProfileContentCard {
+            padding: 20px 16px;
+        }
+}
+
+/* ================= Document Tab inside contractor profile ================= */
+
+
+.contractorProfile .contractorDocumentViewCard {
+    border: 1px solid #EFEFEF;
+    border-radius: 22px;
+    padding: 18px;
+    background: #fff;
+    height: 100%;
+    transition: 0.25s ease;
+}
+
+    .contractorProfile .contractorDocumentViewCard:hover {
+        border-color: #E5C7B7;
+        transform: translateY(-2px);
+    }
+
+.contractorProfile .contractorDocumentViewTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.contractorProfile .contractorDocumentFileName {
+    font-size: 14px;
+    color: #444;
+    font-weight: 500;
+    margin-top: 4px;
+    word-break: break-word;
+}
+
+.contractorProfile .contractorDocumentIcon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 14px;
+    background: #D5E3FF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.contractorProfile .contractorDocumentIcon i {
+    font-size: 22px;
+    color: var(--primary);
+}
+
+.contractorProfile .contractorDocumentIcon.image {
+    background: rgba(49, 132, 253, 0.12);
+}
+
+.contractorProfile .contractorDocumentIcon.image i {
+    color: #3184FD;
+}
+
+.contractorProfile .contractorDocumentActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.contractorProfile .contractorDocumentViewBtn,
+.contractorProfile .contractorDocumentDownloadBtn {
+    flex: 1;
+    height: 32px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.contractorProfile .contractorDocumentViewBtn {
+    border: 1px solid #E5E5E5;
+    background: #fff;
+    color: #444;
+}
+
+.contractorProfile .contractorDocumentViewBtn:hover {
+    background: #F8F8F8;
+}
+
+.contractorProfile .contractorDocumentDownloadBtn {
+    border: 0;
+    background: var(--primary);
+    color: #fff;
+}
+
+@media(max-width:767px) {
+
+    .contractorProfile .contractorDocumentActions {
+        flex-direction: column;
+    }
+
+    .contractorProfile .contractorDocumentViewBtn,
+    .contractorProfile .contractorDocumentDownloadBtn {
+        width: 100%;
+    }
+}
+
+
+/*================== DECLARATION ==================*/
+
+.contractorProfile .contractorProfileDeclarationWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.contractorProfile .contractorProfileDeclarationRow {
+    background: #f8f9fd;
+    border-radius: 14px;
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.contractorProfile .contractorProfileDeclarationName {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2A2A2A;
+}
+
+.contractorProfile .contractorProfileViewBtn {
+    min-width: 75px;
+    height: 30px;
+    border-radius: 14px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: 0.25s ease;
+}
+
+    .contractorProfile .contractorProfileViewBtn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/*================== UNDERTAKING================== */
+
+.contractorProfile .contractorProfileUndertakingCard {
+    background: #f8f9fd;
+    border-radius: 24px;
+    padding: 22px;
+}
+
+.contractorProfile .contractorProfileUndertakingText {
+    margin-bottom: 10px;
+}
+
+.contractorProfile .contractorProfileUndertakingHeading {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4B4B4B;
+    margin-bottom: 12px;
+}
+
+.contractorProfile .contractorProfileUndertakingList {
+    margin: 0;
+    padding-left: 20px;
+    color: #575757;
+}
+
+    .contractorProfile .contractorProfileUndertakingList li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+    }
+
+.contractorProfile .contractorProfileReadValue {
+    /*min-height: 48px;
+    border: 1px solid #E2D6D1;
+    border-radius: 10px;
+    background: #fff;
+    padding: 12px 14px;*/
+    display: flex;
+    align-items: center;
+    color: #303030;
+    font-weight: 500;
+}
+
+.contractorProfile .contractorProfileDocumentValue {
+    /*min-height: 48px;
+    border: 1px solid #E2D6D1;
+    border-radius: 10px;
+    background: #fff;
+    padding: 12px 14px;*/
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #303030;
+    font-weight: 500;
+}
+
+    .contractorProfile .contractorProfileDocumentValue i {
+        color: var(--primary);
+        font-size: 1rem;
+    }
+
+/* FIXED HEIGHT */
+
+.contractorProfile .contractorProfileContentCard {
+   /* min-height: 680px;*/
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 767px) {
+
+    .contractorProfile .contractorProfileDeclarationRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .contractorProfile .contractorProfileViewBtn {
+        width: 100%;
+    }
+}
+
+
+/* ============== EDIT CONTRACTOR PROFILE MODAL============== */
+
+.contractorProfile .contractorProfileModalContent {
+    overflow: hidden;
+    background: var(--card-bg);
+}
+
+/* HEADER */
+
+.contractorProfile .contractorProfileModalHeader {
+    padding: 12px 26px;
+    border-bottom: 1px solid #F3E4DD;
+    display: flex;
+    align-items: center;
+    background: var(--primary);
+    color:#fff;
+    justify-content: space-between;
+}
+
+.contractorProfile .contractorProfileModalTitleWrapper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.contractorProfile .contractorProfileModalIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: #FFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.3rem;
+}
+
+.contractorProfile .contractorProfileModalTitle {
+    font-size: 1.4rem;
+    font-weight: 500;
+}
+
+.contractorProfile .contractorProfileModalSubTitle {
+    font-size: 0.9rem;
+   /* margin-top: 2px;*/
+}
+
+.contractorProfile .contractorProfileModalClose {
+    box-shadow: none !important;
+    opacity: 0.7;
+}
+
+/* BODY */
+
+.contractorProfile .contractorProfileModalBody {
+    padding: 28px 26px;
+    overflow-y: auto;
+}
+
+
+/* STEP TRACKER */
+.contractorProfileModalBody .stepper-modern {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+    /* LINE */
+    .contractorProfileModalBody .stepper-modern::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #e5e7eb;
+        transform: translateY(-50%);
+        z-index: 0;
+    }
+
+/* STEP ITEM */
+.contractorProfileModalBody .step-item {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    flex: 1;
+}
+
+    /* DOT */
+    .contractorProfileModalBody .step-item::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        background: #d1d5db;
+        border-radius: 50%;
+        display: block;
+        margin: 0 auto 6px;
+        transition: all 0.2s ease;
+    }
+
+    /* ACTIVE */
+    .contractorProfileModalBody .step-item.active {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+        .contractorProfileModalBody .step-item.active::before {
+            background: var(--primary);
+            transform: scale(1.4);
+        }
+
+    /* COMPLETED */
+    .contractorProfileModalBody .step-item.completed::before {
+        background: #22c55e;
+    }
+
+/* CARD */
+.contractorProfileModalBody .entity-card {
+    border-radius: 14px;
+    background: var(--card-bg);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    border: none;
+}
+
+.contractorProfileModalBody .form-label {
+    font-size: 12px;
+}
+
+.contractorProfileModalBody .form-control, .form-select {
+    font-size: 13px;
+    height: 36px;
+}
+
+.contractorProfileModalBody .entity-footer {
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+}
+
+.contractorProfileModalBody .form-control:focus,
+.contractorProfileModalBody .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.05rem rgba(228, 93, 39, 0.25);
+    outline: none;
+}
+
+.contractorProfileModalBody .form-select {
+    height: 36px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    transition: all 0.15s ease;
+}
+
+    /* Hover feel */
+    .contractorProfileModalBody .form-select:hover {
+        border-color: var(--primary);
+    }
+
+/* Arrow color tweak (modern browsers) */
+.contractorProfileModalBody .form-select {
+    background-color: #fff;
+}
+
+.contractorProfileModalBody .multi-select-dropdown {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    animation: fadeIn 0.15s ease;
+}
+
+    /* Hover item */
+    .contractorProfileModalBody .multi-select-dropdown label:hover {
+        background: #FFF1EB !important;
+    }
+
+    /* Checkbox spacing */
+    .contractorProfileModalBody .multi-select-dropdown input {
+        margin-right: 6px;
+    }
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* GRID */
+.contractorProfileModalBody .form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width:1200px) {
+    .contractorProfileModalBody .form-grid {
+        grid-template-columns: repeat(3,1fr);
+    }
+}
+
+@media (max-width:992px) {
+    .contractorProfileModalBody .form-grid {
+        grid-template-columns: repeat(2,1fr);
+    }
+}
+
+@media (max-width:576px) {
+    .contractorProfileModalBody .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* BUTTON */
+.contractorProfileModalBody .save-btn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 14px;
+    border: none;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    /* Hover */
+    .contractorProfileModalBody .save-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+    /* Click (press effect) */
+    .contractorProfileModalBody .save-btn:active {
+        transform: scale(0.96);
+        background: var(--primary-dark);
+    }
+
+        /* Remove ugly default focus */
+        .contractorProfileModalBody .save-btn:focus,
+        .contractorProfileModalBody .save-btn:active:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+/* MULTI SELECT */
+.contractorProfileModalBody .multi-select {
+    position: relative;
+}
+
+.contractorProfileModalBody .multi-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+    .contractorProfileModalBody .multi-select-dropdown label {
+        display: block;
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+        .contractorProfileModalBody .multi-select-dropdown label:hover {
+            background: #f5f5f5;
+        }
+
+.contractorProfileModalBody .save-btn,
+.contractorProfileModalBody .save-btn:focus,
+.contractorProfileModalBody .save-btn:active,
+.contractorProfileModalBody .save-btn:visited {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+    /* Hover (keep same feel) */
+    .contractorProfileModalBody .save-btn:hover {
+        background: var(--primary-dark) !important;
+        color: #fff !important;
+    }
+
+    /* Prevent bootstrap active flash */
+    .contractorProfileModalBody .save-btn:active:focus,
+    .contractorProfileModalBody .save-btn:active:hover {
+        background: var(--primary-dark) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+
+/* Remove default click highlight (mobile too) */
+.contractorProfileModalBody .save-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.contractorProfileModalBody .view-btn {
+    background: transparent;
+    color: var(--primary) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: all 0.15s ease;
+}
+
+    /* Hover */
+    .contractorProfileModalBody .view-btn:hover {
+        background: var(--primary);
+        color: #fff !important;
+    }
+
+    /* Click (press effect) */
+    .contractorProfileModalBody .view-btn:active {
+        transform: scale(0.96);
+        background: var(--primary) !important;
+        color: #fff !important;
+    }
+
+
+/* LEGAL BOX */
+.contractorProfileModalBody .legal-box {
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+    /* Scrollbar (optional modern feel) */
+    .contractorProfileModalBody .legal-box::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .contractorProfileModalBody .legal-box::-webkit-scrollbar-thumb {
+        background: #ddd;
+        border-radius: 10px;
+    }
+
+/* AGREEMENT AREA */
+.contractorProfileModalBody .legal-agree {
+    padding: 10px 12px;
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+    background: #FFF7F3;
+}
+
+    /* Checkbox spacing */
+    .contractorProfileModalBody .legal-agree input {
+        margin-right: 6px;
+    }
+
+.contractorProfileModalBody .declaration-list {
+    /* max-height: 300px;*/
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.contractorProfileModalBody .decl-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid #eee;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.contractorProfileModalBody .status {
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+    .contractorProfileModalBody .status.pending {
+        color: #f59e0b;
+    }
+
+    .contractorProfileModalBody .status.done {
+        color: #22c55e;
+    }
+
+

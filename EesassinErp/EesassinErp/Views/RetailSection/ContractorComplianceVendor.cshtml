@@ -1,0 +1,292 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Contractor Compliance";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Masters/ContractorComplianceVendor/style.css" rel="stylesheet" />
+<script src="~/Masters/ContractorComplianceVendor/script.js"></script>
+
+
+<div class="contractorCompVendorPage px-4 py-2">
+    <!-- Top bar: instruction left + Bulk Download button right -->
+    <div class="d-flex align-items-center justify-content-between mb-3 top-bar">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            @*<div class="limit-instruction">Location Total Limit: <strong>600</strong></div>
+                <div class="limit-instruction">Used: <strong>250</strong></div>
+                <div class="limit-instruction">Left: <strong>350</strong></div>*@
+            <h4 style="color: var(--primary)">Contractor Compliance</h4>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- Bulk Download (rounded pill) -->
+            <button class="btn btn-sm btn-bulk-download" id="btnBulkDownload" type="button" data-bs-toggle="modal" data-bs-target="#bulkDownloadModal">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Bulk Download</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="View or Generate">
+            <button type="button" class="btn btn-pill active" data-target="#viewCard" aria-pressed="true">View</button>
+            <button type="button" class="btn btn-pill" data-target="#generateCard" aria-pressed="false">Generate</button>
+        </div>
+    </div>
+    
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- VIEW CARD (default visible) -->
+        <div id="viewCard" class="card section-card active">
+            <div class="card-body p-3 h-100 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Month
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">January</a></li>
+                                <li><a class="dropdown-item" href="#">February</a></li>
+                                <li><a class="dropdown-item" href="#">March</a></li>
+                                <!-- ... -->
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Year
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">2025</a></li>
+                                <li><a class="dropdown-item" href="#">2024</a></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm filter-btn active">Go</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="estSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" style="border-color: #E45D27" id="estSearchBtn" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="estTable">
+                            <thead>
+                                <tr>
+                                    <th>Sr.No</th>
+                                    <th>Month</th>
+                                    <th>Year</th>
+                                    <th>Category</th>
+                                    <th>State Count</th>
+                                    <th>Employee Count</th>
+                                    <th>Site Count</th>
+                                    <th>Generated On</th>
+                                    <th>Status</th>
+                                    <th>View</th>
+                                    <th>Master File</th>
+                                </tr>
+                            </thead>
+                            <tbody id="estTableBody">
+                                <tr>
+                                    <td>1</td>
+                                    <td>Jan</td>
+                                    <td>2025</td>
+                                    <td>Category1</td>
+                                    <td>27</td>
+                                    <td>97</td>
+                                    <td>47</td>
+                                    <td>01/01/2026</td>
+                                    <td><span class="badge status-active">Generated</span></td>
+                                    <td><button class="btn btn-sm view-btn">View</button></td>
+                                    <td><button class="btn btn-sm download-btn">Download</button></td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Jan</td>
+                                    <td>2025</td>
+                                    <td>Category1</td>
+                                    <td>27</td>
+                                    <td>97</td>
+                                    <td>47</td>
+                                    <td>01/01/2026</td>
+                                    <td><span class="badge status-active">Generated</span></td>
+                                    <td><button class="btn btn-sm view-btn">View</button></td>
+                                    <td><button class="btn btn-sm download-btn">Download</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="estPaginationWrap">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm" id="estPrev" type="button">Previous</button>
+                            <button class="btn btn-sm" id="estNext" type="button">Next</button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="estPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                            <button class="btn btn-sm btn-primary" id="viewAllRows" type="button">View All Rows</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BULK DOWNLOAD MODAL -->
+        <div class="modal fade bulkDownloadModal" id="bulkDownloadModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+
+                    <!-- HEADER -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Bulk Download Documents</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <!-- BODY -->
+                    <div class="modal-body">
+
+                        <!-- STATES -->
+                        <div class="form-group mb-3">
+                            <label class="form-label">Select State(s)</label>
+                            <div class="state-box">
+
+                                <div class="form-check state-item select-all">
+                                    <input class="form-check-input" type="checkbox" id="selectAllStates">
+                                    <label class="form-check-label">Select All</label>
+                                </div>
+
+                                <div class="form-check state-item">
+                                    <input class="form-check-input state-checkbox" type="checkbox">
+                                    <label class="form-check-label">Andaman and Nicobar Islands</label>
+                                </div>
+                                <div class="form-check state-item">
+                                    <input class="form-check-input state-checkbox" type="checkbox">
+                                    <label class="form-check-label">Andhra Pradesh</label>
+                                </div>
+                                <div class="form-check state-item">
+                                    <input class="form-check-input state-checkbox" type="checkbox">
+                                    <label class="form-check-label">Arunachal Pradesh</label>
+                                </div>
+                                <div class="form-check state-item">
+                                    <input class="form-check-input state-checkbox" type="checkbox">
+                                    <label class="form-check-label">Assam</label>
+                                </div>
+                                <div class="form-check state-item">
+                                    <input class="form-check-input state-checkbox" type="checkbox">
+                                    <label class="form-check-label">Bihar</label>
+                                </div>
+                                <div class="form-check state-item">
+                                    <input class="form-check-input state-checkbox" type="checkbox">
+                                    <label class="form-check-label">Central</label>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- FY + MONTH -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Financial Year</label>
+                                <select class="form-select">
+                                    <option selected>Select</option>
+                                    <option>2023 - 24</option>
+                                    <option>2024 - 25</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Month</label>
+                                <select class="form-select">
+                                    <option selected>Select</option>
+                                    <option>April</option>
+                                    <option>May</option>
+                                    <option>June</option>
+                                    <option>July</option>
+                                    <option>August</option>
+                                    <option>September</option>
+                                    <option>October</option>
+                                    <option>November</option>
+                                    <option>December</option>
+                                    <option>January</option>
+                                    <option>February</option>
+                                    <option>March</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- FOOTER -->
+                    <div class="modal-footer">
+                        <button class="btn btn-download">
+                            <i class="bi bi-download me-1"></i> Download
+                        </button>
+                        <button class="btn btn-download" data-bs-dismiss="modal">Close</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= GENERATE CARD (hidden by default) ================= -->
+        <div id="generateCard" class="card section-card d-none">
+            <div class="card-body p-3">
+                <h6>Import Master File</h6>
+                @*<p class="text-muted">Upload CSV or Excel to import multiple files.</p>*@
+
+                <!-- Download Template -->
+                <button class="btn btn-sm mb-3" id="estDownloadTemplate">
+                    <i class="bi bi-download me-1"></i> Download Master Template
+                </button>
+
+                <!-- Upload Box -->
+                <div class="est-import-box p-3">
+                    <label class="form-label  mb-2">Choose Master File</label>
+                    <input type="file" id="locationImportFile" class="form-control" />
+
+                    <label class="form-label mb-2">Choose Signature</label>
+                    <input type="file" id="locationImportFile" class="form-control" />
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn est-import-save-btn px-4" id="importSaveBtn">
+                            Save
+                        </button>
+
+                        <button class="btn est-cancel-btn px-4" id="importCancelBtn">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <div id="generateFilePreview" class="mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

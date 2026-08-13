@@ -1,0 +1,266 @@
+﻿.establishReportPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 84vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Section cards */
+.establishReportPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .establishReportPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        min-height: 320px;
+    }
+
+/* Table wrapper and hide scrollbar visually */
+.establishReportPage .small-table-wrapper {
+    max-height: auto;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+}
+
+    .establishReportPage .small-table-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+
+.establishReportPage .small-table-wrapper {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* table header sticky */
+.establishReportPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.establishReportPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.establishReportPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+.establishReportPage .small-table tbody td .store-code-link {
+    text-decoration: none;
+}
+
+
+
+/* filter button */
+.establishReportPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .establishReportPage .filter-btn.active,
+    .establishReportPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.establishReportPage .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.establishReportPage .export-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .establishReportPage .export-btn:hover {
+        background: var(--primary-dark);
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .establishReportPage .export-btn:focus,
+    .establishReportPage .export-btn:active {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* Pagination area */
+.establishReportPage .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .establishReportPage .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .establishReportPage .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.establishReportPage #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .establishReportPage #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+/* statuses */
+.establishReportPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.establishReportPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.establishReportPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.establishReportPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .establishReportPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .establishReportPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .establishReportPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .establishReportPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+/*Buttons*/
+.view-btn, .download-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .view-btn:hover, .download-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+/*==========Establishment report Modal============*/
+.establishReportModal {
+    --primary: #E45D27;
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+}
+
+    /* Header */
+    .establishReportModal .modal-header {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    .establishReportModal .btn-close {
+        filter: brightness(0) invert(1);
+    }
+
+    /* Checkbox alignment fix */
+    .establishReportModal .table input[type="checkbox"] {
+        margin: 0;
+    }
+
+    /* Action icons */
+    .establishReportModal .action-col {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .establishReportModal .action-col i {
+            cursor: pointer;
+            font-size: 1rem;
+            color: #555;
+        }
+
+            .establishReportModal .action-col i:hover {
+                color: var(--primary);
+            }

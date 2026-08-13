@@ -1,0 +1,403 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = null;
+}
+<!DOCTYPE html>
+<html ng-app="myLoginApp">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EZCompliance</title>
+    <link rel="stylesheet" type="text/css" href="../login/style.css">
+    <link href="@Url.Content("~/Content/plugins/assets/css/font-icons/font-awesome.css")" rel="stylesheet" media="all" />
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    @*<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>*@
+    <script src="~/scripts/Rootfile/sweetalert.min.js"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/loginController.js?Ver="+ViewBag.Version+"")"></script>
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/myjslib/myJs.js?Ver="+ViewBag.Version+"")"></script>
+
+    <style>
+        .swal-modal {
+            background-color: #f0f0f0;
+            border-radius: 15px;
+            width: 23%;
+        }
+
+        .swal-title {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .swal-button {
+            background-color: #d73d3d;
+            color: white;
+        }
+
+            .swal-button:hover {
+                background-color: #28a745;    
+                color: white;
+            }
+
+        .swal-icon:first-child {
+            margin-top: -48px;
+            background-color: white;
+        }
+
+        .red-validation {
+            border: 1px solid #d65e65 !important;
+        }
+
+        input[type="text"], input[type="password"] {
+            padding: 10px;
+            width: 99%;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .password-container {
+            display: flex;
+            width: 100%;
+            align-items: center; /* Vertically center the elements */
+        }
+
+        .password-input {
+            width: 80%;
+            padding-right: 30px; /* Add space for the icon */
+            margin-right: 10px; /* Optional: Adjust the margin to add spacing between the input and icon */
+        }
+
+        .input-icon {
+            text-align: center; /* Center the icons */
+        }
+
+            .input-icon i {
+                cursor: pointer; /* Make icons clickable */
+            }
+    </style>
+    <script>
+        $(document).ready(function () {
+
+            $('#username-input').keypress(function (event) {
+                if (event.which == 13) { // 13 = Enter key
+                    //  event.preventDefault(); // prevent default form submit (optional)
+
+                    $('#btnStep1Login').click(); // trigger button click
+                    $('#username-input').focus();
+                    // keep focus on the input box
+                    //setTimeout(function () {
+                    //    $('#username-input').focus();
+                    //}, 100); // small delay ensures focus applies after button logic
+                }
+            });
+            $('#txtCaptcha').keypress(function (event) {
+                if (event.which == 13) { // 13 = Enter key
+                    //  event.preventDefault(); // prevent default form submit (optional)
+
+                    $('#btnLogin').click(); // trigger button click
+                    $('#txtCaptcha').focus();
+                    // keep focus on the input box
+                    //setTimeout(function () {
+                    //    $('#username-input').focus();
+                    //}, 100); // small delay ensures focus applies after button logic
+                }
+            });
+        });
+    </script>
+    <script>
+        if (window.top !== window.self) {
+            window.top.location.href = window.location.href;
+        }
+    </script>
+</head>
+<body>
+     
+        <div class="container">
+            <div class="left-panel">
+                <img src="../login/image/logo.png" class="logo" alt="Talent India Logo" />
+                <div class="slideshow-container">
+                    <div class="slide slide1  active">
+                        <div class="gif-wrapper">
+                            <img src="../login/image/gif1.gif" class="gif" alt="EZ HRMS Demo" />
+                            <div class="highlights">
+                                <div class="highlight">Excellence</div>
+                                <div class="highlight">Innovation</div>
+                                <div class="highlight">Sustainability</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slide slide2">
+                        <div class="gif-wrapper">
+                            @*<img src="../login/image/gif2.gif" class="gif" alt="EzCompliance" />*@
+                            <video autoplay muted loop playsinline style="width:100%">
+                                <source src="/login/gif.mp4" type="video/mp4">
+                            </video>
+                        </div>
+
+
+                    </div>
+                    <!-- Slide 3 - Testimonials -->
+                    <div class="slide slide3">
+                        <div class="testimonial-slider">
+                            <img src="../login/image/content.png" class="quote-image" alt="Quote">
+                            <div class="testimonial active">
+                                <img src="image/profile.PNG" class="testimonial-img" alt="Client 1">
+                                <p class="quote-text">"Empowering Workforce enabling Future!"</p>
+                                <!--      <div class="client-info">
+                                       <div class="client-name">Priya Mehta</div>
+                                       <div class="client-role">Compliance Officer, TechNova</div>
+                                   </div> -->
+                            </div>
+                            <!--   <div class="testimonial">
+                                <img src="../login/image/profile.PNG" class="testimonial-img" alt="Client 2">
+                                <p class="quote-text">"The dashboard is clean and user-friendly. Great support team too!"</p>
+                                <div class="client-info">
+                                    <div class="client-name">Rohan Kapoor</div>
+                                    <div class="client-role">HR Manager, GreenLogix</div>
+                                </div>
+                            </div>
+                            <div class="testimonial">
+                                <img src="../login/image/profile.PNG" class="testimonial-img" alt="Client 3">
+                                <p class="quote-text">"Finally, a system that actually simplifies compliance processes."</p>
+                                <div class="client-info">
+                                    <div class="client-name">Anjali Rao</div>
+                                    <div class="client-role">Legal Consultant, ApexGroup</div>
+                                </div>
+                            </div> -->
+
+                            <div class="testimonial-dots">
+                                <span class="t-dot active" onclick="showTestimonial(0)"></span>
+                                <!-- <span class="t-dot" onclick="showTestimonial(1)"></span>
+                                <span class="t-dot" onclick="showTestimonial(2)"></span> -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dots -->
+                    <div class="dots">
+                        <span class="dot active" onclick="currentSlide(0)"></span>
+                        <span class="dot" onclick="currentSlide(1)"></span>
+                        <span class="dot" onclick="currentSlide(2)"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="right-panel" ng-controller="myLoginController">
+                <div class="welcome-header">
+                    <h1 class="welcome-text">Welcome</h1>
+                    <img src="../login/image/ezfulllogo 3.png" alt="Company Logo" class="company-logo" />
+                </div>
+
+                <p>Sign in to access India's smart unified Compliance System.</p>
+
+                <!-- Dynamic form container -->
+                <div class="form-group" id="form-container">
+
+                    <!-- Initial View -->
+                    <div ng-show="Step1">
+                        <input type="text" id="username-input" class="form-control validate" placeholder="Enter Username" ng-model="Username"
+                               ng-blur="CUVAILD()" autocomplete="new-username" />
+
+                        <button id="btnStep1Login" ng-click="CheckUserName();ManageLog('Click on Next button of login')">Next</button>
+                        <div class="divider1">OR</div>
+
+                        <button class="demo-btn outline" ng-click="rtodemo();ManageLog('Click on Schedule Demo')">Schedule Demo</button>
+
+                    </div>
+                    <div class="full-login-form" ng-show="Step2">
+                        <label style="margin-left: -49%; margin-bottom: 1%;">
+                            <span style="float:right; color:#007BFF; cursor:pointer; font-size: 70%;" ng-click="resetusername();ManageLog('Click on Change user name')">Change user name</span>
+                        </label>
+                        <input type="text" ng-model="Username" class="validate" disabled />
+                        <div class="password-container">
+
+                            @Html.TextBox("txtPassWord", "", new { @class = "validate password-input", @placeholder = "Password", @type = "password", @ng_keyup = "PassWordEnterKey($event);", @ng_model = "Password", @autocomplete = "new-password" })
+                            <div class="input-icon" style="display: flex; align-items: center; gap: 8px;">
+                                <i id="PasswordShowHide" class="fa fa-eye" style="display: none;"></i>
+                                <i id="LoginLock" class="fa fa-lock"></i>
+                                <i id="PasswordShow" class="fa fa-eye-slash" style="display: none;"></i>
+
+                            </div>
+                        </div>
+
+                        <br />
+                        <div class="divider1" ng-init="BindModule()"></div>
+                        <select id="ddlModule" style="height: 30px ; border: 1px solid #ccc; border-radius: 6px; padding-left: 2px; font-size: 15px; " ng-model="ModuleId" ng-show="IsModuleOpen">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in ModuleList" value="{{x.Id}}">{{x.Module_Name}}</option>
+                        </select>
+                        <br />
+                        <div ng-init="GetCaptchaImage();" style="display: flex; align-items: center; gap: 10px;">
+                            <img alt="Captcha" ng-src="{{CaptchaSrc}}" />
+                            <i class="fa fa-refresh" aria-hidden="true" ng-click="GetCaptchaImage();ManageLog('Click on Refresh Captcha')" style="cursor: pointer;"></i>
+                        </div> <br />
+                        <input class="form-control numbersOnly validate" id="txtCaptcha" type="text" name="txtCaptcha" ng-model="Captcha" placeholder="How much is the sum">
+
+
+                        <div class="forgot-password">
+                            <a href="#" ng-click="forgetpass();ManageLog('Click on Forgot Your Password')">Forgot Your Password ?</a>
+
+                        </div>
+
+                        <button id="btnLogin" class="sign-in-btn" ng-click="Login();ManageLog('Click on Sign In')">Sign In</button>
+
+                    </div>
+
+                    <div ng-show="Step3">
+                        <label>Reset Password</label>
+                        <br />
+
+                        <div ng-show="hidemobile">
+                            <input id="txtContactNo" ng-model="MobileNo" class="removespacer" type="text" placeholder="Enter registered Email or Mobile number" />
+                            <button id="btnRLogin" type="button" ng-show="hidemobile" class="sign-in-btn" ng-click="RedirectLogin();">Send OTP</button>
+                        </div>
+                        <div ng-show="IshideOtp">
+                            @Html.TextBox("txtOtp", "", new { @class = "form-control removespacer", @placeholder = "Enter OTP", @type = "text", @ng_model = "notp", @autocomplete = "off", @maxlength = "10" })
+                            <button id="btnLogin1" type="button" ng-show="IshideOtp" class="btn login-btn" ng-click="verifypass();ManageLog('Click on Verify OTP')">Verify OTP</button>
+                        </div>
+                        <br />
+                        <div ng-show="IshideSubmit">
+                            @Html.TextBox("txtPassWord", "", new { @class = "form-control", @placeholder = "Password", @type = "password", @ng_keyup = "PassWordEnterKey($event);", @ng_model = "NewPassword", @autocomplete = "off" })
+                            <button id="btnLogin2" type="button" ng-show="IshideSubmit" class="btn login-btn" ng-click="ResetPass();ManageLog('Click on Submit New Password')">Submit</button>
+                        </div>
+                    </div>
+                    <div id="msgbox" style="display:none;">
+                        <label id="lblmsg" style="font-size:14px"></label>
+                    </div>
+                </div>
+
+
+                <!-- <div class="download-section">
+
+                     <img src="../login/image/google1.png" alt="Google Play" />
+                     <img src="../login/image/app1.png" alt="App Store" />
+                     <h6>Download the Ezcompliance mobile app.</h6>
+                 </div>-->
+                <div class="download-section">
+                    <a href="https://play.google.com/store/apps/details?id=com.retail.ezcompliance.ezcompliance&pcampaignid=web_share" target="_blank">
+                        <img src="../login/image/google1.png" alt="Google Play" />
+                    </a>
+
+
+                    <a href="https://apps.apple.com/in/app/ez-compliance/id6752576679" target="_blank">   <img src="../login/image/app1.png" alt="App Store" /></a>
+                    <h6>Download the Ezcompliance mobile app.</h6>
+                </div>
+
+                <div class="terms">
+                    By clicking "Continue" you agree to Ez compliance <a target="_blank" href="https://ezcompliance.in/privacy-policy/">User Terms of Privacy</a>.
+                </div>
+            </div>
+
+
+        </div>
+
+
+
+</body>
+</html>
+<script>
+    $(window).ready(function () {
+        $("#txtPassWord").focus(function () {
+            //debugger;
+            var text_val = $(this).val();
+            if (text_val === "") {
+
+                if ($('#PasswordShowHide').css('display') == 'block') {
+                    $('#PasswordShow').css("display", "none");
+                    $('#LoginLock').css("display", "none");
+                } else {
+                    $('#LoginLock').css("display", "none");
+                    $('#PasswordShow').css("display", "block");
+                }
+            }
+            else {
+                if ($('#PasswordShowHide').css('display') == 'block') {
+                    $('#PasswordShow').css("display", "none");
+                    $('#LoginLock').css("display", "none");
+                } else {
+                    $('#LoginLock').css("display", "none");
+                    $('#PasswordShow').css("display", "block");
+                }
+            }
+        }).blur(function () {
+            if ($(this).val().length === 0) {
+                $('#PasswordShow').css("display", "none");
+                $('#PasswordShowHide').css("display", "none");
+                $('#LoginLock').css("display", "block");
+                $('#txtPassWord').attr('type', 'password');
+            }
+        });
+        $('#PasswordShow').click(function () {
+            $('#PasswordShow').css("display", "none");
+            $('#LoginLock').css("display", "none");
+            $('#PasswordShowHide').css("display", "block");
+            $('#txtPassWord').attr('type', 'text');
+        });
+        $('#PasswordShowHide').click(function () {
+            $('#PasswordShowHide').css("display", "none");
+            $('#LoginLock').css("display", "none");
+            $('#PasswordShow').css("display", "block");
+            $('#txtPassWord').attr('type', 'password');
+        });
+
+    });
+
+
+
+
+</script>
+
+<script>
+    let slideIndex = 0;
+    const slides = document.querySelectorAll(".slide");
+    const dots = document.querySelectorAll(".dot");
+
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.remove("active");
+            dots[i].classList.remove("active");
+        });
+        slides[index].classList.add("active");
+        dots[index].classList.add("active");
+    }
+
+    function currentSlide(n) {
+        slideIndex = n;
+        showSlide(slideIndex);
+    }
+
+    function autoSlide() {
+        slideIndex = (slideIndex + 1) % slides.length;
+        showSlide(slideIndex);
+    }
+
+    showSlide(slideIndex);
+    setInterval(autoSlide, 5000);
+
+
+
+
+
+
+    let testimonialIndex = 0;
+    const testimonials = document.querySelectorAll(".testimonial");
+    const testimonialDots = document.querySelectorAll(".t-dot");
+
+    function showTestimonial(index) {
+        testimonials.forEach((t, i) => {
+            t.classList.remove("active");
+            testimonialDots[i].classList.remove("active");
+        });
+        testimonials[index].classList.add("active");
+        testimonialDots[index].classList.add("active");
+        testimonialIndex = index;
+    }
+
+    function autoTestimonialSlide() {
+        testimonialIndex = (testimonialIndex + 1) % testimonials.length;
+        showTestimonial(testimonialIndex);
+    }
+
+    setInterval(autoTestimonialSlide, 5000);
+    showTestimonial(testimonialIndex);
+</script>

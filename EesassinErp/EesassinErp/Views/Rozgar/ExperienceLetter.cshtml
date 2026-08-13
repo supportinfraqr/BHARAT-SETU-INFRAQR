@@ -1,0 +1,343 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Profile";
+    Layout = "~/Views/Common/Withoutlayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/Rozgar/ExperienceLetter/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/ReleaseWorkerController.js"></script>
+
+<div class="experienceLetter px-4 py-4" ng-init="GetexpDetails()">
+
+
+    <!-- ===========================================================
+        Toolbar
+    =========================================================== -->
+
+    <div class="letterToolbar">
+
+        <div class="toolbarTitle">
+            <i class="bi bi-file-earmark-text"></i>
+            Experience Letter Preview
+        </div>
+
+        <div class="toolbarActions">
+
+            <button type="button"
+                    class="btn btn-download" ng-click="DownloadPDF()" hidden>
+                <i class="bi bi-download me-1"></i>
+                Download PDF
+            </button>
+
+            <button type="button"
+                    class="btn btn-print"
+                    onclick="window.print();">
+                <i class="bi bi-printer me-1"></i>
+                Print
+            </button>
+
+        </div>
+
+    </div>
+
+    <div id="pdfContent">
+        <!-- ===========================================================
+            EXPERIENCE LETTER
+        =========================================================== -->
+        <div class="experience-page">
+
+            <!-- ================= HEADER ================= -->
+
+            <div class="experience-header">
+                <div class="header-bottom">
+
+                    <div class="reference-id">
+                        <strong>Ref ID:</strong>
+                        {{EmployeeList.RefEmployeeCode}}
+                    </div>
+
+                    <div class="issue-date">
+                        <strong>Date:</strong>
+                        {{EmployeeList.Issuedt}}
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ================= CONTENT ================= -->
+
+            <div class="experience-content">
+
+                <h1 class="letter-title">
+                    EXPERIENCE LETTER
+                </h1>
+
+                <div class="letter-subtitle">
+                    To Whom It May Concern
+                </div>
+
+                <p class="intro-text">
+                    This is to certify that <strong>{{EmployeeList.EmployeeName}} ({{EmployeeList.EmployeeCode}})</strong> has successfully completed
+                    his tenure within the authorized industrial project framework under the
+                    Bharat Shram Setu.
+                </p>
+
+                <!-- ================= DETAILS CARD ================= -->
+
+                <div class="experience-card">
+
+                    <div class="card-row">
+
+                        <div class="card-item">
+
+                            <div class="card-label">
+                                DATE OF JOINING
+                            </div>
+
+                            <div class="card-value">
+                                {{EmployeeList.DOJ}}
+                            </div>
+
+                        </div>
+
+                        <div class="card-item">
+
+                            <div class="card-label">
+                                DATE OF RELIEVING
+                            </div>
+
+                            <div class="card-value">
+                                {{EmployeeList.RelDate}}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="card-row">
+
+                        <div class="card-item">
+
+                            <div class="card-label">
+                                DESIGNATION
+                            </div>
+
+                            <div class="card-value">
+                                {{EmployeeList.EmployeeDesignation}}
+                            </div>
+
+                        </div>
+
+                        <div class="card-item">
+
+                            <div class="card-label">
+                                DEPARTMENT
+                            </div>
+
+                            <div class="card-value">
+                                {{EmployeeList.EmployeeDepartment}}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ================= EXPERIENCE TEXT ================= -->
+
+                <p class="body-text">
+
+                    During his period of service,
+                    <strong>{{EmployeeList.EmployeeName}} ({{EmployeeList.EmployeeCode}}))</strong>
+                    displayed exceptional proficiency in high-voltage circuit diagnostics
+                    and industrial automation protocols. His commitment to workplace
+                    safety standards and precision in technical execution has been
+                    exemplary. He has contributed significantly to the operational
+                    efficiency and industrial growth of Bharat, maintaining a flawless
+                    track record of discipline and professional conduct.
+
+                </p>
+
+                <p class="body-text">
+
+                    We appreciate his dedicated service and wish him immense success
+                    in all his future professional endeavors and career progression.
+
+                </p>
+
+            </div>
+
+            <!-- ================= SIGNATURE ================= -->
+
+            <div class="signature-section">
+
+
+
+                <div class="signature-line"></div>
+
+                <div class="signature-designation">
+                    Regional Director
+                </div>
+
+            </div>
+
+            <!-- ================= FOOTER ================= -->
+            @*<div class="experience-footer">
+
+                    This is a computer-generated certificate verified through
+                    Bharat Shram Setu Portal.
+
+                </div>*@
+
+        </div>
+
+        <!-- ===========================================================
+            FORM XXIII
+        =========================================================== -->
+
+        <div class="form23-page page-break">
+
+            <div class="form23-header">
+
+                <div class="form23-title">
+                    FORM-XXIII
+                </div>
+
+                <div class="form23-rule">
+                    (See rule 100)
+                </div>
+
+                <div class="form23-subtitle">
+                    EXPERIENCE CERTIFICATE OF CONTRACT LABOUR
+                </div>
+
+                <div class="form23-caption">
+                    To whomsoever it may concern
+                </div>
+
+            </div>
+
+            <table class="form23-table">
+
+                <tr>
+                    <td>1. Name of contractor/employer*:</td>
+                    <td> {{ContDashboard.connanme}}</td>
+                </tr>
+
+                <tr>
+                    <td>2. LIN/PAN No. of the contractor/employer*:</td>
+                    <td>{{ContDashboard.LIN}}</td>
+                </tr>
+
+                <tr>
+                    <td>3. Email ID of the contractor/employer*:</td>
+                    <td>{{ContDashboard.EmailId}}</td>
+                </tr>
+
+                <tr>
+                    <td>4. Mobile No. of the contractor/employer*:</td>
+                    <td>{{ContDashboard.Contactno}}</td>
+                </tr>
+
+                <tr>
+                    <td>5. Nature and location of work:</td>
+                    <td>{{ContDashboard.Address}}</td>
+                </tr>
+
+                <tr>
+                    <td>6. Name of principal employer*:</td>
+                    <td>{{client.Employername}}</td>
+                </tr>
+
+                <tr>
+                    <td>7. LIN/PAN No. of the principal employer*:</td>
+                    <td>{{client.LIN}}</td>
+                </tr>
+
+                <tr>
+                    <td>8. Email ID of the principal employer*:</td>
+                    <td>{{client.EmailId}}</td>
+                </tr>
+
+                <tr>
+                    <td>9. Mobile No. of the principal employer*:</td>
+                    <td>{{client.Contactno}}</td>
+                </tr>
+
+                <tr>
+                    <td>10. Name of the labourer*:</td>
+                    <td>{{EmployeeList.EmployeeName}}</td>
+                </tr>
+
+                <tr>
+                    <td>11. UAN / Aadhaar No.:</td>
+                    <td>{{EmployeeList.PreviousUAN}} / {{EmployeeList.AdharCardNumber}} </td>
+                </tr>
+
+                <tr>
+                    <td>12. Mobile No.:</td>
+                    <td>{{EmployeeList.MobileNumber}}</td>
+                </tr>
+
+                <tr>
+                    <td>13. Serial Number in the employee register:</td>
+                    <td>-</td>
+                </tr>
+
+                <tr class="large-row">
+                    <td>
+                        14. Registration number, date and name of the Board where the
+                        building or other construction work is registered as a beneficiary:
+                    </td>
+                    <td>-</td>
+                </tr>
+
+                <tr>
+                    <td>15. Period of employment:</td>
+                    <td>{{EmployeeList.IYear}}</td>
+                </tr>
+
+                <tr>
+                    <td>16. Designation:</td>
+                    <td>{{EmployeeList.EmployeeDesignation}}</td>
+                </tr>
+
+                <tr>
+                    <td>17. Work performed:</td>
+                    <td>-</td>
+                </tr>
+
+                <tr class="signature-row">
+
+                    <td colspan="2">
+
+                        <div class="form23-signature">
+
+                            <div class="contractor-sign-text">
+                                Seal and Signature of Contractor
+                            </div>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td colspan="2" class="foot-note">
+
+                        *Strike off whichever is not applicable.
+
+                    </td>
+
+                </tr>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>

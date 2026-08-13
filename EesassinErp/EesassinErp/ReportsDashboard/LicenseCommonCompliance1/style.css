@@ -1,0 +1,1150 @@
+﻿.licCommonCompPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 80vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* Toggle pill - single capsule container */
+.licCommonCompPage .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .licCommonCompPage .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 4px 8px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+        /* active pill */
+        .licCommonCompPage .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+        }
+
+        /* ensure focus ring for accessibility (subtle) */
+        .licCommonCompPage .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+/* ================= Section Header ================= */
+.licCommonCompPage .licCommonCompPage-header {
+    /*display: flex;*/
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .licCommonCompPage .licCommonCompPage-header h4 {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+/* Mobile stacking */
+@media (max-width: 768px) {
+    .licCommonCompPage .licCommonCompPage-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+
+/* Section cards */
+.licCommonCompPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+.licCommonCompPage .section-card .card-body {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+   /* min-height: 320px;*/
+} 
+
+.licCommonCompPage .section-card h4{
+    color:var(--primary);
+}
+
+
+/*==========================OVERVIEW CARD STYLE========================================*/
+
+/* filter button */
+.licCommonCompPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.75rem;
+}
+
+    .licCommonCompPage .filter-btn.active,
+    .licCommonCompPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* ================= Smart Search (Outlook Style) ================= */
+.licCommonCompPage .licCommonCompPage-search {
+    position: relative;
+    width: 320px;
+}
+
+.licCommonCompPage .licCommonCompPage-searchBox {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--primary);
+    border-radius: 999px;
+    padding: 0px 8px;
+    gap: 8px;
+}
+
+    .licCommonCompPage .licCommonCompPage-searchBox i {
+        color: var(--primary);
+        font-size: 0.9rem;
+    }
+
+    .licCommonCompPage .licCommonCompPage-searchBox input {
+        border: none;
+        outline: none;
+        font-size: 0.75rem;
+        width: 100%;
+    }
+
+        .licCommonCompPage .licCommonCompPage-searchBox input::placeholder {
+            color: #999;
+        }
+
+        /* ================= Remove focus outline / blue ring from smart search ================= */
+        .licCommonCompPage /*.licCommonCompPage-searchBox*/ input:focus,
+        .licCommonCompPage /*.licCommonCompPage-searchBox*/ input:focus-visible {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+    /* Also protect the wrapper (some browsers apply focus styles there) */
+    .licCommonCompPage .licCommonCompPage-searchBox:focus-within {
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+
+/* Dropdown panel */
+.licCommonCompPage .licCommonCompPage-searchDropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+
+/* Group header */
+.licCommonCompPage .search-group {
+    padding: 6px 14px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--primary);
+    text-transform: uppercase;
+}
+
+/* Item */
+.licCommonCompPage .search-item {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+    .licCommonCompPage .search-item:hover {
+        background: rgba(228,93,39,0.08);
+        color: var(--primary);
+    }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .licCommonCompPage .licCommonCompPage-search {
+        width: 100%;
+    }
+}
+
+
+/* Export button (rounded) */
+.licCommonCompPage .export-btn, .go-btn, .reset-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.75rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .licCommonCompPage .export-btn:hover,.licCommonCompPage .go-btn:hover,.licCommonCompPage .reset-btn:hover {
+        background: var(--primary-dark);
+        color:#fff;
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .licCommonCompPage .export-btn:focus,
+    .licCommonCompPage .export-btn:active {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* ================= Dashboard Chart ================= */
+.licCommonCompPage .licCommonCompPage-chartWrap {
+    width: 100%;
+}
+
+.licCommonCompPage .licCommonCompPage-chartContainer {
+    width: 100%;
+    min-height: 380px;
+    position: relative;
+}
+
+    /* Make canvas responsive */
+    .licCommonCompPage .licCommonCompPage-chartContainer canvas {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .licCommonCompPage .licCommonCompPage-chartContainer {
+        min-height: 280px;
+    }
+}
+
+
+
+
+/*========================================EXPIRE REPORT STYLE=====================================*/
+
+/* KPI CARDS */
+#expiryReport .licCommonCompPage-kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+#expiryReport .licCommonCompPage-kpi-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    #expiryReport .licCommonCompPage-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+#expiryReport .licCommonCompPage-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+#expiryReport .licCommonCompPage-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+/* Table wrapper and hide scrollbar visually */
+.licCommonCompPage #expiryReport .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .licCommonCompPage #expiryReport .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.licCommonCompPage #expiryReport .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.licCommonCompPage #expiryReport .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.licCommonCompPage #expiryReport .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* action menu */
+
+.licCommonCompPage #expiryReport .action-menu .btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+.licCommonCompPage #expiryReport .action-menu .btn:hover{
+    background:var(--primary);
+    color:#fff;
+}
+
+
+/* filter button */
+.licCommonCompPage #expiryReport .filter-btn,
+.licCommonCompPage #masterReport .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .licCommonCompPage #expiryReport .filter-btn.active,
+    .licCommonCompPage #expiryReport .filter-btn:hover,
+    .licCommonCompPage #masterReport .filter-btn.active,
+    .licCommonCompPage #masterReport .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.licCommonCompPage #expiryReport .table-toolbar .form-control-sm,
+.licCommonCompPage #masterReport .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px 0 0 999px;
+    border-right: none;
+    border-color: var(--primary);
+}
+
+/* Search button */
+.licCommonCompPage #expiryReport .input-group .btn,
+.licCommonCompPage #masterReport .input-group .btn {
+   /* border-radius: 0 999px 999px 0;
+    border-left: none;*/
+}
+
+/* Export button (rounded) */
+.licCommonCompPage #expiryReport .export-btn, .search-btn,
+.licCommonCompPage #masterReport .export-btn, .search-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .licCommonCompPage #expiryReport .export-btn:hover,
+    .licCommonCompPage #masterReport .export-btn:hover,
+    .licCommonCompPage #masterReport .search-btn:hover{
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+
+/* Pagination area */
+.licCommonCompPage #expiryReport .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .licCommonCompPage #expiryReport .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .licCommonCompPage #expiryReport .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.licCommonCompPage #expiryReport #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .licCommonCompPage #expiryReport #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }
+
+
+
+
+/* ================= LICENSE REPORT ================= */
+
+.licCommonCompPage #licenseReport {
+    background: transparent;
+    border: none;
+}
+
+/* Summary */
+.licCommonCompPage .licenseReport-summary {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.licCommonCompPage .licenseReport-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Client */
+.licCommonCompPage .licenseReport-client {
+    flex: 1 1 60%;
+}
+
+.licCommonCompPage .client-name {
+    color:var(--primary);
+    margin: 0;
+    font-weight: 500;
+}
+
+.licCommonCompPage .client-meta {
+    font-size: 14px;
+    color: #555;
+}
+
+    .licCommonCompPage .client-meta .dot {
+        margin: 0 6px;
+    }
+
+.licCommonCompPage .client-date {
+    font-size: 13px;
+    color: #777;
+    margin-top: 6px;
+}
+
+/* Health */
+.licCommonCompPage .licenseReport-health {
+    text-align: right;
+    min-width: 180px;
+}
+
+.licCommonCompPage .health-label {
+    font-size: 14px;
+    color: #666;
+}
+
+.licCommonCompPage .health-score {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+    .licCommonCompPage .health-score span {
+        font-size: 16px;
+    }
+
+.licCommonCompPage .health-status {
+    font-size: 14px;
+    color: var(--primary);
+}
+
+/* KPI CARDS */
+#licenseReport .licCommonCompPage-kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+#licenseReport .licCommonCompPage-kpi-card {
+    flex: 1;
+    min-width: 205px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    #licenseReport .licCommonCompPage-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+#licenseReport .licCommonCompPage-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+#licenseReport .licCommonCompPage-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .licCommonCompPage #licenseReport .stat-card {
+        min-width: 100%;
+    }
+}
+
+/* ================= PRIORITY ACTIONS (INSIDE LICENSE REPORT) ================= */
+
+.licCommonCompPage #licenseReport .licenseReport-priorityActions {
+    margin-top: 24px;
+}
+
+/* Header */
+.licCommonCompPage #licenseReport .priorityActions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.licCommonCompPage #licenseReport .priorityActions-title {
+    margin: 0;
+    font-weight: 400;
+    color: var(--primary);
+}
+
+.licCommonCompPage #licenseReport .priorityActions-badge {
+    background: #ffe9d6;
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 400;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+/* Grid */
+.licCommonCompPage #licenseReport .priorityActions-body {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+/* Action Item */
+.licCommonCompPage #licenseReport .priorityActions-item {
+    background: #fff7f2;
+    border: 1px solid #ffd8c8;
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+/* Icon */
+.licCommonCompPage #licenseReport .priorityActions-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ffe1d4;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+/* Content */
+.licCommonCompPage #licenseReport .priorityActions-content {
+    flex: 1;
+}
+
+.licCommonCompPage #licenseReport .priorityActions-item-title {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--primary);
+    margin-bottom: 4px;
+}
+
+.licCommonCompPage #licenseReport .priorityActions-desc {
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* Date / Status */
+.licCommonCompPage #licenseReport .priorityActions-date {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .licCommonCompPage #licenseReport .priorityActions-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================= License Report Insights (Scoped – FIXED) ================= */
+
+.licCommonCompPage .licReportInsights-card {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Title */
+.licCommonCompPage .licReportInsights-title {
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--primary);
+    margin-bottom: 12px;
+}
+
+.licCommonCompPage .licReportInsights-chartWrap {
+    position: relative;
+    width: 100%;
+}
+
+/* Heights */
+.licCommonCompPage .licReportInsights-chart-lg {
+    height: 280px;
+}
+
+.licCommonCompPage .licReportInsights-chart-sm {
+    height: 120px;
+}
+
+/* Canvas */
+.licCommonCompPage .licReportInsights canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Legends  */
+
+.licCommonCompPage .licReportInsights-legend {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    font-size: 0.8rem;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+    .licCommonCompPage .licReportInsights-legend.single-row {
+        flex-wrap: nowrap;
+    }
+
+    .licCommonCompPage .licReportInsights-legend span::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+
+.licCommonCompPage .active::before {
+    background: #22c55e;
+}
+
+.licCommonCompPage .expiring::before {
+    background: #f59e0b;
+}
+
+.licCommonCompPage .expired::before {
+    background: #ef4444;
+}
+
+.licCommonCompPage .pending::before {
+    background: #3b82f6;
+}
+
+/* Risk Assessment  */
+
+.licCommonCompPage .licReportInsights-riskWrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    height: 160px;
+}
+
+.licCommonCompPage .risk-chart {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+
+.licCommonCompPage .risk-score {
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.licCommonCompPage .risk-label {
+    position: absolute;
+    top: 62%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.licCommonCompPage .licReportInsights-riskList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+    .licCommonCompPage .licReportInsights-riskList li {
+        margin-bottom: 6px;
+    }
+
+.licCommonCompPage .high {
+    color: #ef4444;
+}
+
+.licCommonCompPage .medium {
+    color: #f59e0b;
+}
+
+.licCommonCompPage .low {
+    color: #22c55e;
+}
+
+/* Responsive  */
+
+@media (max-width: 991px) {
+    .licCommonCompPage .licReportInsights-chart-lg,
+    .licCommonCompPage .licReportInsights-chart-sm {
+        height: 220px;
+    }
+
+    .licCommonCompPage .licReportInsights-riskWrap {
+        height: auto;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
+
+/* ================= License Details Table (Scoped) ================= */
+.exLicTableWrapper {
+    background: var(--card-bg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.exLicTable thead th {
+    font-weight: 400;
+    color: #fff;
+    font-size: 0.8rem;
+    background: var(--primary);
+    border-bottom: 1px solid #eee;
+    white-space: nowrap;
+}
+
+.exLicTable tbody tr {
+    vertical-align: middle;
+}
+
+.exLicTable td {
+    background: var(--card-bg);
+    color: #444;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* Status badges (text-only) */
+.ex-status {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.ex-active {
+    background: #e9f9ef;
+    color: #1f9d55;
+}
+
+.ex-warning {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+.ex-danger {
+    background: #fdecea;
+    color: #d32f2f;
+}
+
+.ex-info {
+    background: #e3f2fd;
+    color: #2962ff;
+}
+
+/* Days */
+.ex-days {
+    font-weight: 400;
+}
+
+.ex-good {
+    color: #16a34a;
+}
+
+.ex-warn {
+    color: #f97316;
+}
+
+.ex-bad {
+    color: #dc2626;
+}
+
+.ex-na {
+    color: #9ca3af;
+}
+
+/* Risk */
+.ex-risk {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.ex-low {
+    background: #e9f9ef;
+    color: #15803d;
+}
+
+.ex-medium {
+    background: #fff7d6;
+    color: #b45309;
+}
+
+.ex-high {
+    background: #fdecea;
+    color: #b91c1c;
+}
+
+/* Compliance bar */
+.ex-progress {
+    display: inline-block;
+    width: 90px;
+    height: 8px;
+    background: #eee;
+    border-radius: 10px;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+    .ex-progress .bar {
+        height: 100%;
+        border-radius: 10px;
+    }
+
+.bar-green {
+    background: #22c55e;
+}
+
+.bar-amber {
+    background: #f59e0b;
+}
+
+.bar-red {
+    background: #ef4444;
+}
+
+.ex-percent {
+    font-size: 12px;
+    font-weight: 400;
+}
+
+/* Documents */
+.ex-docs span:nth-child(1) {
+    color: #f59e0b;
+}
+
+.ex-docs span:nth-child(2) {
+    color: #2563eb;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .exLicTable td, .exLicTable th {
+        font-size: 12px;
+    }
+}
+
+
+/* ================= Recommended Actions & Next Steps (Scoped) ================= */
+
+.licCommonCompPage .licActionNextSteps {
+    width: 100%;
+}
+
+/* Card base */
+.licCommonCompPage .licAction-card,
+.licCommonCompPage .licAction-summary {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    height: 100%;
+}
+
+/* Header */
+.licCommonCompPage .licAction-header h6 {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+/* Strategic tag */
+.licCommonCompPage .licAction-tag {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e8f0ff;
+    color: #2563eb;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Action blocks */
+.licCommonCompPage .licAction-block {
+    height: 100%;
+}
+
+/* Section titles */
+.licCommonCompPage .licAction-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .licCommonCompPage .licAction-title.immediate {
+        color: #dc2626;
+    }
+
+    .licCommonCompPage .licAction-title.short {
+        color: #f59e0b;
+    }
+
+/* Lists */
+.licCommonCompPage .licAction-list {
+    padding-left: 18px;
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+    .licCommonCompPage .licAction-list li {
+        margin-bottom: 8px;
+        line-height: 1.4;
+    }
+
+/* ================= Summary ================= */
+
+.licCommonCompPage .licAction-summary {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+}
+
+.licCommonCompPage .licAction-summaryItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+}
+
+    .licCommonCompPage .licAction-summaryItem i {
+        font-size: 1.1rem;
+    }
+
+    .licCommonCompPage .licAction-summaryItem.compliant {
+        color: #2563eb;
+    }
+
+    .licCommonCompPage .licAction-summaryItem.attention {
+        color: #dc2626;
+    }
+
+.licCommonCompPage .licAction-summary hr {
+    margin: 6px 0;
+    opacity: 0.3;
+}
+
+/* Review date */
+.licCommonCompPage .licAction-review {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+/* ================= Responsive ================= */
+
+@media (max-width: 991px) {
+    .licCommonCompPage .licAction-summary {
+        margin-top: 8px;
+    }
+}
+
+
+
+/* ================= Quick Notes & Client Annotations (Scoped) ================= */
+
+.licCommonCompPage .licReportNotes {
+    background: transparent;
+    padding: 0;
+    padding: 16px 18px;
+}
+
+/* Header */
+.licCommonCompPage .licReportNotes-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+    .licCommonCompPage .licReportNotes-header i {
+        font-size: 1.1rem;
+        color: var(--primary);
+    }
+
+.licCommonCompPage .licReportNotes-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--primary);
+}
+
+/* Editable Inner Card */
+.licCommonCompPage .licReportNotes-editor {
+    background: #fff7e6; /* soft theme-friendly highlight */
+    border: 1px solid #ffd9b3;
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    color: #444;
+    min-height: 110px;
+    outline: none;
+}
+
+    /* Bullet layout */
+    .licCommonCompPage .licReportNotes-editor ul {
+        padding-left: 18px;
+        margin: 0;
+    }
+
+    .licCommonCompPage .licReportNotes-editor li {
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+
+/* Placeholder text */
+.licCommonCompPage .licReportNotes-placeholder {
+    margin-top: 6px;
+    font-style: italic;
+    color: #999;
+    pointer-events: none;
+}
+
+/* Hide placeholder when user types */
+.licCommonCompPage .licReportNotes-editor:focus .licReportNotes-placeholder,
+.licCommonCompPage .licReportNotes-editor:not(:empty) .licReportNotes-placeholder {
+    display: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .licCommonCompPage .licReportNotes-editor {
+        font-size: 0.8rem;
+    }
+}

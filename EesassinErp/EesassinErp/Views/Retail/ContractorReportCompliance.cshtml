@@ -1,0 +1,519 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Compliance Report";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="~/scripts/RetailJsLib/AddContractorComplianceController.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- For Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "AddContractorCompliance";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+
+}
+<style>
+    .bg-primary {
+        background-color: #e67525 !important;
+    }
+
+    .form-check .form-check-input {
+        float: left;
+        margin-left: 0.5em !important;
+    }
+
+    .select-as-button {
+        appearance: none;
+        -webkit-appearance: none;
+        background: #e63123; /* bootstrap primary */
+        color: #fff;
+        border: 1px solid #0d6efd;
+        border-radius: .5rem;
+        font-weight: 600;
+        cursor: pointer;
+        position: relative;
+    }
+
+        .select-as-button:disabled {
+            opacity: .75;
+            cursor: not-allowed;
+        }
+
+        .select-as-button:focus {
+            outline: 0;
+            box-shadow: 0 0 0 .25rem rgba(13,110,253,.25);
+        }
+    /* caret arrow */
+    .select-as-button {
+        background-image: linear-gradient(45deg, transparent 50%, #fff 50%), linear-gradient(135deg, #fff 50%, transparent 50%);
+        background-position: calc(100% - 18px) calc(50% + 3px), calc(100% - 12px) calc(50% + 3px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat;
+        padding-right: 2.25rem;
+    }
+
+    #print-area {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+        visibility: visible;
+        display: block;
+        background: #fff;
+    }
+
+    .custom-tabs .nav-link {
+        color: #333;
+        font-weight: 500;
+    }
+
+        .custom-tabs .nav-link.active-tab {
+            background-color: #e67525 !important; /* Highlight active tab */
+            color: #000 !important;
+            border-color: #ddd #ddd transparent;
+        }
+
+    .custom-dropdown {
+        background-color: #f9f9f9;
+    }
+
+    .form-check {
+        padding: 5px 10px;
+    }
+
+    .form-check-input {
+        margin-top: 0.3rem;
+    }
+
+    .modal-backdrop.show {
+        opacity: 0 !important;
+        pointer-events: none !important; /* अब क्लिक block नहीं होगा */
+    }
+</style>
+<div class="pagecontentbody" ng-cloak>
+
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+
+            <div class="pagecontentbody">
+
+                <div class="pagebody">
+                    <div class="col-md-12 pageheader">
+                        <!-- Tabs Content -->
+                        <div class="tab-content">
+                            <div>
+
+                                <div>
+                                    <div>
+                                        <div>
+
+                                            <div>
+                                                <div class="mt-2">
+                                                    <button type="button"
+                                                            class="btn btn-success mb-2"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#bulkDownloadModal">
+                                                        <i class="fa fa-download"></i> Bulk Download Docs
+                                                    </button>
+                                                    <p>{{ downloadAlertMessage }}</p>
+                                                    <p>{{ downloadMessage }}</p>
+                                                    <p>{{downloadSkipMessage}}</p>
+                                                </div>
+                                                <div class="row g-3 align-items-end">
+
+                                                    <!-- State -->
+                                                    <div class="col-md-2">
+                                                        <div class="form-group" ng-init="AllState();">
+                                                            <label for="ddlState" class="form-label">State</label>
+                                                            <select id="ddlState" class="form-control form-select validate" ng-model="StateId" ng-change="BindStore()">
+                                                                <option value="">Select</option>
+                                                                <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">
+                                                                    {{x.STATE_NM}}
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Category -->
+                                                    <div class="col-md-2">
+                                                        <label class="control-label">Compliance Category<span class="vd_red">*</span></label>
+                                                        <div class="input-box">
+                                                            <select id="ddlComplianceCategory" class="select2 form-control validate" ng-model="ComplianceCategory" ng-change="BindStore()">
+                                                                <option value="">Select Compliance</option>
+                                                                @*
+                                                                    <option value="1">Store</option>
+                                                                    <option value="2">Warehouse</option>
+                                                                    <option value="3">Factory</option>*@
+                                                                @*<option value="4">Establishment</option>*@
+                                                                
+                                                                    <option value="5">Contractor</option>
+                                                            </select>
+                                                            <div class="text-box-msg-r">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <div class="form-group">
+                                                            <label>Store Code</label>
+
+                                                            <select id="myDropdown" class="form-control form-select validate" ng-change="BindAct(StoreId);SetStoreCode(StoreId)" ng-model="StoreId">
+                                                                <option value="">Select</option>
+                                                                <option ng-repeat="xx in StoreList" value="{{xx.StoreId}}"> {{xx.StoreCode}} </option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-2" ng-click="$event.stopPropagation()">
+                                                        <div class="form-group" ng-init="SelectedActs = []">
+                                                            <label class="form-label">Act List</label>
+
+                                                            <!-- Dropdown Container -->
+                                                            <div class="dropdown" style="position:relative; display:inline-block; width:100%;">
+                                                                <button type="button"
+                                                                        class="form-control text-left"
+                                                                        ng-click="toggleDropdown($event)">
+                                                                    {{SelectedActs.length > 0 ? SelectedActs.length + ' selected' : 'Select Acts'}}
+                                                                    <span style="float:right;">&#9662;</span>
+                                                                </button>
+
+                                                                <!-- Dropdown Content -->
+                                                                <div ng-show="dropdownOpenActs"
+                                                                     style="position:absolute; z-index:1000; background:white; border:1px solid #ccc; width:100%; max-height:200px; overflow-y:auto; padding:5px; box-shadow:0 2px 5px rgba(0,0,0,0.2);"
+                                                                     ng-click="$event.stopPropagation()">
+
+                                                                    <!-- Select All -->
+                                                                    <div>
+                                                                        <input type="checkbox" ng-model="selectAllActs" ng-change="toggleAllActs()" />
+                                                                        <label><strong>Select All</strong></label>
+                                                                    </div>
+                                                                    <hr style="margin:4px 0;">
+
+                                                                    <!-- Checkboxes -->
+                                                                    <div ng-repeat="act in ActList">
+                                                                        <input type="checkbox"
+                                                                               ng-checked="SelectedActs.indexOf(act.Act) > -1"
+                                                                               ng-click="toggleAct(act.Act)" />
+                                                                        <label>{{act.Act}}</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+
+
+                                                    <!-- Financial Year -->
+                                                    <div class="col-md-2">
+                                                        <div class="form-group" ng-init="BindFinacialYear();">
+                                                            <label for="ddlFinancialYear" class="form-label">Financial Year</label>
+                                                            <select id="ddlFinancialYear" class="form-control form-select validate" ng-model="FY">
+                                                                <option value="">Select</option>
+                                                                <option ng-repeat="x in finacialyearList" value="{{x.FinancialName}}">
+                                                                    {{x.FinancialName}}
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Month -->
+                                                    <div class="col-md-1">
+                                                        <div class="form-group" ng-init="BindMonth();">
+                                                            <label for="CMonth" class="form-label">Month</label>
+                                                            <select id="CMonth" class="form-control form-select validate" ng-model="CMonth">
+                                                                <option value="">Select</option>
+                                                                <option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">
+                                                                    {{x.MonthName}}
+                                                                </option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-md-1">
+                                                        <div class="form-group">
+                                                            <label class="form-label d-block">&nbsp;</label>
+                                                            <button type="button"
+                                                                    class="btn btn-warning w-100"
+                                                                    ng-click="BindAllDocumentList()"
+                                                                    ng-disabled="searching">
+                                                                <span ng-if="!searching">
+                                                                    <i class="fa fa-search"></i>
+                                                                </span>
+                                                                <span ng-if="searching">
+                                                                    <i class="fa fa-spinner fa-spin"></i>
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+
+
+
+
+
+
+
+
+
+
+                                                </div>
+
+
+                                                <div id="dynamic-content" style="display: none;"></div>
+                                                <div id="print-area"
+                                                     style="position:absolute; top:-9999px; left:-9999px;
+            background:#fff; min-width:800px; min-height:600px;
+            display:block; visibility:visible;">
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        <br />
+
+                                        <div class="input-box" ng-show="Doclist" style="max-height:500px; overflow-x:auto; overflow-y:auto; border:1px solid #ccc;
+padding:10px;">
+
+                                            <h4>Document List</h4>
+                                            <table class="table table-bordered table-striped" style="width:100%;">
+                                                <thead>
+                                                    <tr>
+                                                        @*<th>
+                                                            <input type="checkbox" ng-model="selectAll" ng-click="toggleAll()" />
+                                                        </th>*@
+                                                        <th>DocumentName</th>
+                                                        <th>DocumentType</th>
+                                                        <th>Act</th>
+                                                        <th>FormNo</th>
+                                                        <th>Criticality</th>
+                                                        <th>DocumentType</th>
+                                                        <th>Frequency</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                    <!-- Search Inputs -->
+                                                    <tr>
+                                                        <th></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search DocumentName" ng-model="search.DocumentName"></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search DocumentType" ng-model="search.DocumentType"></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search Act" ng-model="search.Act"></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search FormNo" ng-model="search.FormNo"></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search Criticality" ng-model="search.Criticality"></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search DocumentType" ng-model="search.DocumentType2"></th>
+                                                        <th><input type="text" class="form-control" placeholder="Search Frequency" ng-model="search.Frequency"></th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr ng-repeat="x in DocumentList | filter:customFilter">
+                                                        @*<td>
+                                                            <input type="checkbox" ng-model="x.isSelected" ng-change="updateSelection()" />
+                                                        </td>*@
+                                                        <td>{{x.DocumentName}}</td>
+                                                        <td>{{x.DocumentType}}</td>
+                                                        <td class="text-center">{{x.Act}}</td>
+                                                        <td class="text-center">{{x.FormNo}}</td>
+                                                        <td class="text-center">{{x.Criticality}}</td>
+                                                        <td class="text-center">{{x.DocumentType}}</td>
+                                                        <td class="text-center">{{x.Frequency}}</td>
+                                                        <td class="text-center">
+                                                            <div class="btn-group" role="group">
+                                                                <!-- Download Button -->
+                                                                <button class="btn btn-sm btn-success"
+                                                                        title="Download"
+                                                                        ng-click="ApproveBeforeDownload(x.HeaderHtml,x.Allowed,x.DocumentId,3,x.DocumentName)"
+                                                                        ng-disabled="loading[x.DocumentId]">
+                                                                    <span ng-if="!loading[x.DocumentId]">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </span>
+                                                                    <span ng-if="loading[x.DocumentId]">
+                                                                        <i class="fa fa-spinner fa-spin"></i>
+                                                                    </span>
+                                                                </button>
+
+                                                                <!-- Print Button -->
+                                                                <button class="btn btn-sm btn-primary"
+                                                                        title="Print"
+                                                                        ng-click="ApproveBeforeDownload(x.HeaderHtml,x.Allowed,x.DocumentId,1,x.DocumentName)"
+                                                                        ng-disabled="loading[x.DocumentId]">
+                                                                    <span ng-if="!loading[x.DocumentId]">
+                                                                        <i class="fa fa-print"></i>
+                                                                    </span>
+                                                                    <span ng-if="loading[x.DocumentId]">
+                                                                        <i class="fa fa-spinner fa-spin"></i>
+                                                                    </span>
+                                                                </button>
+                                                                <!-- Excel Button -->
+                                                                <button class="btn btn-sm btn-warning"
+                                                                        title="Download Excel"
+                                                                        ng-click="ApproveBeforeDownload(x.HeaderHtml,x.Allowed,x.DocumentId,2,x.DocumentName)"
+                                                                        ng-disabled="loading[x.DocumentId]">
+                                                                    <span ng-if="!loading[x.DocumentId]">
+                                                                        <i class="fas fa-file-excel"></i>
+                                                                    </span>
+                                                                    <span ng-if="loading[x.DocumentId]">
+                                                                        <i class="fa fa-spinner fa-spin"></i>
+                                                                    </span>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+
+
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+
+                                        </div>
+
+                                    </div>
+
+
+
+                                </div>
+
+
+                            </div>
+                        </div>
+
+
+                    </div>
+
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@*//----------------*@
+<!-- Bootstrap Modal -->
+<div id="employeeModal" tabindex="-1" role="dialog"
+     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.5); z-index:1050; overflow:auto;">
+
+    <div class="modal-dialog" role="document"
+         style="margin:20% auto; max-width:500px; z-index:1060;">
+
+        <div class="modal-content" style="border-radius:8px; overflow:hidden;">
+
+            <div class="modal-header" style="border-bottom:1px solid #ddd; padding:10px 15px;">
+                <h5 class="modal-title">Select Employee</h5>
+                <button type="button" class="close"
+                        style="border:none; background:none; font-size:24px;"
+                        onclick="angular.element(this).scope().closeModal()">
+                    &times;
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding:15px;">
+                <!-- Dropdown -->
+                <select class="form-control" ng-model="SelectedEmployee">
+                    <option value="">Select Employee</option>
+                    <option ng-repeat="x in EmployeeDetail" value="{{x.Employee_Code}}">{{x.Employee_Code}}|{{x.Employee_Name}}</option>
+
+                </select>
+            </div>
+
+            <div class="modal-footer" style="border-top:1px solid #ddd; padding:10px 15px; text-align:right;">
+                <button type="button" class="btn btn-success" ng-click="PrintEmployee()">Download Form</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="angular.element(this).scope().closeModal()">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<!-- 🔹 Modal -->
+<div class="modal fade" id="bulkDownloadModal" tabindex="-1" aria-labelledby="bulkDownloadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="bulkDownloadModalLabel">Bulk Download Documents</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- 🔹 State Checkbox List -->
+                <div class="form-group mb-3">
+                    <label class="col-form-label mb-2 fw-bold">Select State(s)</label>
+                    <div class="border" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+                        <div class="form-check" ng-repeat="s in AllStateList">
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   id="chk_{{s.SATE_CODE}}"
+                                   ng-checked="SelectedStates.indexOf(s.SATE_CODE) > -1"
+                                   ng-click="toggleStateSelection(s.SATE_CODE)">
+                            <label class="form-check-label ms-2" for="chk_{{s.SATE_CODE}}">
+                                {{s.STATE_NM}}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔹 Financial Year and Month Dropdowns -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group" ng-init="BindFinacialYear();">
+                            <label for="ddlFinancialYear" class="form-label fw-bold">Financial Year</label>
+                            <select id="ddlFinancialYear" class="form-control form-select" ng-model="FY">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in finacialyearList" value="{{x.FinancialName}}">
+                                    {{x.FinancialName}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group" ng-init="BindMonth();">
+                            <label for="CMonth" class="form-label fw-bold">Month</label>
+                            <select id="CMonth" class="form-control form-select" ng-model="CMonth">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">
+                                    {{x.MonthName}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔹 Footer -->
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-success"
+                        ng-click="DownloadSelected()"
+                        data-bs-dismiss="modal">
+                    <i class="fa fa-download"></i> Download
+                </button>
+
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*//----------------*@
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="~/scripts/RetailJsLib/AddcomplianceFileController.js"></script>
+
+
+
+
+
+
+

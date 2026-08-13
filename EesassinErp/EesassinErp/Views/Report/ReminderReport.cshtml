@@ -1,0 +1,88 @@
+﻿@{
+    ViewBag.Title = "Scheduler Reminder Report";
+    ViewBag.TitleList = "Scheduler Reminder Report";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css")" />
+<link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/css/buttons.dataTables.min.css")" />
+<link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css")" />
+
+<script src="~/Scripts/myjslib/ReminderController.js?Ver=@ViewBag.Version"></script>
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Scheduler Reminder Report</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-sm-6 col-md-6 col-xs-12 ">
+            <ol class="breadcrumb">
+                <li><a href="#"><span>Master</span></a></li>
+                <li><a href="#"><span>Report</span></a></li>
+                <li class="active"><span>Scheduler Reminder Report</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="section-toggle">
+
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <label class="control-label">Reminder Date</label>
+                                                <div class="input-box">
+                                                    <input id="txtStartDate" type="date" class="form-control" ng-model="StartDate" />
+                                                    <div class="text-box-msg-r">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                                <br />
+                                                @Html.Partial("ActionSearch")
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding report-box">
+                                    <div class="arrow-container animated fadeInDown filter-toggle " ng-click="FilterToggle()">
+                                        <div class="arrow-2">
+                                            <i class="fa fa-angle-down"></i>
+                                        </div>
+                                        <div class="arrow-1 animated hinge infinite zoomIn"></div>
+                                    </div>
+                                    @Html.Partial("GeneralReportGrid")
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+</div>

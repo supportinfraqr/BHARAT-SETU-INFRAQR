@@ -1,0 +1,1401 @@
+﻿.supplierAdminPage {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+    --card-bg: #fff;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.add-btn, .save-btn{
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .save-btn:hover,
+    .add-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.cancel-btn {
+    border-radius: 999px;
+    color: var(--primary);
+    background: transparent;
+    border: 1px solid var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .cancel-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.seeContractor-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+.seeContractor-btn:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+
+/* ===== Fix Add Party button click blink ===== */
+
+.supplierAdminPage .add-btn {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    /* prevent white flash on click */
+    .supplierAdminPage .add-btn:active,
+    .supplierAdminPage .add-btn:focus,
+    .supplierAdminPage .add-btn:focus-visible {
+        background: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+/* remove mobile tap highlight */
+.supplierAdminPage .add-btn {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Toggle pill - single capsule container */
+.supplierAdminPage .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .supplierAdminPage .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 4px 8px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+        box-shadow: none !important;
+    }
+
+        /* active pill */
+        .supplierAdminPage .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: none !important;
+        }
+
+        /* ensure focus ring for accessibility (subtle) */
+        .supplierAdminPage .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: none !important;
+        }
+
+/* Section cards */
+.supplierAdminPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .supplierAdminPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* min-height: 320px;*/
+    }
+
+    .supplierAdminPage .section-card h4 {
+        color: var(--primary);
+    }
+
+
+/* KPI CARDS */
+.supplierAdminPage .kpi-row {
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+.supplierAdminPage .kpi-card {
+    flex: 1;
+    min-width: 220px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #022B5E;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .supplierAdminPage .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.supplierAdminPage .kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.supplierAdminPage .kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #022B5E;
+}
+
+/* Table wrapper and hide scrollbar visually */
+.supplierAdminPage .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .supplierAdminPage .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.supplierAdminPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F8F9FD;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.supplierAdminPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.supplierAdminPage .small-table tbody tr:hover td {
+    background-color: #F8f9fc;
+}
+
+/* action menu */
+
+.supplierAdminPage .action-menu .btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .supplierAdminPage .action-menu .btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+.supplierAdminPage .table-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .supplierAdminPage .table-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* statuses */
+.supplierAdminPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.supplierAdminPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.supplierAdminPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.supplierAdminPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+
+/* filter button */
+.supplierAdminPage .filter-btn,
+.supplierAdminPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .supplierAdminPage .filter-btn.active,
+    .supplierAdminPage .filter-btn:hover,
+    .supplierAdminPage .filter-btn.active,
+    .supplierAdminPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.supplierAdminPage .table-toolbar .form-control-sm {
+    height: 34px;
+    border-radius: 999px 0 0 999px;
+    border-right: none;
+    border-color: var(--primary);
+}
+
+/* Search button */
+.supplierAdminPage .input-group .btn {
+    /* border-radius: 0 999px 999px 0;
+    border-left: none;*/
+}
+
+/* Export button (rounded) */
+.supplierAdminPage .export-btn, .search-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .supplierAdminPage .export-btn:hover,
+    .supplierAdminPage .search-btn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+/* ================= Add Party Modal ================= */
+
+.supplierAdminPage .supplierAdminModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.supplierAdminPage .supplierAdminModal .modal-title {
+    font-weight: 400;
+}
+
+.supplierAdminPage .supplierAdminModal .modal-body {
+    background: var(--card-bg);
+}
+
+.supplierAdminPage .supplierAdminModal .form-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #444;
+}
+
+    .supplierAdminPage .supplierAdminModal .form-label span {
+        color: #022B5E;
+    }
+
+.supplierAdminPage .supplierAdminModal .form-control-sm,
+.supplierAdminPage .supplierAdminModal .form-select-sm {
+    font-size: 0.78rem;
+    border-radius: 6px;
+}
+
+.supplierAdminPage .supplierAdminModal .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}
+
+
+/*==============Overview================*/
+
+/* ADMIN OVERVIEW  */
+.supplierAdminPage #overview .adminOverview .card-body {
+    padding: 24px;
+}
+
+/* Header  */
+.supplierAdminPage #overview .adminOverview-header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+/* Org Info */
+.supplierAdminPage #overview .adminOverview-org {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* Org Logo : Universal Fit  */
+.supplierAdminPage #overview .adminOverview-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px; /* works for all shapes */
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* important */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+    .supplierAdminPage #overview .adminOverview-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain; /* KEY: no crop, no stretch */
+        display: block;
+    }
+
+
+.supplierAdminPage #overview .adminOverview-orgInfo h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.supplierAdminPage #overview .adminOverview-orgInfo a,p {
+    font-size: 13px;
+    color: #555;
+    text-decoration: none;
+}
+
+/* Meta Info */
+.supplierAdminPage #overview .adminOverview-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px 24px;
+}
+
+.supplierAdminPage #overview .meta-item label {
+    font-size: 12px;
+    color: #777;
+    display: block;
+}
+
+.supplierAdminPage #overview .meta-item span {
+    font-weight: 500;
+}
+
+/* Right Wrapper */
+.supplierAdminPage #overview .adminOverview-right {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+/* Attention Card */
+.supplierAdminPage #overview .adminOverview-alert {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #fff6f1;
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    padding: 12px 14px;
+    max-width: 300px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+    /* Icon */
+    .supplierAdminPage #overview .adminOverview-alert .alert-icon {
+        color: red;
+        font-size: 16px;
+        margin-top: 2px;
+    }
+
+    /* Content */
+    .supplierAdminPage #overview .adminOverview-alert h6 {
+        margin: 0;
+        color: red !important;
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .supplierAdminPage #overview .adminOverview-alert p {
+        font-size: 12px;
+        color: #666;
+        margin: 4px 0 8px;
+        line-height: 1.4;
+    }
+
+    .supplierAdminPage #overview .adminOverview-alert .renew-btn {
+        background-color: #fff;
+        color: red;
+        border: 1px solid red;
+        border-radius: 999px;
+        font-weight: 400;
+        padding: 1px 6px;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+    }
+
+        .supplierAdminPage #overview .adminOverview-alert .renew-btn:hover {
+            background: red;
+            color: #fff;
+        }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .supplierAdminPage #overview .adminOverview-right {
+        width: 100%;
+    }
+
+    .supplierAdminPage #overview .adminOverview-alert {
+        max-width: 100%;
+    }
+}
+
+
+/* Edit Button */
+.supplierAdminPage #overview .adminOverview-edit {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: none;
+    background: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    cursor: pointer;
+}
+
+    .supplierAdminPage #overview .adminOverview-edit i {
+        color: var(--primary);
+    }
+
+/* KPI Cards  */
+.supplierAdminPage #overview .adminOverview-kpis {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
+.supplierAdminPage #overview .kpiCard {
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    border-left: 4px solid var(--primary);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+    .supplierAdminPage #overview .kpiCard:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .supplierAdminPage #overview .kpiCard i {
+        font-size: 26px;
+        color: var(--primary);
+    }
+
+    .supplierAdminPage #overview .kpiCard h6 {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .supplierAdminPage #overview .kpiCard span {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+/* Responsive  */
+@media (max-width: 992px) {
+    .supplierAdminPage #overview .adminOverview-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .supplierAdminPage #overview .adminOverview-meta {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .supplierAdminPage #overview .adminOverview-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .supplierAdminPage #overview .adminOverview-header {
+        padding-top: 32px;
+    }
+}
+
+/* USER ANALYTICS  */
+.supplierAdminPage #overview .adminUserAnalytics .card-body {
+    padding: 20px;
+}
+
+/* Header */
+.supplierAdminPage #overview .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+    .supplierAdminPage #overview .analytics-header h5 {
+        margin: 0;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+.supplierAdminPage #overview #overview .card-head {
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.supplierAdminPage #overview .analytics-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .supplierAdminPage #overview .analytics-actions a {
+        font-size: 13px;
+        text-decoration: none;
+        color: var(--primary);
+    }
+
+/* Chart wrapper */
+.supplierAdminPage #overview .chartWrap {
+    height: 260px;
+}
+
+/* Donut */
+.supplierAdminPage #overview .donutWrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 16px;
+}
+
+.supplierAdminPage #overview .donutCenter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+    .supplierAdminPage #overview .donutCenter span {
+        font-size: 12px;
+        color: #777;
+    }
+
+    .supplierAdminPage #overview .donutCenter strong {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+/* User stats */
+.supplierAdminPage #overview .userStats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 12px;
+}
+
+    .supplierAdminPage #overview .userStats div {
+        text-align: center;
+    }
+
+    .supplierAdminPage #overview .userStats strong {
+        display: block;
+        font-size: 18px;
+    }
+
+    .supplierAdminPage #overview .userStats small {
+        font-size: 12px;
+        color: #777;
+    }
+
+.supplierAdminPage #overview .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+    .supplierAdminPage #overview .dot.active {
+        background: var(--primary);
+    }
+
+    .supplierAdminPage #overview .dot.inactive {
+        background: #ccc;
+    }
+
+    .supplierAdminPage #overview .dot.total {
+        background: #999;
+    }
+
+/* Responsive */
+@media (max-width: 991px) {
+    .supplierAdminPage #overview .chartWrap {
+        height: 220px;
+    }
+}
+
+.supplierAdminPage .admin-dd-select {
+    border-radius: 10px;
+    border: 1px solid var(--primary);
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    background-color: #fff;
+    box-shadow: none;
+}
+
+.supplierAdminPage .admin-dd-label {
+    font-size: 0.75rem;
+}
+
+/* ==========================
+   REDRESSAL COMMITTEE
+========================== */
+
+.redressalCommitteeSearch {
+    position: relative;
+    max-width: 420px;
+    margin-bottom: 24px;
+}
+
+    .redressalCommitteeSearch i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #667085;
+    }
+
+    .redressalCommitteeSearch input {
+        width: 100%;
+        height: 38px;
+        font-size: 1rem;
+        border: 1px solid #E4E7EC;
+        border-radius: 12px;
+        padding: 0 16px 0 45px;
+        outline: none;
+        background: #fff;
+    }
+
+.redressalCommitteeGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.redressalCommitteeCard {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    min-height: 265px;
+    cursor: pointer;
+    transition: all .25s ease;
+    display: flex;
+    flex-direction: column;
+    border : 0;
+}
+
+    .redressalCommitteeCard:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(0,0,0,.08);
+        border : 1px solid var(--primary);
+    }
+
+.redressalCommitteeTop {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.redressalCommitteeIcon {
+    width: 48px;
+    height: 48px;
+    background: #FFF3EE;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+    .redressalCommitteeIcon i {
+        font-size: 28px;
+        color: #F26A2E;
+    }
+
+.redressalCommitteeInfo h5 {
+    margin-bottom: 2px;
+    font-weight: 600;
+    color: #1D2939;
+    font-size: 1rem;
+}
+
+.redressalCommitteeStatus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+    .redressalCommitteeStatus.active {
+        background: #D8F5E3;
+        color: #118D57;
+        font-size : 10px;
+    }
+
+.redressalCommitteeDescription {
+    margin-top: 10px;
+    margin-bottom: 0;
+    color: #667085;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 60px;
+}
+
+.redressalCommitteeDivider {
+    height: 1px;
+    background: #E4E7EC;
+    margin: 20px 0;
+}
+
+.redressalCommitteeFooter {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.redressalCommitteeMembers {
+    display: flex;
+    align-items: center;
+}
+
+    .redressalCommitteeMembers img {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #fff;
+    }
+
+        .redressalCommitteeMembers img + img {
+            margin-left: -12px;
+        }
+
+.redressalCommitteeCount {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #F2F4F7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -12px;
+    border: 2px solid #fff;
+    font-weight: 600;
+    color: #344054;
+}
+
+.redressalCommitteeCases {
+    display: flex;
+    flex-direction: column;
+}
+
+    .redressalCommitteeCases span {
+        font-size: 12px;
+        /*text-transform: uppercase;*/
+        color: #667085;
+        /*font-weight: 600;*/
+    }
+
+    .redressalCommitteeCases strong {
+        font-size: 24px;
+        color: #F26A2E;
+        font-weight: 500;
+    }
+
+/* ==========================
+   RESPONSIVE
+========================== */
+
+@media (max-width: 991px) {
+
+    .redressalCommitteeGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+}
+
+@media (max-width: 767px) {
+
+    .redressalCommitteeGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .redressalCommitteeFooter {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+    }
+
+    .redressalCommitteeSearch {
+        max-width: 100%;
+    }
+}
+
+
+/* ===================================
+   CREATE COMMITTEE MODAL
+=================================== */
+
+
+.committeeManagementModal .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+/* Header */
+
+.committeeManagementModal .modal-header {
+    background: var(--primary);
+    color : #fff;
+}
+
+.committeeManagementModal .modal-title {
+    font-weight : 500;
+}
+
+.committeeManagementModal .btn-close {
+    opacity: 1;
+}
+
+/* Body */
+
+.committeeManagementModal .modal-body {
+    padding: 20px;
+    background : var(--card-bg);
+
+}
+
+.committeeManagementModal .form-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #704B3B;
+    margin-bottom: 12px;
+}
+
+/* Inputs */
+
+.committeeInput,
+.committeeTextarea {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 14px;
+    box-shadow: none !important;
+}
+
+.committeeInput {
+    height: 50px;
+}
+
+.committeeTextarea {
+    resize: none;
+}
+
+/* Type Cards */
+
+.committeeTypeWrapper {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.committeeTypeCard {
+    height: 50px;
+    border: 2px solid #ddd;
+    border-radius: 14px;
+
+    display: flex;
+    align-items: center;
+    gap: 18px;
+
+    padding: 0 28px;
+    cursor: pointer;
+
+    transition: all .2s ease;
+}
+
+.committeeTypeCard input {
+    display: none;
+}
+
+.committeeTypeCard span:last-child {
+    font-size: 14px;
+    font-weight: 500;
+    color: #2E1A12;
+}
+
+.committeeRadio {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #8B95A7;
+    position: relative;
+}
+
+.committeeTypeCard.active {
+    border-color: #F05A00;
+}
+
+.committeeTypeCard.active .committeeRadio {
+    border-color: #F05A00;
+}
+
+.committeeTypeCard.active .committeeRadio::after {
+    content: "";
+    width: 12px;
+    height: 12px;
+    background: #F05A00;
+    border-radius: 50%;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+}
+
+/* Footer */
+
+.committeeManagementModal .modal-footer {
+    border-top: none;
+    background: #FDF5F2;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+
+    .committeeManagementModal .modal-header,
+    .committeeManagementModal .modal-body,
+    .committeeManagementModal .modal-footer {
+        padding: 20px;
+    }
+
+    .committeeTypeWrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .committeeManagementModal .modal-title {
+        font-size: 22px;
+    }
+
+    .committeeManagementModal .modal-footer {
+        flex-direction: column;
+    }
+
+    .committeeManagementModal .save-btn,
+    .committeeManagementModal .cancel-btn {
+        width: 100%;
+    }
+}
+
+/* ===============================
+   ASSIGN MEMBER MODAL
+================================ */
+
+.assignMemberModalDialog {
+    max-width: 1500px;
+    width: 95vw;
+}
+
+.assignMemberModal .modal-content {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+/* Header */
+
+.assignMemberModal .modal-header {
+    border-bottom: none;
+    padding: 20px 25px;
+}
+
+.assignMemberModalBack {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #F05A00;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+    .assignMemberModalBack i {
+        font-size: 22px;
+    }
+
+/* Body */
+
+.assignMemberModal .modal-body {
+    padding: 0 20px 20px;
+}
+
+.assignMemberLayout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 20px;
+}
+
+/* Panels */
+
+.assignMemberCommitteeCard,
+.assignMemberUserCard {
+    border: 1px solid #D6DCE5;
+    border-radius: 12px;
+    background: #fff;
+    height: 620px;
+    display: flex;
+    flex-direction: column;
+}
+
+    .assignMemberCommitteeCard h5,
+    .assignMemberUserCard h5 {
+        padding: 18px;
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+/* Left List */
+
+.assignMemberCommitteeList {
+    padding: 0 18px 18px;
+    overflow-y: auto;
+}
+
+.committeeItem {
+    border: 1px solid #D6DCE5;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .committeeItem h6 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .committeeItem span {
+        font-size: 14px;
+        color: #555;
+    }
+
+    .committeeItem.active {
+        background: #EB5F20;
+        border-color: #EB5F20;
+        color: #fff;
+    }
+
+        .committeeItem.active span {
+            color: #fff;
+        }
+
+        .committeeItem.active i {
+            font-size: 20px;
+        }
+
+/* Right Header */
+
+.assignMemberHeader {
+    padding: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.availableBadge {
+    background: #DCE8FF;
+    color: #243B63;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+/* Search */
+
+.assignMemberSearch {
+    margin: 0 18px 18px;
+    position: relative;
+}
+
+    .assignMemberSearch i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .assignMemberSearch input {
+        width: 100%;
+        height: 42px;
+        border: 1px solid #D6DCE5;
+        border-radius: 4px;
+        padding-left: 42px;
+    }
+
+/* Members */
+
+.assignMemberList {
+    padding: 0 18px 18px;
+    overflow-y: auto;
+}
+
+.memberRow {
+    border: 1px solid #D6DCE5;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.memberInfo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.memberAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #F1F1F1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #EB5F20;
+    font-weight: 600;
+}
+
+.memberInfo h6 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.memberInfo span {
+    font-size: 14px;
+    color: #555;
+}
+
+.memberActions {
+    display: flex;
+    gap: 8px;
+}
+
+.memberAddBtn,
+.memberRemoveBtn {
+    border: none;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 14px;
+}
+
+.memberAddBtn {
+    background: #16A34A;
+    color: #fff;
+}
+
+    .memberAddBtn.outline {
+        background: #fff;
+        border: 1px solid #16A34A;
+        color: #16A34A;
+    }
+
+.memberRemoveBtn {
+    background: #F4F4F4;
+    color: #BBB;
+}
+
+    .memberRemoveBtn.active {
+        background: #D50000;
+        color: #fff;
+    }
+
+/* Footer */
+
+.assignMemberModal .modal-footer {
+    border-top: none;
+    padding: 20px 30px 30px;
+}
+
+.assignMemberModal .save-btn {
+    min-width: 120px;
+}
+
+/* Responsive */
+
+@media(max-width:1199px) {
+
+    .assignMemberLayout {
+        grid-template-columns: 1fr;
+    }
+
+    .assignMemberCommitteeCard,
+    .assignMemberUserCard {
+        height: 450px;
+    }
+}
+
+
+/*=============Permissions tab and others==============*/
+
+/* Themed Select Dropdown */
+.supplierAdminPage .admin-dd {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 180px;
+}
+
+.supplierAdminPage .admin-dd-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #666;
+    padding-left: 6px;
+}
+
+.supplierAdminPage .admin-dd-select {
+    border-radius: 10px;
+    border: 1px solid var(--primary);
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    background-color: #fff;
+    box-shadow: none;
+}
+
+    .supplierAdminPage .admin-dd-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* Responsive */
+@media (max-width: 576px) {
+    .supplierAdminPage .admin-dd {
+        width: 100%;
+    }
+}
+
+.supplierAdminPage .check-all-wrap {
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 6px 18px;
+    font-size: 0.85rem;
+}
+
+/* =====  Checkboxes ===== */
+.supplierAdminPage input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+/* Check all wrapper */
+.supplierAdminPage .check-all-wrap label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+}

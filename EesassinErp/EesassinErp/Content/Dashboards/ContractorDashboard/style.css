@@ -1,0 +1,1429 @@
+﻿.contractorDashboard {
+    font-family: "Inter", sans-serif;
+    --primary: #022B5E;
+    --primary-dark: #033d84;
+    --bg: #FFFFFF;
+   /* --card-bg: #F8F9FC;*/
+    --card-bg: #fff;
+    --border: #D9D9D9;
+    --text: #1F2937;
+    --muted: #6B7280;
+    --radius: 12px;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.contractorDashboard {
+    --text-dark: #101828;
+    --text-medium: #475467;
+    --text-muted: #667085;
+    --success: #16A34A;
+    --warning: #D4A100;
+    --danger: #EF4444;
+    --blue: #2563EB;
+    --purple: #7C3AED;
+    --green: #16A34A;
+   
+}
+
+    /* =========================================================
+   DROPDOWN
+========================================================= */
+
+    .contractorDashboard .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        max-height: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+/* =========================================================
+   GLOBAL THIN SCROLLBAR
+========================================================= */
+
+* {
+    scrollbar-width: thin;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.contractorDashboardHeader {
+    padding-top: 0.25rem;
+}
+
+.contractorWelcomeText {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+
+.contractorCompanyName {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+}
+
+.contractorCompanyCode {
+    font-size: 0.96rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.contractorStatusBadge {
+    padding: 0.38rem 1.15rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+    .contractorStatusBadge.active {
+        background: var(--success);
+    }
+
+/* =========================================================
+   TOP STATS
+========================================================= */
+
+.contractorStatCard {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid #E6F0FF;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.95rem;
+    min-height: 92px;
+    transition: border-color 0.2s ease;
+}
+
+    .contractorStatCard:hover {
+        border-color: #d6c1b6;
+    }
+
+.contractorStatIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+    .contractorStatIcon.blue {
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--blue);
+    }
+
+    .contractorStatIcon.purple {
+        background: rgba(124, 58, 237, 0.1);
+        color: var(--purple);
+    }
+
+    .contractorStatIcon.green {
+        background: rgba(22, 163, 74, 0.1);
+        color: var(--green);
+    }
+
+.contractorStatCard h3 {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-dark);
+}
+
+.contractorStatCard p {
+    margin: 0.35rem 0 0;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* =========================================================
+   COMMON CARD
+========================================================= */
+
+.contractorDashboardCard {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0.7rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+    .contractorDashboardCard > * {
+        min-height: 0;
+    }
+
+.contractorCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+    .contractorCardHeader h5 {
+        margin: 0;
+        font-size: 1.02rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        letter-spacing: -0.2px;
+    }
+
+.contractorArrowBtn {
+    border: none;
+    background: transparent;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+    .contractorArrowBtn i {
+        font-size: 1.15rem;
+        transition: transform 0.2s ease;
+    }
+
+    .contractorArrowBtn:hover {
+        background: #f8f9fd;
+    }
+
+        .contractorArrowBtn:hover i {
+            transform: rotate(15deg);
+        }
+
+/* =========================================================
+   INFO CARD
+========================================================= */
+
+.contractorInfoGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+    margin-top: 0.35rem;
+}
+
+.contractorInfoRow {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+    .contractorInfoRow span {
+        font-size: 0.86rem;
+        color: var(--text-medium);
+        font-weight: 500;
+    }
+
+    .contractorInfoRow strong {
+        font-size: 0.88rem;
+        color: var(--text-medium);
+        font-weight: 500;
+    }
+
+/* =========================================================
+   TABLES
+========================================================= */
+
+.contractorTableWrapper {
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: 10px;
+}
+
+.contractorTable {
+    min-width: 650px;
+    margin: 0;
+}
+
+    .contractorTable thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #F8F9FC;
+        color: var(--primary);
+        border: none;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.3rem 0.4rem;
+        white-space: nowrap;
+    }
+
+        .contractorTable thead th:first-child {
+            border-top-left-radius: 10px;
+        }
+
+        .contractorTable thead th:last-child {
+            border-top-right-radius: 10px;
+        }
+
+    .contractorTable tbody td {
+        border-color: #F1F3F5;
+        padding: 0.3rem 0.4rem;
+        font-size: 0.8rem;
+        color: var(--text-dark);
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .contractorTable tbody tr:hover {
+        background: rgba(0,0,0,0.015);
+    }
+
+/* =========================================================
+   STATUS PILLS
+========================================================= */
+
+.contractorStatusPill {
+    padding: 0.32rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 400;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+    .contractorStatusPill.success {
+        color: #15803D;
+        background: rgba(22, 163, 74, 0.14);
+    }
+
+    .contractorStatusPill.warning {
+        color: #B58105;
+        background: rgba(234, 179, 8, 0.16);
+    }
+
+    .contractorStatusPill.danger {
+        color: #DC2626;
+        background: rgba(239, 68, 68, 0.12);
+    }
+
+/* =========================================================
+   WORKER HIGHLIGHTS
+========================================================= */
+
+.contractorHighlightsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+    overflow-y: auto;
+    /*max-height: 260px;*/
+    padding-right: 0.1rem;
+}
+
+.contractorWorkerCard {
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    min-height: 90px;
+}
+
+    .contractorWorkerCard.accepted {
+        background: rgba(22, 163, 74, 0.08);
+    }
+
+    .contractorWorkerCard.pending {
+        background: rgba(234, 179, 8, 0.12);
+    }
+
+    .contractorWorkerCard.rejected {
+        background: #FDF2F2;
+    }
+
+    .contractorWorkerCard h6 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .contractorWorkerCard p {
+        margin: 0.3rem 0 0;
+        color: var(--text-muted);
+        font-size: 0.76rem;
+        font-weight: 500;
+    }
+
+/* ==========================================
+   Worker Highlights (Dashboard Compact)
+==========================================*/
+
+.contractorWorkerHighlightsCard .contractorHighlightsGrid {
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    overflow-y: auto;
+    flex: 1;
+    padding-right: .1rem;
+}
+
+.contractorWorkerHighlightsCard .contractorWorkerCard {
+    width: 100%;
+    min-height: 88px;
+}
+
+
+/* =========================================================
+   DOCUMENTS CARD
+========================================================= */
+
+.contractorDocumentsCard {
+    min-height: 100%;
+}
+
+.contractorDocumentsList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+    /*max-height: 300px;*/
+    padding-right: 0.2rem;
+}
+
+.contractorDocumentItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.contractorDocumentTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+    .contractorDocumentTop span {
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+
+    .contractorDocumentTop strong {
+        font-size: 0.82rem;
+        color: var(--text-dark);
+        font-weight: 700;
+    }
+
+.contractorDocumentProgress {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+
+    .contractorDocumentProgress .progress-bar {
+        background: var(--success);
+        border-radius: 999px;
+    }
+
+/* =========================================================
+   RECENT ACTIVITIES
+========================================================= */
+
+.contractorActivitiesList {
+    overflow-y: auto;
+    max-height: 700px !important;
+    padding-right: 0.2rem;
+}
+
+.contractorActivityItem {
+    padding-bottom: 0.2rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+    .contractorActivityItem:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .contractorActivityItem h6 {
+        margin: 0 0 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 400;
+        color: var(--text-dark);
+        line-height: 1;
+    }
+
+    .contractorActivityItem p {
+        margin: 0 0 0.1rem;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        line-height: 1;
+    }
+
+    .contractorActivityItem span {
+        font-size: 0.72rem;
+        color: #9CA3AF;
+        font-weight: 500;
+    }
+
+
+/* =========================================================
+   VIEW ALL BUTTON
+========================================================= */
+
+.contractorViewAllBtn {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 12px;
+    padding: 4px 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+    .contractorViewAllBtn i {
+        font-size: 0.7rem;
+        transition: transform 0.2s ease;
+    }
+
+    .contractorViewAllBtn:hover {
+        background: #f9fafb;
+        color: var(--primary-dark);
+    }
+
+        .contractorViewAllBtn:hover i {
+            transform: translateX(2px);
+        }
+
+/* =========================================================
+   CHART TOGGLE
+========================================================= */
+
+.contractorChartToggle {
+    background: #ddd;
+    border-radius: 18px;
+    padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+    .contractorChartToggle button {
+        border: none;
+        background: transparent;
+        height: 25px;
+        padding: 0 0.6rem;
+        border-radius: 18px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: var(--text-medium);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+        .contractorChartToggle button.active {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+        }
+
+        .contractorChartToggle button:hover:not(.active) {
+            color: var(--text-dark);
+        }
+
+/* =========================================================
+   CHART CONTAINER
+========================================================= */
+
+/*.contractorMiddleBottomRight canvas {
+    width: 100% !important;
+    max-height: 210px;
+}*/
+
+.contractorChartContainer {
+    position: relative;
+    flex: 1;
+    min-height: 260px;
+}
+
+    .contractorChartContainer canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+/* =========================================================
+   STICKY FOOTER ACTION AREA
+========================================================= */
+
+.contractorCardFooter {
+    margin-top: auto;
+    padding-top: 0.2rem;
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   MASTER LAYOUT SYSTEM
+========================================================= */
+
+.contractorDashboardRowOne {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+/*=========================================================
+    ROW ONE RIGHT (2 CARDS)
+=========================================================*/
+
+.contractorRowOneRight {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: .75rem;
+}
+
+/*  PENDING REQUESTS */
+
+.contractorPendingRequestCard .contractorPendingWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 2px;
+}
+
+.contractorPendingRequestCard .contractorPendingCard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    border: 1px solid #EEF2F7;
+    border-radius: 14px;
+    background: #F8FAFC;
+}
+
+    .contractorPendingRequestCard .contractorPendingCard h6 {
+        margin: 0;
+        font-size: .95rem;
+        font-weight: 600;
+    }
+
+    .contractorPendingRequestCard .contractorPendingCard p {
+        margin: 4px 0 0;
+        font-size: .82rem;
+        color: #64748B;
+    }
+
+.contractorPendingRequestCard .contractorPendingActions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .contractorPendingRequestCard .contractorPendingActions .btn {
+        padding: 2px 8px;
+        font-size: .75rem;
+        line-height: 1.3;
+    }
+
+
+
+/* RESPONSIVE */
+
+@media (max-width:991px) {
+
+    .contractorRowOneRight {
+        grid-template-columns: 1fr;
+    }
+}
+
+.contractorMiddleSection {
+    display: grid;
+    grid-template-columns: minmax(0, 2.15fr) minmax(320px, 0.85fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.contractorMiddleLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.contractorMiddleTop,
+.contractorMiddleBottom {
+    display: grid;
+    gap: 0.75rem;
+}
+
+/* TOP ROW */
+.contractorMiddleTop {
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.8fr);
+}
+
+/* BOTTOM ROW */
+.contractorMiddleBottom {
+    grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
+}
+
+.contractorMiddleRight {
+    height: 100%;
+}
+
+.contractorBottomSection {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 0.9fr);
+    gap: 0.75rem;
+}
+
+.contractorChartTop {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   FIXED CARD HEIGHT SYSTEM
+========================================================= */
+
+.contractorRowOneLeft .contractorDashboardCard,
+.contractorRowOneMiddle .contractorDashboardCard,
+.contractorRowOneRight .contractorDashboardCard {
+    height: 300px;
+}
+
+.contractorMiddleTop .contractorDashboardCard {
+    height: 320px;
+}
+
+.contractorMiddleBottom .contractorDashboardCard {
+    height: 340px;
+}
+
+.contractorMiddleRight .contractorDashboardCard {
+    height: 680px;
+}
+
+.contractorBottomSection .contractorDashboardCard {
+    height: 360px;
+}
+
+/* =========================================================
+   CARD BODY SCROLL SYSTEM
+========================================================= */
+
+.contractorDashboardCard {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* HEADER NEVER SHRINKS */
+
+.contractorCardHeader,
+.contractorCardFooter,
+.contractorChartTop {
+    flex-shrink: 0;
+}
+
+
+/* IMPORTANT */
+
+.contractorTable {
+    margin-bottom: 0 !important;
+}
+
+/* TABLE WRAPPER */
+
+.contractorTableWrapper {
+    position: relative;
+}
+
+/* STICKY TABLE HEADER */
+
+.contractorTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+/* VIEW ALL FOOTER */
+
+.contractorCardFooter {
+    padding-top: 0.9rem;
+    margin-top: auto;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* =========================================================
+   SCROLLABLE CONTENT AREAS
+========================================================= */
+
+.contractorTableWrapper,
+.contractorHighlightsGrid,
+.contractorDocumentsList,
+.contractorActivitiesList {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* TABLES */
+
+.contractorTableWrapper {
+    overflow-x: auto;
+    max-height: 400px;
+}
+
+/* FIX TABLE HEIGHTS */
+
+.contractorRowOneMiddle .contractorTableWrapper {
+    max-height: 200px;
+}
+
+.contractorMiddleTopLeft .contractorTableWrapper {
+    max-height: 295px;
+}
+
+.contractorMiddleBottomLeft .contractorTableWrapper {
+    max-height: 300px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1400px) {
+
+    .contractorDashboardRowOne {
+        grid-template-columns: 1fr 1.2fr 1.2fr;
+    }
+}
+
+@media (max-width: 1199px) {
+
+    .contractorDashboardRowOne {
+        grid-template-columns: 1fr;
+    }
+
+    .contractorMiddleSection {
+        grid-template-columns: 1fr;
+    }
+
+    .contractorMiddleRight .contractorDashboardCard {
+        min-height: 300px;
+    }
+
+    .contractorBottomSection {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 991px) {
+
+    .contractorMiddleTop,
+    .contractorMiddleBottom {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+
+    .contractorDashboard {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .contractorDashboardRowOne,
+    .contractorMiddleSection,
+    .contractorBottomSection,
+    .contractorMiddleTop,
+    .contractorMiddleBottom {
+        gap: 0.85rem;
+    }
+}
+
+/* =========================================================
+   TABLE ACTION BUTTON
+========================================================= */
+
+.contractorTableActionBtn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    transition: all 0.2s ease;
+}
+
+    .contractorTableActionBtn:hover {
+        background: rgba(0,0,0,0.05);
+    }
+
+/* =========================================================
+   EXPIRY ALERTS
+========================================================= */
+
+.contractorExpiryList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    max-height: 428px;
+    padding-right: 0.15rem;
+}
+
+.contractorExpiryItem {
+    min-height: 62px;
+    border-radius: 10px;
+    background: #f8f9fd;
+    padding: 0.8rem 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+    .contractorExpiryItem::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        border-radius: 10px;
+    }
+
+    /* =========================================================
+   PRIORITY COLORS
+========================================================= */
+
+    .contractorExpiryItem.danger::before {
+        background: #FF3B30;
+    }
+
+    .contractorExpiryItem.orange::before {
+        background: #FF6B00;
+    }
+
+    .contractorExpiryItem.warning::before {
+        background: #E0A800;
+    }
+
+    .contractorExpiryItem.success::before {
+        background: #00C853;
+    }
+
+/* =========================================================
+   EXPIRY LEFT
+========================================================= */
+
+.contractorExpiryLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.contractorExpiryIcon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    /*border: 2px solid currentColor;*/
+    font-size: 1.4rem;
+}
+
+/* =========================================================
+   ICON COLORS
+========================================================= */
+
+.contractorExpiryItem.danger .contractorExpiryIcon,
+.contractorExpiryItem.danger .contractorExpiryArrow {
+    color: #FF3B30;
+}
+
+.contractorExpiryItem.orange .contractorExpiryIcon,
+.contractorExpiryItem.orange .contractorExpiryArrow {
+    color: #FF6B00;
+}
+
+.contractorExpiryItem.warning .contractorExpiryIcon,
+.contractorExpiryItem.warning .contractorExpiryArrow {
+    color: #E0A800;
+}
+
+.contractorExpiryItem.success .contractorExpiryIcon,
+.contractorExpiryItem.success .contractorExpiryArrow {
+    color: #00C853;
+}
+
+/* =========================================================
+   EXPIRY TEXT
+========================================================= */
+
+.contractorExpiryLeft h6 {
+    margin: 0 0 0.2rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.2;
+}
+
+.contractorExpiryLeft p {
+    margin: 0;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+/* =========================================================
+   RIGHT ARROW
+========================================================= */
+
+.contractorExpiryArrow {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+    .contractorExpiryArrow:hover {
+        transform: translateY(2px);
+    }
+
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 767px) {
+
+    .contractorExpiryItem {
+        padding: 0.75rem;
+    }
+
+    .contractorExpiryLeft {
+        gap: 0.7rem;
+    }
+
+        .contractorExpiryLeft h6 {
+            font-size: 0.82rem;
+        }
+
+        .contractorExpiryLeft p {
+            font-size: 0.7rem;
+        }
+
+    .contractorViewAllBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
+
+/*=======================================================
+  Contractor Worker Offcanvas
+=======================================================*/
+
+.contractorDashboard .contractorWorkerPanel {
+    width: 500px;
+    max-width: 100%;
+    background: #fff;
+    /*border-left: 1px solid #E5E7EB;*/
+}
+
+.contractorDashboard .contractorWorkerHeader {
+    padding: 14px 24px;
+    color: #fff;
+    background: var(--primary);
+}
+
+.contractorDashboard .contractorWorkerTitle {
+    font-size: 20px;
+    font-weight: 500;
+    color: #fff;
+    margin: 0;
+}
+
+.contractorDashboard .contractorWorkerBody {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.contractorDashboard .contractorWorkerProgressCard {
+    background: #EAF4FF;
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+}
+
+.contractorDashboard .contractorWorkerProgressLabel {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    color: #6B7280;
+    margin-bottom: 8px;
+}
+
+.contractorDashboard .contractorWorkerProgressValue {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+    .contractorDashboard .contractorWorkerProgressValue span {
+        color: var(--primary);
+        font-size: 30px;
+        font-weight: 700;
+        margin-right: 8px;
+    }
+
+.contractorDashboard .contractorWorkerToolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.contractorDashboard .contractorWorkerToolbarTitle {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+.contractorDashboard .contractorWorkerToolbarActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.contractorDashboard .contractorWorkerSearch {
+    position: relative;
+}
+
+    .contractorDashboard .contractorWorkerSearch i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9CA3AF;
+    }
+
+    .contractorDashboard .contractorWorkerSearch input {
+        width: 150px;
+        height: 34px;
+        border: 1px solid #D1D5DB;
+        border-radius: 8px;
+        padding: 0 14px 0 40px;
+        outline: none;
+        font-size: 12px;
+    }
+
+.contractorDashboard .contractorWorkerExportBtn {
+    border: none;
+    background: var(--primary);
+    padding: 4px 12px;
+    color: #fff;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: .25s;
+}
+
+    .contractorDashboard .contractorWorkerExportBtn:hover {
+        background: var(--primary-dark);
+    }
+
+.contractorDashboard .contractorWorkerTableContainer {
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.contractorDashboard .contractorWorkerTableWrapper {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.contractorDashboard .contractorWorkerTable {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 450px;
+}
+
+    .contractorDashboard .contractorWorkerTable thead th {
+        position: sticky;
+        top: 0;
+        background: #F8f9fd;
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--primary);
+        border-bottom: 1px solid #E5E7EB;
+        z-index: 2;
+    }
+
+    .contractorDashboard .contractorWorkerTable tbody td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #F1F5F9;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .contractorDashboard .contractorWorkerTable tbody tr:hover {
+        background: #f8f9fd;
+    }
+
+.contractorDashboard .contractorWorkerBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    padding: 2px 8px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.contractorDashboard .contractorWorkerAccepted {
+    background: #DCFCE7;
+    color: #15803D;
+}
+
+.contractorDashboard .contractorWorkerRejected {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.contractorDashboard .contractorWorkerPending {
+    background: #FEF3C7;
+    color: #B45309;
+}
+
+.contractorDashboard .contractorWorkerSuccessBtn {
+    border: none;
+    background: none;
+    font-size: 22px;
+    color: #16A34A;
+}
+
+.contractorDashboard .contractorWorkerResendBtn {
+    border: none;
+    background: #fff;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: .25s;
+}
+
+    .contractorDashboard .contractorWorkerResendBtn:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.contractorDashboard .contractorWorkerFooter {
+    border-top: 1px solid #E5E7EB;
+    padding: 18px 24px;
+}
+
+.contractorDashboard .contractorWorkerFooterInner {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.contractorDashboard .contractorWorkerCloseFooterBtn {
+    background: #fff;
+    border: 1px solid var(--primary);
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 500;
+    color: var(--primary);
+}
+
+.contractorDashboard .contractorWorkerPrimaryBtn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+    .contractorDashboard .contractorWorkerPrimaryBtn:hover {
+        background: var(--primary-dark);
+    }
+
+/*==========================
+Responsive
+==========================*/
+
+@media(max-width:767px) {
+
+    .contractorDashboard .contractorWorkerPanel {
+        width: 100%;
+    }
+
+    .contractorDashboard .contractorWorkerBody {
+        padding: 18px;
+    }
+
+    .contractorDashboard .contractorWorkerToolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .contractorDashboard .contractorWorkerToolbarActions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .contractorDashboard .contractorWorkerSearch {
+        width: 100%;
+    }
+
+        .contractorDashboard .contractorWorkerSearch input {
+            width: 100%;
+        }
+
+    .contractorDashboard .contractorWorkerExportBtn {
+        width: 100%;
+    }
+
+    .contractorDashboard .contractorWorkerFooterInner {
+        flex-direction: column;
+    }
+
+        .contractorDashboard .contractorWorkerFooterInner button {
+            width: 100%;
+        }
+}
+
+
+/*==========================================================
+    Pending Request Offcanvas
+==========================================================*/
+
+.contractorPendingInfo {
+    font-size: 16px;
+    color: #4B5563;
+    margin-bottom: 22px;
+}
+
+    .contractorPendingInfo strong {
+        color: #111827;
+        font-weight: 700;
+    }
+
+/* Action Buttons */
+
+.contractorPendingModalActions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.contractorAcceptBtn,
+.contractorCancelBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #fff;
+    transition: .2s;
+}
+
+.contractorAcceptBtn {
+    color: #0A9A42;
+    border: 1px solid #0A9A42;
+}
+
+    .contractorAcceptBtn:hover {
+        background: #EAF9F0;
+    }
+
+.contractorCancelBtn {
+    color: #DC2626;
+    border: 1px solid #DC2626;
+}
+
+    .contractorCancelBtn:hover {
+        background: #FEF2F2;
+    }

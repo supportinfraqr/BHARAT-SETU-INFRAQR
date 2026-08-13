@@ -1,0 +1,149 @@
+﻿
+@{
+    ViewBag.Title = "paymentOption";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+<div class="pagecontentbody">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+                </div>
+                <div class="col-sm-3 text-end">
+                    <a class="btn btn-dark" href="@Url.Action("checkout","RetailSection")">Back</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="mb-3">Payment Options</h5>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-9">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="paymentOptions" id="upi" value="upi">
+                                                <label class="form-check-label" for="upi">
+                                                    <b>Pay with UPI</b><br />
+                                                    <small>
+                                                        You will be redirected to PayPal website to complete your purchase securely.
+                                                    </small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 text-end pt-2">
+                                            <img src="~/compliance/images/ic_paypal.png" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-9">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="paymentOptions" id="creddebit" value="creddebit">
+                                                <label class="form-check-label" for="creddebit">
+                                                    <b>
+                                                        Credit / Debit Card
+                                                    </b><br />
+                                                    <small>
+                                                        We support Mastercard, Visa, Discover and Stripe.
+                                                    </small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 text-end pt-2">
+                                            <img src="~/compliance/images/visa.png" />
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Card</label>
+                                            <select class="form-select form-control form-control-lg">
+                                                <option value="">Select</option>
+                                                <option selected>
+                                                    **** **** **** 5678 - Opi Watihana
+                                                </option>
+                                                <option>-</option>
+                                                <option>-</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <a href="#" class="text-decoration-none text-dark">
+                                                <b><i class="fa fa-plus"></i> Add new address</b>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="paymentOptions" id="upi" value="upi">
+                                                <label class="form-check-label" for="upi">
+                                                    <b>Easy Monthly Installments (EMI)</b><br />
+                                                    <small>
+                                                        Pay in installments.
+                                                    </small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6"><h5 class="mb-3">Account</h5></div>
+                                <div class="col-6 text-end"><a href="#" class="text-dark text-decoration-none"><b><i class="fa fa-pencil-alt"></i> Edit</b></a></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <p><b>Manual Cooper</b></p>
+                                    <p>Manual.cooper@gmail.com</p>
+                                    <p>(512)588-7852</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h5 class="mb-3">Order Summary</h5>
+                            <div class="row mb-3">
+                                <div class="col-6">Sub Total</div>
+                                <div class="col-6 text-end">Rs. 10,250</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12"><div class="spreator"></div></div>
+                            </div>
+                            <div class="row py-2">
+                                <div class="col-4"><b>Total</b></div>
+                                <div class="col-8 text-end">
+                                    <b class="text-danger">Rs. 10,250</b><br />
+                                    <small>(GST included if applicable)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-12 d-grid">
+                            <a href="@Url.Action("thankyou","RetailSection")" class="btn btn-lg btn-warning">Pay Now</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

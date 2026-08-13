@@ -1,0 +1,859 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html ng-app="myApp" ng-controller="myController">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title ng-if="title.length>0" ng-model="title" ng-bind="title">@ViewBag.Title</title>
+    <title ng-if="title==null">@ViewBag.Title</title>
+    <title ng-if="title.length==0">@ViewBag.Title</title>
+
+    <!-- FAVICON ICON -->
+    <link rel="icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
+
+    @RenderSection("head", required: false)
+
+
+    <!--alerts CSS -->
+    <!-- Tooltipster css -->
+    <link href="@Url.Content("~/Content/plugins/vendors/bower_components/tooltipster/tooltipster.bundle.min.css")" rel="stylesheet">
+    <link href="@Url.Content("~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css")" rel="stylesheet" type="text/css">
+    <link href="@Url.Content("~/Content/plugins/assets/css/default.css")" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css")" />
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/css/buttons.dataTables.min.css")" />
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css")" />
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    @RenderSection("styles", required: false)
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/jscolor.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/moment.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.9.5/tinymce.min.js"></script>
+    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/ddlBindings.js?Ver="+ViewBag.Version+"")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/Authorization.js?Ver="+ViewBag.Version+"")"></script>
+    <script src="~/scripts/managebyuser.js"></script>
+
+    <link href="~/chatbot/chatbot.css" rel="stylesheet" />
+    <script src="~/chatbot/chatbot.js"></script>
+    <style>
+        #session-timer {
+            font-weight: bold;
+            color: #a39393;
+           display:none
+        }
+    </style>
+    <script>
+        $(window).ready(function FindWindow() {
+
+            var InW = $(window).width();
+            var InH = $(window).height();
+
+            var IfSetHeight;
+            if (InW > 1024) {
+                IfSetHeight = InH - 126;
+                $('.iframe-wrapper').find('.iframedesign ').css({ "height": IfSetHeight });
+            }
+            else {
+                IfSetHeight = InH - 132;
+                $('.iframe-wrapper').find('.iframedesign ').css({ "height": IfSetHeight });
+                $('.iframe-wrapper').find('.iframedesign ').css({ "width": InW });
+            }
+            $('input').removeAttr('readonly');
+        });
+
+        $(window).on('resize', function () {
+            var InW = $(window).width();
+            var InH = $(window).height();
+
+            var IfSetHeight;
+            if (InW > 1024) {
+                IfSetHeight = InH - 126;
+                $('.iframe-wrapper').find('.iframedesign ').css({ "height": IfSetHeight });
+            }
+            else {
+                IfSetHeight = InH - 132;
+                $('.iframe-wrapper').find('.iframedesign ').css({ "height": IfSetHeight });
+                $('.iframe-wrapper').find('.iframedesign ').css({ "width": InW });
+            }
+            $('input').removeAttr('readonly');
+        })
+    </script>
+    <style>
+        .modal-title2 {
+            color: #fff !important;
+            width: 50% !important;
+            float: left !important;
+            font-family: arial;
+        }
+
+        .modal-content {
+            border-radius: 10px !important;
+        }
+
+        .modal-header {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .btn-danger {
+            border-radius: 80px;
+            background-color: transparent !important;
+            font-family: arial;
+            font-weight: normal !important;
+            padding: 5px 10px;
+            border: 2px solid #4aa0ec !important;
+            color: #4aa0ec;
+        }
+
+            .btn-danger:hover {
+                background-color: #4aa0ec !important;
+                border: 2px solid #4aa0ec !important;
+                color: #fff !important;
+            }
+
+        .modal-dialog {
+            width: 420px;
+        }
+
+        .header-button {
+            display: inline-block;
+            margin-top: 1rem;
+            margin-right: 2rem;
+            padding: 0.5rem 1rem;
+            background-color: #007bff; /* Change the color as desired */
+            color: #fff; /* Text color */
+            text-decoration: none; /* Remove underline from the link */
+            border-radius: 4px;
+            transition: background-color 0.3s ease; /* Add a smooth transition effect */
+        }
+
+            /* Hover effect for the button */
+            .header-button:hover {
+                background-color: #ff1a1a !important; /* Change the color as desired */
+                cursor: pointer;
+            }
+    </style>
+
+</head>
+<body class="theme-orange" ng-init="NavMenu()" oncontextmenu="return false;">
+
+
+    <!-- The Modal -->
+    <div class="modal" id="myModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header" style="background-color:#4aa0ec">
+                    <h4 class="modal-title2">Notification	</h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body">
+
+                    <h6 class="modal-title">{{MInvoiceNo}}</h6><br>
+                    {{MCreatedOn}}
+                    {{MNOti}}
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer" ng-if="loginType==2">
+                    <button type="button" class="btn-danger" ng-click="SelectIfram('/communication/Vcommunication','Commmunication')" data-dismiss="modal">Go to Page</button>
+                </div>
+                <div class="modal-footer" ng-if="loginType==3">
+                    <button type="button" class="btn-danger" ng-click="SelectIfram('/communication/communication','Commmunication')" data-dismiss="modal">Go to Page</button>
+                </div>
+                <div class="modal-footer" ng-if="loginType==4">
+                    <button type="button" class="btn-danger" ng-click="SelectIfram('/communication/ccommunication'  ,'Commmunication')" data-dismiss="modal">Go to Page</button>
+                </div>
+
+
+
+
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <div id="cover-spin">
+        <script>$('#cover-spin').show(0);</script>
+    </div>
+    <script>
+        $(window).ready(function () {
+            $('#cover-spin').hide()
+        });
+
+        function clearServerCookies() {
+            fetch('/login/ClearCookies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                });
+        }
+        function reloadJavaScript() {
+            debugger;
+            var scriptElement = document.getElementById("dynamicScript");
+            if (scriptElement) {
+                scriptElement.remove(); // Remove the old script
+            }
+
+            var newScript = document.createElement("script");
+            newScript.id = "dynamicScript";
+            newScript.src = "/js/site.js?v=" + new Date().getTime(); // Append timestamp to force reload
+            newScript.type = "text/javascript";
+            document.body.appendChild(newScript);
+
+            alert("JavaScript file has been refreshed!");
+        }
+    </script>
+    <div class="wrapper light-theme">
+        <div id="IframeUpperLayer"></div>
+        <!-- Top Header -->
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+
+            <div class="mobile-only-brand pull-left">
+                <div class="nav-header pull-left">
+                    <div class="logo-wrap">
+                        <div class="mobile-logo-box">
+                            <a href="@Url.Action("DashBoard", "DashBoard")" data-toggle="tooltip" data-placement="top" data-original-title="Logo" tooltip>
+                                <div class="panel-logo-box hidden-xs hidden-sm hidden-md">
+                                    <img class="brand-img" src="@Url.Content("~/Content/plugins/assets/img/logo-icon.png")" alt="EZ Compliance" />
+                                </div>
+                                <div class="panel-logo-box-title">
+                                    <img class="brand-img2" src="@Url.Content("~/Content/plugins/assets/img/logo-text.png")" alt="EZ Compliance" />
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a id="toggle-btn" class="toggle-left-nav-btn inline-block ml-20 pull-left" href="javascript:void(0);"><i class="mdi mdi-format-list-bulleted"></i></a>
+                @*<a id="toggle_mobile_search" data-toggle="collapse" data-target="#search_form" class="mobile-only-view" href="javascript:void(0);"><i class="mdi mdi-search"></i></a>*@
+                <a id="toggle_mobile_nav" class="mobile-only-view" href="javascript:void(0);"><i class="mdi mdi-more"></i></a>
+
+            </div>
+
+            <div id="mobile_right_sidebar" class="mobile-right-sidebar pull-right">
+                <ul class="nav navbar-right top-nav pull-right manage-box">
+                    <li class="dropdown auth-drp">
+                        <div>
+                            <a ng-if="loginType==1" ng-click="GoToRetail()" class="header-button">Go To Retail</a>
+                            <a ng-if="loginType==1" onclick="clearServerCookies();reloadJavaScript()" class="header-button">Clear Cookies</a>
+
+                        </div>
+                    </li>
+                    <li class="dropdown auth-drp">
+                        <a href="#" class="dropdown-toggle " data-toggle="dropdown">
+                            <div class="user-auth-name-box">
+                                <lable class="login-user-name" ng-if="false"> Login Time:</lable>
+                                <label class="login-user-name" ng-if="false" ng-model="CurrLogin" ng-bind="CurrLogin"></label>
+                            </div>
+
+                            <div class="login-user-name">
+                                {{Name}} <p ng-if="loginType !=1">
+                                    <lablel class="login-user-name user-auth-name-box" ng-if="loginType==2">Vendor</lablel>
+                                    <lablel class="login-user-name user-auth-name-box" ng-if="loginType==3">Auditor</lablel>
+                                    <lablel class="login-user-name user-auth-name-box" ng-if="loginType==4">Client</lablel>
+                                </p>
+                            </div>
+
+                            <div class="last-login-time-box">
+                                <lable class="last-login-time">Last Login Time : </lable>
+                                <lable class="last-login-time" ng-model="LastLogin" ng-bind="LastLogin"></lable>
+                            </div>
+                            <input type="hidden" id="hfCode" ng-model="Code" ng-value="Code" />
+                            <div class="user-auth-img-box">
+                                <a title="Change Password" data-path="@Url.Action("ChangePassCode", "ChangePassCode")"
+                                   ng-click="SelectIfram('/ChangePassCode/ChangePassCode','ChangePassCode')">
+                                    <img src={{Photo}} class="user-auth-img img-circle">
+                                </a>
+
+                            </div>
+                            <span class="user-online-status"></span>
+                        </a>
+                    </li>
+
+
+                    <li> <a id="open_right_sidebar" href="#"><i class="pe-7s-bell top-nav-icon"></i><span class="top-nav-icon-badge btn-sonar">{{Ncount}}</span></a> </li>
+
+
+                    <li>
+                        <a title="Change Password" href="" data-path="@Url.Action("ChangePassCode", "ChangePassCode")" ng-click="SelectIfram('/ChangePassCode/ChangePassCode','ChangePassCode')"><i class="pe-7s-config top-nav-icon"></i></a>
+
+                    </li>
+                    <li class="dropdown alert-drp">
+                        <a id="logout" href="" title="Logout" ng-click="Logout();ManageLog('Logout from Supplier Section')"><i class="pe-7s-power top-nav-icon"></i></a>
+
+                    </li>
+                </ul>
+            </div>
+        </nav>
+        <!-- /Top Menu Items class="active-page" -->
+        <!-- Left Sidebar Menu -->
+        <div class="fixed-sidebar-left app-sidebar ">
+            <ul class="nav navbar-nav side-nav nicescroll-bar">
+                @*<li class="navigation-header"> <span>Main</span> <i class="mdi mdi-more"></i> </li>*@
+                <li>
+                    <a href="@Url.Action("DashBoard", "DashBoard")">
+                        <div class="pull-left"><i class="fa fa-dashboard mr-12"></i><span class="right-nav-text">Dashboard</span></div>
+                        <div class="clearfix"></div>
+                    </a>
+                </li>
+                <li ng-repeat="submenu in menu.submenu" ng-model="SelectSubMenu" class="ng-pristine ng-untouched ng-valid ng-scope ng-empty">
+                    <a class="selectifram" href="" data-path="/Dashboard/Unit" ng-click="SelectIfram(submenu.SubMenuUrl,submenu.SubMenuName);UrlAccessPermission(submenu.SubMenuId)" title="Unit">
+                        <div class="pull-left">
+                            <i class="mdi mdi-chevron-right"></i>
+                            <span class="right-nav-text ng-binding">Unit</span>
+                        </div>
+                    </a>
+                </li>
+
+                <li ng-repeat="module in ModuleList" ng-init="module.isOpen = false">
+                    <a href="javascript:void(0);" ng-click="module.isOpen = !module.isOpen">
+                        <div class="pull-left">
+                            <i class="{{module.ModuleIcon}}"></i>
+                            <span class="right-nav-text">{{module.ModuleName}}</span>
+                        </div>
+                        <div class="pull-right"><i class="mdi mdi-chevron-down"></i></div>
+                        <div class="clearfix"></div>
+                    </a>
+                    <ul ng-show="module.isOpen" class="collapse-level-1">
+                        <li ng-repeat="menu in module.menu" ng-init="menu.isOpen = false">
+                            <a href="javascript:void(0);" ng-click="menu.isOpen = !menu.isOpen" title="{{menu.MenuName}}">
+                                <div class="pull-left">
+                                    <i class="{{menu.MenuIcon}}"></i>
+                                    <span class="right-nav-text">{{menu.MenuName}}</span>
+                                </div>
+                                <div class="pull-right"><i class="mdi mdi-chevron-down"></i></div>
+                                <div class="clearfix"></div>
+                            </a>
+                            <ul ng-show="menu.isOpen" class="collapse-level-2">
+                                <li ng-repeat="submenu in menu.submenu">
+                                    <a class="selectifram" href="" data-path="{{submenu.SubMenuUrl}}" ng-click="SelectIfram(submenu.SubMenuUrl,submenu.SubMenuName); UrlAccessPermission(submenu.SubMenuId)" title="{{submenu.SubMenuName}}">
+                                        <div class="pull-left">
+                                            <i class="{{submenu.SubMenuIcon}}"></i>
+                                            <span class="right-nav-text">{{submenu.SubMenuName}}</span>
+                                        </div>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+
+            </ul>
+            <div _ngcontent-c0="" class="sidebar-background menu-bg-6 menu-bg-c7"></div>
+        </div>
+        <!-- /Left Sidebar Menu -->
+        <!-- Right Sidebar Menu -->
+        <div class="fixed-tab-menu-sidebar-right">
+            <div class="more-than-tab-v">
+                <a id="open_right_sidebar_tab_menu_box" href="#" title="Recent Open Pages"><i class="mdi mdi-step-forward"></i></a>
+            </div>
+            <ul class="right-sidebar">
+                <li>
+                    <div class="recent-open-tab-h">
+                        <h3 class="inline-block txt-dark">Recent Open Pages</h3>
+                        <a href="javascript:void(0)" id="CloseRecentOpenPages" class="inline-block txt-grey" title="Close Tab"> <i class="icofont-close-line close-box"></i> </a>
+                        <div class="clearfix"></div>
+                    </div>
+                    <ul class="right-side-menu-tab-bind"></ul>
+                </li>
+            </ul>
+        </div>
+        <!-- /Right Sidebar Menu -->
+        <!-- Right Sidebar Menu -->
+        <div class="fixed-sidebar-right">
+            <ul class="right-sidebar">
+                <li>
+                    <div class="tab-struct user-tabs">
+
+
+
+                        <div class="tab-content" id="right_sidebar_content">
+                            <div id="notification_tab" class="tab-pane fade active in" role="tabpanel">
+                                <div class="chat-cmplt-wrap">
+                                    <div class="chat-box-wrap">
+                                        <div class="add-friend" ng-init="BindNotification()">
+                                            <span class="inline-block txt-dark">Notification List&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <i class="fa fa-times" aria-hidden="true"></i></span>
+                                            <div class="clearfix"></div>
+
+                                        </div>
+                                        <div id="chat_list_scroll">
+                                            <div class="nicescroll-bar">
+                                                <ul class="chat-list-wrap">
+                                                    <li class="chat-list">
+                                                        <div class="chat-body" ng-if="AllNotification.length>0">
+
+                                                            <div class="notification-item" ng-repeat="x in AllNotification" ng-model="Notification">
+
+                                                                <a href="" data-path="{{x.link}}" ng-click="UpdateNotifi(x.InvoiceNo,x.url ,x.Conversation,x.CreatedOn,x.Id,x.PageName)" title="List" data-toggle="modal" data-target="#myModal">
+
+                                                                    <div class="notification-data" style="font-weight:{{x.IsSeen==0?'bolder':'initial'}}">
+                                                                        <div class="notification-img-type">
+                                                                            <div class="notification-img">
+                                                                                <img class="user-bg img-circle" src="#"
+                                                                                     ng-src="../Content/plugins/assets/img/icons/seo-developement/{{x.Icon}}" title="{{x.Conversation}}" alt="">
+                                                                            </div>
+
+                                                                        </div>
+                                                                        <div class="notification-content">
+                                                                            <span class="n-content block truncate capitalize-font">{{x.InvoiceNo}}</span>
+                                                                            <span class="n-content block truncate capitalize-font">{{x.Conversation}}</span>
+                                                                            <span class="date txt-grey">{{x.CreatedOn}}</span>
+                                                                            <span class="eye-action" data-original-title="{{x.IsSeen}}" data-toggle="tooltip" data-placement="bottom"><i class="{{x.IsSeen==0?'fa fa-eye':'fa fa-eye-slash'}}"></i></span>
+                                                                        </div>
+                                                                    </div>
+                                                                </a>
+
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="recent-chat-box-wrap">
+                                        <div class="recent-chat-wrap">
+                                            <div class="panel-heading ma-0">
+                                                <div class="goto-back">
+                                                    <a id="goto_back" href="javascript:void(0)" class="inline-block txt-grey"> <i class="mdi mdi-chevron-left"></i> </a> <span class="inline-block txt-dark">Max</span> <a href="javascript:void(0)" class="inline-block text-right txt-grey"><i class="mdi mdi-more"></i></a>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </div>
+                                            <div class="panel-wrapper collapse in">
+                                                <div class="panel-body pa-0">
+                                                    <div class="chat-content">
+                                                        <ul class="nicescroll-bar pt-20">
+                                                            <li class="friend">
+                                                                <div class="friend-msg-wrap">
+                                                                    <img class="user-img img-circle block pull-left" src="#" alt="user" />
+                                                                    <div class="msg pull-left">
+                                                                        <p class="msng-name">Sam Wrote:</p>
+                                                                        <p>Neque porro quisquam est qui dolorem ipsum quia dolor sit amet?</p>
+                                                                        <div class="msg-per-detail text-right"> <span class="msg-time txt-grey">5:01 PM</span> </div>
+                                                                    </div>
+                                                                    <div class="clearfix"></div>
+                                                                </div>
+                                                            </li>
+                                                            <li class="self mb-10">
+                                                                <div class="self-msg-wrap">
+                                                                    <div class="msg block pull-right">
+                                                                        Neque porro quisquam est qui dolorem ipsum quia dolor sit amet
+                                                                        <div class="msg-per-detail text-right"> <span class="msg-time txt-light">5:01 pm</span> </div>
+                                                                    </div>
+                                                                    <div class="clearfix"></div>
+                                                                </div>
+                                                            </li>
+                                                            <li class="self">
+                                                                <div class="self-msg-wrap">
+                                                                    <div class="msg block pull-right">
+                                                                        Consectetur, adipisci velit.
+                                                                        <div class="msg-per-detail text-right"> <span class="msg-time txt-light">5:13 pm</span> </div>
+                                                                    </div>
+                                                                    <div class="clearfix"></div>
+                                                                </div>
+                                                            </li>
+                                                            <li class="friend">
+                                                                <div class="friend-msg-wrap">
+                                                                    <img class="user-img img-circle block pull-left" src="#" alt="user" />
+                                                                    <div class="msg pull-left">
+                                                                        <p class="msng-name">Sam Wrote:</p>
+                                                                        <p>Neque porro quisquam.</p>
+                                                                        <div class="msg-per-detail  text-right"> <span class="msg-time txt-grey">6:35 pm</span> </div>
+                                                                    </div>
+                                                                    <div class="clearfix"></div>
+                                                                </div>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="input-group">
+                                                        <input type="text" id="input_msg_send" name="send-msg" class="input-msg-send form-control" placeholder="Type something">
+                                                        <div class="input-group-btn emojis">
+                                                            <div class="dropup">
+                                                                <button type="button" class="btn  btn-default  dropdown-toggle" data-toggle="dropdown"><i class="mdi mdi-mood"></i></button>
+                                                                <ul class="dropdown-menu dropdown-menu-right">
+                                                                    <li><a href="javascript:void(0)">Action</a></li>
+                                                                    <li><a href="javascript:void(0)">Another action</a></li>
+                                                                    <li class="divider"></li>
+                                                                    <li><a href="javascript:void(0)">Separated link</a></li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        <div class="input-group-btn attachment">
+                                                            <div class="fileupload btn  btn-default">
+                                                                <i class="mdi mdi-attachment-alt"></i>
+                                                                <input type="file" class="upload">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="messages_tab" class="tab-pane fade" role="tabpanel">
+                                <div class="message-box-wrap">
+                                    <div class="add-friend">
+                                        <span class="inline-block txt-dark">messages</span> <a href="javascript:void(0)" class="inline-block text-right txt-grey"><i class="mdi mdi-search"></i></a> <a href="javascript:void(0)" class="inline-block txt-grey"> <i class="mdi mdi-more"></i> </a>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="set-height-wrap">
+                                        <div class="streamline message-box nicescroll-bar">
+                                            <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" )" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Peter Wyatt</span> <span class="inline-block font-11  pull-right message-time">12:28 AM</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam est qui dolorem ipsu messm quia dolor sit amet consectetur</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsu messm quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a> <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Vivian Rox</span> <span class="inline-block font-11  pull-right message-time">1 Feb</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam est qui dolorem ipsu messm quia dolor sit amet consectetur</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a> <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Mr. Danielle</span> <span class="inline-block font-11  pull-right message-time">31 Jan</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam est qui dolorem ipsu messm quia dolor sit amet consectetur nominees</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a> <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Tom Taylor</span> <span class="inline-block font-11  pull-right message-time">29 Jan</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam est qui dolorem ipsu messm quia dolor sit amet consectetur</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a> <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Mitch Blue</span> <span class="inline-block font-11  pull-right message-time">27 Jan</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam.</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a> <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Michelle</span> <span class="inline-block font-11  pull-right message-time">19 Jan</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam es.</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a> <a href="javascript:void(0)">
+                                                <div class="sl-item">
+                                                    <div class="sl-avatar avatar avatar-sm avatar-circle"> <img class="img-responsive img-circle" src="#" alt="avatar" /> </div>
+                                                    <div class="sl-content">
+                                                        <span class="inline-block capitalize-font   pull-left message-per">Linda Stack</span> <span class="inline-block font-11  pull-right message-time">13 Jan</span>
+                                                        <div class="clearfix"></div>
+                                                        <span class="truncate message-subject">Neque porro quisquam.</span>
+                                                        <p class="txt-grey truncate">Neque porro quisquam est qui dolorem ipsum quia dolor sit amet consectetur, adipisci velit</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="settings_tab" class="tab-pane fade" role="tabpanel">
+                                <div class="settings-box-wrap">
+                                    <div class="add-settings text-center txt-dark pt-15">
+                                        General Settings
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="set-height-wrap">
+                                        <!-- settings-List -->
+                                        <ul class="settings-list nicescroll-bar">
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Email Notifications</div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Site Tracking</div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" checked class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">SMS Alerts </div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Backup Storage</div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" checked class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Audit Logs</div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li>
+                                                <div class="add-settings text-center txt-dark pt-15">
+                                                    SYSTEM SETTINGS
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">System Logs </div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Error Reporting </div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" checked class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Applications Logs </div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" checked class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Backup Servers</div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                            <li class="settings-item">
+                                                <div class="list-settings">
+                                                    <div class="pull-left">Audit Logs</div>
+                                                    <div class="pull-right">
+                                                        <input type="checkbox" class="switch-setting-bar switch-setting" data-color="#716aca" data-size="small" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            </li>
+                                        </ul>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <!-- /Right Sidebar Menu -->
+        <!-- Main Content -->
+        <div class="page-wrapper " oncontextmenu="return false;">
+            @RenderBody()
+            <div id="msgbox" style="display:none">
+                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                <strong><i id="faicon"></i> </strong> <label id="lblmsg"></label>
+            </div>
+            <!-- Footer -->
+            <footer class="footer container-fluid ">
+                <div class="row">
+                    <div class="col-sm-12 col-xs-12">
+                        <div class="pull-left session-box " ng-cloak> {{BranchName}} &nbsp; | &nbsp; Address {{BranchAddress}} </div>
+
+                        <div class="pull-right copyright-box ">Copyright © 2022 Talent Cabin India. All Rights Reserved &nbsp; | &nbsp; Powered by <a href="#" target="_blank">Talent Cabin India</a></div>
+                        <div class="clearfix"><label id="session-timer" style></label></div>
+                    </div>
+                </div>
+            </footer>
+            <!-- /Footer -->
+        </div>
+        <!-- /Main Content -->
+    </div>
+
+
+    <!-- /#wrapper -->
+    <!-- JavaScript -->
+    <!-- jQuery -->
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/jquery/dist/jquery.min.js")"></script>
+    <!-- Bootstrap Core JavaScript -->
+
+
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/bootstrap/dist/js/bootstrap.min.js")"></script>
+    <!-- data-table js -->
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net/js/jquery.dataTables.min.js")"></script>
+
+    <script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js")"></script>
+    <script src="@Url.Content("~/Content/colResizable-1.6.js")"></script>
+
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/dataTables.buttons.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/jszip.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/pdfmake.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/vfs_fonts.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/buttons.print.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-buttons/js/buttons.html5.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/js/dataTables.bootstrap4.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive/js/dataTables.responsive.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js")"></script>
+
+    @*<script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js")"></script>*@
+    <!-- Tooltipster js -->
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/tooltipster/tooltipster.bundle.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/assets/js/jquery.tooltipster.js")"></script>
+    <!-- Slimscroll JavaScript -->
+
+    <script src="@Url.Content("~/Content/plugins/assets/js/jquery.slimscroll.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/assets/js/jquery.scrollbar.js")"></script>
+
+    <!-- Fancy Dropdown JS -->
+    <script src="@Url.Content("~/Content/plugins/assets/js/dropdown-bootstrap-extended.js")"></script>
+    <!-- Owl JavaScript -->
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/owl.carousel/dist/owl.carousel.min.js")"></script>
+    <!-- Sweet-Alert  -->
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.js")"></script>
+    <!-- Switchery JavaScript -->
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/switchery/dist/switchery.min.js")"></script>
+    <script src="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/js/data-table-custom.js")"></script>
+    <!-- EChartJS JavaScript -->
+    <!-- Init JavaScript -->
+    <script src="@Url.Content("~/Content/plugins/assets/js/init.js")"></script>
+
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/underscore/underscore.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/bootstrap-select/dist/js/bootstrap-select.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/select2/select2.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/jquery.maskedinput/dist/jquery.maskedinput.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/moment/moment.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Content/lib/twitter-bootstrap-wizard/jquery.bootstrap.wizard.min.js")"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+
+    @RenderSection("scripts", required: false)
+<div id="myController" ng-controller="myController">
+    <div id="chatIcon" onclick="toggleChat()">
+        <i id="chatIconSymbol" class="fa-solid fa-headset fa-2xl" style="color: #ffffff;"></i>
+    </div>
+    @*<div id="chatIcon" onclick="openChat()">
+        <i class="fa-solid fa-headset fa-2xl" style="color: #ffffff;"></i>
+    </div>*@
+
+    <div id="chatContainer">
+        <div class="chat-message" id="robotMessage">
+        </div>
+        <div class="chat-message" id="robotMessage1">
+        </div>
+
+        <div id="inputSection" style="display: none;">
+            <textarea id="userMessage" placeholder="Type your query here" required></textarea>
+            <span id="messageError" style="color:red; display:none; font-size:12px;">Detail should not be empty.</span>
+
+            <div id="dropArea">
+                <p>📎 Drag & Drop file here or click to upload</p>
+                <input type="file" id="userFile" hidden style="display:none !important" />
+            </div>
+            <span id="fileError" style="color:red; display:none; font-size:12px;">File upload should not be empty.</span>
+
+            <button class="btn1" onclick="sendMessage()">Send</button>
+        </div>
+        <div id="responseSection" class="chat-message">
+        </div>
+        <div id="responseSection1" class="chat-message">
+        </div>
+        <div id="responseSection2" class="chat-message">
+        </div>
+        <div id="responseSection3" class="chat-message">
+            <button class="btn1" onclick="connectToExpert()">Connect Expert</button><button class="btn1" onclick="showFeedback()">End Chat</button>
+        </div>
+
+        <div id="feedbackSection">
+            <p>Please rate your experience:</p>
+            <div class="stars">
+                <span class="star" onclick="rate(this)">&#9733;</span>
+                <span class="star" onclick="rate(this)">&#9733;</span>
+                <span class="star" onclick="rate(this)">&#9733;</span>
+                <span class="star" onclick="rate(this)">&#9733;</span>
+                <span class="star" onclick="rate(this)">&#9733;</span>
+            </div>
+            <textarea id="feedbackSuggestion" placeholder="Any suggestions?"></textarea>
+            <span id="feedbackError" style="color:red; display:none; font-size:12px;">Please enter suggestion.</span>
+            <button class="btn1" onclick="closeChat()">Submit Feedback</button>
+        </div>
+    </div>
+
+
+</div>
+</body>
+</html>
+
+
+

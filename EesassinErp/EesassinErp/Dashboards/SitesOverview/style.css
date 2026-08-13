@@ -1,0 +1,549 @@
+﻿.sitesOverview {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    height: 100%;
+    min-height: 90vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+
+.sitesOverview {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27;
+    --primary-dark: #c44b1d;
+    --card-bg: #ffffff;
+    --border-color: #e7d8cf;
+    background: #FFF1EB;
+    color: #1f2937;
+    min-height: 100vh;
+}
+
+    /* SCROLLBAR */
+
+    .sitesOverview *::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    .sitesOverview *::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.18);
+        border-radius: 999px;
+    }
+
+    /* HEADER */
+
+    .sitesOverview .sitesOverviewHeader {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 28px;
+    }
+
+    .sitesOverview .sitesOverviewTitle {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.1;
+        color: #0f172a;
+    }
+
+    .sitesOverview .sitesOverviewSubTitle {
+        margin: 2px 0 0;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    /* TOGGLE */
+
+    .sitesOverview .viewToggleWrapper {
+        display: flex;
+        align-items: center;
+        background: #fff;
+        border-radius: 14px;
+        padding: 5px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+
+    .sitesOverview .viewToggleBtn {
+        width: 44px;
+        height: 38px;
+        border: none;
+        background: transparent;
+        color: #374151;
+        border-radius: 10px;
+        transition: 0.2s ease;
+    }
+
+        .sitesOverview .viewToggleBtn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* GRID VIEW */
+
+    /*.sitesOverview .sitesGridView {
+        display: none;
+    }
+
+        .sitesOverview .sitesGridView.activeView {
+            display: block;
+        }*/
+
+    .sitesOverview .sitesGrid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        gap: 12px;
+    }
+
+
+    /* CARD */
+
+    .sitesOverview .siteOverviewCard {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 14px;
+    }
+
+    .sitesOverview .siteOverviewCardHeader {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .sitesOverview .siteOverviewIcon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 12px;
+        border: 1px solid #f0b49c;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .sitesOverview .siteOverviewCardHeader h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .sitesOverview .siteOverviewCardHeader p {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .sitesOverview .siteOverviewStatus {
+        background: #dcfce7;
+        color: #16a34a;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-weight: 600;
+        height: fit-content;
+        white-space: nowrap;
+    }
+
+    /* STATS */
+
+    .sitesOverview .siteOverviewStats {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+
+    .sitesOverview .siteOverviewStat {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+        .sitesOverview .siteOverviewStat:last-child {
+            margin-bottom: 0;
+        }
+
+        .sitesOverview .siteOverviewStat span {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .sitesOverview .siteOverviewStat strong {
+            font-size: 13px;
+            color: #111827;
+        }
+
+    /* PROGRESS */
+
+    .sitesOverview .siteOverviewProgressWrap {
+        margin-bottom: 16px;
+    }
+
+        .sitesOverview .siteOverviewProgressWrap span {
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+    .sitesOverview .siteOverviewProgress {
+        height: 7px;
+        border-radius: 999px;
+        background: #e5e7eb;
+    }
+
+        .sitesOverview .siteOverviewProgress .progress-bar {
+            background: #16a34a;
+        }
+
+    /* BUTTON */
+
+    .sitesOverview .siteOverviewViewBtn {
+        width: 100%;
+        border: 1px solid #d1d5db;
+        background: transparent;
+        border-radius: 12px;
+        height: 42px;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: 0.2s ease;
+    }
+
+        .sitesOverview .siteOverviewViewBtn:hover {
+            background: #f9fafb;
+        }
+
+    /* TABLE VIEW */
+
+    /*.sitesOverview .sitesTableView {
+        display: none;
+    }
+
+        .sitesOverview .sitesTableView.activeView {
+            display: block;
+        }*/
+
+    .sitesOverview .sitesTableCard {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    /* TABLE */
+
+    .sitesOverview .sitesOverviewTable {
+        min-width: 1300px;
+    }
+
+        .sitesOverview .sitesOverviewTable thead th {
+            background: #f8fafc;
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        .sitesOverview .sitesOverviewTable tbody td {
+            padding: 15px;
+            font-size: 15px;
+            color: #334155;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+    /* TABLE SITE */
+
+    .sitesOverview .tableSiteNameWrap {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .sitesOverview .tableSiteIcon {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        color: #f97316;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sitesOverview .tableSiteNameWrap strong {
+        font-size: 15px;
+        color: #0f172a;
+    }
+
+    /* LOCATION */
+
+    .sitesOverview .tableLocation {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* STATUS */
+
+    .sitesOverview .tableStatusBadge {
+        background: #dcfce7;
+        color: #16a34a;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    /* TABLE PROGRESS */
+
+    .sitesOverview .tableProgressWrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .sitesOverview .tableProgressBar {
+        width: 100px;
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #d4d4d8;
+    }
+
+        .sitesOverview .tableProgressBar .progress-bar {
+            background: #020617;
+        }
+
+    /* ACTIONS */
+
+    .sitesOverview .tableActionWrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    .sitesOverview .tableActionBtn {
+        border: none;
+        background: transparent;
+        font-size: 18px;
+        color: #111827;
+        padding: 0;
+    }
+
+/* RESPONSIVE */
+
+@media (max-width: 1450px) {
+
+    .sitesOverview .sitesGrid {
+        grid-template-columns: repeat(4, minmax(0,1fr));
+    }
+}
+
+@media (max-width: 1100px) {
+
+    .sitesOverview .sitesGrid {
+        grid-template-columns: repeat(3, minmax(0,1fr));
+    }
+}
+
+@media (max-width: 700px) {
+
+    .sitesOverview .sitesGrid {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+
+    .sitesOverview .sitesOverviewHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sitesOverview .sitesOverviewTitle {
+        font-size: 32px;
+    }
+}
+
+
+/*========View site modal ========*/
+
+.sitesOverview .sitesOverviewModal .modal-header {
+    background: var(--primary);
+    color: #fff;
+}
+
+.sitesOverview .sitesOverviewModal .modal-title {
+    font-weight: 400;
+}
+
+.sitesOverview .sitesOverviewModal .modal-body {
+    background: #FEF3EC;
+}
+
+.sitesOverviewModal .employeeManual-label {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: #444 !important;
+}
+
+    .sitesOverviewModal .employeeManual-label span {
+        color: #E45D27 !important;
+    }
+
+.sitesOverviewModal .form-control,
+.sitesOverviewModal .form-select {
+    /*font-size: 0.78rem;*/
+    border-radius: 6px !important;
+}
+
+.sitesOverviewModal .employeeManual-input {
+    /*font-size: 0.78rem;*/
+    border-radius: 6px !important;
+}
+
+.sitesOverviewModal #contactTab h5 {
+    font-size: 1rem;
+    margin-bottom : 0;
+    color: var(--primary);
+}
+
+.sitesOverviewModal .modal-footer {
+    background: var(--card-bg);
+    border-top: 1px solid #eee;
+}
+
+/* SEGMENT TOGGLE */
+
+.sitesOverview .siteSegment-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #E7DFDA;
+    border-radius: 999px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-bottom: 24px;
+    width: fit-content;
+    max-width: 100%;
+    scrollbar-width: none;
+}
+
+    .sitesOverview .siteSegment-wrap::-webkit-scrollbar {
+        display: none;
+    }
+
+/* BUTTONS */
+
+.sitesOverview .siteSegment-btn {
+    border: 0;
+    background: transparent;
+    color: #555;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+
+    /* HOVER */
+
+    .sitesOverview .siteSegment-btn:hover {
+        color: var(--primary);
+    }
+
+    /* ACTIVE */
+
+    .sitesOverview .siteSegment-btn.active {
+        background: var(--primary);
+        color: #fff;
+    }
+
+    /* CLICK EFFECT */
+
+    .sitesOverview .siteSegment-btn:active {
+        transform: scale(0.97);
+    }
+
+
+/* PANELS */
+
+.sitesOverview .employeeManualPanel-wrap {
+    position: relative;
+}
+
+.sitesOverview .employeeManualPanel {
+    display: none;
+    animation: employeePanelFade 0.28s ease;
+}
+
+    .sitesOverview .employeeManualPanel.active {
+        display: block;
+    }
+
+@keyframes employeePanelFade {
+
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* CARD */
+
+.sitesOverview .employeeManualPanel {
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+}
+
+
+/* HEADER */
+
+.sitesOverview .employeeManualPanel-header {
+    margin-bottom: 28px;
+}
+
+    .sitesOverview .employeeManualPanel-header h4 {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 6px;
+    }
+
+    .sitesOverview .employeeManualPanel-header p {
+        margin: 0;
+        color: #888;
+    }
+

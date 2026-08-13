@@ -1,0 +1,844 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Contractor Gate Pass";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/GatePass/ContractorGatePass/style.css" rel="stylesheet" />
+
+<script src="~/scripts/bharat/ContractorGatePassController.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    /*=========================================
+        Permanent / Temporary Tabs
+    =========================================*/
+
+    const tabs = document.querySelectorAll(".contractorGatePass .gatePassTabs .nav-link");
+
+    tabs.forEach(tab => {
+
+        tab.addEventListener("click", function () {
+
+            tabs.forEach(t => t.classList.remove("active"));
+
+            this.classList.add("active");
+
+        });
+
+    });
+
+    /*=========================================
+        Select All
+    =========================================*/
+
+    const table = document.querySelector(".contractorGatePass .previewTable");
+
+    if (table) {
+
+        const headerCheckbox = table.querySelector("thead .form-check-input");
+
+        const rowCheckboxes = table.querySelectorAll("tbody .form-check-input");
+
+        headerCheckbox.addEventListener("change", function () {
+
+            rowCheckboxes.forEach(cb => {
+
+                cb.checked = this.checked;
+
+            });
+
+        });
+
+    }
+
+});
+
+</script>
+
+<div class="contractorGatePass px-4 py-4">
+
+    <!-- ==========================================
+        Header
+    ========================================== -->
+
+    <div class="cgpHeader d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+
+        <h2 class="pageTitle mb-0">
+            Generate Bulk Gate Passes
+        </h2>
+
+        <ul class="nav nav-tabs gatePassTabs border-0">
+
+            <li class="nav-item">
+                <button class="nav-link active" style="background: var(--primary); color: #fff;"
+                        ng-click="redirectdetail()">
+                    Generate Gate Pass
+                </button>
+            </li>
+
+            
+
+        </ul>
+
+    </div>
+
+    <!-- ==========================================
+        Session Card
+    ========================================== -->
+
+    <div class="currentSessionCard mb-4">
+
+        <div class="sessionContent">
+
+            <div>
+
+                <div class="sessionLabel">
+                    CURRENT SESSION
+                </div>
+
+                <div class="sessionCount">
+
+                    <span class="countNumber">
+                        {{GetPendingCount()}}
+                    </span>
+
+                    <span class="countText">
+                        Pending passes
+                    </span>
+
+                </div>
+
+            </div>
+
+            <div class="sessionIcon">
+
+                <i class="bi bi-shield-check"></i>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+        Preview Card
+    ========================================== -->
+
+    <div class="previewCard">
+
+        <div class="previewHeader">
+
+            <ul class="nav nav-tabs gatePassTabs border-0">
+
+                <li class="nav-item">
+                    <button class="nav-link"
+                            ng-class="{'active': GatePassType=='P'}"
+                            ng-click="ChangeGatePassType('P')">
+                        Permanent
+                    </button>
+                </li>
+
+                <li class="nav-item">
+                    <button class="nav-link"
+                            ng-class="{'active': GatePassType=='T'}"
+                            ng-click="ChangeGatePassType('T')">
+                        Temporary
+                    </button>
+                </li>
+
+            </ul>
+
+            <div class="previewHeaderRight">
+
+                <select class="form-select siteFilter"
+                        ng-model="SelectedSite"
+                        ng-change="FilterWorker()">
+
+                    <option value="">All Sites</option>
+
+                    <option ng-repeat="x in WorkerList1 | unique:'SiteName'"
+                            value="{{x.SiteName}}">
+                        {{x.SiteName}}
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="table-responsive" ng-init="BindWorker()">
+          
+
+            <table class="table previewTable align-middle">
+
+                <thead>
+
+                    <tr>
+
+
+
+                        <th>Worker Name</th>
+
+                        <th>ID Number</th>
+
+                        <th>Skill/Role</th>
+
+                        <th>Contact No.</th>
+
+                        <th>Medical</th>
+
+                        <th>Health & Safety</th>
+
+                        <th>Compliance</th>
+
+                        <th>Status</th>
+
+                        <th class="text-center">
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+
+
+
+                    <tr ng-repeat="x in WorkerList | filter:SiteFilter | filter:{GatePassType1: PassType}">
+
+                        <td>
+
+                            {{x.EmployeeName}}
+
+                        </td>
+
+                        <td>
+
+                            {{x.EmployeeCode}}
+
+                        </td>
+
+                        <td>
+
+                            {{x.EmployeeDesignation}}
+
+                        </td>
+
+                        <td>
+
+                            {{x.mobilenumber}}
+
+                        </td>
+
+                        <td>
+
+                            <span class="statusDone" ng-show="x.MedicalStatus =='Done'">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                {{x.MedicalStatus}}
+
+                            </span>
+                            <span class="statusPending" ng-show="x.MedicalStatus =='Pending'">
+
+                                <i class="bi bi-dash-circle"></i>
+
+                                Pending
+
+                            </span>
+                        </td>
+
+                        <td>
+
+                            <span class="statusDone" ng-show="x.FitnessTypes =='Done'">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                {{x.FitnessTypes}}
+
+                            </span>
+                            <span class="statusPending" ng-show="x.FitnessTypes =='Pending'">
+
+                                <i class="bi bi-dash-circle"></i>
+
+                                Pending
+
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            <span class="statusDone" ng-show="x.Compliance =='Done'">
+
+                                <i class="bi bi-check-circle"></i>
+
+                                {{x.Compliance}}
+
+                            </span>
+                            <span class="statusPending" ng-show="x.Compliance =='Pending'">
+
+                                <i class="bi bi-dash-circle"></i>
+
+                                Pending
+
+                            </span>
+
+                        </td>
+
+                        <td>
+
+                            <span class="approvalStatus approved" ng-show="x.GSTATUS=='Approved'">
+
+                                <span class="dot"></span>
+
+                                {{x.GSTATUS}}
+
+                            </span>
+                            <span class="approvalStatus rejected" ng-show="x.GSTATUS =='Rejected'">
+
+                                <span class="dot"></span>
+
+                                Rejected
+
+                            </span>
+                            <span class="approvalStatus pending" ng-show="x.GSTATUS =='Pending'">
+
+                                <span class="dot"></span>
+
+                                Not Alloted
+
+                            </span>
+
+                        </td>
+
+                        <td class="text-center">
+
+                            <button class="iconBtn"
+                                    data-bs-toggle="modal" ng-click="setEmpValue(x)"
+                                    data-bs-target="#workerPreviewModal">
+
+                                <i class="bi bi-eye"></i>
+
+                            </button>
+
+                        </td>
+
+                    </tr>
+                    <tr ng-if="(WorkerList | filter:SiteFilter | filter:{GatePassType1: PassType}).length == 0">
+                        <td colspan="9" class="text-center text-muted">
+                            <i class="bi bi-exclamation-circle"></i>
+                            No Gate Pass Generated
+                        </td>
+                    </tr>
+                    <!-- Pending -->
+                    <!--<tr>
+
+        <td><input class="form-check-input" type="checkbox"></td>
+
+        <td>Rajesh Kumar</td>
+
+        <td>#RK0626DL01</td>
+
+        <td>Welder</td>
+
+        <td>+91 98765 43210</td>
+
+        <td>
+
+            <span class="statusDone">
+
+                <i class="bi bi-check-circle"></i>
+
+                Done
+
+            </span>
+
+        </td>
+
+        <td>
+
+            <span class="statusDone">
+
+                <i class="bi bi-check-circle"></i>
+
+                Done
+
+            </span>
+
+        </td>
+
+        <td>
+
+            <span class="statusPending">
+
+                <i class="bi bi-dash-circle"></i>
+
+                Pending
+
+            </span>
+
+        </td>
+
+        <td>
+
+            <span class="approvalStatus rejected">
+
+                <span class="dot"></span>
+
+                Rejected
+
+            </span>
+
+        </td>
+
+        <td class="text-center">
+
+            <button class="iconBtn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#workerPreviewModal">
+
+                <i class="bi bi-eye"></i>
+
+            </button>
+
+        </td>
+
+    </tr>-->
+                    <!-- Duplicate -->
+                    <!--<tr>
+
+        <td><input class="form-check-input" type="checkbox"></td>
+        <td>Rajesh Kumar</td>
+        <td>#RK0626DL01</td>
+        <td>Welder</td>
+        <td>+91 98765 43210</td>
+
+        <td>
+            <span class="statusDone"><i class="bi bi-check-circle"></i>Done</span>
+        </td>
+
+        <td>
+            <span class="statusDone"><i class="bi bi-check-circle"></i>Done</span>
+        </td>
+
+        <td>
+            <span class="statusDone"><i class="bi bi-check-circle"></i>Done</span>
+        </td>
+
+        <td>
+
+            <span class="approvalStatus approved">
+
+                <span class="dot"></span>
+
+                Approved
+
+            </span>
+
+        </td>
+
+        <td class="text-center">
+
+            <button class="iconBtn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#workerPreviewModal">
+
+                <i class="bi bi-eye"></i>
+
+            </button>
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td><input class="form-check-input" type="checkbox"></td>
+        <td>Rajesh Kumar</td>
+        <td>#RK0626DL01</td>
+        <td>Welder</td>
+        <td>+91 98765 43210</td>
+
+        <td><span class="statusDone"><i class="bi bi-check-circle"></i>Done</span></td>
+
+        <td><span class="statusDone"><i class="bi bi-check-circle"></i>Done</span></td>
+
+        <td><span class="statusDone"><i class="bi bi-check-circle"></i>Done</span></td>
+
+        <td>
+
+            <span class="approvalStatus pending">
+
+                <span class="dot"></span>
+
+                Pending
+
+            </span>
+
+        </td>
+
+        <td class="text-center">
+
+            <button class="iconBtn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#workerPreviewModal">
+
+                <i class="bi bi-eye"></i>
+
+            </button>
+
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td><input class="form-check-input" type="checkbox"></td>
+        <td>Rajesh Kumar</td>
+        <td>#RK0626DL01</td>
+        <td>Welder</td>
+        <td>+91 98765 43210</td>
+
+        <td><span class="statusDone"><i class="bi bi-check-circle"></i>Done</span></td>
+
+        <td><span class="statusDone"><i class="bi bi-check-circle"></i>Done</span></td>
+
+        <td><span class="statusPending"><i class="bi bi-dash-circle"></i>Pending</span></td>
+
+        <td>
+
+            <span class="approvalStatus rejected">
+
+                <span class="dot"></span>
+
+                Rejected
+
+            </span>
+
+        </td>
+
+        <td class="text-center">
+
+            <button class="iconBtn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#workerPreviewModal">
+
+                <i class="bi bi-eye"></i>
+
+            </button>
+
+        </td>
+
+    </tr>-->
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+        Bottom Summary
+    ========================================== -->
+
+    <div class="bottomSummary">
+
+        <div class="summaryLeft">
+
+            <div class="employeeSummary">
+
+                <div class="summaryTitle">
+               
+                </div>
+
+                <div class="summaryValue">
+
+                 
+
+                </div>
+
+            </div>
+ 
+
+        </div>
+
+       
+
+    </div>
+
+
+    <!-- =====================================================
+        Worker Preview Modal
+    ====================================================== -->
+
+    <div class="modal fade"
+         id="workerPreviewModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+
+            <div class="modal-content workerPreviewModal">
+
+                <!-- Header -->
+
+                <div class="modal-header">
+
+                    <div>
+
+                        <h4 class="workerModalName mb-1">
+
+
+                            {{EmpName}}
+                        </h4>
+
+                        <div class="workerModalId">
+
+
+                            {{EmployeeCode}}
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <!-- Body -->
+
+                <div class="modal-body">
+
+                    <div class="row g-4">
+
+                        <!-- Medical -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    Medical Examination
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{MedicalStatus}}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Safety Kit -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    Safety Kit
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{PPE}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Safety Training -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    Safety Training
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{SafetyTrainingStatus}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Site Induction -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    Site Induction
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{SiteInduction}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Aadhaar -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    Aadhaar
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{AadharVerify}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- Bank -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    Bank Account
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{BankVerify}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- UAN -->
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    UAN
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{UANVerify}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-lg-3 col-md-6">
+
+                            <div class="detailItem">
+
+                                <div class="detailTitle">
+
+                                    PF
+
+                                </div>
+
+                                <div class="detailValue success">
+
+                                    {{PFVerify}}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <div class="modal fade" id="gatePassModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">Generate Gate Pass</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <label>Gate Pass Valid For (Days)</label>
+
+                    <input type="number"
+                           class="form-control"
+                           ng-model="GatePassDays"
+                           min="1"
+                           placeholder="Enter days">
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+
+                    <button class="btn btn-primary"
+                            ng-click="SaveSelectedEmployee()">
+                        Generate
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>

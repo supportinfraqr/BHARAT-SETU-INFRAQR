@@ -1,0 +1,381 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Factory Compliance";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<link href="~/Masters/LabourCompliance/style.css" rel="stylesheet" />
+<script src="~/Masters/LabourCompliance/script.js"></script>
+<script src="~/scripts/RetailJsLib/FactoryComplianceController.js?Ver=@ViewBag.Version"></script>
+<script>
+    app.directive('fileModel', ['$parse', function ($parse) {
+        return {
+            restrict: 'A',
+            scope: {
+                fileModel: '=',
+                rowContext: '=' // passing the row object
+            },
+            link: function (scope, element, attrs) {
+                element.bind('change', function () {
+                    scope.$parent.fileSelected(element[0].files, scope.rowContext);
+                });
+            }
+        };
+    }]);
+</script>
+<style>
+    .labourCompPage .toggle-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+        /* hide scrollbar (optional) */
+        .labourCompPage .toggle-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+
+    /* main capsule */
+    .labourCompPage .toggle-pill {
+        display: inline-flex;
+        min-width: max-content; /* important */
+        border-radius: 999px;
+        background: rgba(0,0,0,0.03);
+        padding: 4px;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .labourCompPage .table-container {
+        max-height: 65vh;
+        overflow: auto;
+        border-radius: 12px;
+        scrollbar-width: thin;
+        scroll-behavior: smooth;
+    }
+
+    /* Sticky columns - body cells */
+    .labourCompPage .custom-table tbody td:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background: var(--card-bg);
+        min-width: 35px;
+    }
+
+    .labourCompPage .custom-table tbody td:nth-child(2) {
+        position: sticky;
+        left: 35px;
+        z-index: 4;
+        background: var(--card-bg);
+        width: 195px;
+        min-width: 195px;
+        max-width: 195px;
+    }
+
+    .labourCompPage .custom-table tbody td:nth-child(3) {
+        position: sticky;
+        left: 230px; /* 35 + 195 */
+        z-index: 3;
+        background: var(--card-bg);
+        min-width: 160px;
+        max-width: 200px;
+    }
+
+    .labourCompPage .custom-table thead th:nth-child(1) {
+        left: 0;
+        z-index: 10;
+    }
+
+    .labourCompPage .custom-table thead th:nth-child(2) {
+        left: 35px;
+        z-index: 9;
+        width: 195px;
+        min-width: 195px;
+        max-width: 195px;
+    }
+
+    .labourCompPage .custom-table thead th:nth-child(3) {
+        left: 230px;
+        z-index: 8;
+    }
+
+
+    .labourCompPage .custom-table thead th {
+        position: sticky;
+        top: 0;
+        /*z-index: 6;*/
+        background: #F37437;
+        color: #fff;
+    }
+
+    .labourCompPage .custom-table {
+        table-layout: auto;
+    }
+
+    .labourCompPage .small-table td,
+    .labourCompPage .small-table th {
+        vertical-align: middle;
+        line-height: 1.4;
+    }
+
+    .labourCompPage .small-table .form-select,
+    .labourCompPage .small-table .form-control {
+        height: 30px;
+        min-height: 30px;
+        line-height: 1.2;
+    }
+
+    .labourCompPage .small-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .labourCompPage .custom-table td:nth-child(2),
+    .labourCompPage .custom-table td:nth-child(3) {
+        white-space: normal !important;
+        max-width: 250px;
+        word-break: break-word;
+    }
+
+    .labourCompPage .custom-table td:nth-child(3),
+    .labourCompPage .custom-table th:nth-child(3) {
+        white-space: normal !important;
+        word-break: break-word;
+    }
+    /* ===== FILTER PILLS (UPDATED) ===== */
+    .filter-pill {
+        border: 1px solid #f26b2e;
+        background: #FFF1EB;
+        color: #f26b2e;
+        padding: 6px 35px 6px 14px;
+        border-radius: 25px;
+        font-size: 13px;
+        cursor: pointer;
+        min-width: 150px;
+        /* 🔥 FIX START */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+
+    /* Remove arrow in IE */
+    select::-ms-expand {
+        display: none;
+    }
+
+    
+        .filter-pill:hover {
+            background: #E45D27;
+            color:white;
+        }
+
+    .filter-pill:focus {
+        background: #FFF1EB !important;
+        color: #f26b2e !important;
+    }
+    /* ===== CUSTOM DROPDOWN ARROW ===== */
+    .select-wrapper {
+        position: relative;
+    }
+
+        .select-wrapper::after {
+            content: "▼";
+            font-size: 10px;
+            color: #f26b2e;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+    /* ===== FILTER CONTAINER ===== */
+    .filter-container {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    /* ===== BUTTONS (SLIGHT IMPROVEMENT) ===== */
+    .btn-go {
+        background: #f26b2e;
+        color: #fff;
+        border: none;
+        padding: 6px 18px;
+        border-radius: 25px;
+    }
+
+    .btn-reset {
+        background: #e35d2f;
+        color: #fff;
+        border: none;
+        padding: 6px 18px;
+        border-radius: 25px;
+    }
+
+    .btn-export {
+        background: #f26b2e;
+        color: #fff;
+        border: none;
+        padding: 6px 18px;
+        border-radius: 25px;
+    }
+
+    /* ===== SEARCH (KEEP YOUR STYLE + FIX ALIGNMENT) ===== */
+    .search-box {
+        position: relative;
+    }
+
+        .search-box input {
+            border: 1px solid #f26b2e;
+            border-radius: 25px;
+            padding: 6px 30px 6px 12px;
+            outline: none;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 10px;
+            top: 8px;
+            color: #f26b2e;
+        }
+
+    /* ===== RESPONSIVE ===== */
+    @@media (max-width: 768px) {
+        .filter-container {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .filter-pill {
+            width: 100%;
+        }
+    }
+
+    /* KEEP YOUR EXISTING */
+    .filters {
+        margin-top: 15px;
+    }
+</style>
+<div class="labourCompPage px-4 py-2">
+    <div class="content active" id="statutory">
+        <div class="container my-4">
+            <div class="row g-3 kpi-row">
+                <div class="col-6 col-md-4 col-lg-3 col-xl-1"></div>
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="lb-kpi-card">
+                        <div class="lb-kpi-title">Complied</div>
+                        <div class="lb-kpi-value">{{totalComplied}}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="lb-kpi-card">
+                        <div class="lb-kpi-title">Non-Complied</div>
+                        <div class="lb-kpi-value">{{totalNonComplied}}</div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="lb-kpi-card">
+                        <div class="lb-kpi-title">Delayed Complied</div>
+                        <div class="lb-kpi-value">{{totalDelayComplied}}</div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="lb-kpi-card">
+                        <div class="lb-kpi-title">Pending</div>
+                        <div class="lb-kpi-value">{{totalPending}}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <div class="lb-kpi-card">
+                        <div class="lb-kpi-title">Verified</div>
+                        <div class="lb-kpi-value">{{totalVerified}}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="filters d-flex justify-content-between align-items-center flex-wrap" ng-init="BindFilter()">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="filter-container" ng-init="BindFilter()">
+
+                        <!-- STATE -->
+                        <div class="select-wrapper">
+                            <select ng-model="State" class="filter-pill">
+                                <option value="">Select State</option>
+                                <option ng-repeat="x in SMasterList | unique:'State'" value="{{x.State}}">
+                                    {{x.STATE_NM}}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- MONTH -->
+                        <div class="select-wrapper">
+                            <select ng-model="Month" class="filter-pill">
+                                <option value="">Select Month</option>
+                                <option ng-repeat="x in SMasterList | unique:'Month'" value="{{x.Month}}">
+                                    {{x.Month}}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- YEAR -->
+                        <div class="select-wrapper">
+                            <select ng-model="Year" class="filter-pill">
+                                <option value="">Select Year</option>
+                                <option ng-repeat="x in YearsList | orderBy:'-'" value="{{x}}">
+                                    {{x}}
+                                </option>
+                            </select>
+                        </div>
+
+                    </div>
+                    <button class="btn-go" ng-click="BindSearch();BindFORTILESSearch()">
+                        Go
+                    </button>
+
+                    <button class="btn-reset" ng-click="State='';Month='';Year=''">
+                        Reset
+                    </button>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="search-box">
+                        <input type="text" ng-model="search.$" placeholder="Search..." />
+                        <i class="fa fa-search"></i>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn-export dropdown-toggle" data-bs-toggle="dropdown">
+                            Export
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="javascript:void(0)" ng-click="ExportTableToExcel();ManageLog('Export in Excel')">
+                                    Export in Excel
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="javascript:void(0)" ng-click="PrintTable();ManageLog('Export in PDF')">
+                                    Export in PDF
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+        });
+    });
+</script>

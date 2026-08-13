@@ -1,0 +1,443 @@
+﻿.financeCompPage {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 80%;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* KPI CARDS */
+.fn-kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    transition: 0.2s ease;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .fn-kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.fn-kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.fn-kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+/* Toggle pill - single capsule container */
+.financeCompPage .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .financeCompPage .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 6px 8px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 60px;
+    }
+
+        /* active pill */
+        .financeCompPage .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+        }
+
+/* ensure focus ring for accessibility (subtle) */
+        .financeCompPage .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+/* Section cards */
+.financeCompPage .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .financeCompPage .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        min-height: 320px;
+    }
+
+/* Table wrapper and hide scrollbar visually */
+.financeCompPage .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .financeCompPage .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.financeCompPage .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.financeCompPage .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.financeCompPage .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+.financeCompPage .small-table tbody td .store-code-link,
+.financeCompPage .small-table tbody td .event-link {
+    text-decoration: none;
+}
+
+/* action menu */
+.financeCompPage .action-menu {
+    position: relative;
+    width: 48px;
+    text-align: right;
+    background-color: var(--card-bg);
+}
+
+    .financeCompPage .action-menu .btn {
+        color: var(--primary);
+    }
+
+    .financeCompPage .action-menu .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+/* filter button */
+.financeCompPage .filter-btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+    .financeCompPage .filter-btn.active,
+    .financeCompPage .filter-btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+/* small inputs */
+.financeCompPage .table-toolbar .form-control-sm {
+    height: 36px;
+    border-radius: 999px;
+    border-color: var(--primary);
+}
+
+/* Export button (rounded) */
+.financeCompPage .export-btn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .financeCompPage .export-btn:hover {
+        background: var(--primary-dark);
+    }
+
+    /* remove default dark flash on click for export and other action buttons while keeping subtle ring on focus */
+    .financeCompPage .export-btn:focus,
+    .financeCompPage .export-btn:active {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* Pagination area */
+/*.secretarialCompPage .table-pagination {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+    .secretarialCompPage .table-pagination .btn {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        padding: 6px 12px;
+        border: 1px solid var(--primary);
+        background: #fff;
+        color: var(--primary);
+    }
+
+        .secretarialCompPage .table-pagination .btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+.secretarialCompPage #viewAllRows {
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+}
+
+    .secretarialCompPage #viewAllRows:hover {
+        background-color: var(--primary-dark);
+    }*/
+
+/* statuses */
+.financeCompPage .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+}
+
+.financeCompPage .status-active {
+    background: #dff6e9;
+    color: #197a3a;
+}
+
+.financeCompPage .status-upcoming {
+    background: #ffeedf;
+    color: #d06a1e;
+}
+
+.financeCompPage .status-disabled {
+    background: #ffe9ee;
+    color: #c43a5b;
+}
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+    .financeCompPage .table-toolbar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .financeCompPage .top-bar {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .financeCompPage .limit-instruction {
+        font-size: 0.85rem;
+    }
+
+    .financeCompPage .toggle-pill .btn-pill {
+        padding: 8px 12px;
+        min-width: 64px;
+    }
+}
+
+/* Table Buttons*/
+
+.financeCompPage .btn-upload, .btn-view, .btn-submit {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .financeCompPage .btn-upload:hover, .btn-view:hover, .btn-submit:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+.financeCompPage .btn-close {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.btn-close:hover {
+    background: var(--primary-dark);
+}
+
+/* Table Selects*/
+.financeCompPage .form-select, .form-control {
+    font-size: .78rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #dcdcdc;
+    outline: none;
+    width: 120px;
+}
+
+/* 2nd and 3rd Col wrap*/
+/* Keep headers unchanged (no wrapping) */
+.financeCompPage .small-table thead th:nth-child(2),
+.financeCompPage .small-table thead th:nth-child(3) {
+    white-space: nowrap; /* important: headers must stay single-line */
+}
+
+/* Allow body cells to wrap and limit their width */
+.financeCompPage .small-table tbody td:nth-child(2),
+.financeCompPage .small-table tbody td:nth-child(3) {
+    white-space: normal !important;
+    min-width: 260px; /* change this value to taste */
+    overflow-wrap: anywhere; /* better wrap for long words/links */
+    word-break: break-word; /* fallback for older browsers */
+    text-align: left; /* keep multi-line content readable */
+    vertical-align: middle;
+    padding-right: 12px; /* small breathing room for wrapped lines */
+}
+
+    /* Ensure any anchor/link inside the compliance column wraps nicely */
+    .financeCompPage .small-table tbody td:nth-child(3) .store-code-link {
+        display: inline-block; /* lets the link wrap within its cell */
+        max-width: 100%;
+        text-decoration: none;
+        color: inherit;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+/*shorter width for Act Name if you want them different sizes */
+.financeCompPage .small-table tbody td:nth-child(2) {
+    min-width: 150px; /* tweak separately if desired */
+}
+
+
+/* ============Compliance Details Modal========== */
+.financeCompPage #complianceDetailsModal .compDetail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--primary);
+    border-bottom: 1px solid #eee;
+}
+
+    .financeCompPage #complianceDetailsModal .compDetail-header .compDetail-back-btn {
+        border: none;
+        background: transparent;
+        font-size: 1.2rem;
+        color: #fff;
+        transition: transform .18s ease, background .18s ease;
+    }
+
+        .financeCompPage #complianceDetailsModal .compDetail-header .compDetail-back-btn:hover {
+            transform: translateX(-4px);
+            background: var(--card-bg);
+            color: var(--primary);
+        }
+
+    .financeCompPage #complianceDetailsModal .compDetail-header .modal-title {
+        flex-grow: 0; /* Prevent the title from stretching */
+        width: 100%;
+        padding-right: 3rem;
+        text-align: center; /* Keep the heading centered */
+    }
+
+/* ============Event Modal========== */
+
+.financeCompPage #eventModal .event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    color: #E45D27;
+    background: var(--card-bg);
+    border-bottom: 1px solid #eee;
+}
+
+    .financeCompPage #eventModal .event-header .event-back-btn {
+        border: none;
+        background: transparent;
+        font-size: 1.2rem;
+        color: #E45D27;
+        transition: transform .18s ease, background .18s ease;
+    }
+
+        .financeCompPage #eventModal .event-header .event-back-btn:hover {
+            transform: translateX(-4px);
+            background: #f7e3d6;
+        }
+
+    .financeCompPage #eventModal .event-header .modal-title {
+        flex-grow: 0; /* Prevent the title from stretching */
+        width: 100%;
+        color: var(--primary);
+        padding-right: 3rem;
+        text-align: center; /* Keep the heading centered */
+    }
+
+.financeCompPage #eventModal .modal-footer .eventSubmitBtn {
+    border-radius: 999px;
+    color: #fff;
+    background: var(--primary);
+    padding: 6px 14px;
+    font-weight: 400;
+    font-size: 0.85rem;
+    -webkit-tap-highlight-color: transparent;
+}
+
+    .financeCompPage #eventModal .modal-footer .eventSubmitBtn:hover {
+        background: var(--primary-dark);
+    }

@@ -1,0 +1,2261 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Location Master";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Masters/LocationMaster/style.css" rel="stylesheet" />
+<script src="~/Masters/LocationMaster/script.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div class="locationMasterPage px-4 py-2">  
+    <!-- Top bar: instruction left + New Location button right -->
+    <div class="d-flex align-items-center justify-content-between mb-3 top-bar">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="limit-instruction">Location Total Limit: <strong>600</strong></div>
+            <div class="limit-instruction">Used: <strong>250</strong></div>
+            <div class="limit-instruction">Left: <strong>350</strong></div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- New Location (rounded pill) -->
+            <button class="btn btn-sm btn-new-location" id="btnNewLocation" type="button">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>New Location</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- NEW LOCATION MODAL (scoped) -->
+    <div class="modal fade lm-newlocation-modal" id="lmNewLocationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content lm-newlocation-card">
+                <div class="modal-header lm-newlocation-topbar">
+                    <div>
+                        <h5 class="mb-0">New Location — <small class="text-white-75">Create / Edit location</small></h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-3 lm-newlocation-body">
+                    <div class="container-fluid">
+                        <div class="row g-3">
+                            <!-- Row 1 -->
+                            <div class="col-md-3">
+                                <label class="form-label">Location Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStoreCode" disabled />
+                                <div class="small text-danger d-none" id="txtStoreCodeError">Special characters are not allowed.</div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Ref. Location Code</label>
+                                <input type="text" class="form-control" id="txtRefStoreCode" maxlength="10" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Compliance Category <span class="text-danger">*</span></label>
+                                <select id="ddlComplianceCategory" class="form-select">
+                                    <option value="">Select Compliance</option>
+                                    <option value="Factory">Factory</option>
+                                    <option value="Establishment">Establishment</option>
+                                    <option value="Contractor">Contractor</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <select id="ddlCategory" class="form-select">
+                                    <option value="">Select Category</option>
+                                    <option value="1">Store</option>
+                                    <option value="2">Warehouse</option>
+                                    <option value="3">Factory</option>
+                                </select>
+                            </div>
+
+                            <!-- Row 2 -->
+                            <div class="col-md-3">
+                                <label class="form-label">Operation model <span class="text-danger">*</span></label>
+                                <select id="ddlOperationModel" class="form-select">
+                                    <option value="">Select</option>
+                                    <option value="COCO">COCO – Company Owned Company Operated</option>
+                                    <option value="FOCO">FOCO – Franchise Owned Company Operated</option>
+                                    <option value="FICO">FICO – Franchise Invested Company Operated</option>
+                                    <option value="COFO">COFO – Company Owned Franchise Operated</option>
+                                    <option value="FOFO">FOFO – Franchise Owned Franchise Operated</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Location Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStoreName" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Complete Address <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtCompleteAddress" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Proposed/Existing <span class="text-danger">*</span></label>
+                                <input id="txtProposedDate" type="date" class="form-control" />
+                            </div>
+
+                            <!-- Row 3 -->
+                            <div class="col-md-3">
+                                <label class="form-label">Location <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStoreLocation" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">State <span class="text-danger">*</span></label>
+                                <select id="ddlstate" class="form-select">
+                                    <option value="">Select State</option>
+                                    <option value="MH">Maharashtra</option>
+                                    <option value="DL">Delhi</option>
+                                    <option value="KA">Karnataka</option>
+                                    <!-- keep static for now -->
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">City <span class="text-danger">*</span></label>
+                                <select id="ddlcity" class="form-select">
+                                    <option value="">Select City</option>
+                                    <option value="MUM">Mumbai</option>
+                                    <option value="DEL">New Delhi</option>
+                                    <option value="BLR">Bengaluru</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Circle/Cluster</label>
+                                <select id="txtCircleId" class="form-select">
+                                    <option value="">Select</option>
+                                    <option value="1">Circle A</option>
+                                    <option value="2">Circle B</option>
+                                </select>
+                            </div>
+
+                            <!-- Row 4 -->
+                            <div class="col-md-3">
+                                <label class="form-label">Region <span class="text-danger">*</span></label>
+                                <select id="txtRegionId" class="form-select">
+                                    <option value="">Select</option>
+                                    <option value="R1">Region 1</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Zip Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtZipCode" maxlength="6" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Location Manager Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStoreManagerName" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Location Manager Mobile No. <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtStoreManagerMobileNo" maxlength="10" />
+                            </div>
+
+                            <!-- Row 5 -->
+                            <div class="col-md-3">
+                                <label class="form-label">Location Manager Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="txtStoreManagerEmail" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 1 Name</label>
+                                <input type="text" class="form-control" id="txtAreaManagerName" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 1 Mobile</label>
+                                <input type="text" class="form-control" id="txtAreaManagerMobileNo" maxlength="10" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 1 Email</label>
+                                <input type="email" class="form-control" id="txtAreaManagerEmail" />
+                            </div>
+
+                            <!-- Row 6: more escalation rows (kept all fields) -->
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 2 Name</label>
+                                <input type="text" class="form-control" id="txtZonalManagerName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 2 Mobile</label>
+                                <input type="text" class="form-control" id="txtZonalManagerMobileNo" maxlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 2 Email</label>
+                                <input type="email" class="form-control" id="txtZonalManagerEmail" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 3 Name</label>
+                                <input type="text" class="form-control" id="txtCircleHeadName" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 3 Mobile</label>
+                                <input type="text" class="form-control" id="txtCircleHeadMobileNo" maxlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 3 Email</label>
+                                <input type="email" class="form-control" id="txtCircleHeadEmail" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 4 Name</label>
+                                <input type="text" class="form-control" id="txtRegionalHeadName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 4 Mobile</label>
+                                <input type="text" class="form-control" id="txtRegionalHeadMobileNo" maxlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 4 Email</label>
+                                <input type="email" class="form-control" id="txtRegionalHeadEmail" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 5 Name</label>
+                                <input type="text" class="form-control" id="txtCorporateHeadName" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 5 Mobile</label>
+                                <input type="text" class="form-control" id="txtCorporateHeadMobileNo" maxlength="10" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Escalation 5 Email</label>
+                                <input type="email" class="form-control" id="txtCorporateHeadEmail" />
+                            </div>
+
+                            <!-- Sizes, days -->
+                            <div class="col-md-3">
+                                <label class="form-label">Location Area in sq.ft. <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtSQFTStoreArea" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Days to Expire <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtDaysOfExpire" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">License Expiry days <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtled" />
+                            </div>
+
+                            <div class="col-12">
+                                <fieldset class="border p-3 mb-2">
+                                    <legend class="float-none w-auto px-2"><h6 class="mb-0">Select Due date for</h6></legend>
+
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">License</label>
+                                            <input type="text" class="form-control" id="txtLicenseD" disabled />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Days to Expire</label>
+                                            <input type="text" class="form-control" id="txtLicenseDaysOfExpire" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Expiry Days</label>
+                                            <input type="text" class="form-control" id="txtLicenseED" />
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label">Labour</label>
+                                            <input type="text" class="form-control" id="txtLabourD" disabled />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Days to Expire</label>
+                                            <input type="text" class="form-control" id="txtLabourDaysOfExpire" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Expiry Days</label>
+                                            <input type="text" class="form-control" id="txtLabourED" />
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label">Factory</label>
+                                            <input type="text" class="form-control" id="txtFactoryD" disabled />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Days to Expire</label>
+                                            <input type="text" class="form-control" id="txtFactoryDaysOfExpire" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Expiry Days</label>
+                                            <input type="text" class="form-control" id="txtFactoryED" />
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label">Finance</label>
+                                            <input type="text" class="form-control" id="txtFinanceD" disabled />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Days to Expire</label>
+                                            <input type="text" class="form-control" id="txtFinanceDaysOfExpire" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Expiry Days</label>
+                                            <input type="text" class="form-control" id="txtFinanceED" />
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <label class="form-label">Secretarial</label>
+                                            <input type="text" class="form-control" id="txtSecraterialD" disabled />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Days to Expire</label>
+                                            <input type="text" class="form-control" id="txtSecraterialDaysOfExpire" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Expiry Days</label>
+                                            <input type="text" class="form-control" id="txtSecraterialED" />
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                            <!-- Documents table -->
+                            <div class="col-12">
+                                <h6 class="subheading m-0 mb-2">Documents</h6>
+
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-borderless arch-newlocation-docs">
+                                        <thead class="text-center">
+                                            <tr>
+                                                <th>Sr no</th>
+                                                <th>Document Name</th>
+                                                <th>Period From</th>
+                                                <th>Period Upto</th>
+                                                <th>View/Upload</th>
+                                                <th>Remark</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <tr>
+                                                <td>1</td>
+                                                <td>Electricity Bill</td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td><input type="date" class="form-control form-control-sm" id="ElectricityBillPeriodUpTo" /></td>
+                                                <td class="text-center">
+                                                    <input type="file" id="fuElectricityBill" class="d-none" />
+                                                    <button type="button" class="btn btn-sm doc-choose-btn" data-target="#fuElectricityBill">Choose File</button>
+                                                </td>
+                                                <td><input type="text" class="form-control form-control-sm" /></td>
+                                            </tr>
+
+                                            <tr>
+                                                <td>2</td>
+                                                <td>Lease / LOI</td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td class="text-center">
+                                                    <input type="file" id="fuRentAgreement" class="d-none" />
+                                                    <button type="button" class="btn btn-sm  doc-choose-btn" data-target="#fuRentAgreement">Choose File</button>
+                                                </td>
+                                                <td><input type="text" class="form-control form-control-sm" /></td>
+                                            </tr>
+
+                                            <tr>
+                                                <td>3</td>
+                                                <td>Property Tax Receipt</td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td class="text-center">
+                                                    <input type="file" id="fuPropertyTaxPaidReceipt" class="d-none" />
+                                                    <button type="button" class="btn btn-sm doc-choose-btn" data-target="#fuPropertyTaxPaidReceipt">Choose File</button>
+                                                </td>
+                                                <td><input type="text" class="form-control form-control-sm" /></td>
+                                            </tr>
+
+                                            <!-- extra dummy rows -->
+                                            <tr>
+                                                <td>4</td>
+                                                <td>Fire NOC</td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td class="text-center">
+                                                    <input type="file" id="fuFireNoc" class="d-none" />
+                                                    <button type="button" class="btn btn-sm doc-choose-btn" data-target="#fuFireNoc">Choose File</button>
+                                                </td>
+                                                <td><input type="text" class="form-control form-control-sm" /></td>
+                                            </tr>
+
+                                            <tr>
+                                                <td>5</td>
+                                                <td>Pollution Certificate</td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td><input type="date" class="form-control form-control-sm" /></td>
+                                                <td class="text-center">
+                                                    <input type="file" id="fuPollution" class="d-none" />
+                                                    <button type="button" class="btn btn-sm doc-choose-btn" data-target="#fuPollution">Choose File</button>
+                                                </td>
+                                                <td><input type="text" class="form-control form-control-sm" /></td>
+                                            </tr>
+
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- footer row actions -->
+                            <div class="col-12">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn" id="cancelNewLocationBtn" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn" id="saveNewLocationBtn">Save</button>
+                                </div>
+                            </div>
+
+                        </div> <!-- .row -->
+                    </div> <!-- .container-fluid -->
+                </div> <!-- .modal-body -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= KPI Bar ================= -->
+    <div class="container my-4 locationMasterPage">
+        <div class="row g-3">
+
+            <!-- Total Locations -->
+            <div class="col-md-3">
+                <div class="lm-kpi-card d-flex">
+                    <div class="lm-kpi-title">Total Upcoming</div>
+                    <div class="lm-kpi-value" id="kpiTotalLocations">230</div>
+                </div>
+            </div>
+
+            <!-- Data Quality Score -->
+            <div class="col-md-3">
+                <div class="lm-kpi-card d-flex">
+                    <div class="lm-kpi-title">Total PD</div>
+                    <div class="lm-kpi-value" id="kpiQualityScore">86</div>
+                </div>
+            </div>
+
+            <!-- Locations Needing Validation -->
+            <div class="col-md-3">
+                <div class="lm-kpi-card d-flex">
+                    <div class="lm-kpi-title">Total Architect</div>
+                    <div class="lm-kpi-value" id="kpiNeedsValidation">68</div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="col-md-3">
+                <div class="lm-kpi-card d-flex">
+                    <div class="lm-kpi-title">License</div>
+                    <div class="lm-kpi-value" id="kpiRecentActivities">25</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="View or Import">
+            <button type="button" class="btn btn-pill active" data-target="#viewCard" aria-pressed="true">View</button>
+            <button type="button" class="btn btn-pill" data-target="#importCard" aria-pressed="false">Import</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <!-- VIEW CARD (default visible) -->
+        <div id="viewCard" class="card section-card active">
+            <div class="card-body p-3 h-100 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Month
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">January</a></li>
+                                <li><a class="dropdown-item" href="#">February</a></li>
+                                <li><a class="dropdown-item" href="#">March</a></li>
+                                <!-- ... -->
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Year
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">2025</a></li>
+                                <li><a class="dropdown-item" href="#">2024</a></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-sm filter-btn active">Go</button>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="lmSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" style="border-color: #E45D27" id="lmSearchBtn" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="lmTable">
+                            <thead>
+                                <tr>
+                                    <th>Sr.No</th>
+                                    <th>Store Code</th>
+                                    <th>Ref. Location Code</th>
+                                    <th>Location Name</th>
+                                    <th>Category</th>
+                                    <th>Location</th>
+                                    <th>City</th>
+                                    <th>Region</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="lmTableBody">
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item open-manage-project" href="#" data-storecode="ST00123">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item open-view-architect" href="#" data-storecode="ST00123">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-disabled">Inactive</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-upcoming">Upcoming</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-upcoming">Upcoming</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-disabled">Inactive</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-disabled">Inactive</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item open-license-copy" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item open-view-more" href="#" data-storecode="00002678">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-upcoming">Upcoming</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td><a href="#" class="store-code-link text-success" data-storecode="00002678" data-storeid="1">00002678</a></td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-disabled">Inactive</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td class="text-success">00002678</td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td class="text-success">00002678</td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-upcoming">Upcoming</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td class="text-success">00002678</td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-disabled">Inactive</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td class="text-success">00002678</td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td class="text-success">00002678</td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>1</td>
+                                    <td class="text-success">00002678</td>
+                                    <td>Contest34</td>
+                                    <td>Test SN34</td>
+                                    <td>Store</td>
+                                    <td>Andhra Pradesh</td>
+                                    <td>Vijayawada</td>
+                                    <td>Central</td>
+                                    <td><span class="badge status-active">Active</span></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">Manage Project Document</a></li>
+                                            <li><a class="dropdown-item" href="#">View Architect Form</a></li>
+                                            <li><a class="dropdown-item" href="#">License Copy</a></li>
+                                            <li><a class="dropdown-item" href="#">Compliance Doc</a></li>
+                                            <li><a class="dropdown-item" href="#">View More</a></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="table-pagination d-flex justify-content-between align-items-center mt-2" id="lmPaginationWrap">
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-primary" id="lmPrev" type="button">Previous</button>
+                            <button class="btn btn-sm btn-outline-primary" id="lmNext" type="button">Next</button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div id="lmPageInfo" style="font-size:0.85rem;color:#555;"></div>
+                            <button class="btn btn-sm btn-primary" id="viewAllRows" type="button">View All Rows</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= Request Form Modal ================= -->
+        <div class="modal fade lm-request-modal" id="lmRequestModal" tabindex="-1" aria-labelledby="lmRequestModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <!-- modal-lg; we'll constrain width via CSS for 70% -->
+                <div class="modal-content" style="background: #FFF1EB">
+                    <div class="modal-header lm-modal-header">
+                        <button type="button" class="btn btn-ghost lm-back-btn" id="lmModalBackBtn" aria-label="Back">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+
+                        <h5 class="modal-title text-center flex-grow-1" id="lmRequestModalLabel">Request Form</h5>
+
+                        <div class="lm-profile-circle" aria-hidden="true">
+                            <div class="lm-profile-percent">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="lm-request-table-wrap">
+                            <div class="table-responsive">
+                                <table class="table table-sm lm-request-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>Applicable License</th>
+                                            <th style="width:120px">Approval</th>
+                                            <th style="width:120px">Upload Doc.</th>
+                                            <th style="width:140px">Link</th>
+                                            <th style="width:80px">View</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lmRequestTbody">
+                                        <!-- Demo rows — these will be (optionally) replaced by JS when a store code is clicked -->
+                                        <tr>
+                                            <td class="text-center"><input type="checkbox" class="form-check-input lm-row-checkbox" /></td>
+                                            <td>
+                                                <a href="javascript:void(0)"
+                                                   class="lm-license-link"
+                                                   data-bs-toggle="modal"
+                                                   data-bs-target="#lmLicenseOverviewModal">
+                                                    Fire NOC
+                                                </a>
+                                            </td>
+                                            <td class="text-center"><button class="btn btn-sm lm-approve-btn">Approve</button></td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-upload-btn d-none">Click Here</button>
+                                                <input type="file" class="d-none lm-hidden-file" />
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-genlink-btn d-none">Generate Link</button>
+                                                <div class="lm-generated-link text-truncate mt-1" style="display:none;"></div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-view-btn" title="View"><i class="bi bi-eye"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center"><input type="checkbox" class="form-check-input lm-row-checkbox" /></td>
+                                            <td>
+                                                <a href="javascript:void(0)"
+                                                   class="lm-license-link"
+                                                   data-bs-toggle="modal"
+                                                   data-bs-target="#lmLicenseOverviewModal">
+                                                    Fire NOC
+                                                </a>
+                                            </td>
+                                            <td class="text-center"><button class="btn btn-sm lm-approve-btn">Approve</button></td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-upload-btn d-none">Click Here</button>
+                                                <input type="file" class="d-none lm-hidden-file" />
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-genlink-btn d-none">Generate Link</button>
+                                                <div class="lm-generated-link text-truncate mt-1" style="display:none;"></div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-view-btn" title="View"><i class="bi bi-eye"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center"><input type="checkbox" class="form-check-input lm-row-checkbox" /></td>
+                                            <td><a href="#" class="lm-license-link">Fire NOC</a></td>
+                                            <td class="text-center"><button class="btn btn-sm lm-approve-btn">Approve</button></td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-upload-btn d-none">Click Here</button>
+                                                <input type="file" class="d-none lm-hidden-file" />
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-genlink-btn d-none">Generate Link</button>
+                                                <div class="lm-generated-link text-truncate mt-1" style="display:none;"></div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-view-btn" title="View"><i class="bi bi-eye"></i></button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center"><input type="checkbox" class="form-check-input lm-row-checkbox" /></td>
+                                            <td><a href="#" class="lm-license-link">Fire NOC</a></td>
+                                            <td class="text-center"><button class="btn btn-sm lm-approve-btn">Approve</button></td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-upload-btn d-none">Click Here</button>
+                                                <input type="file" class="d-none lm-hidden-file" />
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-genlink-btn d-none">Generate Link</button>
+                                                <div class="lm-generated-link text-truncate mt-1" style="display:none;"></div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm lm-view-btn" title="View"><i class="bi bi-eye"></i></button>
+                                            </td>
+                                        </tr>
+
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer d-flex justify-content-end">
+                        <button type="button" class="btn btn-sm" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= License Overview Modal (inside request form) ================= -->
+        <div class="modal fade locationMasterPage" id="lmLicenseOverviewModal" tabindex="-1" aria-hidden="true" style="background-color:transparent">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content lm-license-modal" style="background: #FFF1EB">
+
+                    <!-- HEADER -->
+                    <div class="lm-license-header d-flex align-items-center gap-3">
+                        <button type="button" class="lm-back-btn" data-bs-dismiss="modal">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+
+                        <!-- Logo placeholder -->
+                        <div class="lm-logo-box">
+                            <img src="~/Masters/LocationMaster/logo.svg" />
+                        </div>
+
+                        <div class="ms-auto"></div>
+                    </div>
+
+                    <!-- TITLE BAR -->
+                    <div class="lm-license-title text-center">
+                        License Overview
+                    </div>
+
+                    <!-- BODY -->
+                    <div class="modal-body lm-license-body">
+
+                        <!-- META INFO -->
+                        <div class="row g-3 lm-license-meta">
+                            <div class="col-md-4">
+                                <div class="lm-meta-item">
+                                    <label>License Name:</label>
+                                    <span>Fire NOC</span>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="lm-meta-item">
+                                    <label>Act Name:</label>
+                                    <span>Fire Safety Act</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="lm-meta-item">
+                                    <label>State Name:</label>
+                                    <span>Maharashtra</span>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="lm-meta-item">
+                                    <label>Application Link:</label>
+                                    <a href="#" class="lm-app-link">www.fire.gov.in</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SUMMARY BUTTON -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm lm-summary-btn">Summary</button>
+                        </div>
+
+                        <!-- CONTENT BOX -->
+                        <div class="lm-license-content mt-3">
+
+                            <h6 class="lm-section-title">
+                                Fire Safety Act – Overview
+                            </h6>
+
+                            <p>
+                                The Fire Safety Act applies to all commercial establishments,
+                                factories, warehouses, and public buildings to ensure
+                                adequate fire prevention and safety measures.
+                            </p>
+
+                            <h6 class="lm-sub-title">Applicability</h6>
+                            <p>
+                                This Act is applicable to establishments where human
+                                occupancy, storage of flammable materials, or public
+                                access is involved. Compliance is mandatory before
+                                commencement of operations.
+                            </p>
+
+                            <h6 class="lm-sub-title">Exemptions</h6>
+                            <p>
+                                Certain government buildings and temporary structures
+                                may be exempted subject to conditions notified by the
+                                State Government.
+                            </p>
+
+                            <h6 class="lm-sub-title">Key Provisions</h6>
+                            <p>
+                                Establishments must install approved fire safety equipment,
+                                maintain evacuation plans, conduct periodic audits, and
+                                renew Fire NOC within prescribed timelines.
+                            </p>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= Upload Document PAGE (modal-style page) ================= -->
+        <div class="modal fade lm-upload-page-modal" id="lmUploadPageModal" tabindex="-1" aria-labelledby="lmUploadPageModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl uploadModalDialog modal--centered">
+                <div class="modal-content" style="background: transparent; border: 0;">
+                    <!-- top bar inside modal (visual page header) -->
+                    <div class="lm-upload-page-card p-3" style="background: #FFF1EB; border-radius:12px;">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm lm-upload-back" id="lmUploadBack"><i class="bi bi-arrow-left"></i> Go Back</button>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm" id="lmSaveDraft">Save as Draft</button>
+                                <button class="btn btn-sm" id="lmSubmitUpload">Submit</button>
+                            </div>
+                        </div>
+
+                        <!-- Info Row -->
+                        <div class="lm-info-row mb-3 d-flex align-items-center justify-content-between p-2" style="background: #fff; border-radius:8px;">
+                            <div class="text-muted" style="font-weight:400">S.No.</div>
+                            <div class="text-center text-muted" style="font-weight:400">Documents/Information Required</div>
+                            <div class="text-muted" style="font-weight:400">Location code - <span id="lmUploadLocationCode">00002671</span></div>
+                        </div>
+
+                        <!-- Directors Details -->
+                        <div class="lm-section mb-4">
+                            <h6 class="mb-3" style="color: var(--primary); font-weight:400">1. Directors Details</h6>
+
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label small">Name</label>
+                                    <input type="text" class="form-control form-control-sm lm-page-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Father Name</label>
+                                    <input type="text" class="form-control form-control-sm lm-page-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Address</label>
+                                    <input type="text" class="form-control form-control-sm lm-page-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Aadhaar No.</label>
+                                    <input type="text" class="form-control form-control-sm lm-page-input" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small">PAN No.</label>
+                                    <input type="text" class="form-control form-control-sm lm-page-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Date of Birth</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="date" class="form-control form-control-sm lm-page-input" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Email ID</label>
+                                    <input type="email" class="form-control form-control-sm lm-page-input" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">Mobile No.</label>
+                                    <input type="tel" class="form-control form-control-sm lm-page-input" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Required Documents -->
+                        <div class="lm-section">
+                            <h6 class="mb-3" style="color: var(--primary); font-weight:400">4. Required Documents</h6>
+
+                            <div class="row g-3">
+                                <!-- Example repeated upload cards -->
+                                <div class="col-md-3">
+                                    <div class="lm-upload-card">
+                                        <div class="lm-upload-label">PAN card of Authorized Person</div>
+                                        <div class="lm-upload-drop" data-target-input="panFile">
+                                            <input type="file" id="panFile" class="d-none lm-upload-input" />
+                                            <div class="lm-upload-inner text-center">
+                                                <i class="bi bi-plus-lg" style="font-size:28px; opacity:0.35;"></i>
+                                                <div class="small text-muted mt-2">Click to upload or drag & drop</div>
+                                                <!-- demo preview: include uploaded preview here -->
+                                                <div class="lm-preview mt-2" style="display:none;">
+                                                    <img src="/mnt/data/241ca8ad-5434-44f2-aeb9-3fcf30a83aba.png" alt="preview" style="max-width:100%; border-radius:6px;" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="lm-upload-card">
+                                        <div class="lm-upload-label">Aadhar card of Authorized Person</div>
+                                        <div class="lm-upload-drop" data-target-input="aadharFile">
+                                            <input type="file" id="aadharFile" class="d-none lm-upload-input" />
+                                            <div class="lm-upload-inner text-center">
+                                                <i class="bi bi-plus-lg" style="font-size:28px; opacity:0.35;"></i>
+                                                <div class="small text-muted mt-2">Click to upload or drag & drop</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="lm-upload-card">
+                                        <div class="lm-upload-label">Photo of Authorized Person</div>
+                                        <div class="lm-upload-drop" data-target-input="photoFile">
+                                            <input type="file" id="photoFile" class="d-none lm-upload-input" />
+                                            <div class="lm-upload-inner text-center">
+                                                <i class="bi bi-plus-lg" style="font-size:28px; opacity:0.35;"></i>
+                                                <div class="small text-muted mt-2">Click to upload or drag & drop</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="lm-upload-card">
+                                        <div class="lm-upload-label">Photograph of Shop & Establishment</div>
+                                        <div class="lm-upload-drop" data-target-input="photoShop">
+                                            <input type="file" id="photoShop" class="d-none lm-upload-input" />
+                                            <div class="lm-upload-inner text-center">
+                                                <i class="bi bi-plus-lg" style="font-size:28px; opacity:0.35;"></i>
+                                                <div class="small text-muted mt-2">Click to upload or drag & drop</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- more rows can be added; keep layout consistent -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LICENSE COPY SLIDE-IN MODAL -->
+        <div class="modal fade licenseCopyModalWrap " id="licenseCopyModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-slideout modal-dialog-right m-0 ">
+                <div class="modal-content h-100">
+
+                    <!-- HEADER -->
+                    <div class="modal-header border-0">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <!-- BODY -->
+                    <div class="modal-body text-center">
+
+                        <!-- Circular Progress -->
+                        <div class="progress-container mb-3">
+                            <svg class="circle-svg" width="140" height="140">
+                                <circle class="bg-circle" cx="70" cy="70" r="60"></circle>
+                                <circle class="fg-circle" cx="70" cy="70" r="60"></circle>
+                            </svg>
+                            <div class="progress-text">
+                                <div class="title">License Status</div>
+                                <div class="percent" id="licensePercent">1%</div>
+                            </div>
+                        </div>
+
+                        <!-- Location details -->
+                        <p class="mb-1">Location Code: <span id="locCode">00002678</span></p>
+                        <p class="text-muted small mb-3">Last Updated: <span id="lastUpdated">–</span></p>
+
+                        <hr>
+
+                        <h6 class="mb-2 fw-bold">Documents</h6>
+
+                        <ul class="doc-list text-start px-4">
+                            <li><a href="#">PPL (Music License)</a></li>
+                            <li><a href="#">Fire NOC</a></li>
+                            <li><a href="#">Signage License</a></li>
+                            <li><a href="#">Trade License</a></li>
+                        </ul>
+
+                    </div>
+
+                    <!-- FOOTER FIXED -->
+                    <div class="modal-footer border-0">
+                        <button class="btn btn-orange w-100">View More</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= View More (Full-width) Modal ================= -->
+        <div class="modal fade lm-viewmore-modal" id="lmViewMoreModal" tabindex="-1" aria-labelledby="lmViewMoreModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen lm-viewmore-dialog">
+                <div class="modal-content lm-upload-page-card" style="background:#FFF1EB;">
+                    <!-- Header row (top bar) -->
+                    <div class="d-flex align-items-center justify-content-between py-2 px-4 border-bottom" style="gap: 12px; background: #E45D27; ">
+                        <div>
+                            <h5 class="mb-0" id="lmViewMoreModalLabel" style="font-weight:500; color:#fff">View Store — <span id="vmStoreCodeHeader">00000000</span></h5>
+                        </div>
+
+                        <!-- Top-right Back button -->
+                        <div>
+                            <button type="button"
+                                    class="btn lm-upload-back"
+                                    id="lmViewMoreBackBtn"
+                                    data-bs-dismiss="modal">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body lm-viewmore-body p-4">
+                        <div class="container-fluid">
+                            <div class="row g-3 ">
+                                <!-- --- all fields copied from user earlier --- -->
+                                <div class="col-md-3">
+                                    <label class="form-label">Location Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtStoreCode_vm" disabled />
+                                    <span class="text-danger d-none" id="vmStoreSpecialCharError">Special characters are not allowed.</span>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Ref. Location Code</label>
+                                    <input type="text" class="form-control" id="txtRefStoreCode_vm" maxlength="10" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="control-label">Compliance Category<span class="vd_red">*</span></label>
+                                    <select id="ddlComplianceCategory_vm" class="form-control">
+                                        <option value="">Select Compliance</option>
+                                        <option value="Factory">Factory</option>
+                                        <option value="Establishment">Establishment</option>
+                                        <option value="Contractor">Contractor</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="control-label">Category<span class="vd_red">*</span></label>
+                                    <select id="ddlCategory_vm" class="form-control">
+                                        <option value="">Select Category</option>
+                                        <option value="1">Store</option>
+                                        <option value="2">Warehouse</option>
+                                        <option value="3">Factory</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="control-label">Operation model<span class="vd_red">*</span></label>
+                                    <select id="ddlOperationModel_vm" class="form-control">
+                                        <option value="">Select</option>
+                                        <option value="COCO">COCO–Company Owned Company Operated</option>
+                                        <option value="FOCO">FOCO–Franchise Owned Company Operated</option>
+                                        <option value="FICO">FICO–Franchise Invested Company Operated</option>
+                                        <option value="COFO">COFO–Company Owned Franchise Operated</option>
+                                        <option value="FOFO">FOFO–Franchise Owned Franchise Operated</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Location Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtStoreName_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Complete Address <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtCompleteAddress_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="control-label">Proposed/Existing <span class="text-danger">*</span></label>
+                                    <input id="txtProposedDate_vm" type="date" class="form-control" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Location <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtStoreLocation_vm" />
+                                </div>
+
+                                <!-- State / City / Circle / Region -->
+                                <div class="col-md-3">
+                                    <label class="control-label">State<span class="vd_red">*</span></label>
+                                    <select id="ddlstate_vm" class="form-control">
+                                        <option value="">Select State</option>
+                                        <option value="AP">Andhra Pradesh</option>
+                                        <!-- add more later -->
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="control-label">City<span class="vd_red">*</span></label>
+                                    <select id="ddlcity_vm" class="form-control">
+                                        <option value="">Select City</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Circle/Cluster</label>
+                                    <select id="txtCircleId_vm" class="form-control">
+                                        <option value="">Select</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Region<span class="vd_red">*</span></label>
+                                    <select id="txtRegionId_vm" class="form-control">
+                                        <option value="">Select</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Zip Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtZipCode_vm" maxlength="6" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Location Manager Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtStoreManagerName_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Location Manager Mobile No. <span class="text-danger">*</span></label>
+                                    <input type="tel" class="form-control" id="txtStoreManagerMobileNo_vm" maxlength="10" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Location Manager Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" id="txtStoreManagerEmail_vm" />
+                                </div>
+
+                                <!-- Escalation levels 1..5 -->
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 1 Name</label>
+                                    <input type="text" class="form-control" id="txtAreaManagerName_vm" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 1 Mobile No.</label>
+                                    <input type="text" class="form-control" id="txtAreaManagerMobileNo_vm" maxlength="10" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 1 Email</label>
+                                    <input type="text" class="form-control" id="txtAreaManagerEmail_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 2 Name</label>
+                                    <input type="text" class="form-control" id="txtZonalManagerName_vm" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 2 Mobile No.</label>
+                                    <input type="text" class="form-control" id="txtZonalManagerMobileNo_vm" maxlength="10" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 2 Email</label>
+                                    <input type="text" class="form-control" id="txtZonalManagerEmail_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 3 Name</label>
+                                    <input type="text" class="form-control" id="txtCircleHeadName_vm" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 3 Mobile No.</label>
+                                    <input type="text" class="form-control" id="txtCircleHeadMobileNo_vm" maxlength="10" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 3 Email</label>
+                                    <input type="text" class="form-control" id="txtCircleHeadEmail_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 4 Name</label>
+                                    <input type="text" class="form-control" id="txtRegionalHeadName_vm" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 4 Mobile No.</label>
+                                    <input type="text" class="form-control" id="txtRegionalHeadMobileNo_vm" maxlength="10" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 4 Email</label>
+                                    <input type="text" class="form-control" id="txtRegionalHeadEmail_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 5 Name</label>
+                                    <input type="text" class="form-control" id="txtCorporateHeadName_vm" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 5 Mobile No.</label>
+                                    <input type="text" class="form-control" id="txtCorporateHeadMobileNo_vm" maxlength="10" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Escalation level 5 Email</label>
+                                    <input type="text" class="form-control" id="txtCorporateHeadEmail_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Location Area in sq.ft. <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtSQFTStoreArea_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">Days to Expire <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtDaysOfExpire_vm" />
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label">License Expiry days<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtled_vm" />
+                                </div>
+
+                                <div class="col-md-3 statuscus">
+                                    <label class="form-label">Status <span class="text-danger">*</span></label>
+                                    <select id="ddlStatus_vm" class="form-control">
+                                        <option value="">Select</option>
+                                        <option value="0">Deactive</option>
+                                        <option value="1">Active</option>
+                                        <option value="2">Upcoming</option>
+                                    </select>
+                                </div>
+
+                                <!-- Select Due date for (fieldset) -->
+                                <div class="col-12">
+                                    <fieldset class="border p-3 mb-3">
+                                        <legend class="float-none w-auto px-2"><h6 class="mb-0">Select Due date for</h6></legend>
+
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label">License</label>
+                                                <input type="text" class="form-control" id="txtLicenseD_vm" disabled />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Days to Expire</label>
+                                                <input type="text" class="form-control" id="txtLicenseDaysOfExpire_vm" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Expiry Days</label>
+                                                <input type="text" class="form-control" id="txtLicenseED_vm" />
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label">Labour</label>
+                                                <input type="text" class="form-control" id="txtLabourD_vm" disabled />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Days to Expire</label>
+                                                <input type="text" class="form-control" id="txtLabourDaysOfExpire_vm" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Expiry Days</label>
+                                                <input type="text" class="form-control" id="txtLabourED_vm" />
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label">Factory</label>
+                                                <input type="text" class="form-control" id="txtFactoryD_vm" disabled />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Days to Expire</label>
+                                                <input type="text" class="form-control" id="txtFactoryDaysOfExpire_vm" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Expiry Days</label>
+                                                <input type="text" class="form-control" id="txtFactoryED_vm" />
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label">Finance</label>
+                                                <input type="text" class="form-control" id="txtFinanceD_vm" disabled />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Days to Expire</label>
+                                                <input type="text" class="form-control" id="txtFinanceDaysOfExpire_vm" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Expiry Days</label>
+                                                <input type="text" class="form-control" id="txtFinanceED_vm" />
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <label class="form-label">Secraterial</label>
+                                                <input type="text" class="form-control" id="txtSecraterialD_vm" disabled />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Days to Expire</label>
+                                                <input type="text" class="form-control" id="txtSecraterialDaysOfExpire_vm" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Expiry Days</label>
+                                                <input type="text" class="form-control" id="txtSecraterialED_vm" />
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </div>
+
+                                <!-- Documents heading + table -->
+                                <div class="col-12">
+                                    <h6 class="subheading m-0">Documents</h6>
+
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm lm-docs-table mb-0">
+                                            <thead>
+                                                <tr class="text-center">
+                                                    <th>Sr no</th>
+                                                    <th>Document Name</th>
+                                                    <th>Period From</th>
+                                                    <th>Period Upto</th>
+                                                    <th>View/Upload</th>
+                                                    <th>Remark</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Recreate rows (static/demo) similar to earlier version -->
+                                                <tr>
+                                                    <td class="text-center">1</td>
+                                                    <td>Electricity Bill</td>
+                                                    <td></td>
+                                                    <td><input type="date" class="form-control form-control-sm" /></td>
+                                                    <td class="text-center">
+                                                        <input type="file" class="d-none" id="fuElectricityBill_vm" />
+                                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('fuElectricityBill_vm').click();">Choose File</button>
+                                                    </td>
+                                                    <td><input type="text" class="form-control form-control-sm" /></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center">2</td>
+                                                    <td>Lease/LOI</td>
+                                                    <td><input type="date" class="form-control form-control-sm" /></td>
+                                                    <td><input type="date" class="form-control form-control-sm" /></td>
+                                                    <td class="text-center">
+                                                        <input type="file" class="d-none" id="fuRentAgreement_vm" />
+                                                        <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('fuRentAgreement_vm').click();">Choose File</button>
+                                                    </td>
+                                                    <td><input type="text" class="form-control form-control-sm" /></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center">3</td>
+                                                    <td>Property Tax Receipt</td>
+                                                    <td></td>
+                                                    <td><input type="date" class="form-control form-control-sm" /></td>
+                                                    <td class="text-center"><input type="file" class="d-none" id="fuPropertyTax_vm" /><button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('fuPropertyTax_vm').click();">Choose File</button></td>
+                                                    <td><input type="text" class="form-control form-control-sm" /></td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center">4</td>
+                                                    <td>Fire NOC</td>
+                                                    <td></td>
+                                                    <td><input type="date" class="form-control form-control-sm" /></td>
+                                                    <td class="text-center"><input type="file" class="d-none" id="fuFireNoc_vm" /><button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('fuFireNoc_vm').click();">Choose File</button></td>
+                                                    <td><input type="text" class="form-control form-control-sm" /></td>
+                                                </tr>
+
+                                                <!-- add more rows as needed -->
+                                                <tr>
+                                                    <td class="text-center">5</td>
+                                                    <td>Additional Document</td>
+                                                    <td></td>
+                                                    <td><input type="date" class="form-control form-control-sm" /></td>
+                                                    <td class="text-center"><input type="file" class="d-none" id="fuAdditional_vm" /><button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('fuAdditional_vm').click();">Choose File</button></td>
+                                                    <td><input type="text" class="form-control form-control-sm" /></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div> <!-- /.row -->
+                        </div> <!-- /.container-fluid -->
+                    </div> <!-- /.modal-body -->
+                    <!-- Footer (fixed) -->
+                    <div class="modal-footer border-0 p-4" style="background:transparent;">
+                        <div class="w-100">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn" id="lmUpdateStoreBtn" style="background:var(--primary);color:#fff">Update Store</button>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- /.modal-content -->
+            </div> <!-- /.modal-dialog -->
+        </div> <!-- /.modal -->
+        <!-- ================= Manage Project Document Modal (scoped) ================= -->
+        <div class="modal fade lm-project-modal" id="lmProjectModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen lm-project-dialog m-0">
+                <div class="modal-content lm-project-card h-100">
+
+                    <!-- Top bar -->
+                    <div class="d-flex align-items-center justify-content-between py-2 px-4 lm-project-topbar">
+                        <div>
+                            <h5 class="mb-0 lm-project-title">Manage Project — <span id="pmStoreCodeHeader">—</span></h5>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn lm-upload-back" id="pmBackBtn"><i class="bi bi-arrow-left"></i> Back</button>
+                        </div>
+                    </div>
+
+                    <!-- BODY -->
+                    <div class="modal-body lm-project-body px-3">
+                        <div class="row g-4">
+
+                            <!-- Overview -->
+                            <section class="manageProjectModal-ov mb-3">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6 col-xl-3">
+                                        <div class="mp-ov-card">
+                                            <div class="mp-ov-card-top">Current Stage</div>
+                                            <div class="mp-ov-card-body">
+                                                <span id="mpStage">Due Diligence</span>
+                                                <div class="mp-ov-sub mt-1">Last updated <small id="mpStageUpdated">02 Feb 2025</small></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-3">
+                                        <div class="mp-ov-card">
+                                            <div class="mp-ov-card-top">Target Open</div>
+                                            <div class="mp-ov-card-body">
+                                                <div class="mp-big">Apr 15, 2026</div>
+                                                <div class="mp-ov-sub mt-1"><small id="mpDaysLeft">90 days left</small></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-3">
+                                        <div class="mp-ov-card h-100">
+                                            <div class="mp-ov-card-top">Project Lead</div>
+                                            <div class="mp-ov-card-body d-flex align-items-center gap-2">
+                                                <div class="mp-avatar" id="mpLeadAvatar">AS</div>
+                                                <div>
+                                                    <div id="mpLeadName" class="mp-big">Amit Sharma</div>
+                                                    <div class="mp-ov-sub"><small id="mpLeadContact">amit@company.com · +91 98xxxxxxx</small></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6 col-xl-3">
+                                        <div class="mp-ov-card h-100">
+                                            <div class="mp-ov-card-top">Risk Score</div>
+                                            <div class="mp-ov-card-body d-flex align-items-center gap-3">
+                                                <div class="mp-risk-ring">
+                                                    <svg viewBox="0 0 36 36" class="circular-chart">
+                                                        <path class="circle-bg" d="M18 2.1a15.9 15.9 0 1 0 0 31.8a15.9 15.9 0 1 0 0-31.8"></path>
+                                                        <path id="mpRiskArc" class="circle" stroke-dasharray="45,100" d="M18 2.1a15.9 15.9 0 1 0 0 31.8a15.9 15.9 0 1 0 0-31.8"></path>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <div id="mpRiskText" class="mp-big">Medium</div>
+                                                    <div class="mp-ov-sub"><small id="mpRiskPercent">45%</small></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- Two-column area: left = checklist (clickable), right = document management -->
+                            <div class="row g-3 w-100">
+                                <div class="col-12 col-lg-5 d-flex">
+                                    <!-- Due Diligence Checklist Section -->
+                                    <div class="pm-card p-3 w-100 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0" style="color: #E45D27;">Due Diligence Checklist</h6>
+                                            <small class="text-muted">Progress: <span id="pmChecklistProgress">0%</span></small>
+                                        </div>
+
+                                        <!-- LIST (clickable labels) -->
+                                        <ul class="list-group pm-checklist mb-0" id="pmChecklist" role="list">
+                                            <li class="list-group-item d-flex align-items-center justify-content-between pm-check-item" data-key="legal">
+                                                <div>
+                                                    <div class="form-check mb-0 d-flex align-items-center gap-2">
+                                                        <input class="form-check-input pm-check-toggle" type="checkbox" />
+                                                        <span class="ms-1 pm-check-label" data-category="legal" tabindex="0" role="button">Legal</span>
+                                                    </div>
+                                                    <div class="small text-muted mt-1">Assigned to: <input class="form-control form-control-sm pm-inline-input pm-assignee" placeholder="Name" /></div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <input type="date" class="form-control form-control-sm pm-date" />
+                                                    <div class="small text-muted mt-1">Status: <span class="pm-status-badge">Incomplete</span></div>
+                                                </div>
+                                            </li>
+
+                                            <li class="list-group-item d-flex align-items-center justify-content-between pm-check-item" data-key="financial">
+                                                <div>
+                                                    <div class="form-check mb-0 d-flex align-items-center gap-2">
+                                                        <input class="form-check-input pm-check-toggle" type="checkbox" />
+                                                        <span class="ms-1 pm-check-label" data-category="financial" tabindex="0" role="button">Financial</span>
+                                                    </div>
+                                                    <div class="small text-muted mt-1">Assigned to: <input class="form-control form-control-sm pm-inline-input pm-assignee" placeholder="Name" /></div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <input type="date" class="form-control form-control-sm pm-date" />
+                                                    <div class="small text-muted mt-1">Status: <span class="pm-status-badge">Incomplete</span></div>
+                                                </div>
+                                            </li>
+
+                                            <li class="list-group-item d-flex align-items-center justify-content-between pm-check-item" data-key="environmental">
+                                                <div>
+                                                    <div class="form-check mb-0 d-flex align-items-center gap-2">
+                                                        <input class="form-check-input pm-check-toggle" type="checkbox" />
+                                                        <span class="ms-1 pm-check-label" data-category="environmental" tabindex="0" role="button">Environmental</span>
+                                                    </div>
+                                                    <div class="small text-muted mt-1">Assigned to: <input class="form-control form-control-sm pm-inline-input pm-assignee" placeholder="Name" /></div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <input type="date" class="form-control form-control-sm pm-date" />
+                                                    <div class="small text-muted mt-1">Status: <span class="pm-status-badge">Incomplete</span></div>
+                                                </div>
+                                            </li>
+
+                                            <li class="list-group-item d-flex align-items-center justify-content-between pm-check-item" data-key="market">
+                                                <div>
+                                                    <div class="form-check mb-0 d-flex align-items-center gap-2">
+                                                        <input class="form-check-input pm-check-toggle" type="checkbox" />
+                                                        <span class="ms-1 pm-check-label" data-category="market" tabindex="0" role="button">Market Analysis</span>
+                                                    </div>
+                                                    <div class="small text-muted mt-1">Assigned to: <input class="form-control form-control-sm pm-inline-input pm-assignee" placeholder="Name" /></div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <input type="date" class="form-control form-control-sm pm-date" />
+                                                    <div class="small text-muted mt-1">Status: <span class="pm-status-badge">Incomplete</span></div>
+                                                </div>
+                                            </li>
+                                        </ul>
+
+                                        <div class="d-flex gap-2 mt-3">
+                                            <button class="btn btn-sm" id="pmAddChecklist">+ Add item</button>
+                                            <button class="btn btn-sm ms-auto" id="pmCalcProgress">Refresh progress</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-lg-7 d-flex">
+                                    <!-- Document Management Section-->
+                                    <div class="pm-card p-3 w-100 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0" style="color: #E45D27;"><span id="pmActiveCategoryLabel">Legal </span>Document Management</h6>
+                                            <div>
+                                                <button class="btn btn-sm  me-2" id="pmOpenVersionHistory"><i class="bi bi-clock-history"></i> Version history</button>
+                                                <button class="btn btn-sm" id="pmDownloadChecklist"><i class="bi bi-download"></i> Download checklist</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- table area - will be dynamically populated by JS per category -->
+                                        <div class="table-responsive pm-doc-scroll-wrap rounded-3">
+                                            <table class="table table-sm mb-0 pm-doc-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width:40px"><input id="pmSelectAllDocs" type="checkbox" /></th>
+                                                        <th>Document</th>
+                                                        <th>Uploaded</th>
+                                                        <th>Uploader</th>
+                                                        <th>Status</th>
+                                                        <th class="text-center">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="pmDocsList">
+                                                    <!-- JS will populate rows -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div class="mt-3">
+                                            <small class="text-muted" id="pmInstructionText">Uploaded files will be kept here for versioning (UI-only in this static layout).</small>
+                                        </div>
+
+                                        <div class="mt-4 ">
+                                            <button class="btn btn-sm" id="pmAddRow">+ Add Row</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div> <!-- /.row two-column -->
+                            <!-- Notes -->
+                            <div class="col-12">
+                                <div class="pm-card p-3 d-flex gap-3 align-items-start">
+                                    <textarea class="form-control pm-notes" rows="3" placeholder="Project notes / activity log (UI-only)"></textarea>
+                                    <div class="d-flex flex-column gap-2">
+                                        <button class="btn btn-sm" id="pmAddNote">Add note</button>
+                                        <button class="btn btn-sm" id="pmShowActivity">Recent activity</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div> <!-- /.row g-4 -->
+                    </div> <!-- /.modal-body -->
+                    <!-- FOOTER -->
+                    <div class="modal-footer border-0 px-4 lm-project-footer">
+                        <div class="w-100 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn " id="pmCancelProject">Cancel</button>
+                            <button type="button" class="btn " id="pmSaveDraftBtn">Save Draft</button>
+                            <button type="button" class="btn " id="pmSubmitApprovalBtn">Submit</button>
+                        </div>
+                    </div>
+
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div>
+
+        <!-- Version history modal (unchanged but used by script) -->
+        <div class="modal fade lm-version-modal" id="lmVersionModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <h6 class="mb-0">Version history</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul id="pmVersionList" class="list-group">
+                            <li class="list-group-item small text-muted">No versions yet (UI-only).</li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VIEW ARCHITECT FORMS (REPLACEMENT - Architect modal only) ================= -->
+        <div class="modal fade lm-architect-modal" id="lmArchitectModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-fullscreen lm-architect-dialog m-0">
+                <div class="modal-content lm-architect-card h-100">
+
+                    <!-- Top bar -->
+                    <div class="d-flex align-items-center justify-content-between py-2 px-4 lm-architect-topbar">
+                        <div>
+                            <h5 class="mb-0 lm-architect-title">Architectural & Build Plans — <span id="archStoreCodeHeader">—</span></h5>
+                            <div class="small lm-architect-sub text-white-75" id="archSubtitle">Architect details & compliance</div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn lm-upload-back" id="archBackBtn"><i class="bi bi-arrow-left"></i> Back</button>
+                        </div>
+                    </div>
+
+                    <!-- BODY -->
+                    <div class="modal-body lm-architect-body p-4">
+                        <div class="container-fluid">
+
+                            <!-- Row 1: Activities (left) + Activity Details table (right) -->
+                            <div class="row g-4">
+                                <!-- Activities list -->
+                                <div class="col-12 col-xl-6">
+                                    <div class="arch-card p-3 h-100 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h6 class="mb-0" style="color:var(--primary)">Construction Activities</h6>
+                                            <small class="text-muted">Click an activity to load contractor, drawings & sub-activities</small>
+                                        </div>
+
+                                        <div class="d-flex gap-2 mb-3">
+                                            <button class="btn btn-sm" id="archAddActivity">+ Add Activity</button>
+                                            <button class="btn btn-sm ms-auto" id="archRefreshActivities">Refresh</button>
+                                        </div>
+
+                                        <div id="archActivitiesWrap" class="arch-activities d-flex gap-2 flex-column" role="list">
+                                            <!-- Activity items are rendered by JS -->
+                                        </div>
+
+                                        <div class="mt-auto small text-muted align-self-start pt-3">Select an activity to view details →</div>
+                                    </div>
+                                </div>
+
+                                <!-- Activity Details table (right) -->
+                                <div class="col-12 col-xl-6">
+                                    <div class="arch-card p-3 h-100 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h6 class="mb-0" style="color:var(--primary)"><span id="activityNameLabel">Activity</span> — Activity Details</h6>
+                                            <small class="text-muted">Sub-activities & status</small>
+                                        </div>
+
+                                        <div class="activity-details-scroll-wrap" style="overflow:auto; max-height:420px;">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm mb-0" id="activityDetailsTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width:36%">Sub-Activity</th>
+                                                            <th style="width:12%">Done</th>
+                                                            <th style="width:18%">Assigned To</th>
+                                                            <th style="width:12%">Start</th>
+                                                            <th style="width:12%">End</th>
+                                                            <th style="width:10%" class="text-center">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="activityDetailsBody">
+                                                        <!-- injected by JS -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3 d-flex gap-2">
+                                            <button class="btn btn-sm" id="addSubActivityRow">+ Add Row</button>
+                                            <div class="ms-auto small text-muted align-self-center">Rows are saved client-side (UI-only)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 2: Contractor Info (left) + Drawings & Blueprints (right) -->
+                            <div class="row g-4 mt-1">
+                                <div class="col-12 col-lg-6">
+                                    <div class="arch-card p-3 h-100 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0" style="color:var(--primary)">Contractor Information</h6>
+                                            <small class="text-muted">Primary contractor for selected activity</small>
+                                        </div>
+
+                                        <div class="row g-2 arch-contractor-scroll-wrap" style="overflow:auto; max-height:360px;">
+                                            <div class="col-12">
+                                                <label class="form-label small mb-1">Activity Name</label>
+                                                <input type="text" class="form-control form-control-sm" id="archContractorCompany" readonly>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Contractor Name</label>
+                                                <input type="text" class="form-control form-control-sm" id="archContractorName" readonly>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">License Number</label>
+                                                <input type="text" class="form-control form-control-sm" id="archContractorLicense" readonly>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Phone</label>
+                                                <input type="tel" class="form-control form-control-sm" id="archContractorPhone" readonly>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Email</label>
+                                                <input type="email" class="form-control form-control-sm" id="archContractorEmail" readonly>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Start Date</label>
+                                                <input type="date" class="form-control form-control-sm" id="archStartDate" readonly>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Est. Completion</label>
+                                                <input type="date" class="form-control form-control-sm" id="archEndDate" readonly>
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small mb-1">Notes</label>
+                                                <textarea class="form-control form-control-sm" id="archContractorNotes" rows="4" readonly></textarea>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-xl-6">
+                                    <div class="arch-card p-3 h-100 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-3">
+                                            <h6 class="mb-0" style="color:var(--primary)">Drawings & Blueprints</h6>
+                                            <small class="text-muted">Upload / view plans (activity-specific)</small>
+                                        </div>
+
+                                        <div id="archGallery" class="arch-gallery" style="overflow:auto; min-height:120px;"></div>
+
+                                        <div class="row g-2 mt-3">
+                                            <div class="col-6 col-md-4">
+                                                <label class="form-label small mb-1">Add Floor Plan</label>
+                                                <input type="file" class="form-control form-control-sm arch-file-input" data-type="Floor Plan">
+                                            </div>
+                                            <div class="col-6 col-md-4">
+                                                <label class="form-label small mb-1">Add Electrical Layout</label>
+                                                <input type="file" class="form-control form-control-sm arch-file-input" data-type="Electrical">
+                                            </div>
+                                            <div class="col-6 col-md-4">
+                                                <label class="form-label small mb-1">Add HVAC Diagram</label>
+                                                <input type="file" class="form-control form-control-sm arch-file-input" data-type="HVAC">
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3">
+                                            <small class="text-muted">Uploaded files are kept client-side (UI-only). Click thumbnail to preview.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Compliance (full width) -->
+                            <div class="row g-4 mt-1">
+                                <div class="col-12">
+                                    <div class="arch-card p-3 d-flex flex-column">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="mb-0" style="color:var(--primary)">Compliance Review Status</h6>
+                                            <small class="text-muted">Issues & severity</small>
+                                        </div>
+
+                                        <div id="archComplianceAlert" class="arch-alert d-none" role="alert">
+                                            <div class="arch-alert-title"> Compliance Issues Found (<span id="archIssuesCount">0</span>)</div>
+                                            <ul id="archIssuesList" class="mb-0 mt-2"></ul>
+                                        </div>
+
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm" id="archAddIssue">+ Add Issue</button>
+                                            <button class="btn btn-sm ms-2" id="archResolveAll">Resolve All</button>
+                                        </div>
+
+                                        <div class="mt-auto small text-muted pt-3">Issues are UI-only in this static demo.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- FOOTER -->
+                    <div class="modal-footer border-0 p-4 lm-architect-footer">
+                        <div class="w-100 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn" id="archCancelBtn">Cancel</button>
+                            <button type="button" class="btn " id="archSaveDraftBtn">Save Draft</button>
+                            <button type="button" class="btn " id="archSubmitBtn">Submit </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Architect Version history tiny modal (unchanged) -->
+        <div class="modal fade lm-arch-version-modal" id="lmArchVersionModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <h6 class="mb-0">Version history</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul id="archVersionList" class="list-group">
+                            <li class="list-group-item small text-muted">No versions yet (UI-only).</li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- ================= IMPORT CARD (hidden by default) ================= -->
+        <div id="importCard" class="card section-card d-none">
+            <div class="card-body p-3">
+                <h6>Import Locations</h6>
+                <p class="text-muted">Upload CSV or Excel to import multiple locations.</p>
+
+                <!-- Download Template -->
+                <button class="btn btn-sm btn-outline-primary mb-3" id="lmDownloadTemplate">
+                    <i class="bi bi-download me-1"></i> Download Template
+                </button>
+
+                <!-- Upload Box -->
+                <div class="lm-import-box p-3">
+                    <label class="form-label fw-semibold mb-2">Choose File</label>
+                    <input type="file" id="locationImportFile" class="form-control" />
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn lm-import-save-btn px-4" id="importSaveBtn">
+                            Save
+                        </button>
+
+                        <button class="btn lm-cancel-btn px-4" id="importCancelBtn">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <div id="importFilePreview" class="mt-3 d-none"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

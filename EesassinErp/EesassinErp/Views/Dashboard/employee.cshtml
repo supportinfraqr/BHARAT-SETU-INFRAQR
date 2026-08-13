@@ -1,0 +1,789 @@
+﻿@{
+    ViewBag.Title = "Employee";
+    Layout = "~/Views/Shared/_GeneralLayout.cshtml";
+}
+
+<div class="container-fluid pagecontentbody">
+    <div class="tab-content">
+        <div class="pagebody removebg-color">
+            <div class="col-md-12 pageheader pb-2">
+                <div class="row">
+                    <div class="col-md-9">
+                        <h4 class="mb-0">Employee</h4>
+                    </div>
+                    <div class="col-sm-3 text-end">
+                        <a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#new-employee"><span class="fas fa-plus"></span>&nbsp;&nbsp;New Employee</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab" aria-controls="tab1" aria-selected="true">View</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab" aria-controls="tab2" aria-selected="false">Import</button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                            <div class="row mb-3">
+                                <div class="col-md-9 mt-3">
+                                    <ul class="filter-search">
+                                        <li class="p-0">
+                                            <div class="input-group">
+                                                <input class="form-control" type="text" id="searchbox" value="" placeholder="Search">
+                                                <button class="btn btn-default" type="button" id="button-addon2"><span class="icons icon-magnifier"></span></button>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-3 mt-3">
+                                    <ul class="btngroup">
+                                        <li></li>
+                                        <li class="nav-item submenu"><a class="btn btn-default" type="button" id="A1">Short by <span class="fa fa-arrow-down"></span></a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="table-responsive nosearch">
+                                <table class="table table-bordred table-hover datatable">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <input type="checkbox" /></th>
+                                            <th width="12%">Employee Code</th>
+                                            <th>Employee Name</th>
+                                            <th>Designation</th>
+                                            <th>D.O.I.</th>
+                                            <th>Department</th>
+                                            <th>Document Status</th>
+                                            <th width="8%">Status</th>
+                                            <th width="5%"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td class="text-success">12345607</td>
+                                            <td>Ajay Sinhe</td>
+                                            <td>HR Executive</td>
+                                            <td>20/02/2022</td>
+                                            <td>Sales</td>
+                                            <td>
+                                                <div class="progress" data-percentage="80">
+                                                    <span class="progress-left">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <span class="progress-right">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <div class="progress-value">
+                                                        <div class="text-center">
+                                                            80%                                                               
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="themeskin" checked>
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="modal" data-bs-target="#profileview"><span class="fa fa-ellipsis-v"></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td class="text-success">12345607</td>
+                                            <td>Ajay Sinhe</td>
+                                            <td>HR Executive</td>
+                                            <td>20/02/2022</td>
+                                            <td>Sales</td>
+                                            <td>
+                                                <div class="progress" data-percentage="80">
+                                                    <span class="progress-left">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <span class="progress-right">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <div class="progress-value">
+                                                        <div class="text-center">
+                                                            80%                                                               
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="Checkbox1" checked>
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="modal" data-bs-target="#profileview"><span class="fa fa-ellipsis-v"></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td class="text-success">12345607</td>
+                                            <td>Ajay Sinhe</td>
+                                            <td>HR Executive</td>
+                                            <td>20/02/2022</td>
+                                            <td>Sales</td>
+                                            <td>
+                                                <div class="progress" data-percentage="80">
+                                                    <span class="progress-left">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <span class="progress-right">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <div class="progress-value">
+                                                        <div class="text-center">
+                                                            80%                                                               
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="Checkbox3" checked>
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="modal" data-bs-target="#profileview"><span class="fa fa-ellipsis-v"></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td class="text-success">12345607</td>
+                                            <td>Ajay Sinhe</td>
+                                            <td>HR Executive</td>
+                                            <td>20/02/2022</td>
+                                            <td>Sales</td>
+                                            <td>
+                                                <div class="progress" data-percentage="80">
+                                                    <span class="progress-left">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <span class="progress-right">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <div class="progress-value">
+                                                        <div class="text-center">
+                                                            80%                                                               
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="Checkbox4" checked>
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="modal" data-bs-target="#profileview"><span class="fa fa-ellipsis-v"></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" /></td>
+                                            <td class="text-success">12345607</td>
+                                            <td>Ajay Sinhe</td>
+                                            <td>HR Executive</td>
+                                            <td>20/02/2022</td>
+                                            <td>Sales</td>
+                                            <td>
+                                                <div class="progress" data-percentage="80">
+                                                    <span class="progress-left">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <span class="progress-right">
+                                                        <span class="progress-bar"></span>
+                                                    </span>
+                                                    <div class="progress-value">
+                                                        <div class="text-center">
+                                                            80%                                                               
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="form-control2">
+                                                    <label class="switch">
+                                                        <input type="checkbox" id="Checkbox5" checked>
+                                                        <div class="slider round">
+                                                            <!--ADDED HTML -->
+                                                            <span class="on">Active</span>
+                                                            <span class="off">Deactive</span>
+                                                            <!--END-->
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="editlist dropdown">
+                                                    <a href="#" class="dropdown-toggle" data-bs-toggle="modal" data-bs-target="#profileview"><span class="fa fa-ellipsis-v"></span></a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tab2" role="tabpanel" aria-labelledby="tab2-tab">
+                            <div class="py-5 mt-3 text-center">
+                                <a class="btn btn-warning btn-lg"><span class="fas fa-download"></span>&nbsp;&nbsp;Download Department Sheet</a>
+                            </div>
+                            <div class="dropbg">
+                                <form method="post" action="/upload">
+                                    <div class="row">
+                                        <div class="col-md-5 text-center">
+                                            <img src="~/Content/general/images/dropf.png" />
+                                        </div>
+                                        <div class="col-md-7">
+                                            <h4 class="mt-5">Drop or Select files</h4>
+                                            <p>
+                                                Drop files here or click
+                                                   <input type="file" multiple class="ddfile">
+                                                to select thorough your machine Accepted files type:.xlsx
+                                            </p>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal right fade createpop" id="new-employee" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Creat a new Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form class="needs-validation" novalidate>
+                <div class="modal-body">
+                    <div class="popup-content-scroll">
+                        <div class="nano-content form-design">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Employee Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Employee Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Employee Designation <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Employee Department <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Father/Husband Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Gender <span class="text-danger">*</span></label>
+                                    <select class="form-select form-control">
+                                        <option value="">Select</option>
+                                        <option>-</option>
+                                        <option>-</option>
+                                        <option>-</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Marital Status <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control datepicker-here" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Present Address <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Permanent Address <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Adhar Card Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">PAN Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Alternative Mobile Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Employee Email ID <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Bank Account Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Bank IFSC Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Previous UAN <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Previous ESI <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Gross Salary <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">DOJ <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control datepicker-here" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Name of Nominee <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Address of Nominee <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Relation of Nominee <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">DOB of Nominee <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control datepicker-here" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Store Code <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" />
+                                </div>
+                                <div class="col-md-3 statuscus">
+                                    <label for="status" class="form-label">Status  <span class="text-danger">*</span></label>
+                                    <div class="form-control2">
+                                        <label class="switch">
+                                            <input type="checkbox" id="Checkbox2" checked>
+                                            <div class="slider round">
+                                                <span class="on">Active</span>
+                                                <span class="off">Deactive</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <h6 class="subheading m-0">Upload Documents</h6>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">1. PAN Card <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">2. Cheque/Passbook Copy <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">3. Educational Certificate <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">4. Experience Certificate <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">5. Adhaar Card <small>(Front Side)</small> <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Adhaar Card <small>(Back Side)</small> <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">6. Relieving Letter <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">7. Payslips <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">8. Photos <span class="text-danger">*</span></label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="fileupld">
+                                        <i class="fa fa-plus"></i>
+                                        <input type="file" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="row w-100">
+                        <div class="col-md-2 d-grid">
+                            <button type="submit" class="btn btn-warning">Creat Employee</button>
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button type="reset" class="btn btn-light">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal right fade createpop" id="profileview" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">X</button>
+            </div>
+            <form class="needs-validation" novalidate>
+                <div class="modal-body" style="padding-top: 0 !important;">
+                    <div class="popup-content-scroll popupheit">
+                        <div class="nano-content form-design">
+                            <div class="text-center prodit">
+                                <img src="~/Content/general/images/profile2.jpg" class="profileimg" />
+                                <h5>Ajay Singh</h5>
+                                <span class="me-3">DOJ: 22/12/2022</span><span>Unit Code: 205678</span>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Contact</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <p><b>Email : </b>chirag.gahlot@gmail.com</p>
+                                    <p><b>Phone Number : </b>+91 9451234567</p>
+                                    <p><b>Address : </b>156 FF, Shakti Khand 3, Indirapuram</p>
+                                    <p><b>City : </b>Ghaziabad</p>
+                                    <p><b>State/Region : </b>Uttar Pradesh</p>
+                                    <p><b>Zipcode : </b>201014</p>
+                                </div>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Documents</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive">
+                                        <table class="cusmtbl">
+                                            <tr>
+                                                <td><b>Adhaar Card</b></td>
+                                                <td style="width: 15%"><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td style="width: 10%"><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Pan Card</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Education Certificate</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Experience Certificate</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Reliving Letter</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Payslips</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Photos</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Cheque/Passbook</b></td>
+                                                <td><span class="browtext">Browse</span><input type="file" class="browbtn" /></td>
+                                                <td><a href="#" class="viewlink">View</a></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="seprathed">
+                                <a class="hedd">Transfer Logs</a>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="table-responsive">
+                                        <table class="cusmtbl transtbl">
+                                            <tr>
+                                                <th></th>
+                                                <th>Start Date</th>
+                                                <th>End Date</th>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a></td>
+                                                <td style="width: 30%">22/12/2022</td>
+                                                <td style="width: 25%">30/12/2022</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a></td>
+                                                <td>22/12/2022</td>
+                                                <td>30/12/2022</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a></td>
+                                                <td>22/12/2022</td>
+                                                <td>30/12/2022</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="row w-100 justify-content-center">
+                        <div class="col-md-6 d-grid">
+                            <a href="#" class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#transferpopup"><i class="fas fa-exchange-alt"></i>&nbsp;Transfer</a>
+                        </div>
+                        <div class="col-md-6 d-grid">
+                            <button type="submit" class="btn btn-warning btn-sm">View More</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="transferpopup" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">X</button>
+                <img src="~/Content/general/images/transfer.png" class="tranimg" />
+            </div>
+            <div class="modal-body">
+                <h5 class="modal-title" id="exampleModalLabel">Transfer Employee<br />
+                    <small>Transfer the employee to the unit you want</small></h5>
+
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="table-responsive">
+                            <table class="cusmtbl transtbl">
+                                <tr>
+                                    <td style="text-align: left;">
+                                        <input type="text" class="form-control" placeholder="Search by code" />
+                                    </td>
+                                    <td>
+                                        <a class="btn btn-warning">Search</a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th style="text-align: left; padding: 15px 0;">Units</th>
+                                    <th style="width: 25%"></th>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a>
+                                        <span>200 Employees</span>
+                                    </td>
+                                    <td><a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#successpopup" data-bs-dismiss="modal" aria-label="Close">Transfer</a></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a>
+                                        <span>200 Employees</span>
+                                    </td>
+                                    <td><a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#successpopup" data-bs-dismiss="modal" aria-label="Close">Transfer</a></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a>
+                                        <span>200 Employees</span>
+                                    </td>
+                                    <td><a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#successpopup" data-bs-dismiss="modal" aria-label="Close">Transfer</a></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left;"><a class="text-success" href="#"><b>12325456</b></a>
+                                        <span>200 Employees</span>
+                                    </td>
+                                    <td><a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#successpopup" data-bs-dismiss="modal" aria-label="Close">Transfer</a></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="successpopup" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="text-center mb-4">
+                            <img src="~/Content/general/images/transfer.png" />
+                        </div>
+                        <div class="text-center">
+                            <h5>Approval request sent successfully!<br /><br />
+                                <small>The unit manager will receive a mail for the approval of the employee</small>
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        $('.ddfile').change(function () {
+            //console.log(this.files);
+            var f = this.files;
+            var el = $(this).parent();
+            if (f.length > 1) {
+                console.log(this.files, 1);
+                el.text('Sorry, multiple files are not allowed');
+                return;
+            }
+            // el.removeClass('focus');
+            el.html(f[0].name + '<br>' +
+                    '<span class="sml">' +
+                    'type: ' + f[0].type + ', ' +
+                    Math.round(f[0].size / 1024) + ' KB</span>');
+        });
+
+        $('input[type=file]').on('focus', function () {
+            $(this).parent().addClass('focus');
+        });
+
+        $('input[type=file]').on('blur', function () {
+            $(this).parent().removeClass('focus');
+        });
+
+    });
+</script>

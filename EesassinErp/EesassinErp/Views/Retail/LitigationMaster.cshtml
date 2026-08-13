@@ -1,0 +1,681 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Litigation Master";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<script type="text/javascript" src="https://unpkg.com/xlsx@0.15.1/dist/xlsx.full.min.js"></script>
+
+<style>
+    .column-content {
+        column-width: 300px; /* Maximum column width */
+        column-gap: 20px; /* Space between columns */
+        word-wrap: break-word; /* Ensures long words break */
+        white-space: normal; /* Enable text wrapping */
+        word-wrap: break-word; /* Break long words */
+        word-break: break-word;
+    }
+
+    .table > thead > tr > th {
+        background-color: #F66659;
+        color: white;
+    }
+</style>
+<style>
+    .email-popup {
+        color: red;
+        background: #ffe5e5;
+        border: 1px solid red;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+@*<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.1/xlsx.full.min.js"></script>*@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+
+<!-- For PDF Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    function switchTab(evt, tabId) {
+        var i, tabcontent, tablinks;
+        debugger;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+
+        tablinks = document.querySelectorAll(".tab-nav li");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+</script>
+<style>
+    .tab-container {
+        margin-bottom: 20px;
+    }
+
+    .tab-nav {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        border-bottom: 2px solid #ddd;
+    }
+
+        .tab-nav li {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #F66659;
+            color: white;
+            margin-right: 2px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+
+            .tab-nav li.active {
+                background-color: #ddcdcd;
+                border: 1px solid #ddd;
+                border-bottom: none;
+                color: black;
+            }
+
+    .tab-content {
+        display: none;
+        padding: 20px;
+        border-top: none;
+        background-color: #fff;
+    }
+
+        .tab-content.active {
+            display: block;
+        }
+</style>
+
+<script src="~/scripts/RetailJsLib/LitigationMasterController.js?Ver=@ViewBag.Version"></script>
+<div class="pagecontentbody themed-element">
+    <div class="pagebody">
+        <div class="col-md-12 pageheader">
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="col-md-5" ng-init="BindAppeals()" ng-show="FilterIsOpen">
+                        <select id="ddlAppeal" class="form-control form-select" ng-model="Appeal" ng-change="EditCaseCode(Appeal)">
+                            <option value="">Select</option>
+                            <option ng-repeat="x in AppealList" value="{{x.CaseCode}}">{{x.Appeal}}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-sm-3 text-end" ng-init="GetLitigationMaster(1, 10, '')">
+                    <a class="btn btn-primary" href="#" ng-show="IsOpen" ng-click="CloseCase();ManageLog('Open New Store')"><span class="fas fa-plus"></span>&nbsp;&nbsp;Go Back</a>
+                    <a class="btn btn-warning" href="#" ng-hide="IsOpen" ng-click="NewCase();ManageLog('Open New Store')"><span class="fas fa-plus"></span>&nbsp;&nbsp;New Case</a>
+                </div>
+            </div>
+        </div>
+        <div class="pagecontentbody themed-element" ng-show="IsOpen">
+            <div class="pagebody">
+                <div class="tab-container">
+                    <ul class="tab-nav">
+                        <li class="active" onclick="switchTab(event, 'tab1')" ng-disabled="Stage1">Stage 1</li>
+                        <li onclick="switchTab(event, 'tab2')" ng-disabled="Stage2">Stage 2</li>
+                        <li onclick="switchTab(event, 'tab3')" ng-disabled="Stage3">Stage 3</li>
+                        <li onclick="switchTab(event, 'tab4')" ng-disabled="Stage4">Stage 4</li>
+                        <li onclick="switchTab(event, 'tab5')" ng-disabled="Stage5">Stage 5</li>
+                    </ul>
+                    <form id="storeForm" enctype="multipart/form-data">
+                        <div class="tab-content active" id="tab1">
+                            <div class="col-md-12">
+                                <div class="row mb-3 p-3">
+                                    <div class="card p-0">
+                                        <div class="card-body">
+                                            <h4>Case Filing  </h4>
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Case Code</label>
+                                                    <input type="text" class="form-control" id="txtCaseCode" ng-disabled="true" ng-model="CaseCode" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Case Title <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control validate" id="txtCaseTitle" ng-model="CaseTitle" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Case Type <span class="text-danger">*</span></label>
+                                                    <select id="txtCaseType" class="select2 form-control validate" ng-model="CaseType">
+                                                        <option value="">Select</option>
+                                                        <option value="Criminal">Criminal</option>
+                                                        <option value="RealEstate">RealEstate</option>
+                                                        <option value="Employment">Employment</option>
+                                                        <option value="Regulatory">Regulatory</option>
+                                                        <option value="Taxation">Taxation</option>
+                                                        <option value="IBC">IBC</option>
+                                                        <option value="Others">Others</option>
+
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-3" ng-init="AllCourtMaster()">
+                                                    <label class="form-label">Forum Court Name <span class="text-danger">*</span></label>
+                                                    <select id="ddlCourtMaster" class="form-control form-select validate" ng-model="ForumCourtName">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in CourtMasterList" value="{{x.ID}}">{{x.Name}}</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Case Number <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control validate" id="txtCaseNumber" ng-model="CaseNumber" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Filing Date <span class="text-danger">*</span></label>
+                                                    <input type="date" class="form-control validate" id="txtFilingDate" ng-model="FilingDate" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Opposition Party <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control validate" id="txtOppositionParty" ng-model="OppositionParty" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Advocate or Legal Counsel <span class="text-danger">*</span></label>
+
+                                                    <select id="txtExternalFirm" class="select2 form-control" ng-model="AdvocateOrLegalCounsel" ng-change="hIDESHOWEVENT(AdvocateOrLegalCounsel)">
+                                                        <option value="External">External</option>
+                                                        <option value="In-House">In-House</option>
+                                                    </select>
+                                                </div>
+
+
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">External Firm Name </label>
+                                                    <input type="text" class="form-control" id="txtExternalFirmName" ng-model="ExternalFirmName" />
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">Senior Representative Name</label>
+                                                    <input type="text" class="form-control" id="txtSeniorRepName" ng-model="SeniorRepName" />
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">Senior Representative Mobile </label>
+
+                                                    <input type="text" class="form-control"
+                                                           id="txtSeniorRepMobile"
+                                                           ng-model="SeniorRepMobile"
+                                                           maxlength="10"
+                                                           onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                                                           placeholder="Enter 10-digit mobile number" />
+
+
+
+
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">Senior Representative Email</label>
+
+
+                                                    <input type="email"
+                                                           class="form-control"
+                                                           id="txtSeniorRepEmail"
+                                                           name="email"
+                                                           ng-model="SeniorRepEmail"
+                                                           ng-blur="checkEmail('SeniorRepEmail')"
+                                                           placeholder="Enter  email" />
+
+                                                    <!-- Tooltip-style popup shown only for this input -->
+                                                    <div class="email-popup" ng-show="emailInvalids['SeniorRepEmail']">
+                                                        Please enter a valid email address.
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">Junior Representative Name</label>
+                                                    <input type="text" class="form-control" id="txtJuniorRepName" ng-model="JuniorRepName" />
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">Junior Representative Mobile</label>
+                                                    <input type="text" class="form-control"
+                                                           id="txtJuniorRepMobile"
+                                                           ng-model="JuniorRepMobile"
+                                                           maxlength="10"
+                                                           onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                                                           placeholder="Enter 10-digit mobile number" />
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">Junior Representative Email</label>
+
+
+
+                                                    <input type="email"
+                                                           class="form-control"
+                                                           id="txtJuniorRepEmail"
+                                                           name="email"
+                                                           ng-model="JuniorRepEmail"
+                                                           ng-blur="checkEmail('JuniorRepEmail')"
+                                                           placeholder="Enter  email" />
+
+                                                    <!-- Tooltip-style popup shown only for this input -->
+                                                    <div class="email-popup" ng-show="emailInvalids['JuniorRepEmail']">
+                                                        Please enter a valid email address.
+                                                    </div>
+
+
+
+                                                </div>
+
+                                                <div class="col-md-3" ng-show="external">
+                                                    <label class="form-label">External Counsel Initial Opinion</label>
+                                                    <textarea class="form-control" id="txtExternalCounselInitialOpinion" ng-model="ExternalCounselInitialOpinion"></textarea>
+                                                </div>
+
+                                                <div class="col-md-3" ng-hide="external">
+                                                    <label class="form-label">Representative Name</label>
+                                                    <input type="text" class="form-control" id="txtRepName" ng-model="RepName" />
+                                                </div>
+
+                                                <div class="col-md-3" ng-hide="external">
+                                                    <label class="form-label">Representative Mobile</label>
+
+                                                    <input type="text" class="form-control"
+                                                           id="txtRepMobile"
+                                                           ng-model="RepMobile"
+                                                           maxlength="10"
+                                                           onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                                                           placeholder="Enter 10-digit mobile number" />
+
+
+
+                                                </div>
+
+                                                <div class="col-md-3" ng-hide="external">
+                                                    <label class="form-label">Representative Email</label>
+
+
+
+                                                    <input type="email"
+                                                           class="form-control"
+                                                           id="txtRepEmail"
+                                                           name="email"
+                                                           ng-model="RepEmail"
+                                                           ng-blur="checkEmail('RepEmail')"
+                                                           placeholder="Enter  email" />
+
+                                                    <!-- Tooltip-style popup shown only for this input -->
+                                                    <div class="email-popup" ng-show="emailInvalids['RepEmail']">
+                                                        Please enter a valid email address.
+                                                    </div>
+
+
+
+                                                </div>
+
+                                                <div class="col-md-3" ng-hide="external">
+                                                    <label class="form-label">In-House Counsel Initial Opinion</label>
+                                                    <textarea class="form-control" id="txtInHouseCounselInitialOpinion" ng-model="InHouseCounselInitialOpinion"></textarea>
+                                                </div>
+
+                                                <div class="col-md-3" ng-init="AllState()">
+                                                    <label class="form-label">State <span class="text-danger">*</span></label>
+                                                    <select id="ddlState" class="form-control form-select validate" ng-model="State">
+                                                        <option value="">Select</option>
+                                                        <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Date of Upload</label>
+                                                    <input type="date" class="form-control" id="txtFileUploadDate" ng-model="FileUploadDate" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Upload Submissions</label>
+
+                                                    <input type="file" class="form-control" id="txtFileUploadPath" name="FileUpload" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                                                    <div ng-if="FileUploadPath" style="margin-top:10px;">
+                                                        <i ng-class="getFileIcon(FileUploadPath)" style="font-size: 20px;"></i>
+                                                        <a ng-href="{{FileUploadPath}}" target="_blank">
+                                                            {{ getFileName(FileUploadPath) }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Case Status <span class="text-danger">*</span></label>
+                                                    <select class="form-control" id="txtCaseStatus" ng-model="ACaseStatus">
+                                                        <option value="">Select</option>
+                                                        <option value="Case Initiation">Case Initiation</option>
+                                                        <option value="Preliminary Processing">Preliminary Processing</option>
+                                                        <option value="Admission of the case">Admission of the case</option>
+                                                        <option value="Appearance Pleadings">Appearance Pleadings</option>
+                                                        <option value="Framing of Issues/Charges">Framing of Issues/Charges</option>
+                                                        <option value="Evidence Stage">Evidence Stage</option>
+                                                        <option value="Final Arguments">Final Arguments</option>
+                                                        <option value="Judgment/Final Order">Judgment/Final Order</option>
+                                                        <option value="Post-Judgment Proceedings">Post-Judgment Proceedings</option>
+                                                    </select>
+
+                                                </div>
+                                                <div class="col-md-12">
+                                                    <input type="button" class="btn btn-warning" value="Save Draft" style="width: 30%;text-align:center" ng-click="SaveStage1()">
+                                                </div>
+
+
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="tab2">
+                            <div class="col-md-12">
+                                <div class="row mb-3 p-3">
+                                    <div class="card p-0">
+                                        <div class="card-body">
+                                            <h4>Pleading </h4>
+                                            <div class="row g-3">
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Pleadings Type <span class="text-danger">*</span></label>
+                                                    <select id="txtPleadingsType" class="select2 form-control" ng-model="PleadingsType">
+                                                        <option value="">Select</option>
+                                                        <option value="Petition">Petition</option>
+                                                        <option value="Written Statement">Written Statement</option>
+                                                        <option value="Rejoinders">Rejoinders</option>
+                                                        <option value="Affidavits">Affidavits</option>
+                                                    </select>
+
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Date of Filing <span class="text-danger">*</span></label>
+                                                    <input type="date" class="form-control" id="txtDateOfFilling" ng-model="DateOfFilling" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Note </label>
+                                                    <textarea class="form-control" id="txtNote" ng-model="Note"></textarea>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Date of Upload </label>
+                                                    <input type="date" class="form-control" id="txtDateOfUpload" ng-model="DateOfUpload" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">File 1 </label>
+                                                    <input type="file" class="form-control" id="txtFile1" name="File1" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                                                    <div ng-if="File1" style="margin-top:10px;">
+                                                        <i ng-class="getFileIcon(File1)" style="font-size: 20px;"></i>
+                                                        <a ng-href="{{File1}}" target="_blank">
+                                                            {{ getFileName(File1) }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">File 2 </label>
+                                                    <input type="file" class="form-control" id="txtFile2" name="File2" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                                                    <div ng-if="File2" style="margin-top:10px;">
+                                                        <i ng-class="getFileIcon(File2)" style="font-size: 20px;"></i>
+                                                        <a ng-href="{{File2}}" target="_blank">
+                                                            {{ getFileName(File2) }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">File 3</label>
+                                                    <input type="file" class="form-control" id="txtFile3" name="File3" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                                                    <div ng-if="File3" style="margin-top:10px;">
+                                                        <i ng-class="getFileIcon(File3)" style="font-size: 20px;"></i>
+                                                        <a ng-href="{{File3}}" target="_blank">
+                                                            {{ getFileName(File3) }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+
+
+
+                                                <div class="col-md-12">
+                                                    <input type="button" class="btn btn-warning" value="Save Draft" style="width: 30%;text-align:center" ng-click="SaveStage2()">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="tab3">
+                            <div class="col-md-12">
+                                <div class="row mb-3 p-3">
+                                    <div class="card p-0">
+                                        <div class="card-body">
+                                            <h4>Hearing  </h4>
+                                            <div class="row g-3">
+                                                <div class="row g-3" ng-repeat="hearing in hearings track by $index">
+
+                                                    <div class="col-md-12" style="font-size:18px">
+                                                        <strong>Tracker {{$index+1}}</strong>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Date of Hearing</label>
+                                                        <input type="date" class="form-control" id="txtDateOfHearing{{$index}}" ng-model="hearing.DateOfHearing" />
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Purpose of Hearing</label>
+                                                        <input type="text" class="form-control" id="txtPurposeOfHearing{{$index}}" ng-model="hearing.PurposeOfHearing" />
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Outcome of Hearing</label>
+                                                        <textarea class="form-control" id="txtOutcomeOfHearing{{$index}}" ng-model="hearing.OutcomeOfHearing"></textarea>
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Case Status</label>
+                                                        <select id="CaseStatus{{$index}}" class="select2 form-control" ng-model="hearing.CaseStatus" ng-change="ChangeHearing(hearing.CaseStatus)">
+                                                            <option value="">Select</option>
+                                                            <option value="Ongoing">Ongoing</option>
+                                                            <option value="Settled">Settled</option>
+                                                            <option value="Disposed">Disposed</option>
+                                                            <option value="Others">Others</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Date of Upload</label>
+                                                        <input type="date" class="form-control" id="txtDateOfUpload{{$index}}" ng-model="hearing.DateOfUpload" />
+                                                    </div>
+
+                                                    <div class="col-md-3">
+                                                        <label class="form-label">Order upload</label>
+
+                                                        <!-- File Input -->
+                                                        <input type="file" class="form-control" id="txtHearingFilePath{{$index}}" file-model="hearing.HearingFilePath" />
+
+
+                                                        <div ng-if="isValidFilePath(hearing.HearingFilePath)" style="margin-top:10px;">
+                                                            <i ng-class="getFileIcon(hearing.HearingFilePath)" style="font-size: 20px;"></i>
+                                                            <a ng-href="{{hearing.HearingFilePath}}" target="_blank">
+                                                                {{ getFileName(hearing.HearingFilePath) }}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-6">
+                                                    <input type="button" class="btn btn-warning" value="Save Draft" style="width: 30%; text-align:center" ng-click="SaveStage3()" />
+                                                    <input type="button" class="btn btn-warning" value="Add New Row" ng-show="AddHeading" ng-click="addNewHearing()" style="width: 30%; text-align:center" />
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="tab4">
+                            <div class="col-md-12">
+                                <div class="row mb-3 p-3">
+                                    <div class="card p-0">
+                                        <div class="card-body">
+                                            <h4>Orders & Judgments </h4>
+                                            <div class="row g-3">
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Judgment Passed <span class="text-danger">*</span></label>
+                                                    <select class="form-control" id="txtJudgmentPassed" ng-model="JudgmentPassed">
+                                                        <option value="">Select</option>
+                                                        <option value="1">Yes</option>
+                                                        <option value="0">Pending</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Judiciary Name <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" id="txtJudiciaryName" ng-model="JudiciaryName" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Summary Of Judgment(Brief) </label>
+                                                    <textarea class="form-control" id="txtSummaryOfJudgment" ng-model="SummaryOfJudgment"></textarea>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Judgment Time</label>
+                                                    <input type="time" class="form-control" id="txtJudgmentTime" ng-model="JudgmentTime" />
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Execution Status</label>
+                                                    <select class="form-control" id="txtExecutionStatus" ng-model="ExecutionStatus">
+                                                        <option value="">Select</option>
+                                                        <option value="1">Done</option>
+                                                        <option value="0">Pending</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Condonation Filed</label>
+                                                    <select class="form-control" id="txtCondonationFiled" ng-model="CondonationFiled">
+                                                        <option value="">Select</option>
+                                                        <option value="1">Yes</option>
+                                                        <option value="0">No</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Condonation Status</label>
+                                                    <select class="form-control" id="txtCondonationStatus" ng-model="CondonationStatus">
+                                                        <option value="">Select</option>
+                                                        <option value="1">Accepted</option>
+                                                        <option value="0">Rejected</option>
+                                                    </select>
+
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Judgment Copy</label>
+                                                    <input type="file" class="form-control" id="txtJudgmentCopyPath" ng-model="JudgmentCopyPath" />
+
+                                                    <div ng-if="JudgmentCopyPath" style="margin-top:10px;">
+                                                        <i ng-class="getFileIcon(JudgmentCopyPath)" style="font-size: 20px;"></i>
+                                                        <a ng-href="{{JudgmentCopyPath}}" target="_blank">
+                                                            {{ getFileName(JudgmentCopyPath) }}
+                                                        </a>
+                                                    </div>
+
+                                                </div>
+
+
+                                                <div class="col-md-12">
+                                                    <input type="button" class="btn btn-warning" value="Save Draft" style="width: 30%;text-align:center" ng-click="SaveStage4()">
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-content" id="tab5">
+                            <div class="col-md-12">
+                                <div class="row mb-3 p-3">
+                                    <div class="card p-0">
+                                        <div class="card-body">
+                                            <h4>Appeal </h4>
+                                            <div class="row g-3">
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Appeal Status <span class="text-danger">*</span></label>
+                                                    <select class="form-control" id="txtAppealStatus" ng-model="AppealStatus">
+                                                        <option value="">Select</option>
+                                                        <option value="1">Yes</option>
+                                                        <option value="0">No</option>
+                                                    </select>
+
+                                                </div>
+
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Appeal By <span class="text-danger">*</span></label>
+
+                                                    <select class="form-control" id="txtAppealby" ng-model="Appealby">
+                                                        <option value="">Select</option>
+                                                        <option value="Self">Self</option>
+                                                        <option value="Opposition">Opposition</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-12">
+                                                    <input type="button" class="btn btn-warning" value="Final Save" style="width: 30%;text-align:center" ng-click="SaveStage5()">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12" ng-hide="IsOpen">
+            <div class="row mb-3 p-3">
+                <div class="p-0">
+                    <input class="form-control" type="text" id="myInput" value="" style="width: 30%; margin-left: 67%; " ng-keyup="GetLitigationMaster(1,10)" placeholder="Search">
+                    <div>
+                        <div id="myTabContent">
+                            <div class="tab-pane fade show active" id="tab1" role="tabpanel" aria-labelledby="tab1-tab">
+                                <table id="example" style="width:100% !important" class="display nowrap table table-bordred table-hover tableFixHead unittbl datatable themed-element">
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

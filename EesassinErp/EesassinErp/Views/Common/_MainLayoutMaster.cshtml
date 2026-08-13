@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>@ViewBag.Title</title>
+
+    <!-- FAVICON ICON -->
+    <link rel="icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
+
+    @RenderSection("head", required: false)
+
+    <!--alerts CSS -->
+    <link href="@Url.Content("~/Content/plugins/vendors/bower_components/sweetalert/dist/sweetalert.css")" rel="stylesheet" type="text/css">
+    <link href="@Url.Content("~/Content/plugins/assets/css/default.css")" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css")" />
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/data-table/css/buttons.dataTables.min.css")" />
+    <link rel="stylesheet" type="text/css" href="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css")" />
+
+    <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js")"></script>
+    @RenderSection("styles", required: false)
+    <script type="text/javascript" src="@Url.Content("~/Scripts/jscolor.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/myJs.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/moment.js")"></script>
+
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
+    <script src="@Url.Content("~/Scripts/ng-map.js")"></script>
+   
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js")"></script>
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js")"></script>
+
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/Authorization.js?Ver="+ViewBag.Version+"")"></script>
+
+    <script>
+        $(document).click(function (event) {
+            alert('alorrr');
+
+        });
+    </script>
+
+
+    <script>
+            $(document).ready(function () {
+                $('#logout').click(function () {
+                    sessionStorage.setItem('userid', "-1");
+                    window.location.href = '@Url.Action("Login", "Login")';
+                })
+            });
+    </script>
+    <script>
+            var userid = sessionStorage.getItem("userid");
+            var schoolCode = sessionStorage.getItem("schoolCode");
+            var branchCode = sessionStorage.getItem("branchCode");
+            var sessionId = sessionStorage.getItem("sessionId");
+            var fyId = sessionStorage.getItem("fyId");
+
+            if (JSON.parse(userid) == "-1" || JSON.parse(userid) == null || JSON.parse(userid) == "") {
+                window.location.href = '@Url.Action("Login", "Login")';
+            }
+            if (JSON.parse(schoolCode) == "-1" || JSON.parse(schoolCode) == null || JSON.parse(schoolCode) == "") {
+                window.location.href = '@Url.Action("Login", "Login")';
+            }
+            if (JSON.parse(branchCode) == "-1" || JSON.parse(branchCode) == null || JSON.parse(branchCode) == "") {
+                window.location.href = '@Url.Action("Login", "Login")';
+            }
+            if (JSON.parse(sessionId) == "-1" || JSON.parse(sessionId) == null || JSON.parse(sessionId) == "") {
+                window.location.href = '@Url.Action("Login", "Login")';
+            }
+            if (JSON.parse(fyId) == "-1" || JSON.parse(fyId) == null || JSON.parse(fyId) == "") {
+                window.location.href = '@Url.Action("Login", "Login")';
+            }
+
+        $(document).ready(function () {
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetUserDetails", "DashBoard")',
+                data: '{userid:' + JSON.parse(userid) + ',schoolcode:' + JSON.parse(schoolCode) + ',branchcode:' + JSON.parse(branchCode) + '}',
+                dataType: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function (response) {
+                    sessionStorage.setItem("userdata", JSON.stringify(response));
+                    var data = sessionStorage.getItem("userdata");
+                    var parsedObject = JSON.parse(data);
+                    $('#lblUserName').text(parsedObject[0].Name);
+                }
+            });
+        });
+    </script>
+    <script>
+        function changeSession(sessionvalue) {
+            $('.session').removeClass('active-session');
+            $(this).addClass("active-session");
+            sessionStorage.setItem('sessionId', sessionvalue);
+        }
+    </script>
+</head>
+<body oncontextmenu="return false;">
+    <div>
+        @RenderBody()
+    </div>
+</body>
+</html>

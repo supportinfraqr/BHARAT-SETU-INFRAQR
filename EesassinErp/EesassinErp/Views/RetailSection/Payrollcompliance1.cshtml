@@ -1,0 +1,2943 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Combined Report";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="~/scripts/RetailJsLib/CombinedReportController.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+<div class="container my-4 py-4" style="background-color: #FFF1EB; max-width: 100% ;">
+
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="PF or ESIC">
+            <button type="button" class="btn btn-pill active" data-target="#PFCard" aria-pressed="true">PF</button>
+            <button type="button" class="btn btn-pill" data-target="#ESICCard" aria-pressed="false">ESIC</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+        <div id="PFCard" class="card section-card active">
+            <h2 class="mb-4">Payroll Compliance </h2>
+            <!-- STEP 1: Payroll Setup + Period + Uploads -->
+            <div class="card mb-4" id="step1">
+                <div class="card-header text-white">
+                    Payroll Setup & Period
+                </div>
+
+                <div class="card-body">
+                    <form class="row g-3">
+                        <!-- Payroll Type -->
+                        <div class="col-md-3">
+                            <label class="form-label">Payroll Type</label>
+                            <select class="form-control form-select validate" id="payrollType" ng-model="PayRollType" ng-disabled="Disableplease">
+                                <option value="">Select</option>
+                                <option value="Main">Main</option>
+                                <option value="Supplementary">Supplementary</option>
+                            </select>
+                        </div>
+
+                        <!-- Mode -->
+                        <div class="col-md-3">
+                            <label class="form-label">Mode</label>
+                            <select class="form-control form-select validate" id="mode" ng-model="Mode" ng-disabled="Disableplease">
+
+                                <option value="">Select</option>
+                                <option value="Console">Console</option>
+                                <option value="Branch">Branch</option>
+
+                            </select>
+                        </div>
+
+                        <!-- Location -->
+                        <div class="col-md-3">
+                            <label class="form-label">Location</label>
+                            <select id="ddlState" class="form-control form-select validate" ng-model="StoreCode" ng-init="BindStore()" ng-disabled="Disableplease">
+                                <option value="">Select Location</option>
+                                <option ng-repeat="x in StoreList" value="{{x.StoreId}}">
+                                    {{x.StoreCode}}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Month -->
+                        <div class="col-md-3" ng-init="BindMonth();">
+                            <label class="form-label">Month</label>
+                            <select id="CMonth" class="form-control form-select validate" ng-model="Month" ng-disabled="Disableplease">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in MonthList" value="{{x.MonthNumber}}">
+                                    {{x.MonthName}}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Year -->
+                        <div class="col-md-3" ng-init="BindFinacialYear()">
+                            <label class="form-label">Year</label>
+                            <select id="ddlFinancialYear" class="form-control form-select validate" ng-model="Year" ng-change="callfromStage1()" ng-disabled="Disableplease">
+                                <option value="">Select</option>
+                                <option ng-repeat="x in finacialyearList" value="{{x.FyId}}">
+                                    {{x.FyId}}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- File Uploads -->
+                        <div class="col-md-3">
+                            <label class="form-label">Active/Deactive Data</label>
+                            <input type="file" id="excelFile1" onchange="angular.element(this).scope().ReadActiveExcel(this)" class="form-control" />
+
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Salary Sheet</label>
+
+                            <input type="file" id="excelFile2" onchange="angular.element(this).scope().ReadSalaryExcel(this)" class="form-control" />
+                        </div>
+
+                        <!-- Proceed + Download -->
+                        <div class="col-12 text-end mt-3">
+                            <button type="button" class="btn btn-outline-primary me-2" id="downloadActiveTemplateBtn">
+                                <i class="bi bi-download"></i> Download Active Template
+                            </button>
+                            <button type="button" class="btn btn-outline-primary me-2" id="downloadSalaryTemplateBtn">
+                                <i class="bi bi-download"></i> Download Salary Template
+                            </button>
+
+                            <button type="button"
+                                    id="btnProceed"
+                                    class="btn btn-success"
+                                    ng-click="SaveRecordStage1($event)">
+                                Proceed
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- STEP 2: Validation Process -->
+            <div class="card mb-4 d-none" id="salaryStep">
+                <div class="card-header text-white">Validation Process</div>
+                <div class="card-body">
+
+                    <!-- Action buttons grouped by type -->
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <!-- Employee Master -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showData('employee')">
+                                <i class="bi bi-eye"></i> View Employee
+                            </button>
+                            <button class="btn btn-outline-secondary" ng-click="DownloadEmpTableCSV()">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+
+                        <!-- Active/Deactive -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showData('active')">
+                                <i class="bi bi-eye"></i> View Active/Inactive
+                            </button>
+                            <button class="btn btn-outline-secondary" ng-click="DownloadActiveTableCSV()">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+
+                        <!-- Salary -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showData('salary')">
+                                <i class="bi bi-eye"></i> View Salary
+                            </button>
+                            <button class="btn btn-outline-secondary" ng-click="DownloadSalarySheetCSV()">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+
+                        <!-- Proceed -->
+                        <button class="btn btn-success ms-auto" ng-click="callfromStagevalidationthreetable()">
+                            Proceed → Validate
+                        </button>
+                    </div>
+
+                    <!-- Data Tables Container -->
+                    <div id="dataTablesContainer">
+
+                        <!-- Employee Table -->
+                        <div class="table-responsive d-none" id="employeeTable">
+                            <h5 class="mb-3 text-primary">Employee Master Data</h5>
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ref Employee Code</th>
+                                        <th>Employee Name</th>
+                                        <th>Employee Designation</th>
+                                        <th>Employee Department</th>
+                                        <th>Father/Husband Name</th>
+                                        <th>Gender</th>
+                                        <th>Marital Status</th>
+                                        <th>Date of Birth</th>
+                                        <th>Present Address</th>
+                                        <th>Permanent Address</th>
+                                        <th>Aadhar Card Number</th>
+                                        <th>PAN Number </th>
+                                        <th>Mobile Number</th>
+                                        <th>Alternative Mobile Number</th>
+                                        <th>Employee Email ID</th>
+                                        <th>Bank Account Number</th>
+                                        <th>Bank IFSC Code</th>
+                                        <th>Previous UAN</th>
+                                        <th>Previous ESI</th>
+                                        <th>Gross Salary</th>
+                                        <th>DOJ</th>
+                                        <th>Name of Nominee</th>
+                                        <th>Address of Nominee</th>
+                                        <th>Relation of Nominee</th>
+                                        <th>DOB of Nominee</th>
+                                        <th>PF Account</th>
+                                        <th>Date of Leaving</th>
+                                        <th>Store Code</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="x in EmpTable">
+                                        <td>
+                                            {{x.RefEmployeeCode}}
+                                        </td>
+                                        <td>
+                                            {{x.EmployeeName}}
+                                        </td>
+                                        <td>
+                                            {{x.EmployeeDesignation}}
+                                        </td>
+                                        <td>
+                                            {{x.EmployeeDepartment}}
+                                        </td>
+                                        <td>
+                                            {{x.Father_Husband_Name}}
+                                        </td>
+                                        <td>
+                                            {{x.Gendar}}
+                                        </td>
+                                        <td>
+                                            {{x.MaritalStatus}}
+                                        </td>
+                                        <td>
+                                            {{x.DateOfBirth}}
+                                        </td>
+                                        <td>
+                                            {{x.PresentAddress }}
+                                        </td>
+                                        <td>
+                                            {{x.PermanemtAddress}}
+                                        </td>
+
+                                        <td>
+                                            {{x.AdharCardNumber}}
+                                        </td>
+                                        <td>
+                                            {{x.PANNumber}}
+                                        </td>
+                                        <td>
+                                            {{x.MobileNumber}}
+                                        </td>
+                                        <td>
+                                            {{x.AlternativeMobileNumber}}
+                                        </td>
+                                        <td>
+                                            {{x.EmployeeEmailID}}
+                                        </td>
+                                        <td>
+                                            {{x.BankAccountNumber}}
+                                        </td>
+                                        <td>
+                                            {{x.BankIFSCCode}}
+                                        </td>
+                                        <td>
+                                            {{x.PreviousUAN}}
+                                        </td>
+                                        <td>
+                                            {{x.PreviousESI}}
+                                        </td>
+                                        <td>
+                                            {{x.GrossSalary}}
+                                        </td>
+                                        <td>
+                                            {{x.DOJ}}
+                                        </td>
+                                        <td>
+                                            {{x.NomineeName}}
+                                        </td>
+                                        <td>
+                                            {{x.NomineeAddress}}
+                                        </td>
+                                        <td>
+                                            {{x.NomineeRelation}}
+                                        </td>
+                                        <td>
+                                            {{x.NomineeDOB}}
+                                        </td>
+                                        <td>
+                                            {{x.PFAccount}}
+                                        </td>
+                                        <td>
+                                            {{x.DateofLeaving}}
+                                        </td>
+                                        <td>
+                                            {{x.StoreCode}}
+                                        </td>
+                                        <td>
+                                            {{x.IsActive}}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Active/Deactive Table -->
+                        <div class="table-responsive d-none" id="activeTable">
+                            <h5 class="mb-3 text-primary">Active/Inactive Data</h5>
+
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>UAN</th>
+                                        <th>Member ID</th>
+                                        <th>Name</th>
+                                        <th>Gender</th>
+                                        <th>DoB</th>
+                                        <th>DoJ</th>
+                                        <th>Father's/Husband's Name</th>
+                                        <th>Relation</th>
+                                        <th>Marital Status</th>
+                                        <th>Mobile</th>
+                                        <th>Email ID</th>
+                                        <th>AADHAAR</th>
+                                        <th>PAN</th>
+                                        <th>Bank Account No</th>
+                                        <th>IFSC Code</th>
+                                        <th>Nomination Filed</th>
+                                        <th>Is AADHAAR Verified</th>
+                                        <th>Face Auth Status</th>
+                                        <th>Whether Member of Pension Scheme</th>
+                                        <th>EPS: Contributing on Higher Wages</th>
+                                        <th>Deferred Pension</th>
+                                        <th>International Worker</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="x in ActiveMemberSheet">
+                                        <td>{{x.UAN}}</td>
+                                        <td>{{x.MemberID}}</td>
+                                        <td>{{x.Name}}</td>
+                                        <td>{{x.Gender}}</td>
+                                        <td>{{x.DoB}}</td>
+                                        <td>{{x.DoJ}}</td>
+                                        <td>{{x.FatherHusbandName}}</td>
+                                        <td>{{x.Relation}}</td>
+                                        <td>{{x.MaritalStatus}}</td>
+                                        <td>{{x.Mobile}}</td>
+                                        <td>{{x.EmailID}}</td>
+                                        <td>{{x.AADHAAR}}</td>
+                                        <td>{{x.PAN}}</td>
+                                        <td>{{x.BankAccountNo}}</td>
+                                        <td>{{x.IFSCCode}}</td>
+                                        <td>{{x.NominationFiled}}</td>
+                                        <td>{{x.IsAadhaarVerified}}</td>
+                                        <td>{{x.FaceAuthStatus}}</td>
+                                        <td>{{x.PensionSchemeMember}}</td>
+                                        <td>{{x.ContributingOnHigherWages}}</td>
+                                        <td>{{x.DeferredPension}}</td>
+                                        <td>{{x.InternationalWorker}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+
+                        </div>
+
+                        <!-- Salary Table -->
+                        <div class="table-responsive d-none" id="salaryTable">
+                            <h5 class="mb-3 text-primary">Salary Sheet Data</h5>
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ref Employee Code</th>
+                                        <th>Employee Name</th>
+                                        <th>DOJ</th>
+                                        <th>Designation</th>
+                                        <th>International Worker (Yes/No)</th>
+                                        <th>POHW (Yes/No)</th>
+                                        <th>Branch/Location</th>
+                                        <th>UAN Number</th>
+                                        <th>PF Type</th>
+                                        <th>Resignation Date</th>
+                                        <th>Total Working Days</th>
+                                        <th>Earned Gross Salary</th>
+                                        <th>PF Salary</th>
+                                        <th>Employee's PF Cont.</th>
+                                        <th>VPF</th>
+                                        <th>Arrear Gross Salary</th>
+                                        <th>Arrear PF Salary</th>
+                                        <th>Employee's ESIC Cont.</th>
+                                        <th>P Tax</th>
+                                        <th>LWF</th>
+                                        <th>Total Deduction</th>
+                                        <th>Net Payable Salary</th>
+                                        <th>Pensioner Employee (Yes/No)</th>
+                                        <th>Created Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="x in SalarySheet">
+                                        <td>{{x.EmployeeCode}}</td>
+                                        <td>{{x.EmployeeName}}</td>
+                                        <td>{{x.DOJ}}</td>
+                                        <td>{{x.Designation}}</td>
+                                        <td>{{x.InternationalWorker}}</td>
+                                        <td>{{x.POHW}}</td>
+                                        <td>{{x.BranchLocation}}</td>
+                                        <td>{{x.UANNumber}}</td>
+                                        <td>{{x.PFType}}</td>
+                                        <td>{{x.ResignationDate}}</td>
+                                        <td>{{x.TotalWorkingDays}}</td>
+                                        <td>{{x.EarnedGrossSalary}}</td>
+                                        <td>{{x.PFSalary}}</td>
+                                        <td>{{x.EmployeePFCont}}</td>
+                                        <td>{{x.VPF}}</td>
+                                        <td>{{x.ArrearGrossSalary}}</td>
+                                        <td>{{x.ArrearPFSalary}}</td>
+                                        <td>{{x.EmployeeESICCont}}</td>
+                                        <td>{{x.PTax}}</td>
+                                        <td>{{x.LWF}}</td>
+                                        <td>{{x.TotalDeduction}}</td>
+                                        <td>{{x.NetPayableSalary}}</td>
+                                        <td>{{x.PensionerEmployee}}</td>
+                                        <td>{{x.CreatedDate}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: Validation Output -->
+            <div class="card mb-4" id="validationStep">
+                @*<div class="card mb-4 d-none" id="validationStep">*@
+                <div class="card-header text-white">Validation Results</div>
+                <div class="card-body">
+                    <!-- Validation Passed -->
+                    <div id="validationPassed" class="d-none text-center p-4">
+                        <h5 class="text-success mb-3">Validation Passed</h5>
+                        <p>All sheets validated successfully. You can proceed to the next step.</p>
+                        <button class="btn btn-success" ng-click="proceedToValidatedSheet()">
+                            Proceed → Validated Sheet
+                        </button>
+                    </div>
+
+                    <!-- Validation Failed -->
+                    <div id="validationFailed" class="d-none">
+                        <h5 class="text-danger mb-3">Validation Failed</h5>
+                        <p>Some discrepancies were found. Review each category below.</p>
+
+                        <!-- Category Table -->
+                        <table class="table table-bordered table-hover mt-3">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Error Category</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="text-danger fw-bold" ng-if="DuplicateEmployeeTableRecord==1">❌</span>
+                                        <span class="text-success fw-bold" ng-if="DuplicateEmployeeTableRecord==0">✅</span>
+
+                                    </td>
+                                    <td>Employee Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" ng-click="TableerrorList('Employee')">View Details</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="text-danger fw-bold" ng-if="DuplicateActiveTableRecord==1">❌</span>
+                                        <span class="text-success fw-bold" ng-if="DuplicateActiveTableRecord==0">✅</span>
+                                    </td>
+                                    <td>Active/Inactive Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" ng-click="TableerrorList('Active/Inactive')">View Details</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="text-danger fw-bold" ng-if="DuplicateSalaryTableRecord==1">❌</span>
+                                        <span class="text-success fw-bold" ng-if="DuplicateSalaryTableRecord==0">✅</span>
+                                    </td>
+                                    <td>Salary Sheet Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" ng-click="TableerrorList('Salary')">View Details</button></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="text-danger fw-bold" ng-if="MisMatchTableRecord==1">❌</span>
+                                        <span class="text-success fw-bold" ng-if="MisMatchTableRecord==0">✅</span>
+                                    </td>
+                                    <td>MisMatching  Sheet Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" ng-click="OpenMismatch()">View Details</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Warning & Proceed -->
+                        <div id="errorWarning" class="alert alert-warning mt-3">
+                            ⚠ Please review all errors before proceeding to the next step.
+                        </div>
+                        <div class="text-end mt-3">
+                            <button class="btn btn-success d-none" id="proceedAfterFixBtn" onclick="showValidatedSheetStep()">Proceed → Validated Sheet</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Error Modal for step 3 -->
+            <div class="modal" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header text-white">
+                            <h5 class="modal-title" id="errorModalLabel">Error Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="errorModalContent">
+                                <h6 class="mb-3 text-primary">
+                                    {{TableHeader}} Error Details [ Total Count : {{errorList.length || 0}} ]
+                                </h6>
+                                <table class="table table-bordered table-hover align-middle">
+                                    <thead class="table-light text-center">
+                                        <tr>
+                                            <th>Emp ID</th>
+                                            <th>Employee Name</th>
+                                            <th>Error Description</th>
+                                            <th>Column</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in errorList">
+                                            <td>{{x.RefEmployeeCode}}</td>
+                                            <td>
+                                                {{x.EmployeeName}}
+                                            </td>
+                                            <td>{{x.Description}}</td>
+                                            <td>
+                                                <!-- Normal display -->
+                                                <span ng-hide="x.isEditing">{{x.ColumnName}}</span>
+
+                                                <!-- Editable input (shows when Fix clicked) -->
+                                                <input type="text" class="form-control form-control-sm"
+                                                       ng-show="x.isEditing"
+                                                       ng-model="x.newValue"
+                                                       placeholder="Enter new value">
+                                            </td>
+                                            <td>
+                                                <!-- Fix button -->
+                                                <button class="btn btn-sm btn-warning"
+                                                        ng-hide="x.isEditing"
+                                                        ng-click="startEdit(x)">
+                                                    Fix
+                                                </button>
+
+                                                <!-- Save button -->
+                                                <button class="btn btn-sm btn-success"
+                                                        ng-show="x.isEditing"
+                                                        ng-click="saveFix(x)">
+                                                    Save
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr ng-if="!errorList || errorList.length === 0">
+                                            <td colspan="4" class="text-center text-success">
+                                                ✅ No errors remaining in this category
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal" id="MisserrorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header text-white">
+                            <h5 class="modal-title" id="errorModalLabel">Error Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="errorModalContent">
+                                <h6 class="mb-3 text-primary d-flex justify-content-between align-items-center">
+                                    <span>
+                                        {{TableHeader}} Error Details [ Total Count : {{errorList1.length || 0}} ]
+                                    </span>
+                                    <button class="btn btn-sm btn-warning" ng-click="BeforeFixAll()">
+                                        Fix All
+                                    </button>
+                                </h6>
+                                <table class="table table-bordered table-hover align-middle">
+                                    <thead class="table-light text-center">
+                                        <tr>
+                                            @*<th>UniqueId</th>*@
+                                            <th>Employee Master</th>
+                                            <th>Salary Sheet</th>
+                                            <th>Active Sheet</th>
+                                            <th>Error Description</th>
+                                            <th>Update Table</th>
+                                            <th>Column</th>
+
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="x in errorList1">
+                                            @*<td>
+                                                    {{x.MemberID}}
+                                                </td>*@
+                                            <td>
+                                                {{x.EmployeeMaster}}
+                                            </td>
+                                            <td>
+                                                {{x.SalarySheet}}
+                                            </td>
+                                            <td>
+                                                {{x.ActiveSheet}}
+                                            </td>
+                                            <td>
+                                                {{x.Description}}
+                                            </td>
+                                            <td>{{x.UpdateTable}}</td>
+                                            <td>
+                                                <!-- Normal display -->
+                                                <span ng-hide="x.MisEditing">{{x.ColumnName}}</span>
+
+                                                <!-- Editable input (shows when Fix clicked) -->
+                                                <input type="text" class="form-control form-control-sm"
+                                                       ng-show="x.MisEditing"
+                                                       ng-model="x.MnewValue"
+                                                       placeholder="Enter new value">
+                                            </td>
+                                            <td>
+                                                <!-- Fix button -->
+
+                                                <button class="btn btn-sm btn-warning" ng-if="x.IsFix==0"
+                                                        ng-hide="x.MisEditing"
+                                                        ng-click="MstartEdit(x)">
+                                                    Fix
+                                                </button>
+                                                <button style="background-color:crimson;color:white" ng-if="x.IsFix==1">
+                                                    ReUpload
+                                                </button>
+                                                <!-- Save button -->
+                                                <button class="btn btn-sm btn-success" ng-if="x.IsFix==0"
+                                                        ng-show="x.MisEditing"
+                                                        ng-click="MsaveFix(x)">
+                                                    Save
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr ng-if="!errorList1 || errorList1.length === 0">
+                                            <td colspan="4" class="text-center text-success">
+                                                ✅ No errors remaining in this category
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fix Modal for step 3 -->
+            <div class="modal fade" id="fixModal" tabindex="-1" aria-labelledby="fixModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="fixModalLabel">Fix Error</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="fixModalForm">
+                                <div id="fixModalFields" class="row"></div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success" onclick="submitFix()">Save Fix</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Validated Excel Sheet -->
+            <div class="card mb-4 d-none" id="validatedSheetStep">
+                <div class="card-header text-white">Validated Excel Sheet</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="toggleValidatedTable(event)">View</button>
+                        <button class="btn btn-secondary" onclick="downloadValidatedSheet()">Download</button>
+                        @*<button class="btn btn-success" onclick="showFinalValidationStep()">Validate</button>*@
+                        <button class="btn btn-success" id="proceedFinalBtn" onclick="showFinalOutputStep()">Proceed → Finish</button>
+                    </div>
+
+                    <div class="table-responsive d-none" id="validatedTableContainer">
+                        <table class="table table-bordered table-hover" id="validatedTable">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Emp. Code</th>
+                                    <th>PF A/c No</th>
+                                    <th>PF Flag</th>
+                                    <th>Pension</th>
+                                    <th>Payable Days</th>
+                                    <th>Paid Days</th>
+                                    <th>Full Basic/Basic</th>
+                                    <th>VPF</th>
+                                    <th>UAN</th>
+                                    <th>Member Name</th>
+                                    <th>Gross Wages</th>
+                                    <th>EPF Wages</th>
+                                    <th>EPS Wages</th>
+                                    <th>EDLI Wages</th>
+                                    <th>EPF Contribution Remitted (Employees 12%)</th>
+                                    <th>EPS Contribution Remitted (Employer  8.33%)</th>
+                                    <th>EPF_EPS Difference_Remitted (Employer 3.67%)</th>
+                                    <th>NCP</th>
+                                    <th>Refund of Advances</th>
+                                    <th>EDLI Contribution  0.50%</th>
+                                    <th>Date of Leaving</th>
+                                    <th>Reason Code</th>
+                                    <th>As per Payroll</th>
+                                    <th>PF</th>
+                                    <th>Diff</th>
+                                    <th>Name as per Active Member Sheet</th>
+                                    <th>DOB as per Active member sheet</th>
+                                    <th>Date of Payroll</th>
+                                    <th>Age</th>
+                                    <th>International Worker</th>
+                                    <th>POHW</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Example AngularJS data binding -->
+                                <tr ng-repeat="x in ValidationStageThree">
+                                    <td>{{x.RefEmployeeCode}}</td>
+                                    <td>{{x.BankAccountNo}}</td>
+                                    <td>{{x.PFType}}</td>
+                                    <td>{{x.Pension}}</td>
+                                    <td>{{x.PayableDays}}</td>
+                                    <td>{{x.PaidDays}}</td>
+                                    <td>{{x.FullBasic}}</td>
+                                    <td>{{x.VPF}}</td>
+                                    <td>{{x.UAN}}</td>
+                                    <td>{{x.MemberName}}</td>
+                                    <td>{{x.GrossWages}}</td>
+                                    <td>{{x.EPFWages}}</td>
+                                    <td>{{x.EPSWages}}</td>
+                                    <td>{{x.EDLIWages}}</td>
+                                    <td>{{x.EPFEmployee12}}</td>
+                                    <td>{{x.EPSEmployer833}}</td>
+                                    <td>{{x.EPF_EPSDiff367}}</td>
+                                    <td>{{x.NCP}}</td>
+                                    <td>{{x.RefundOfAdvances}}</td>
+                                    <td>{{x.EDLIContribution}}</td>
+                                    <td>{{x.DateOfLeaving}}</td>
+                                    <td>{{x.ReasonCode}}</td>
+                                    <td>{{x.AsPerPayroll}}</td>
+                                    <td>{{x.PF}}</td>
+                                    <td>{{x.Diff}}</td>
+                                    <td>{{x.NameAsPerActiveSheet}}</td>
+                                    <td>{{x.DOBAsPerActiveSheet}}</td>
+                                    <td>{{x.DateOfPayroll}}</td>
+                                    <td>{{x.Age}}</td>
+                                    <td>{{x.InternationalWorker}}</td>
+                                    <td>{{x.POHW}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: Final Validation Results -->
+            <div class="card mb-4 d-none" id="finalValidationStep">
+                <div class="card-header text-white">Final Validation Results</div>
+                <div class="card-body">
+
+                    <div id="validationSummary" class="mb-3"></div>
+
+                    <!-- Fixed Category Table (only error categories) -->
+                    <div id="finalCategoryTableContainer" class="mb-4 d-none">
+                        <h6 class="mb-2">Error Categories</h6>
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Error Category</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+
+                    <!-- Warning + Proceed -->
+                    <div id="pfErrorWarning" class="alert alert-warning mt-3">
+                        ⚠ Please review all errors before proceeding.
+                    </div>
+                    <div class="text-end mt-3">
+                        <button class="btn btn-success d-none" id="proceedFinalBtn" onclick="showFinalOutputStep()">Proceed → Finish</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Modal for step 5 -->
+            <div class="modal fade" id="finalErrorModal" tabindex="-1" aria-labelledby="finalErrorModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header text-white">
+                            <h5 class="modal-title" id="finalErrorModalLabel">Error Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="finalErrorModalContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fix Modal for step 5 -->
+            <div class="modal fade" id="finalFixModal" tabindex="-1" aria-labelledby="finalFixModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="finalFixModalLabel">Fix Error</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="finalFixModalForm">
+                                <div id="finalFixModalFields" class="row"></div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-success" onclick="submitFinalFix()">Save Fix</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Final Output & Summary -->
+            <div class="card mb-4 d-none" id="finalOutputStep">
+                <div class="card-header text-white">Final Output & Summary</div>
+                <div class="card-body">
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <!-- CSV Output -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showFinalFile('csv')">
+                                <i class="bi bi-eye"></i> View CSV Output
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="downloadFinalFile('csv')">
+                                <i class="bi bi-download"></i> Download CSV
+                            </button>
+                        </div>
+
+                        <!-- TXT Output -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showFinalFile('txt')">
+                                <i class="bi bi-eye"></i> View TXT Output
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="downloadFinalFile('txt')">
+                                <i class="bi bi-download"></i> Download TXT
+                            </button>
+                        </div>
+
+                        <!-- Proceed / Finish -->
+                        <button class="btn btn-success ms-auto" ng-click="ExportPFReport()">
+                            Print Final Summary
+                        </button>
+                    </div>
+
+                    <!-- Output Display -->
+                    <div id="finalFileContainer">
+                        <!-- CSV File View -->
+                        <div class="table-responsive d-none" id="csvFileView">
+                            <h5 class="mb-3 text-primary">Final CSV Output</h5>
+                            <table class="table table-bordered table-hover" id="finalCsvTable">
+                                <thead class="table-light text-white">
+                                    <tr>
+                                        <th>UAN</th>
+                                        <th>Member Name</th>
+                                        <th>Gross Wages</th>
+                                        <th>EPF Wages</th>
+                                        <th>EPS Wages</th>
+                                        <th>EDLI Wages</th>
+                                        <th>EPF Contribution Remitted (Employees 12%)</th>
+                                        <th>EPS Contribution Remitted (Employer 8.33%)</th>
+                                        <th>EPF_EPS Difference_Remitted (Employer 3.67%)</th>
+                                        <th>NCP</th>
+                                        <th>Refund of Advances</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="x in ValidationStageThree">
+                                        <td>{{x.UAN}}</td>
+                                        <td>{{x.MemberName}}</td>
+                                        <td>{{x.GrossWages}}</td>
+                                        <td>{{x.EPFWages}}</td>
+                                        <td>{{x.EPSWages}}</td>
+                                        <td>{{x.EDLIWages}}</td>
+                                        <td>{{x.EPFEmployee12}}</td>
+                                        <td>{{x.EPSEmployer833}}</td>
+                                        <td>{{x.EPF_EPSDiff367}}</td>
+                                        <td>{{x.NCP}}</td>
+                                        <td>{{x.RefundOfAdvances}}</td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- TXT File View -->
+                        <div class="d-none" id="txtFileView">
+                            <h5 class="mb-3 text-primary">Final TXT Output</h5>
+                            <pre class="bg-light p-3 border rounded">
+                        UAN | Member Name | Gross Wages | EPF Wages | EPS Wages | EDLI Wages | EPF (12%) | EPS (8.33%) | Diff (3.67%) | NCP | Refund
+                            <span ng-repeat="x in ValidationStageThree">
+                            {{x.UAN}} | {{x.MemberName}} | {{x.GrossWages}} | {{x.EPFWages}} | {{x.EPSWages}} | {{x.EDLIWages}} | {{x.EPFEmployee12}} | {{x.EPSEmployer833}} | {{x.EPF_EPSDiff367}} | {{x.NCP}} | {{x.RefundOfAdvances}}
+                        </span>
+                    </pre>
+                        </div>
+                    </div>
+
+                    <!-- Final Summary -->
+                    <div class="alert alert-success mt-4" id="finalSummary">
+                        <h5 class="mb-2"><i class="bi bi-check-circle-fill"></i> Process Completed Successfully</h5>
+                        <p>Total Employees Processed: <strong> {{ValidationStageThree.length}}</strong></p>
+                        @*<p>Approved: <strong>2</strong> | Denied: <strong>0</strong></p>*@
+                        <p>All data has been exported successfully to CSV and TXT format.</p>
+
+
+                        <!-- Payroll Summary Table -->
+                        <div class="table-responsive mt-4">
+                            <h5 class="text-primary mb-3">Payroll Summary</h5>
+                            <h3 style="margin-bottom:6px; text-align:center;">
+                                {{MapUser}}
+                            </h3>
+                            <br>
+                            <div style="display:flex; justify-content:space-between;width:100%;  margin-bottom:6px;">
+                                <div style="text-align:left; width:50%;">
+                                    <strong>PF report for the month of {{MonthYear}}</strong>
+                                </div>
+                                <div style="text-align:right; width:50%;">
+                                    @*<strong>Employer PF No.: </strong>*@
+                                </div>
+                            </div>
+
+                            <div id="report" style="border:1px solid #ccc; padding:10px;">
+                                <table id="pfTable" style="border-collapse:collapse; width:100%; font-size:13px;">
+                                    <thead>
+                                        <tr>
+                                            <th style="border:1px solid #ccc; padding:6px;">Sl. No.</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Emp. Code</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">UAN</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Name of Member</th>
+                                            <!-- 4 columns for contributions (so total columns = 8) -->
+                                            <th style="border:1px solid #ccc; padding:6px;" colspan="2">Employee Contribution</th>
+                                            <th style="border:1px solid #ccc; padding:6px;" colspan="2">Employer Contribution</th>
+                                        </tr>
+                                        <tr>
+                                            <!-- empty placeholders to align with above merged headers -->
+                                            <th style="border:1px solid #ccc; padding:6px;"></th>
+                                            <th style="border:1px solid #ccc; padding:6px;"></th>
+                                            <th style="border:1px solid #ccc; padding:6px;"></th>
+                                            <th style="border:1px solid #ccc; padding:6px;"></th>
+
+                                            <th style="border:1px solid #ccc; padding:6px;">PF Earnings</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Contribution EPF</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">EPF Difference</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Pension Fund</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        <tr ng-repeat="x in ValidationStageThree">
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:center;">{{$index + 1}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:center;">{{x.RefEmployeeCode}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:center;">{{x.UAN}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:center;">   {{x.NameAsPerActiveSheet}} </td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:left; padding-left:8px;">{{x.EPFWages}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{x.EPFEmployee12}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{x.EPF_EPSDiff367}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{x.EPSEmployer833}}</td>
+
+                                        </tr>
+
+
+
+                                        <!-- aur rows add kar sakte ho yahan -->
+                                    </tbody>
+                                    <tfoot>
+                                        <!-- 🟩 Grand Total Row -->
+                                        <tr style="font-weight:bold; background-color:#f8f8f8;">
+                                            <td colspan="4" style="border:1px solid #ccc; padding:6px; text-align:left;">Grand Total</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{getTotal('EPFWages') | number:2}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{getTotal('EPFEmployee12') | number:2}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{getTotal('EPF_EPSDiff367') | number:2}}</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;">{{getTotal('EPSEmployer833') | number:2}}</td>
+                                        </tr>
+
+                                        <tr><td colspan="8" style="padding:6px; border:0;"></td></tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:01 (Column Nos.6+7) = {{(getTotal('EPFEmployee12') + getTotal('EPF_EPSDiff367')) | number:2}}
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:02 (0.50000% of Column No. 5)= {{(getTotal('EPFWages') * 0.005) | number:2}}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:10 (Column No.8) = {{(getTotal('EPSEmployer833')) |  number:2}}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:21 EDLI WAGES *0.50000% = {{(getTotal('EDLIWages') * 0.005) | number:2}}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:22 EDLI Wages *0.00000% =
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                TOTAL : {{(getTotal('EPFContribution') + getTotal('EPF_EPSDiff367') + getTotal('EPSEmployer833')) | number:2}}
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                Total No. of Employees in the Month: {{ValidationStageThree.length}}
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                VPS: {{ getTotal('VPS') || 0}}
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                EDLI Wages : {{ getTotal('EDLIWages') || 0}}  ; Pension Wages : {{ getTotal('EPS') || 0}}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                    <!--<tfoot>-->
+                                    <!-- Grand totals row: first 4 cells merged, then 4 numeric totals -->
+                                    <!--<tr>
+                                        <th colspan="4" style="border:1px solid #ccc; padding:6px; text-align:left;">Grand Total</th>
+                                        <td style="border:1px solid #ccc; padding:6px; text-align:right;">285,000.00</td>
+                                        <td style="border:1px solid #ccc; padding:6px; text-align:right;">34,200.00</td>
+                                        <td style="border:1px solid #ccc; padding:6px; text-align:right;">11,700.00</td>
+                                        <td style="border:1px solid #ccc; padding:6px; text-align:right;">22,500.00</td>
+                                    </tr>-->
+                                    <!-- Additional info rows (use colspan=8 to span whole table) -->
+                                    <!--<tr>
+                                            <td colspan="8" style="padding:6px; border:0;"></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:01 (Column Nos.6+7) = 45,000
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                Account No:02 (0.50000% of Col.) = 1,425
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:right; padding:6px;">
+                                                TOTAL : 71,250.00
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                Total No. of Employees in the Month: 22
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                No. of Excluded Employees: 3
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                Gross Wages of Excluded Employees: 75,000.00
+                                            </td>
+                                        </tr>
+                                    </tfoot>-->
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div id="ESICCard" class="card section-card d-none">
+            <h2 class="mb-4">ESIC Compliance </h2>
+            <!-- STEP 1: ESIC Setup + Period + Uploads -->
+            <div class="card mb-4" id="esicStep1">
+                <div class="card-header text-white">
+                    ESIC Setup & Period
+                </div>
+
+                <div class="card-body">
+                    <form class="row g-3">
+
+                        <!-- Mode -->
+                        <div class="col-md-3">
+                            <label class="form-label">Mode</label>
+                            <select class="form-control form-select" id="esicMode">
+                                <option value="">Select</option>
+                                <option value="Console">Main Code</option>
+                                <option value="Branch">Sub Code</option>
+                            </select>
+                        </div>
+
+                        <!-- Location -->
+                        <div class="col-md-3">
+                            <label class="form-label">Code Number</label>
+                            <select class="form-control form-select" id="esicLocation">
+                                <option value="">Select Location</option>
+                                <!-- Static for now -->
+                                <option value="1">Location 1</option>
+                                <option value="2">Location 2</option>
+                            </select>
+                        </div>
+
+                        <!-- Month -->
+                        <div class="col-md-3">
+                            <label class="form-label">Month</label>
+                            <select class="form-control form-select" id="esicMonth">
+                                <option value="">Select</option>
+                                <option>January</option>
+                                <option>February</option>
+                                <option>March</option>
+                                <option>April</option>
+                                <option>May</option>
+                                <option>June</option>
+                                <option>July</option>
+                                <option>August</option>
+                                <option>September</option>
+                                <option>October</option>
+                                <option>November</option>
+                                <option>December</option>
+                            </select>
+                        </div>
+
+                        <!-- Year -->
+                        <div class="col-md-3">
+                            <label class="form-label">Year</label>
+                            <select class="form-control form-select" id="esicYear">
+                                <option value="">Select</option>
+                                <option>2023</option>
+                                <option>2024</option>
+                                <option>2025</option>
+                            </select>
+                        </div>
+
+                        <!-- Employee ESIC Master Upload -->
+                        <div class="col-md-3">
+                            <label class="form-label">Employee ESIC Active</label>
+                            <input type="file" class="form-control" id="esicMasterFile" />
+                        </div>
+
+                        <!-- ESIC Salary Data Upload -->
+                        <div class="col-md-3">
+                            <label class="form-label">ESIC Wage Data</label>
+                            <input type="file" class="form-control" id="esicSalaryFile" />
+                        </div>
+
+                        <!-- Proceed + Download -->
+                        <div class="col-12 text-end mt-3">
+                            <button type="button" class="btn btn-outline-primary me-2" id="downloadEsicMasterTemplate">
+                                <i class="bi bi-download"></i> Download ESIC Master Template
+                            </button>
+
+                            <button type="button" class="btn btn-outline-primary me-2" id="downloadEsicSalaryTemplate">
+                                <i class="bi bi-download"></i> Download ESIC Wage Template
+                            </button>
+
+                            <button type="button"
+                                    id="btnProceedESIC"
+                                    class="btn btn-success"
+                                    onclick="goToESICStep2()">
+                                Proceed
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <!-- STEP 2: ESIC Validation Process -->
+            <div class="card mb-4 d-none" id="esicStep2">
+
+                <div class="card-header text-white">
+                    ESIC Validation Process
+                </div>
+
+                <div class="card-body">
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+
+                        <!-- ESIC Active  -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showESICData('master')">
+                                <i class="bi bi-eye"></i> View ESIC Active
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+
+                        <!-- ESIC Wage Data -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showESICData('salary')">
+                                <i class="bi bi-eye"></i> View ESIC Wage Data
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+
+                        <!-- ESIC Contribution Preview -->
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="showESICData('contribution')">
+                                <i class="bi bi-eye"></i> View ESIC Contribution
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="bi bi-download"></i> Download
+                            </button>
+                        </div>
+
+                        <!-- Proceed -->
+                        <button class="btn btn-success ms-auto" onclick="goToESICStep3()">
+                            Proceed → Validate
+                        </button>
+
+                    </div>
+
+                    <!-- DATA TABLES CONTAINER -->
+                    <div id="esicDataTablesContainer">
+
+                        <!--  ESIC Active TABLE -->
+                        <div class="table-responsive d-none" id="esicMasterTable">
+                            <h5 class="mb-3 text-primary">ESIC Employee Master</h5>
+
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>IP Number (10 Digits Only)</th>
+                                        <th>Name (Alphabets Only)</th>
+                                        <th>Date of Appointment (DD/MM/YYYY)Eg : 01/01/1970</th>
+                                        <th>Date of Birth (DD/MM/YYYY) Eg : 01/01/1970</th>
+                                        <th>Gender (M/F)</th>
+                                        <th>UAN Number</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>3714768684</td>
+                                        <td>VAHGELA MITALBEN DHIRUBHAI</td>
+                                        <td>28.03.2023</td>
+                                        <td>28.10.1997</td>
+                                        <td>F</td>
+                                        <td>9876543210</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!--  ESIC SALARY TABLE -->
+                        <div class="table-responsive d-none" id="esicSalaryTable">
+                            <h5 class="mb-3 text-primary">ESIC Salary Data</h5>
+
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Employee Code</th>
+                                        <th>Employee Name</th>
+                                        <th>Gross Salary</th>
+                                        <th>ESIC Salary</th>
+                                        <th>Working Days</th>
+                                        <th>Month</th>
+                                        <th>Year</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>EMP001</td>
+                                        <td>Rahul Sharma</td>
+                                        <td>18000</td>
+                                        <td>18000</td>
+                                        <td>26</td>
+                                        <td>March</td>
+                                        <td>2025</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!--  ESIC CONTRIBUTION PREVIEW -->
+                        <div class="table-responsive d-none" id="esicContributionTable">
+                            <h5 class="mb-3 text-primary">ESIC Contribution Preview</h5>
+
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Employee Code</th>
+                                        <th>Employee Name</th>
+                                        <th>ESIC Salary</th>
+                                        <th>Employee Contribution (0.75%)</th>
+                                        <th>Employer Contribution (3.25%)</th>
+                                        <th>Total Contribution</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>EMP001</td>
+                                        <td>Rahul Sharma</td>
+                                        <td>18000</td>
+                                        <td>135</td>
+                                        <td>585</td>
+                                        <td>720</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!--STEP 3: ESIC Validation Output -->
+            <div class="card mb-4 d-none" id="esicValidationStep">
+                <div class="card-header text-white">ESIC Validation Results</div>
+
+                <div class="card-body">
+
+                    <!--  VALIDATION PASSED -->
+                    <div id="esicValidationPassed" class="d-none text-center p-4">
+                        <h5 class="text-success mb-3">Validation Passed</h5>
+                        <p>All ESIC records validated successfully.</p>
+                        <button class="btn btn-success" onclick="goToESICContribution()">
+                            Proceed → Contribution Register
+                        </button>
+                    </div>
+
+                    <!-- ❌ VALIDATION FAILED -->
+                    <div id="esicValidationFailed" class="d-none">
+                        <h5 class="text-danger mb-3">Validation Failed</h5>
+                        <p>Errors found in ESIC data. Please fix them below.</p>
+
+                        <table class="table table-bordered table-hover mt-3 text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Error Category</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span id="esicMasterStatus">❌</span></td>
+                                    <td>ESIC Master Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" onclick="openESICErrorModal('Master')">View Details</button></td>
+                                </tr>
+
+                                <tr>
+                                    <td><span id="esicIPStatus">❌</span></td>
+                                    <td>IP Status Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" onclick="openESICErrorModal('IP')">View Details</button></td>
+                                </tr>
+
+                                <tr>
+                                    <td><span id="esicSalaryStatus">❌</span></td>
+                                    <td>Salary Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" onclick="openESICErrorModal('Salary')">View Details</button></td>
+                                </tr>
+
+                                <tr>
+                                    <td><span id="esicMismatchStatus">❌</span></td>
+                                    <td>Mismatch Errors</td>
+                                    <td><button class="btn btn-sm btn-primary" onclick="openESICMismatchModal()">View Details</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div id="esicErrorWarning" class="alert alert-warning mt-3">
+                            ⚠ Please fix all errors before proceeding.
+                        </div>
+
+                        <div class="text-end mt-3">
+                            <button id="esicProceedAfterFixBtn"
+                                    class="btn btn-success d-none"
+                                    onclick="showESICValidatedSheetStep()">
+                                Proceed → Validate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NORMAL ERROR MODAL (MASTER / IP / SALARY) -->
+            <div class="modal fade" id="esicErrorModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header text-white">
+                            <h5 class="modal-title" id="esicErrorModalTitle">ESIC Error Details</h5>
+                            <button class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <table class="table table-bordered text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Emp Code</th>
+                                        <th>Description</th>
+                                        <th>Fix</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="esicErrorModalBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MISMATCH MODAL (EXACTLY LIKE PF) -->
+            <div class="modal fade" id="esicMismatchModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+
+                        <div class="modal-header text-white">
+                            <h5 class="modal-title">ESIC Mismatch Errors</h5>
+                            <button class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong>Total Count: <span id="esicMismatchCount"></span></strong>
+                                <button class="btn btn-sm btn-warning" onclick="esicFixAllMismatch()">Fix All</button>
+                            </div>
+
+                            <table class="table table-bordered text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Master</th>
+                                        <th>Salary</th>
+                                        <th>Description</th>
+                                        <th>Fix</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="esicMismatchBody"></tbody>
+                            </table>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ESIC STEP 4: Validated Excel Sheet -->
+            <div class="card mb-4 d-none" id="esicValidatedSheetStep">
+                <div class="card-header text-white">Validated ESIC Sheet</div>
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="toggleESICValidatedTable(event)">View</button>
+                        <button class="btn btn-secondary" onclick="downloadESICValidatedSheet()">Download</button>
+                        <button class="btn btn-success" id="proceedESICFinalBtn" onclick="showESICFinalValidationStep()">
+                            Proceed → Validate
+                        </button>
+                    </div>
+
+                    <div class="table-responsive d-none" id="esicValidatedTableContainer">
+                        <table class="table table-bordered table-hover" id="esicValidatedTable">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Emp Code</th>
+                                    <th>IP Number</th>
+                                    <th>Member Name</th>
+                                    <th>Gross Wages</th>
+                                    <th>ESIC Wages</th>
+                                    <th>Employee Contribution</th>
+                                    <th>Employer Contribution</th>
+                                    <th>Total Contribution</th>
+                                    <th>Contribution Period</th>
+                                    <th>Branch</th>
+                                    <th>Date of Joining</th>
+                                    <th>Date of Leaving</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <!-- Static / Angular Ready -->
+                                <tr ng-repeat="x in ESICValidatedData">
+                                    <td>{{x.EmpCode}}</td>
+                                    <td>{{x.IPNumber}}</td>
+                                    <td>{{x.MemberName}}</td>
+                                    <td>{{x.GrossWages}}</td>
+                                    <td>{{x.ESICWages}}</td>
+                                    <td>{{x.EmployeeContribution}}</td>
+                                    <td>{{x.EmployerContribution}}</td>
+                                    <td>{{x.TotalContribution}}</td>
+                                    <td>{{x.Period}}</td>
+                                    <td>{{x.Branch}}</td>
+                                    <td>{{x.DOJ}}</td>
+                                    <td>{{x.DOL}}</td>
+                                    <td>{{x.Status}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ESIC STEP 5: Final Validation Results -->
+            <div class="card mb-4 d-none" id="esicFinalValidationStep">
+                <div class="card-header text-white">Final ESIC Validation Results</div>
+                <div class="card-body">
+
+                    <div id="esicValidationSummary" class="mb-3"></div>
+
+                    <!-- Fixed Category Table (only error categories) -->
+                    <div id="esicFinalCategoryTableContainer" class="mb-4 d-none">
+                        <h6 class="mb-2">Error Categories</h6>
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Error Category</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Warning + Proceed -->
+                    <div id="esicErrorWarning" class="alert alert-warning mt-3">
+                        ⚠ Please review all ESIC errors before proceeding.
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <button class="btn btn-success d-none" id="proceedESICFinishBtn" onclick="showESICStep6()">
+                            Proceed → Finish
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ERROR MODAL -->
+            <div class="modal fade" id="esicFinalErrorModal" tabindex="-1">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header text-white">
+                            <h5 class="modal-title" id="esicFinalErrorModalLabel">Error Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="esicFinalErrorModalContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FIX MODAL -->
+            <div class="modal fade" id="esicFinalFixModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="esicFinalFixModalLabel">Fix Error</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <form id="esicFinalFixModalForm">
+                                <div id="esicFinalFixModalFields" class="row"></div>
+                            </form>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-success" onclick="submitESICFinalFix()">Save Fix</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!--  ESIC STEP 6: Final Register (SUMMARY ONLY) -->
+            <div class="card mb-4 d-none" id="esicStep6">
+                <div class="card-header text-white">
+                    ESIC Final Register - Summary
+                </div>
+
+                <div class="card-body">
+
+                    <!-- ================== ESIC STEP 6 : FINAL SUMMARY ================== -->
+                    <div class="alert alert-success mt-4 d-none" id="esicFinalSummary">
+
+                        <h5 class="mb-2">
+                            ✅ ESIC Process Completed Successfully
+                        </h5>
+
+                        <p>
+                            Total Employees Processed:
+                            <strong id="esicEmployeeCount">0</strong>
+                        </p>
+
+                        <!-- ================== ESIC SUMMARY TABLE ================== -->
+                        <div class="table-responsive mt-4">
+                            <h5 class="text-primary mb-3">ESIC Contribution Summary</h5>
+
+                            <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:6px;">
+                                <div><strong>ESIC Report for the Month: <span id="esicMonthLabel">March 2025</span></strong></div>
+                                <div><strong>Employer ESIC Code:</strong> 12-34567-890-000</div>
+                            </div>
+
+                            <div id="esicReport" style="border:1px solid #ccc; padding:10px;">
+                                <table style="border-collapse:collapse; width:100%; font-size:13px;">
+                                    <thead>
+                                        <tr>
+                                            <th style="border:1px solid #ccc; padding:6px;">Sl. No.</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Emp Code</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">IP Number</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Employee Name</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Gross Wages</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Employee ESIC (0.75%)</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Employer ESIC (3.25%)</th>
+                                            <th style="border:1px solid #ccc; padding:6px;">Total Contribution</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="esicSummaryBody"></tbody>
+
+                                    <tfoot>
+                                        <!-- ✅ Grand Total -->
+                                        <tr style="font-weight:bold; background-color:#f8f8f8;">
+                                            <td colspan="4" style="border:1px solid #ccc; padding:6px; text-align:left;">Grand Total</td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;" id="gtGross"></td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;" id="gtEmployee"></td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;" id="gtEmployer"></td>
+                                            <td style="border:1px solid #ccc; padding:6px; text-align:right;" id="gtTotal"></td>
+                                        </tr>
+
+                                        <tr>
+                                            <td colspan="8" style="text-align:left; padding:6px;">
+                                                Total No. of Employees: <span id="gtEmployees"></span>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    .container {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27; /* theme accent */
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        color: #223;
+        min-height: 100%;
+    }
+
+    /* Toggle pill - single capsule container */
+    .toggle-pill {
+        display: inline-flex;
+        border-radius: 999px;
+        background: rgba(0,0,0,0.03);
+        padding: 4px;
+        overflow: hidden;
+        gap: 4px;
+        align-items: center;
+    }
+
+        /* inner buttons: make them visually full-pill, no borders, equal width */
+        .toggle-pill .btn-pill {
+            background: transparent;
+            border: 0;
+            padding: 8px 18px;
+            margin: 0;
+            font-weight: 500;
+            color: #333;
+            border-radius: 999px;
+            transition: background .15s ease, color .15s ease, transform .06s ease;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+            /* active pill */
+            .toggle-pill .btn-pill.active {
+                background: var(--primary);
+                color: #fff;
+                box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+            }
+
+            /* ensure focus ring for accessibility (subtle) */
+            .toggle-pill .btn-pill:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+            }
+
+
+    .card {
+        border-radius: 10px;
+    }
+
+    .section-card {
+        background: transparent;
+        border: none;
+    }
+
+        .section-card .card-body {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+    .card-header, .modal-header {
+        font-weight: 400;
+        background: var(--primary);
+    }
+
+    #finalOutputStep table {
+        border: 1px solid #000;
+    }
+
+    #finalOutputStep th,
+    #finalOutputStep td {
+        border: 1px solid #000 !important;
+        background-color: #d9d9d9;
+    }
+
+    #finalOutputStep th {
+        background-color: #bfbfbf !important;
+    }
+
+    /* === Step 3 Table Alignment Fix === */
+
+    /* Center text in all validation tables */
+    #validationStep table th,
+    #validationStep table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Add some visual structure */
+    #validationStep table {
+        border: 1px solid #dee2e6;
+    }
+
+        #validationStep table thead th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+    /*  tighten spacing inside modals */
+    #validationStep .modal table td,
+    #validationStep .modal table th {
+        padding: 0.5rem;
+    }
+
+    /* === Center table text inside modals too === */
+    .modal table th,
+    .modal table td {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
+    /* === Step 5 Table Alignment Fix === */
+    #finalCategoryTableContainer th,
+    #finalCategoryTableContainer td,
+    #finalErrorModalContent th,
+    #finalErrorModalContent td {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* extra polish */
+    .modal table thead th {
+        /*      // background-color: #f8f9fa;
+        // font-weight: 600;*/
+    }
+
+
+    /* Step 6 tables same style as above steps */
+    #finalOutputStep table {
+        border: 1px solid #dee2e6;
+    }
+
+    #finalOutputStep th,
+    #finalOutputStep td {
+        border: 1px solid #dee2e6 !important;
+        background-color: #f8f9fa;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #finalOutputStep th {
+        background-color: #f1f3f5 !important; /* matches Step 3 & 5 */
+        font-weight: 600;
+    }
+
+    /* CSV table styling same as Step 3 & 5 */
+    #finalOutputStep #csvFileView table {
+        border: 1px solid #dee2e6;
+    }
+
+    #finalOutputStep #csvFileView th,
+    #finalOutputStep #csvFileView td {
+        border: 1px solid #dee2e6 !important;
+        background-color: #f8f9fa;
+        text-align: center;
+        vertical-align: middle;
+        padding: 0.5rem;
+    }
+
+    #finalOutputStep #csvFileView th {
+        background-color: #f1f3f5 !important;
+        font-weight: 600;
+    }
+
+    /*=================== ESIC Page ========================*/
+</style>
+
+<script>
+    // =============================
+    // UTILITY FUNCTION
+    // =============================
+    function scrollToElement(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            window.scrollTo({
+                top: el.offsetTop - 20,
+                behavior: "smooth"
+            });
+        }
+    }
+
+    // =============================
+    // STEP NAVIGATION
+    // =============================
+    function showStep1() {
+        document.getElementById('step1').classList.remove('d-none');
+        scrollToElement('step1');
+    }
+
+    function showSalaryStep() {
+        document.getElementById('salaryStep').classList.remove('d-none');
+        scrollToElement('salaryStep');
+    }
+
+
+    document.getElementById("downloadActiveTemplateBtn").addEventListener("click", () => {
+
+        const link = document.createElement('a');
+        link.href = '../DownloadMat/ActivePayrollTemplate.xlsx';
+        link.download = 'ActivePayrollTemplate.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    document.getElementById("downloadSalaryTemplateBtn").addEventListener("click", () => {
+        const link = document.createElement('a');
+        link.href = '../DownloadMat/SalaryPayRollTemplate.xlsx';
+        link.download = 'SalaryPayRollTemplate.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+
+    // =============================
+    // STEP 2 ACTIONS
+    // =============================
+    function showSalaryTable() {
+        document.getElementById('salaryTableContainer').classList.remove('d-none');
+        scrollToElement('salaryTableContainer');
+    }
+
+    function showData(type) {
+        // Hide all tables first
+        document.querySelectorAll('#dataTablesContainer > div').forEach(el => el.classList.add('d-none'));
+
+        // Show the selected one
+        const tableId = type + 'Table';
+        document.getElementById(tableId).classList.remove('d-none');
+        window.scrollTo(0, document.getElementById(tableId).offsetTop - 20);
+    }
+
+
+
+    function runValidation() {
+        // Hide Step 2 content and show Step 3
+        document.getElementById('validationStep').classList.remove('d-none');
+        scrollToElement('validationStep');
+
+        // Simulate backend response
+        const isValid = false; // change to true to test "pass" case
+
+        if (isValid) {
+            document.getElementById('validationPassed').classList.remove('d-none');
+            document.getElementById('validationFailed').classList.add('d-none');
+        } else {
+            document.getElementById('validationFailed').classList.remove('d-none');
+            document.getElementById('validationPassed').classList.add('d-none');
+        }
+    }
+
+
+
+    // =============================
+    // STEP 3 ACTIONS (FINAL ENHANCED)
+    // =============================
+
+    let selectedRow = null;
+
+    // Error data grouped by category
+    const categorizedErrors = {
+        Employee: [
+            { id: "EMP003", desc: "Missing Department", col: "Department" },
+            { id: "EMP006", desc: "Invalid Designation", col: "Designation" }
+        ],
+        "Active/Inactive": [
+            { id: "EMP001", desc: "Missing DoB", col: "DoB" }
+        ],
+        Salary: [
+            { id: "EMP002", desc: "Invalid Net Pay", col: "Net Pay" },
+            { id: "EMP005", desc: "Negative Basic Pay", col: "Basic" }
+        ]
+    };
+
+    // Track fixed status of each category
+    const categoryStatus = {
+        Employee: false,
+        "Active/Inactive": false,
+        Salary: false
+    };
+
+    // Column structures per sheet (from earlier working Step 3)
+    const sheetColumns = {
+        Employee: ["Employee Code",
+            "Employee Name",
+            "Employee Designation",
+            "Employee Department",
+            "Father/Husband Name",
+            "Gender",
+            "Marital Status",
+            "Date of Birth",
+            "Present Address",
+            "Permanent Address",
+            "Aadhar Card Number",
+            "PAN Number",
+            "Mobile Number",
+            "Alternative Mobile Number",
+            "Employee Email ID",
+            "Bank Account Number",
+            "Bank IFSC Code",
+            "Previous UAN",
+            "Previous ESI",
+            "Gross Salary",
+            "DOJ",
+            "Name of Nominee",
+            "Address of Nominee",
+            "Relation of Nominee",
+            "DOB of Nominee",
+            "Store Code",
+            "Status"],
+        Salary: ["Employee Code",
+            "Employee Name",
+            "DOJ",
+            "Designation",
+            "International Worker(Yes/No)",
+            "POHW (Yes/ No)",
+            "Branch/Location",
+            "UAN Number",
+            "PF type(Ceiling/ Basic)",
+            "Resignation Date",
+            "Total Working Days",
+            "Earned Gross Salary",
+            "PF salary",
+            "Employee's PF Cont.",
+            "VPF",
+            "Arrear Gross salary",
+            "Arrear PF salary",
+            "Employee's ESIC Cont.",
+            "P Tax",
+            "LWF",
+            "Total Deduction",
+            "Net Payable Salary"],
+        "Active/Inactive": [
+            "UAN",
+            "Member ID",
+            "Name",
+            "Gender",
+            "DoB",
+            "DoJ",
+            "Father's/Husband's Name",
+            "Relation",
+            "Marital Status",
+            "Mobile",
+            "Email ID",
+            "AADHAAR",
+            "PAN",
+            "Bank Account No",
+            "IFSC Code",
+            "Nomination Filed",
+            "Is AADHAAR Verified",
+            "Face Auth Status",
+            "Whether Member of Pension Scheme",
+            "EPS: Contributing on Higher Wages",
+            "Deferred Pension",
+            "International Worker"
+        ]
+    };
+
+    // Open modal with error table
+    function openErrorModal(category) {
+        //    const errors = categorizedErrors[category] || [];
+        //    let tableHTML = `
+        //<h6 class="mb-3 text-primary">${category} - Error Details</h6>
+        //<table class="table table-bordered table-hover align-middle">
+        //  <thead class="table-light text-center">
+        //    <tr>
+        //      <th>Emp ID</th>
+        //      <th>Error Description</th>
+        //      <th>Column</th>
+        //      <th>Action</th>
+        //    </tr>
+        //  </thead>
+        //  <tbody>`;
+
+        //    if (errors.length === 0) {
+        //        tableHTML += `<tr><td colspan="4" class="text-center text-success">✅ No errors remaining in this category</td></tr>`;
+        //    } else {
+        //        errors.forEach(err => {
+        //            tableHTML += `
+        //    <tr>
+        //      <td>${err.id}</td>
+        //      <td>${err.desc}</td>
+        //      <td>${err.col}</td>
+        //      <td><button class="btn btn-sm btn-warning" onclick="openFixModal(this, '${category}', '${err.col}')">Fix</button></td>
+        //    </tr>`;
+        //        });
+        //    }
+
+        //    tableHTML += `</tbody></table>`;
+        //    document.getElementById("errorModalContent").innerHTML = tableHTML;
+        //  document.getElementById("errorModalLabel").innerText = `${category} - Errors`;
+
+        /*  new bootstrap.Modal(document.getElementById("errorModal")).show();*/
+    }
+
+    // Open Fix modal – only show relevant field(s)
+    function openFixModal(button, category, errorCol) {
+        selectedRow = button.closest("tr");
+        const columns = sheetColumns[category] || [];
+        let fieldsHTML = "";
+
+        columns.forEach(col => {
+            const isErrorField = col === errorCol;
+            fieldsHTML += `
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">${col}</label>
+                    <input type="text" class="form-control" name="${col}" placeholder="Enter ${col}" ${isErrorField ? "required" : ""}>
+                  </div>`;
+        });
+
+        document.getElementById("fixModalFields").innerHTML = fieldsHTML;
+        document.getElementById("fixModal").setAttribute("data-category", category);
+        document.getElementById("fixModal").setAttribute("data-errorcol", errorCol);
+
+        new bootstrap.Modal(document.getElementById("fixModal")).show();
+    }
+
+    // Submit fix — only check required field
+    function submitFix() {
+        if (!selectedRow) return;
+
+        const form = document.getElementById("fixModalForm");
+        const requiredInputs = form.querySelectorAll("input[required]");
+        const isFilled = Array.from(requiredInputs).every(inp => inp.value.trim() !== "");
+
+        if (!isFilled) return alert("Please fill the highlighted error field before fixing.");
+
+        const category = document.getElementById("fixModal").getAttribute("data-category");
+        const errorCol = document.getElementById("fixModal").getAttribute("data-errorcol");
+
+        // Remove fixed row
+        selectedRow.remove();
+        selectedRow = null;
+
+        // Close fix modal
+        bootstrap.Modal.getInstance(document.getElementById("fixModal")).hide();
+
+        // If no errors left → mark category as fixed
+        const tbody = document.querySelector("#errorModalContent tbody");
+        if (tbody.querySelectorAll("tr").length === 0) {
+            categoryStatus[category] = true;
+            categorizedErrors[category] = [];
+            updateCategoryStatus(category);
+        }
+
+        checkAllCategoriesFixed();
+    }
+
+    // Update main category status
+    function updateCategoryStatus(category) {
+        const rows = document.querySelectorAll("#validationFailed tbody tr");
+        rows.forEach(row => {
+            const label = row.cells[1].innerText.trim();
+            if (label.includes(category)) {
+                row.cells[0].innerHTML = categoryStatus[category]
+                    ? `<span class="text-success fw-bold">✅</span>`
+                    : `<span class="text-danger fw-bold">❌</span>`;
+            }
+        });
+    }
+
+    // Enable Proceed button if all fixed
+    function checkAllCategoriesFixed() {
+        const allFixed = Object.values(categoryStatus).every(v => v);
+        document.getElementById("errorWarning").classList.toggle("d-none", allFixed);
+        document.getElementById("proceedAfterFixBtn").classList.toggle("d-none", !allFixed);
+    }
+
+    function showValidatedSheetStep() {
+        document.getElementById("validatedSheetStep").classList.remove("d-none");
+        window.scrollTo(0, document.getElementById("validatedSheetStep").offsetTop - 20);
+    }
+
+
+
+
+
+    // ------------------------------
+    // STEP 4 ACTIONS
+    // ------------------------------
+
+    // Show Step 4 table
+    function showValidatedSheetStep() {
+        document.getElementById("validatedSheetStep").classList.remove("d-none");
+        window.scrollTo(0, document.getElementById("validatedSheetStep").offsetTop - 20);
+    }
+
+    // Toggle Step 4 table
+    function toggleValidatedTable(event) {
+        const tableContainer = document.getElementById("validatedTableContainer");
+        tableContainer.classList.toggle("d-none");
+        event.currentTarget.innerText = tableContainer.classList.contains("d-none") ? "View" : "Hide";
+    }
+
+    // Download Step 4 table as CSV
+    function downloadValidatedSheet() {
+        const rows = document.querySelectorAll("#validatedTableContainer table tr");
+        let csv = [];
+        rows.forEach(row => {
+            const cols = Array.from(row.querySelectorAll("th, td"))
+                .map(cell => `"${cell.innerText.replace(/"/g, '""')}"`);
+            csv.push(cols.join(","));
+        });
+        const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+        const downloadLink = document.createElement("a");
+        downloadLink.download = "validated_pf_sheet.csv";
+        downloadLink.href = URL.createObjectURL(csvFile);
+        downloadLink.click();
+    }
+
+
+    // ------------------------------
+    // STEP 5 ACTIONS
+    // ------------------------------
+
+
+    let selectedFinalRow = null;
+
+    // All PF categories
+    const pfCategories = [
+        "Emp. Code", "PF A/c No", "PF Flag", "Pension", "Payable Days", "Paid Days", "Full Basic/Basic",
+        "VPF", "UAN", "Member Name", "Gross Wages", "EPF Wages", "EPS Wages", "EDLI Wages",
+        "EPF Contribution Remitted (Employees at 12%)", "EPS Contribution Remitted (Employer at 8.33%)",
+        "EPF_EPS Difference_Remitted (Employer at 3.67%)", "NCP", "Refund of Advances", "EDLI Contribution at 0.50%",
+        "Date of Leaving", "Reason Code", "As per Payroll", "PF", "Diff", "Name as per Active Member Sheet",
+        "DOB as per Active member sheet", "Date of Payroll", "Age", "International worker", "POHW"
+    ];
+
+    // Example errors (replace with actual validation results)
+    const pfCategorizedErrors = {
+        "Emp. Code": [
+            { id: "EMP001", desc: "Missing Employee Code", col: "Emp. Code" }
+        ],
+        "PF Flag": [
+            { id: "EMP004", desc: "PF Flag not selected", col: "PF Flag" }
+        ],
+        "UAN": [
+            { id: "EMP007", desc: "UAN Mismatch", col: "UAN" }
+        ]
+    };
+
+    // Track fix status
+    const pfCategoryStatus = Object.fromEntries(pfCategories.map(c => [c, false]));
+
+    // Populate category summary
+    function populatePFCategories() {
+        const tbody = document.querySelector("#finalCategoryTableContainer tbody");
+        tbody.innerHTML = "";
+        Object.keys(pfCategorizedErrors).forEach(cat => {
+            const errs = pfCategorizedErrors[cat];
+            if (errs?.length > 0) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><span class="text-danger fw-bold">❌</span></td>
+                    <td>${cat}</td>
+                    <td><button class="btn btn-sm btn-primary" onclick="openFinalErrorModal('${cat}')">View Details</button></td>`;
+                tbody.appendChild(tr);
+            }
+        });
+        document.getElementById("finalCategoryTableContainer").classList.toggle("d-none", tbody.children.length === 0);
+    }
+
+    // Open category detail modal
+    function openFinalErrorModal(category) {
+        const errors = pfCategorizedErrors[category] || [];
+        let html = `
+                <h6 class="mb-3 text-primary">${category} – Error Details</h6>
+                <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light text-center">
+                  <tr><th>Emp ID</th><th>Error Description</th><th>Column</th><th>Action</th></tr>
+                </thead><tbody>`;
+        if (errors.length === 0) {
+            html += `<tr><td colspan="4" class="text-center text-success">✅ No errors</td></tr>`;
+        } else {
+            errors.forEach(e => {
+                html += `
+                  <tr>
+                    <td>${e.id}</td>
+                    <td>${e.desc}</td>
+                    <td>${e.col}</td>
+                    <td><button class="btn btn-sm btn-warning" onclick="openFinalFixModal(this,'${category}','${e.col}')">Fix</button></td>
+                  </tr>`;
+            });
+        }
+        html += `</tbody></table>`;
+        document.getElementById("finalErrorModalContent").innerHTML = html;
+        document.getElementById("finalErrorModalLabel").innerText = `${category} – Errors`;
+        new bootstrap.Modal(document.getElementById("finalErrorModal")).show();
+    }
+
+    // Open single-field Fix modal
+    function openFinalFixModal(btn, category, errorCol) {
+        selectedFinalRow = btn.closest("tr");
+        document.getElementById("finalFixModalFields").innerHTML = `
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">${errorCol}</label>
+                  <input type="text" class="form-control" name="${errorCol}" placeholder="Enter ${errorCol}" required>
+                </div>`;
+        const modal = document.getElementById("finalFixModal");
+        modal.dataset.category = category;
+        modal.dataset.errorcol = errorCol;
+        new bootstrap.Modal(modal).show();
+    }
+
+    // Save fix
+    function submitFinalFix() {
+        if (!selectedFinalRow) return;
+        const input = document.querySelector("#finalFixModal input[required]");
+        if (!input.value.trim()) return alert("Please fill the field before saving.");
+        const category = document.getElementById("finalFixModal").dataset.category;
+        selectedFinalRow.remove();
+        bootstrap.Modal.getInstance(document.getElementById("finalFixModal")).hide();
+
+        const tbody = document.querySelector("#finalErrorModalContent tbody");
+        if (tbody.querySelectorAll("tr").length === 0) {
+            pfCategoryStatus[category] = true;
+            pfCategorizedErrors[category] = [];
+            updateFinalCategoryStatus(category);
+        }
+        checkAllPFCategoriesFixed();
+    }
+
+    // Update category row icon
+    function updateFinalCategoryStatus(category) {
+        document.querySelectorAll("#finalCategoryTableContainer tbody tr").forEach(r => {
+            if (r.cells[1].innerText.trim() === category) {
+                r.cells[0].innerHTML = pfCategoryStatus[category]
+                    ? `<span class="text-success fw-bold">✅</span>`
+                    : `<span class="text-danger fw-bold">❌</span>`;
+            }
+        });
+    }
+
+    // Unlock Proceed when all fixed
+    function checkAllPFCategoriesFixed() {
+        // Only consider categories with actual errors
+        const activeCategories = Object.keys(pfCategorizedErrors).filter(cat => pfCategorizedErrors[cat]?.length > 0);
+        const allFixed = activeCategories.every(cat => pfCategoryStatus[cat]);
+        document.getElementById("pfErrorWarning").classList.toggle("d-none", allFixed);
+        document.getElementById("proceedFinalBtn").classList.toggle("d-none", !allFixed);
+    }
+
+    // Call this when Step 5 loads
+    function showFinalValidationStep() {
+        document.getElementById("finalValidationStep").classList.remove("d-none");
+        populatePFCategories();
+    }
+
+
+    // =============================
+    // STEP 6: FINAL OUTPUT
+    // =============================
+
+    // Show Final Output Step
+    function showFinalOutputStep() {
+        // document.getElementById("finalValidationStep").classList.add("d-none");
+        document.getElementById("finalOutputStep").classList.remove("d-none");
+        window.scrollTo(0, document.getElementById("finalOutputStep").offsetTop - 20);
+    }
+
+    // View file (CSV or TXT)
+    function showFinalFile(type) {
+        document.getElementById("csvFileView").classList.add("d-none");
+        document.getElementById("txtFileView").classList.add("d-none");
+
+        const viewId = type === "csv" ? "csvFileView" : "txtFileView";
+        document.getElementById(viewId).classList.remove("d-none");
+        window.scrollTo(0, document.getElementById(viewId).offsetTop - 20);
+    }
+
+    // Download file simulation or actual CSV
+    function downloadFinalFile(type) {
+        if (type === "csv") {
+            // ✅ CSV Download (same as before)
+            const rows = document.querySelectorAll("#finalCsvTable tr");
+            let csv = [];
+
+            rows.forEach(row => {
+                const cols = Array.from(row.querySelectorAll("th, td"))
+                    .map(cell => `"${cell.innerText.replace(/"/g, '""')}"`);
+                csv.push(cols.join(","));
+            });
+
+            const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+            const downloadLink = document.createElement("a");
+            downloadLink.download = "Final_EPF_Report.csv";
+            downloadLink.href = URL.createObjectURL(csvFile);
+            downloadLink.click();
+        }
+
+        else if (type === "txt") {
+            // ✅ TXT Download (Dynamic from AngularJS scope)
+            const scope = angular.element(document.getElementById("finalFileContainer")).scope();
+            const data = scope.ValidationStageThree || [];
+
+            // 🔹 Header row
+            let txtContent = `UAN | Member Name | Gross Wages | EPF Wages | EPS Wages | EDLI Wages | EPF (12%) | EPS (8.33%) | Diff (3.67%) | NCP | Refund\n`;
+
+            // 🔹 Data rows dynamically generated
+            data.forEach(x => {
+                txtContent += `${x.UAN} | ${x.MemberName} | ${x.GrossWages} | ${x.EPFWages} | ${x.EPSWages} | ${x.EDLIWages} | ${x.EPFEmployee12} | ${x.EPSEmployer833} | ${x.EPF_EPSDiff367} | ${x.NCP} | ${x.RefundOfAdvances}\n`;
+            });
+
+            // 🔹 Create and download TXT file
+            const txtFile = new Blob([txtContent.trim()], { type: "text/plain" });
+            const downloadLink = document.createElement("a");
+            downloadLink.download = "Final_EPF_Report.txt";
+            downloadLink.href = URL.createObjectURL(txtFile);
+            downloadLink.click();
+        }
+    }
+
+
+    // Finish process
+    function finishProcess() {
+        alert("🎉 Process completed successfully!");
+        // document.getElementById("finalOutputStep").classList.add("d-none");
+    }
+
+
+
+
+</script>
+
+<script>
+    // ===========ESIC page script==================
+
+    // TOGGLE BUTTON
+    (function () {
+        const container = document.querySelector(".container"); // parent wrapper
+        if (!container) return;
+
+        const tabs = container.querySelectorAll(".toggle-pill .btn-pill");
+        const sections = container.querySelectorAll(".section-card");
+
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function () {
+
+                // 1. Toggle active pill
+                tabs.forEach(t => {
+                    t.classList.remove("active");
+                    t.setAttribute("aria-pressed", "false");
+                });
+
+                this.classList.add("active");
+                this.setAttribute("aria-pressed", "true");
+
+                // 2. Show/Hide cards
+                const target = this.getAttribute("data-target");
+
+                sections.forEach(card => {
+                    if ("#" + card.id === target) {
+                        card.classList.remove("d-none");
+                        card.classList.add("active");
+                    } else {
+                        card.classList.add("d-none");
+                        card.classList.remove("active");
+                    }
+                });
+
+            });
+        });
+    })();
+
+    //showing step 2
+    function goToESICStep2() {
+        // Hide Step 1
+        //document.getElementById("esicStep1").classList.add("d-none");
+        // Show Step 2
+        document.getElementById("esicStep2").classList.remove("d-none");
+        // Optional: Scroll to Step 2 smoothly
+        document.getElementById("esicStep2").scrollIntoView({
+            behavior: "smooth"
+        });
+    }
+    //showing table at step 2
+    function showESICData(type) {
+        const tables = [
+            "esicMasterTable",
+            "esicSalaryTable",
+            "esicContributionTable"
+        ];
+
+        tables.forEach(id => {
+            document.getElementById(id).classList.add("d-none");
+        });
+
+        if (type === "master") {
+            document.getElementById("esicMasterTable").classList.remove("d-none");
+        }
+        if (type === "salary") {
+            document.getElementById("esicSalaryTable").classList.remove("d-none");
+        }
+        if (type === "contribution") {
+            document.getElementById("esicContributionTable").classList.remove("d-none");
+        }
+    }
+
+    // Step - 3(static demo)
+
+    function goToESICStep3() {
+        const step2 = document.getElementById('esicStep2');
+        const step3 = document.getElementById('esicValidationStep');
+
+        if (!step3) {
+            console.error('esicValidationStep not found. Make sure element id="esicValidationStep" exists.');
+            return;
+        }
+
+        // Show Step 3 (remove d-none)
+        if (step3.classList.contains('d-none')) {
+            step3.classList.remove('d-none');
+        }
+
+        // Ensure validation failed block is visible (default behavior)
+        const failed = document.getElementById('esicValidationFailed');
+        const passed = document.getElementById('esicValidationPassed');
+        if (failed) failed.classList.remove('d-none');
+        if (passed) passed.classList.add('d-none');
+
+        // Scroll to Step 3
+        step3.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    const esicErrors = {
+        Master: [{ emp: "EMP01", desc: "Missing Insurance No" }],
+        IP: [{ emp: "EMP02", desc: "Invalid IP Status" }],
+        Salary: [{ emp: "EMP03", desc: "Wrong Deduction" }]
+    };
+
+    let esicMismatchErrors = [
+        { master: "EMP04", salary: "EMP04", desc: "Amount mismatch", fixed: false }
+    ];
+
+    const esicStatus = {
+        Master: false,
+        IP: false,
+        Salary: false,
+        Mismatch: false
+    };
+
+    /* ===== OPEN NORMAL MODAL ===== */
+    function openESICErrorModal(type) {
+        let body = document.getElementById("esicErrorModalBody");
+        body.innerHTML = "";
+
+        esicErrors[type].forEach((x, i) => {
+            body.innerHTML += `
+            <tr>
+                <td>${x.emp}</td>
+                <td>${x.desc}</td>
+                <td><input class="form-control form-control-sm"></td>
+                <td><button class="btn btn-success btn-sm" onclick="saveESICFix('${type}',${i})">Save</button></td>
+            </tr>
+        `;
+        });
+
+        new bootstrap.Modal(document.getElementById("esicErrorModal")).show();
+    }
+
+    /* ===== SAVE FIX ===== */
+    function saveESICFix(type, index) {
+        esicErrors[type].splice(index, 1);
+
+        if (esicErrors[type].length === 0) {
+            esicStatus[type] = true;
+            document.getElementById(`esic${type}Status`).innerHTML = "✅";
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById("esicErrorModal")).hide();
+        checkAllESICFixed();
+    }
+
+    /* ===== OPEN MISMATCH MODAL ===== */
+    function openESICMismatchModal() {
+        let body = document.getElementById("esicMismatchBody");
+        document.getElementById("esicMismatchCount").innerText = esicMismatchErrors.length;
+
+        body.innerHTML = "";
+        esicMismatchErrors.forEach((x, i) => {
+            body.innerHTML += `
+            <tr>
+                <td>${x.master}</td>
+                <td>${x.salary}</td>
+                <td>${x.desc}</td>
+                <td><input class="form-control form-control-sm"></td>
+                <td>
+                    ${x.fixed ? '✅' : `<button class="btn btn-success btn-sm" onclick="fixESICMismatch(${i})">Save</button>`}
+                </td>
+            </tr>`;
+        });
+
+        new bootstrap.Modal(document.getElementById("esicMismatchModal")).show();
+    }
+
+    /* ===== SINGLE FIX ===== */
+    function fixESICMismatch(index) {
+        esicMismatchErrors[index].fixed = true;
+        checkMismatchDone();
+    }
+
+    /* ===== FIX ALL ===== */
+    function esicFixAllMismatch() {
+        esicMismatchErrors.forEach(x => x.fixed = true);
+        checkMismatchDone();
+    }
+
+    /* ===== CHECK MISMATCH ===== */
+    function checkMismatchDone() {
+        const allDone = esicMismatchErrors.every(x => x.fixed);
+
+        if (allDone) {
+            esicStatus.Mismatch = true;
+            document.getElementById("esicMismatchStatus").innerHTML = "✅";
+
+            bootstrap.Modal.getInstance(document.getElementById("esicMismatchModal")).hide();
+            checkAllESICFixed();
+        }
+    }
+
+    /* ===== FINAL CHECK ===== */
+    function checkAllESICFixed() {
+        const allDone = Object.values(esicStatus).every(v => v);
+
+        document.getElementById("esicErrorWarning").classList.toggle("d-none", allDone);
+        document.getElementById("esicProceedAfterFixBtn").classList.toggle("d-none", !allDone);
+    }
+
+    // Step - 4 Validated Excel sheet
+    function toggleESICValidatedTable(e) {
+        e.preventDefault();
+        document
+            .getElementById("esicValidatedTableContainer")
+            .classList.toggle("d-none");
+    }
+
+    function downloadESICValidatedSheet() {
+        alert("ESIC validated download will be wired later.");
+    }
+
+    function showESICValidatedSheetStep() {
+        // Hide Step 3
+        document.getElementById("esicValidationStep").classList.add("d-none");
+
+        // Show Step 4
+        document.getElementById("esicValidatedSheetStep").classList.remove("d-none");
+
+        document.getElementById("esicValidatedSheetStep").scrollIntoView({
+            behavior: "smooth"
+        });
+    }
+
+
+    // ESIC STEP 5 ACTIONS
+
+    let selectedESICFinalRow = null;
+
+    /*  EXACT 4 ESIC CATEGORIES YOU CONFIRMED */
+    const esicCategories = [
+        "Master",
+        "IP Status",
+        "Salary",
+        "Mismatch"
+    ];
+
+    /*  STATIC SAMPLE ERRORS */
+    const esicCategorizedErrors = {
+        "Master": [
+            { id: "EMP001", desc: "Missing IP Number", col: "IP Number" }
+        ],
+        "IP Status": [
+            { id: "EMP004", desc: "IP Inactive", col: "IP Status" }
+        ],
+        "Salary": [
+            { id: "EMP007", desc: "Salary below minimum threshold", col: "Salary" }
+        ],
+        "Mismatch": [
+            { id: "EMP012", desc: "Name mismatch with ESIC master", col: "Employee Name" }
+        ]
+    };
+
+    /*  Track Fix Status */
+    const esicCategoryStatus = Object.fromEntries(esicCategories.map(c => [c, false]));
+    Object.keys(esicCategorizedErrors).forEach(cat => {
+        if (esicCategorizedErrors[cat].length === 0) {
+            esicCategoryStatus[cat] = true;
+        }
+    });
+
+
+    /*  Populate Category Summary */
+    function populateESICCategories() {
+
+        const tbody = document.querySelector("#esicFinalCategoryTableContainer tbody");
+        tbody.innerHTML = "";
+
+        Object.keys(esicCategorizedErrors).forEach(cat => {
+            const errs = esicCategorizedErrors[cat];
+
+            if (errs?.length > 0) {
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+        <td class="text-center"><span class="text-danger fw-bold">❌</span></td>
+        <td class="text-center">${cat}</td>
+        <td class="text-center">
+            <button class="btn btn-sm btn-primary" onclick="openESICFinalErrorModal('${cat}')">
+                View Details
+            </button>
+        </td>`;
+
+                tbody.appendChild(tr);
+            }
+        });
+
+        document
+            .getElementById("esicFinalCategoryTableContainer")
+            .classList.toggle("d-none", tbody.children.length === 0);
+    }
+
+
+    /*  Open Category Detail Modal */
+    function openESICFinalErrorModal(category) {
+
+        const errors = esicCategorizedErrors[category] || [];
+
+        let html = `
+        <h6 class="mb-3 text-primary">${category} – Error Details</h6>
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light text-center">
+                <tr>
+                    <th>Emp ID</th>
+                    <th>Error Description</th>
+                    <th>Column</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        if (errors.length === 0) {
+            html += `<tr><td colspan="4" class="text-center text-success">✅ No errors</td></tr>`;
+        } else {
+            errors.forEach(e => {
+                html += `
+                <tr>
+                    <td>${e.id}</td>
+                    <td>${e.desc}</td>
+                    <td>${e.col}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning"
+                            onclick="openESICFinalFixModal(this,'${category}','${e.col}')">
+                            Fix
+                        </button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        html += `</tbody></table>`;
+
+        document.getElementById("esicFinalErrorModalContent").innerHTML = html;
+        document.getElementById("esicFinalErrorModalLabel").innerText = `${category} – Errors`;
+
+        new bootstrap.Modal(document.getElementById("esicFinalErrorModal")).show();
+    }
+
+
+    /*  Open Fix Modal */
+    function openESICFinalFixModal(btn, category, errorCol) {
+
+        selectedESICFinalRow = btn.closest("tr");
+
+        document.getElementById("esicFinalFixModalFields").innerHTML = `
+        <div class="col-md-6 mb-3">
+            <label class="form-label">${errorCol}</label>
+            <input type="text" class="form-control" required placeholder="Enter ${errorCol}">
+        </div>`;
+
+        const modal = document.getElementById("esicFinalFixModal");
+        modal.dataset.category = category;
+        modal.dataset.errorcol = errorCol;
+
+        new bootstrap.Modal(modal).show();
+    }
+
+
+    /*  Save Fix */
+    function submitESICFinalFix() {
+
+        if (!selectedESICFinalRow) return;
+
+        const input = document.querySelector("#esicFinalFixModal input[required]");
+        if (!input.value.trim()) {
+            alert("Please fill the field before saving.");
+            return;
+        }
+
+        const modal = document.getElementById("esicFinalFixModal");
+        const category = modal.dataset.category;
+
+        //  1. Remove the row from MODAL
+        selectedESICFinalRow.remove();
+
+        //  2. FULLY CLEAR ERROR ARRAY FOR THIS CATEGORY
+        esicCategorizedErrors[category] = [];
+
+        //  3. MARK CATEGORY AS FIXED
+        esicCategoryStatus[category] = true;
+
+        //  4. UPDATE ICON  IN MAIN TABLE
+        updateESICFinalCategoryStatus(category);
+
+        //  5. IF THIS WAS LAST ERROR — REMOVE CATEGORY ROW ITSELF
+        document.querySelectorAll("#esicFinalCategoryTableContainer tbody tr").forEach(r => {
+            if (r.cells[1].innerText.trim() === category) {
+                r.remove();
+            }
+        });
+
+        //  6. CLOSE MODAL
+        bootstrap.Modal.getInstance(modal).hide();
+
+        //  7. FINAL GLOBAL CHECK
+        checkAllESICCategoriesFixed();
+    }
+
+
+    /*  Update Category Row Icon */
+    function updateESICFinalCategoryStatus(category) {
+        document.querySelectorAll("#esicFinalCategoryTableContainer tbody tr").forEach(r => {
+            if (r.cells[1].innerText.trim() === category) {
+                r.cells[0].innerHTML = esicCategoryStatus[category]
+                    ? `<span class="text-success fw-bold">✅</span>`
+                    : `<span class="text-danger fw-bold">❌</span>`;
+            }
+        });
+    }
+
+
+    /*  Unlock Proceed When All Fixed */
+    function checkAllESICCategoriesFixed() {
+
+        //  FIX: Directly check status map instead of error object
+        const allFixed = Object.values(esicCategoryStatus).every(v => v === true);
+
+        // Ensure parent step container is visible
+        const stepContainer = document.getElementById("esicFinalValidationStep");
+        if (stepContainer.classList.contains("d-none")) {
+            stepContainer.classList.remove("d-none");
+        }
+
+        //  Toggle UI correctly
+        document.getElementById("esicErrorWarning").classList.toggle("d-none", allFixed);
+        document.getElementById("proceedESICFinishBtn").classList.toggle("d-none", !allFixed);
+    }
+
+    /*  Call This When STEP 5 Loads */
+    function showESICFinalValidationStep() {
+
+        // Show Step 5
+        document.getElementById("esicFinalValidationStep").classList.remove("d-none");
+
+        populateESICCategories();
+
+        document.getElementById("esicFinalValidationStep").scrollIntoView({
+            behavior: "smooth"
+        });
+    }
+
+    /*  Show ESIC Step 6 */
+   
+    //  DEMO DATA (Replace later with backend/API)
+    const esicFinalData = [
+        { empCode: "EMP001", ip: "IP1001", name: "Rahul Sharma", gross: 18000 },
+        { empCode: "EMP002", ip: "IP1002", name: "Neha Verma", gross: 22000 },
+        { empCode: "EMP003", ip: "IP1003", name: "Amit Singh", gross: 25000 },
+        { empCode: "EMP004", ip: "IP1004", name: "Pooja Mehta", gross: 30000 }
+    ];
+
+
+    /* SHOW STEP 6 + LOAD SUMMARY */
+    function showESICStep6() {
+
+        const tbody = document.getElementById("esicSummaryBody");
+        tbody.innerHTML = "";
+
+        let totalGross = 0;
+        let totalEmpShare = 0;
+        let totalEmprShare = 0;
+
+        esicFinalData.forEach((x, index) => {
+
+            const empShare = x.gross * 0.0075;   // 0.75%
+            const emprShare = x.gross * 0.0325; // 3.25%
+            const total = empShare + emprShare;
+
+            totalGross += x.gross;
+            totalEmpShare += empShare;
+            totalEmprShare += emprShare;
+
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+            <td style="border:1px solid #ccc; padding:6px; text-align:center;">${index + 1}</td>
+            <td style="border:1px solid #ccc; padding:6px; text-align:center;">${x.empCode}</td>
+            <td style="border:1px solid #ccc; padding:6px; text-align:center;">${x.ip}</td>
+            <td style="border:1px solid #ccc; padding:6px;">${x.name}</td>
+            <td style="border:1px solid #ccc; padding:6px; text-align:right;">${x.gross.toLocaleString("en-IN")}</td>
+            <td style="border:1px solid #ccc; padding:6px; text-align:right;">${empShare.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+            <td style="border:1px solid #ccc; padding:6px; text-align:right;">${emprShare.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+            <td style="border:1px solid #ccc; padding:6px; text-align:right;">${total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+        `;
+
+            tbody.appendChild(tr);
+        });
+
+        const grandTotal = totalEmpShare + totalEmprShare;
+
+        //  APPLY TOTALS INTO FOOTER
+        document.getElementById("gtGross").innerText =
+            totalGross.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+        document.getElementById("gtEmployee").innerText =
+            totalEmpShare.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+        document.getElementById("gtEmployer").innerText =
+            totalEmprShare.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+        document.getElementById("gtTotal").innerText =
+            grandTotal.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
+        document.getElementById("gtEmployees").innerText = esicFinalData.length;
+        document.getElementById("esicEmployeeCount").innerText = esicFinalData.length;
+
+        //  SHOW SUMMARY BLOCK
+        document.getElementById("esicFinalSummary").classList.remove("d-none");
+
+        //  SHOW STEP 6
+        document.getElementById("esicStep6").classList.remove("d-none");
+
+        document.getElementById("esicStep6").scrollIntoView({
+            behavior: "smooth"
+        });
+    }
+
+</script>

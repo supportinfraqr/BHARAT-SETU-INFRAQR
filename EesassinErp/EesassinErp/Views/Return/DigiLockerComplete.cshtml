@@ -1,0 +1,281 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Bharat Shram Setu</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f7fb;
+            font-family: Arial, sans-serif;
+        }
+
+        .card {
+            background: white;
+            padding: 40px;
+            width: 350px;
+            text-align: center;
+            border-radius: 15px;
+            box-shadow: 0px 0px 25px #ddd;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            animation: pulse 1.5s infinite;
+        }
+
+        @@keyframes pulse {
+
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        h2 {
+            color: #0b4f8a;
+            margin-top: 15px;
+        }
+
+        #msg {
+            font-size: 18px;
+            color: #555;
+            margin-top: 20px;
+        }
+
+        .submsg {
+            color: #777;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+
+        .loader {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #0b4f8a;
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="card">
+
+        <img src="https://login.bharatshramsetu.com/Content/NewLogin/images/bharatshramsetu-logo.png"
+             class="logo" />
+
+        <h2>Bharat Shram Setu</h2>
+
+        <div id="msg">
+            Please Wait<span id="dots">...</span>
+        </div>
+
+        <div class="submsg">
+            Your DigiLocker verification is in progress.
+            <br />
+            Please do not press Back button.
+        </div>
+
+        <div class="loader">
+            Secure verification in process...
+        </div>
+
+        <!-- Hidden Continue Button -->
+        
+
+    </div>
+
+
+
+    <script>
+        $("#btnContinue").click(function () {
+            window.location.href = "../Dashboard/WorkerDashboard";
+        });
+        function storeSession(d) {
+         
+            var sessionData = {
+                LoginId: d.LoginId,
+                MapId: d.MapId,
+                MapUser: d.MapUser,
+                BranchCode: d.BranchCode,
+                LoginType: d.LoginType,
+                LastLogin: d.LastLogin,
+                Desig: d.Desig,
+                Name: d.Name,
+                BranchName: d.BranchName,
+                ContactNo: d.ContactNo,
+                CreatedOn: d.CreatedOn,
+                Photo: d.Photo,
+                UserName: d.UserName,
+                BranchAddress: d.BranchAddress,
+                SessionId: d.SessionId,
+                EmailId: d.EmailId,
+                PartyEMail: d.PartyEMail,
+                Loadonce: 0
+            };
+
+            sessionStorage.setItem("userSession", JSON.stringify(sessionData));
+
+        }
+        let count = 0;
+
+        setInterval(function () {
+
+            count++;
+
+            if (count > 3)
+                count = 0;
+
+            var dots = document.getElementById("dots");
+
+            if (dots) {
+                dots.innerHTML = ".".repeat(count);
+            }
+
+        }, 500);
+        function postObj(url, obj) {
+
+            return $.ajax({
+                url: url,
+                type: "POST",
+                data: JSON.stringify({ obj: obj }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json"
+            });
+
+        }
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        function check() {
+
+            var obj = {
+                Username:   getQueryParam("state"),
+                Action: "68"
+            };
+
+            postObj('../Login/VLoginVerify', obj)
+                .then(function (response) {
+
+                    console.log("Response:", response);
+
+                    if (response && response.length > 0)
+                    {
+                        alert('Already Registered with this number, please login or use forget password');
+
+                        setTimeout(function () {
+                            window.location.href = "https://login.bharatshramsetu.com/login/login";
+                        }, 100);
+                    }
+                    
+
+                })
+                .catch(function (err) {
+                    console.error("API Error:", err);
+                });
+        }
+        $(document).ready(function () {
+            debugger;
+
+            check();
+
+            var checkTimer = setInterval(function ()
+            {
+                debugger;
+                $.ajax({
+
+                    url: '../Return/CheckDigiLockerStatus',
+                    type: 'GET',
+
+                    success: function (res) {
+                        debugger;
+                        
+                            debugger;
+                            clearInterval(checkTimer);
+
+
+                            $("#msg").html(
+                                "✔ DigiLocker Verification Completed"
+                            );
+                     
+                       
+                            setTimeout(function () {
+
+                                debugger;
+                                var obj = {
+                                    Username: res.LoginId || getQueryParam("state"),
+                                    Action: "67"
+                                };
+                                debugger;
+
+                                postObj('../Login/NGetUserId', obj)
+                                    .then(function (response) {
+                                        debugger;
+                                        console.log(response);
+                                        debugger;
+                                        if (response && response.length > 0) {
+                                            debugger;
+                                            var data = response[0];
+                                            debugger;
+                                            storeSession(data);
+                                            debugger;
+                                            console.log("Redirect Path:", data.RPath);
+
+                                            window.location.href = data.RPath;
+
+                                        }
+                                        else {
+                                            debugger;
+                                            console.log("User data not found");
+                                        }
+
+                                    });
+
+                            }, 4000); 
+
+                    },
+
+                    error: function () {
+
+                        console.log("DigiLocker status check failed");
+
+                    }
+
+                });
+
+
+            }, 3000);
+
+
+        });
+
+
+
+    </script>
+
+
+</body>
+</html>

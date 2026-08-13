@@ -1,0 +1,165 @@
+﻿
+@{
+    ViewBag.Title = "FinancialStatutorySetup";
+    Layout = "~/Views/Common/_RetailLayout.cshtml";
+}
+
+<script src="../Scripts/RetailJsLib/FinancialStatutorySetupController.js"></script>
+
+<style>
+    .table th,
+    .table td {
+        vertical-align: middle !important;
+    }
+
+    .table th {
+        background-color: #f8f9fa;
+    }
+
+    .table td input,
+    .table td select {
+        min-width: 150px;
+    }
+
+    .form-control-file {
+        padding-top: 6px;
+    }
+</style>
+<script>
+
+
+
+</script>
+
+<div class="table-responsive" style="position:relative">
+    <button class="btn btn-primary mb-6" ng-click="switchView()">
+        {{ showEntryForm ? 'Back to Dashboard' : 'Add Financial Setup' }}
+    </button>
+
+
+    <a class="btn btn-warning" href="#" ng-click="SaveAfterValidate();ManageLog('Save Financial Setup')" ng-show="showEntryForm">
+        <span class="fas fa-plus"></span>&nbsp;&nbsp;Save
+    </a>
+    <table class="table table-bordered table-striped" ng-init="AddListSet()" ng-show="showEntryForm">
+        <thead class="thead-dark">
+            <tr>
+                <th>Sr.No.</th>
+                <th>State</th>
+                <th>Act</th>
+                <th>Compliance Name</th>
+                @*<th style="display:none">Registration Number</th>
+                <th style="display:none">Valid From</th>
+                <th style="display:none">Valid To</th>
+                <th style="display:none">Type Code</th>*@
+                <th>Registration Type</th>
+                <th>Upload</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="obj in ListSet track by $index">
+                <td>{{$index + 1}}</td>
+                <td>
+                    <select class="form-control validate" ng-model="obj.State" ng-init="AllState()" ng-change="BindAct(obj.State, $index)">
+                        <option value="">Select State</option>
+                        <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control validate" ng-model="obj.Act" ng-change="BindCompliance(obj.Act,obj.State, $index)">
+                        <option value="">Select Act</option>
+                        <option ng-repeat="x in AllActList[$index]" value="{{x.ActId}}">{{x.Act}}</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control validate" ng-model="obj.ComplianceName">
+                        <option value="">Select Compliance</option>
+                        <option ng-repeat="x in AllComlist[$index]" value="{{x.CName}}">{{x.CName}}</option>
+                    </select>
+                </td>
+                @*<td style="display:none"><input type="text" class="form-control validate" ng-model="obj.RegistrationNumber" /></td>
+                <td style="display:none">
+                    <input type="date" class="form-control validate" ng-model="obj.ValidFrom" value="{{convertTodate(obj.ValidFrom)}}" />
+                </td>
+                <td style="display:none"><input type="date" class="form-control validate" ng-model="obj.ValidTo" value="{{convertTodate(obj.ValidTo)}}" /></td>
+                <td style="display:none"><input type="text" class="form-control validate" ng-model="obj.TypeCode" /></td>*@
+                <td>
+
+                    <select class="form-control validate" ng-model="obj.RegistrationType">
+                        <option value="">Select</option>
+                        <option value="Central">Central</option>
+                        <option value="State">State</option>
+                    </select>
+
+                </td>
+
+                <td>
+
+                    <input type="file"
+                           class="form-control-file"
+                           accept=".pdf,.doc,.jpg,.jpeg,.png"
+                           data-index="{{$index}}"
+                           onchange="angular.element(this).scope().handleFileUpload(this,'#file')" ng-model="obj.Upload" />
+
+                </td>
+
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-success btn-sm"
+                            ng-click="AddListSet()"
+                            ng-if="$last">
+                        +
+                    </button>
+                    <button type="button"
+                            class="btn btn-danger btn-sm"
+                            ng-click="RemoveListSet($index)"
+                            ng-if="ListSet.length > 1">
+                        -
+                    </button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+
+    <table class="table table-bordered table-striped" ng-init="Binddasboard()" ng-show="showEntryForm==false">
+        <thead>
+            <tr>
+                <th>State</th>
+                <th>Act</th>
+                <th>ComplianceName</th>
+                @*<th style="display:none">RegistrationNumber</th>
+                <th style="display:none">ValidFrom</th>
+                <th style="display:none">ValidTo</th>
+                <th style="display:none">TypeCode</th>*@
+                <th>RegistrationType</th>
+                <th>Upload</th>
+                <th>CreatedOn</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr ng-repeat="obj in dashboardlist">
+                <td>{{ obj.STATE_NM }}</td>
+                <td> {{ obj.actname  }} </td>
+                <td>{{obj.ComplianceName}}</td>
+                @*<td style="display:none">{{ obj.RegistrationNumber }}</td>
+                <td style="display:none">{{ obj.ValidFrom | date:'yyyy-MM-dd' }}</td>
+                <td style="display:none">{{ obj.ValidTo | date:'yyyy-MM-dd' }}</td>
+                <td style="display:none">{{ obj.TypeCode }}</td>*@
+                <td>{{ obj.RegistrationType }}</td>
+                <td>
+                    <span ng-if="obj.Upoad">
+                        <a href="#" ng-click="viewFile(obj.Upoad)">
+                            Download
+                        </a>
+                    </span>
+                    <span ng-if="!obj.Upoad">No File</span>
+                </td>
+                <td>{{ obj.CreatedOn | date:'yyyy-MM-dd' }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+

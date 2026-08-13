@@ -1,0 +1,191 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Notifications";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/NotificationDetails.js?Ver=@ViewBag.Version"></script>
+<style>
+    .notificationsPage {
+        font-family: "Inter", sans-serif;
+        --primary: #E45D27; /* theme accent */
+        --primary-dark: #c44b1d;
+        --card-bg: #FEF3EC;
+        background: #FFF1EB;
+        color: #223;
+        min-height: 85vh;
+    }
+    /* ================= FULL NOTIFICATION PAGE ================= */
+    .notifPage {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    /* Header */
+    .notifPage-header h4 {
+        font-weight: 400;
+        color:var(--primary);
+    }
+
+    /* Buttons */
+    .notifActionBtn,
+    .notifLoadMoreBtn {
+        border: 1px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+        .notifActionBtn:hover,
+        .notifLoadMoreBtn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Search */
+    .notifSearchInput {
+        flex: 1;
+        min-width: 260px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #E45D27;
+        font-size: 13px;
+    }
+
+    /* List */
+    .notifPage-list {
+        background: var(--card-bg);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    /* Row */
+    .notifPage-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px;
+        border-bottom: 1px solid #f1f1f1;
+        cursor: pointer;
+    }
+
+        .notifPage-item.unread {
+            background: #FFF0E6;
+        }
+
+        .notifPage-item:hover {
+            background: #FFE8D9;
+        }
+
+    /* Left */
+    .notifContent {
+        flex: 1;
+    }
+
+    .notifTitle {
+        font-size: 14px;
+        font-weight: 400;
+    }
+
+    .notifMsg {
+        font-size: 12px;
+        color: #555;
+    }
+
+    .notifMeta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 4px;
+    }
+
+    /* Right */
+    .notifActions {
+        display: flex;
+        align-items: center;
+    }
+
+    .notifDownloadBtn {
+        border: 1px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+
+        .notifDownloadBtn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+    /* Mobile */
+    @@media (max-width: 576px) {
+        .notifPage-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+
+<div ng-controller="NotificationDetailsCtrl" class="notificationsPage px-4 py-4" ng-init="getNewsupdatesn()">
+    <!-- FULL NOTIFICATIONS PAGE  -->
+    <div class="notifPage container-fluid py-4">
+        <!-- HEADER -->
+        <div class="notifPage-header d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+                <h4 class="mb-0">News & Updates</h4>
+                
+            </div>
+            <button id="pageMarkAllRead" class="notifActionBtn">Mark all as read</button>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="notifPage-filters mb-3">
+
+            <!-- ROW 1 -->
+            <div class="d-flex flex-wrap gap-2 justify-content-between mb-2">
+                <input type="text" id="pageNotifSearch" ng-model="USearch" class="notifSearchInput"
+                       placeholder="Search notifications...">
+            </div>
+
+            <!-- ROW 2 -->
+            <div class="notifTabs">
+                <button class="active" data-category="all" ng-click="getNewsupdatesn()">All</button>
+                <button data-category="newlabourcode" ng-click="BindCompliances('New Labour Codes')">
+                    New Labour Codes
+                </button>
+                <button data-category="esicnotification" ng-click="BindCompliances('ESIC Notification')">ESIC Notification</button>
+                <button data-category="Ministryofcorporate" ng-click="BindCompliances('Ministry of Corporate affairs')">Ministry of Corporate affairs</button>
+                <button data-category="newlabourcodecentral" ng-click="BindCompliances('New Labour Codes Rules (Central)')">New Labour Codes Rules (Central)</button>
+                <button data-category="labourwelfare" ng-click="BindCompliances('Labour Welfare Fund')">Labour Welfare Fund</button>
+                <button data-category="fssai" ng-click="BindCompliances('FSSAI')">FSSAI</button>
+                <button data-category="shopsestablishment" ng-click="BindCompliances('Shops & Establishment')">Shops & Establishment</button>
+                <button data-category="minimumwages" ng-click="BindCompliances('Minimum Wages')">Minimum Wages</button>
+                <button data-category="professional" ng-click="BindCompliances('Professional Tax')">Professional Tax</button>
+                <button data-category="mayday" ng-click="BindCompliances('May Day')">May Day</button>
+                <button data-category="newlabpucodestate" ng-click="BindCompliances('New Labour Codes Rules (State)')">New Labour Codes Rules (State)</button>
+                <button data-category="Others" ng-click="BindCompliances('Others')">Others</button>
+            </div>
+        </div>
+
+        <!-- LIST -->
+        <div id="notifPageList" class="notifPage-list">
+            <div class="notifItem" ng-repeat="n in notificationsn |filter:USearch">
+                <a ng-href="{{n.url}}" class="text-decoration-none text-dark">
+                    <div class="notifContent">
+                        <h6 ng-class="n.title">{{n.title}}</h6>
+                        <h6 ng-class="n.msg">{{n.msg}}</h6>
+                        <h6>{{n.time}}</h6>
+                    </div>
+                </a>
+            </div>
+        </div>
+        @*<div class="text-center mt-3">
+            <button id="loadMoreNotif" class="notifLoadMoreBtn">Load more notifications</button>
+        </div>*@
+    </div>
+</div>

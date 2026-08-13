@@ -1,0 +1,784 @@
+﻿.adminSetup {
+    font-family: "Inter", sans-serif;
+    --primary: #E45D27; /* theme accent */
+    --primary-dark: #c44b1d;
+    --card-bg: #FEF3EC;
+    background: #FFF1EB;
+    color: #223;
+    min-height: 83vh;
+}
+
+.dropdown-menu {
+    min-width: 120px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* Toggle pill - single capsule container */
+.adminSetup .toggle-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.03);
+    padding: 4px;
+    overflow: hidden;
+    gap: 4px;
+    align-items: center;
+}
+
+    /* inner buttons: make them visually full-pill, no borders, equal width */
+    .adminSetup .toggle-pill .btn-pill {
+        background: transparent;
+        border: 0;
+        padding: 4px 8px;
+        margin: 0;
+        font-weight: 400;
+        color: #333;
+        border-radius: 999px;
+        transition: background .15s ease, color .15s ease, transform .06s ease;
+        white-space: nowrap;
+        min-width: 80px;
+    }
+
+        /* active pill */
+        .adminSetup .toggle-pill .btn-pill.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(196,75,29,0.08);
+        }
+
+        /* ensure focus ring for accessibility (subtle) */
+        .adminSetup .toggle-pill .btn-pill:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+/* Section cards */
+.adminSetup .section-card {
+    background: transparent;
+    border: none;
+}
+
+    .adminSetup .section-card .card-body {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        /* min-height: 320px;*/
+    }
+
+    .adminSetup .section-card h4 {
+        color: var(--primary);
+    }
+
+/*=============Code From UserProfile for Overview And Users=====================*/
+
+body::-webkit-scrollbar {
+    display: none;
+}
+/*==============Overview================*/
+
+/* ADMIN OVERVIEW  */
+.adminSetup .adminOverview .card-body {
+    padding: 24px;
+}
+
+/* Header  */
+.adminSetup .adminOverview-header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+/* Org Info */
+.adminSetup .adminOverview-org {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* Org Logo : Universal Fit  */
+.adminSetup .adminOverview-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px; /* works for all shapes */
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* important */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+    .adminSetup .adminOverview-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain; /* KEY: no crop, no stretch */
+        display: block;
+    }
+
+
+.adminSetup .adminOverview-orgInfo h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.adminSetup .adminOverview-orgInfo a {
+    font-size: 13px;
+    color: #555;
+    text-decoration: none;
+}
+
+/* Meta Info */
+.adminSetup .adminOverview-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px 24px;
+}
+
+.adminSetup .meta-item label {
+    font-size: 12px;
+    color: #777;
+    display: block;
+}
+
+.adminSetup .meta-item span {
+    font-weight: 500;
+}
+
+/* Edit Button */
+.adminSetup .adminOverview-edit {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: none;
+    background: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    cursor: pointer;
+}
+
+    .adminSetup .adminOverview-edit i {
+        color: var(--primary);
+    }
+
+/* KPI Cards  */
+.adminSetup .adminOverview-kpis {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.adminSetup .kpiCard {
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    border-left: 4px solid var(--primary);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+    .adminSetup .kpiCard:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+    .adminSetup .kpiCard i {
+        font-size: 26px;
+        color: var(--primary);
+    }
+
+    .adminSetup .kpiCard h6 {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .adminSetup .kpiCard span {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+/* Responsive  */
+@media (max-width: 992px) {
+    .adminSetup .adminOverview-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .adminSetup .adminOverview-meta {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .adminSetup .adminOverview-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .adminSetup .adminOverview-header {
+        padding-top: 32px;
+    }
+}
+
+/* USER ANALYTICS  */
+.adminSetup .adminUserAnalytics .card-body {
+    padding: 20px;
+}
+
+/* Header */
+.adminSetup .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+    .adminSetup .analytics-header h5 {
+        margin: 0;
+        font-weight: 500;
+        color: var(--primary);
+    }
+
+.adminSetup #overview .card-head{
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.adminSetup .analytics-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .adminSetup .analytics-actions a {
+        font-size: 13px;
+        text-decoration: none;
+        color: var(--primary);
+    }
+
+/* Chart wrapper */
+.adminSetup .chartWrap {
+    height: 260px;
+}
+
+/* Donut */
+.adminSetup .donutWrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 16px;
+}
+
+.adminSetup .donutCenter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+    .adminSetup .donutCenter span {
+        font-size: 12px;
+        color: #777;
+    }
+
+    .adminSetup .donutCenter strong {
+        font-size: 22px;
+        font-weight: 600;
+    }
+
+/* User stats */
+.adminSetup .userStats {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 12px;
+}
+
+    .adminSetup .userStats div {
+        text-align: center;
+    }
+
+    .adminSetup .userStats strong {
+        display: block;
+        font-size: 18px;
+    }
+
+    .adminSetup .userStats small {
+        font-size: 12px;
+        color: #777;
+    }
+
+.adminSetup .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+    .adminSetup .dot.active {
+        background: var(--primary);
+    }
+
+    .adminSetup .dot.inactive {
+        background: #ccc;
+    }
+
+    .adminSetup .dot.total {
+        background: #999;
+    }
+
+/* Responsive */
+@media (max-width: 991px) {
+    .adminSetup .chartWrap {
+        height: 220px;
+    }
+}
+
+/* STORAGE & MODULES  */
+.adminSetup .adminStorageModules .card-body {
+    padding: 20px;
+}
+
+/* Header */
+.adminSetup .adminStorageModules .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+    .adminSetup .adminStorageModules .analytics-header h5 {
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .adminSetup .adminStorageModules .analytics-header a {
+        font-size: 13px;
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+/* Storage chart */
+.adminSetup .storageChartWrap {
+    height: 320px;
+    overflow-y: auto;
+}
+
+/* Recommended modules */
+.adminSetup .moduleList {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.adminSetup .moduleItem {
+    border-left: 3px solid var(--primary);
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+
+    .adminSetup .moduleItem h6 {
+        margin: 0 0 4px;
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--primary);
+    }
+
+    .adminSetup .moduleItem p {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+    }
+
+/* Scrollbar (subtle) */
+.adminSetup .storageChartWrap::-webkit-scrollbar,
+.adminSetup .moduleList::-webkit-scrollbar {
+    width: 6px;
+}
+
+.adminSetup .storageChartWrap::-webkit-scrollbar-thumb,
+.adminSetup .moduleList::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .adminSetup .storageChartWrap,
+    .adminSetup .moduleList {
+        max-height: none;
+    }
+}
+
+
+
+
+/* =========== USERS SECTION STYLES ==========*/
+.adminSetup .userProfile-users-section {
+    background-color: var(--card-bg);
+}
+
+/* Card container */
+.adminSetup .userProfile-user-card {
+    border: none;
+    border-radius: 10px;
+    background-color: var(--card-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.adminSetup .userProfile-user-card h5{
+    color: var(--primary);
+}
+
+    /* Add User Button */
+    .adminSetup .userProfile-user-card .btn-orange {
+        background-color: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 999px;
+        font-weight: 400;
+        padding: 4px 8px;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+        .adminSetup .userProfile-user-card .btn-orange:hover {
+            background-color: var(--primary-dark);
+        }
+
+/* Table styling */
+.adminSetup .userProfile-user-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+    .adminSetup .userProfile-user-table-container::-webkit-scrollbar {
+        display: none;
+    }
+
+.adminSetup .userProfile-user-card table {
+    width: 100%;
+}
+
+.adminSetup .userProfile-user-card table th {
+    font-weight: 400;
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.adminSetup .userProfile-user-card td {
+    vertical-align: middle;
+    padding: 12px 10px;
+    border-top: 1px solid #f5f5f5;
+}
+
+/* Avatar */
+.adminSetup .userProfile-user-card .avatar {
+    background-color: #fde5d8;
+    color: #E45D27;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Role badges */
+.role-admin {
+    background-color: #f6e1ff;
+    color: #6b22a6;
+}
+
+.role-manager {
+    background-color: #dcecff;
+    color: #0044cc;
+}
+
+.role-user {
+    background-color: #f1f1f1;
+    color: #555;
+}
+
+/* Status badges */
+.status-active {
+    background-color: #e9f8ee;
+    color: #198754;
+}
+
+.status-inactive {
+    background-color: #f1f1f1;
+    color: #666;
+}
+
+/* Dropdown icon */
+.userProfile-dropdown-toggle {
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #666;
+    transition: 0.2s ease;
+}
+
+    .userProfile-dropdown-toggle:hover {
+        color: #E45D27;
+    }
+
+/* ===== Add User Button ===== */
+.adminSetup .add-user-btn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+}
+
+    .adminSetup .add-user-btn:hover {
+        background: var(--primary-dark);
+    }
+
+/* ===== User Modal ===== */
+.adminSetup .admin-user-modal {
+    border-radius: 12px;
+    background: var(--card-bg);
+}
+
+    .adminSetup .admin-user-modal .modal-title {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+    .adminSetup .admin-user-modal .form-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #444;
+    }
+
+    .adminSetup .admin-user-modal .form-control,
+    .adminSetup .admin-user-modal .form-select {
+        font-size: 0.85rem;
+        border-radius: 6px;
+    }
+
+        .adminSetup .admin-user-modal .form-control:focus,
+        .adminSetup .admin-user-modal .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+        }
+
+/* Save button */
+.adminSetup .save-user-btn {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 18px;
+    font-size: 0.85rem;
+}
+
+    .adminSetup .save-user-btn:hover {
+        background: var(--primary-dark);
+    }
+
+
+
+/* Responsive tweaks */
+@@media (max-width: 992px) {
+    .userProfile .info-card {
+        margin-bottom: 1rem;
+    }
+
+    .userProfile .header-buttons {
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+}
+
+/* KPI CARDS */
+.kpi-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 5px solid #E45D27;
+    transition: 0.2s ease;
+    align-items: center;
+    justify-content: space-between;
+}
+
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+.kpi-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+}
+
+.kpi-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: #E45D27;
+}
+
+/*===============================================================================================*/
+
+
+
+
+/* Table wrapper and hide scrollbar visually */
+.adminSetup .small-table-wrapper .table-responsive {
+    max-height: 75vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+    .adminSetup .small-table-wrapper .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+
+/* table header sticky */
+.adminSetup .small-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: #F37437;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 8px 10px;
+}
+
+/* table body */
+.adminSetup .small-table tbody td {
+    background-color: var(--card-bg);
+    font-size: 0.78rem;
+    vertical-align: middle;
+    text-align: left;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+
+/* hover */
+.adminSetup .small-table tbody tr:hover td {
+    background-color: #FFE8D9;
+}
+
+/* action menu */
+
+.adminSetup .action-menu .btn {
+    border-radius: 999px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: transparent;
+    padding: 4px 8px;
+    font-weight: 400;
+    font-size: 0.78rem;
+}
+
+    .adminSetup .action-menu .btn:hover {
+        background: var(--primary);
+        color: #fff;
+    }
+
+
+/*=============Permissions and others==============*/
+
+/* Themed Select Dropdown */
+.adminSetup  .admin-dd {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 180px;
+}
+
+.adminSetup  .admin-dd-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #666;
+    padding-left: 6px;
+}
+
+.adminSetup  .admin-dd-select {
+    border-radius: 10px;
+    border: 1px solid var(--primary);
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    background-color: #fff;
+    box-shadow: none;
+}
+
+    .adminSetup  .admin-dd-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(228,93,39,0.12);
+    }
+
+/* Responsive */
+@media (max-width: 576px) {
+    .adminSetup  .admin-dd {
+        width: 100%;
+    }
+}
+
+
+/* =====  Checkboxes ===== */
+.adminSetup input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+/* Check all wrapper */
+.adminSetup .check-all-wrap label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Save button */
+.adminSetup .save-btn, .check-all-wrap, .export-btn {
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 6px 18px;
+    font-size: 0.85rem;
+}
+
+    .adminSetup .save-btn:hover,
+    .adminSetup .export-btn:hover,
+    .adminSetup .check-all-wrap:hover {
+        background: var(--primary-dark);
+        color: #fff;
+    }
+
+.adminSetup .search-container {
+    max-width: 280px;
+}
+
+.adminSetup .btn-outline-primary {
+    --bs-btn-color: #E45D27;
+    --bs-btn-border-color: #E45D27;
+    --bs-btn-hover-bg: #E45D27;
+    --bs-btn-hover-border-color: #E45D27;
+}

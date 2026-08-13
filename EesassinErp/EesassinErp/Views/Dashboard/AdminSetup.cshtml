@@ -1,0 +1,755 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Admin Setup";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/AdminSetup/Dashboard/style.css" rel="stylesheet" />
+<script src="~/AdminSetup/Dashboard/script.js"></script>
+
+<script src="~/scripts/RetailJsLib/AdminDashboardcontroller.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+<div class="adminSetup px-4 py-2">
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="Overview, Users, Permissions, Store Mapping or Industry Mapping">
+            <button type="button" class="btn btn-pill active" data-target="#overview" aria-pressed="true">Overview</button>
+            <button type="button" class="btn btn-pill" data-target="#users" aria-pressed="false">Users</button>
+            <button type="button" class="btn btn-pill" data-target="#permissions" aria-pressed="false">Permissions</button>
+            <button type="button" class="btn btn-pill" data-target="#storeMapping" aria-pressed="false">Location Management</button>
+            <button type="button" class="btn btn-pill" data-target="#industryMapping" aria-pressed="false">License Management</button>
+            <button type="button" class="btn btn-pill" data-target="#activityReport" aria-pressed="false">Activity Report</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+
+        <!-- CARD 1 : Overview (default visible) -->
+        <div id="overview" class="card section-card active adminOverview">
+            <div class="card-body">
+
+                <!-- TOP SUMMARY  -->
+                <div class="adminOverview-header">
+
+                    <!-- Left : Org Info -->
+                    <div class="adminOverview-org">
+                        <div class="adminOverview-logo">
+                            <img src="~/AdminSetup/Dashboard/theobroma-logo.png" alt="Organization Logo">
+                        </div>
+
+                        <div class="adminOverview-orgInfo">
+                            <h4>EZcompliance</h4>
+                            <a href="https://www.ezcompliance.in" target="_blank">
+                                www.ezcompliance.in
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right : Meta Info -->
+                    <!-- Right : Meta + Attention -->
+                    <div class="adminOverview-right">
+
+                        <!-- Meta Info -->
+                        <div class="adminOverview-meta">
+                            <div class="meta-item">
+                                <label>Email Address</label>
+                                <span>shankar@ezcompliance.in</span>
+                            </div>
+
+                            <div class="meta-item">
+                                <label>Subscription Duration</label>
+                                <span>Yearly</span>
+                            </div>
+
+                            <div class="meta-item">
+                                <label>Plan</label>
+                                <span>Professional</span>
+                            </div>
+
+                            <div class="meta-item">
+                                <label>Renewal Date</label>
+                                <span>11/01/27</span>
+                            </div>
+                        </div>
+
+                        <!-- Attention Card (show only when expired – logic later) -->
+                        <div class="adminOverview-alert">
+                            <div class="alert-icon">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+
+                            <div class="alert-content">
+                                <h6>Subscription Expired</h6>
+                                <p>Your subscription has expired. Renew now to avoid service interruption.</p>
+                                <button class="btn btn-sm renew-btn">Renew Subscription</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- Edit Icon -->
+                    <!--<button class="adminOverview-edit" title="Edit Organization">
+        <i class="bi bi-pencil"></i>
+    </button>-->
+                </div>
+
+                <!-- KPI CARDS  -->
+                <div class="adminOverview-kpis">
+
+                    <div class="kpiCard">
+                        <i class="bi bi-credit-card-2-front"></i>
+                        <div>
+                            <h6>Total Locations</h6>
+                            <span>7</span>
+                        </div>
+                    </div>
+
+                    <div class="kpiCard">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                        <div>
+                            <h6>Module Subscribed</h6>
+                            <span>15</span>
+                        </div>
+                    </div>
+
+                    <div class="kpiCard">
+                        <i class="bi bi-people"></i>
+                        <div>
+                            <h6>Organization Users</h6>
+                            <span>7</span>
+                        </div>
+                    </div>
+
+                    <div class="kpiCard">
+                        <i class="bi bi-diagram-3"></i>
+                        <div>
+                            <h6>Groups</h6>
+                            <span>0</span>
+                        </div>
+                    </div>
+
+
+
+                </div>
+
+            </div>
+
+            <!--USER ANALYTICS-->
+            <div class=" adminUserAnalytics mt-4">
+
+                <div class="row g-3 align-items-stretch">
+                    <!-- LEFT : User Activity Trend -->
+                    <div class="col-lg-8">
+                        <div class="card section-card h-100">
+                            <div class="card-body">
+
+                                <div class="analytics-header">
+                                    <h5 class="card-head">User Activity Trend</h5>
+
+                                    <div class="analytics-actions">
+                                        <select class="form-select form-select-sm">
+                                            <option>Last 7 days</option>
+                                            <option>Last 30 days</option>
+                                            <option>Last 90 days</option>
+                                        </select>
+
+                                        @*<a href="javascript:void(0)">View all reports</a>*@
+                                    </div>
+                                </div>
+
+                                <div class="chartWrap">
+                                    <canvas id="userActivityChart"></canvas>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT : User Status Summary -->
+                    <div class="col-lg-4">
+                        <div class="card section-card h-100">
+                            <div class="card-body">
+
+                                <h5 class="mb-3 card-head" style="color: var(--primary)">User Status Summary</h5>
+
+                                <div class="donutWrap">
+                                    <canvas id="userStatusChart"></canvas>
+                                    <div class="donutCenter">
+                                        <span>Total</span>
+                                        <strong>7</strong>
+                                    </div>
+                                </div>
+
+                                <div class="userStats">
+                                    <div>
+                                        <span class="dot active"></span>
+                                        <strong>7</strong>
+                                        <small>Active users</small>
+                                    </div>
+
+                                    <div>
+                                        <span class="dot inactive"></span>
+                                        <strong>0</strong>
+                                        <small>Inactive users</small>
+                                    </div>
+
+                                    <div>
+                                        <span class="dot total"></span>
+                                        <strong>7</strong>
+                                        <small>Total users</small>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!--  STORAGE & MODULES  -->
+            <div class=" adminStorageModules mt-4">
+
+                <div class="row g-3 align-items-stretch">
+
+                    <!-- LEFT : User Storage Usage -->
+                    <div class="col-lg-8">
+                        <div class="card section-card h-100">
+                            <div class="card-body">
+
+                                <div class="analytics-header">
+                                    <h5 class="card-head">User Storage Usage</h5>
+
+                                    @*<a href="javascript:void(0)">View detailed report</a>*@
+                                </div>
+
+                                <div class="storageChartWrap">
+                                    <canvas id="userStorageChart"></canvas>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT : Recommended Modules -->
+                    <div class="col-lg-4">
+                        <div class="card section-card h-100">
+                            <div class="card-body">
+
+                                <h5 class="mb-3 card-head">Recommended Modules</h5>
+
+                                <div class="moduleList">
+
+                                    <div class="moduleItem">
+                                        <h6>Compliance Tracker</h6>
+                                        <p>Avoid missed compliance deadlines with automated tracking.</p>
+                                    </div>
+
+                                    <div class="moduleItem">
+                                        <h6>Advanced Reports</h6>
+                                        <p>Generate downloadable and custom reports for audits.</p>
+                                    </div>
+
+                                    <div class="moduleItem">
+                                        <h6>Audit Logs</h6>
+                                        <p>Track every admin and user activity securely.</p>
+                                    </div>
+
+                                    <div class="moduleItem">
+                                        <h6>Risk Assessment</h6>
+                                        <p>Identify and mitigate compliance risks proactively.</p>
+                                    </div>
+
+                                    <!-- more items can exist, scroll will activate -->
+
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+        </div>
+
+
+
+        <!-- CARD 2 : Users -->
+        <div id="users" class="card section-card d-none">
+            <div class="container my-3">
+                <div class="row g-3 justify-content-center">
+                    <!-- Total User -->
+                    <div class="col-md-3">
+                        <div class="kpi-card d-flex">
+                            <div class="kpi-title">User Limit</div>
+                            <div class="kpi-value" id="kpiTotalStore">{{ (UserLimit|| 0) }}</div>
+                        </div>
+                    </div>
+                    <!-- Used -->
+                    <div class="col-md-3">
+                        <div class="kpi-card d-flex">
+                            <div class="kpi-title">User Created</div>
+                            <div class="kpi-value" id="kpiUsed">{{(Useroccupied || 0) }}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="kpi-card d-flex">
+                            <div class="kpi-title">User Left</div>
+                            <div class="kpi-value" id="kpiPending"> {{ (UserLimit || 0) - (Useroccupied || 0) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Delayed -->
+                    @*<div class="col-md-3">
+                        <div class="kpi-card d-flex">
+                            <div class="kpi-title">Delayed</div>
+                            <div class="kpi-value" id="kpiDelayed">25</div>
+                        </div>
+                    </div>*@
+
+                </div>
+            </div>
+            <div class="card userProfile-user-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                    <div>
+                        <h5 class="mb-1">User Management</h5>
+                        <small class="text-muted">Manage users and their access permissions</small>
+                    </div>
+                    <button class="btn btn-sm add-user-btn" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="bi bi-plus-lg me-1"></i> Add User
+                    </button>
+                </div>
+
+                <div class="table-responsive userProfile-user-table-container">
+
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="x in EmployeeList">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="avatar">U</div>
+                                        <div>
+                                            <strong>{{x.UserName}}</strong><br>
+                                            <small class="text-muted">{{x.EmailId}}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge role-admin">
+                                        {{ x.LoginType == 5 ? 'Admin' : 'User' }}
+                                    </span>
+                                </td>
+                                <td ng-show="1">
+                                    <span class="badge status-active">
+                                        {{ x.IsActive  == 1 ? 'Active' : 'InActive' }}
+                                    </span>
+                                </td>
+                                <td ng-show !="0">
+                                    2
+                                    <span class="badge status-inactive">
+                                        {{ x.IsActive  == 1 ? 'Active' : 'InActive' }}
+                                </td>
+                                <td>
+                                    {{x.LL}}
+                                </td>
+                                @*<td class="text-end position-relative">
+                                    <button class="btn btn-sm" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                        <li><a class="dropdown-item" href="#">Edit</a></li>
+                                        <li><a class="dropdown-item" href="#">Remove</a></li>
+                                        <li><a class="dropdown-item" href="#">Reset Password</a></li>
+                                    </ul>
+                                </td>*@
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+        <!-- ADD USER MODAL INSIDE USERS section-->
+        <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content admin-user-modal">
+                    <div class="modal-header">
+                        <h6 class="modal-title">Add User</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <!-- Party -->
+                            <!--<div class="col-md-6">
+                            <label class="form-label">Party Name</label>
+                            <select class="form-select">
+                                <option selected disabled>Select Party</option>
+                                <option>Party A</option>
+                                <option>Party B</option>
+                            </select>
+                        </div>-->
+                            <!-- Name -->
+                            <div class="col-md-6">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control">
+                            </div>
+
+                            <!-- Username -->
+                            <div class="col-md-6">
+                                <label class="form-label">User Name</label>
+                                <input type="text" class="form-control">
+                            </div>
+
+                            <!-- Password -->
+                            <div class="col-md-6">
+                                <label class="form-label">Password</label>
+                                <input type="password" class="form-control">
+                            </div>
+
+                            <!-- Contact -->
+                            <div class="col-md-6">
+                                <label class="form-label">Contact No</label>
+                                <input type="text" class="form-control">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6">
+                                <label class="form-label">Email Id</label>
+                                <input type="email" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer justify-content-end">
+                        <button class="btn btn-sm save-user-btn" data-bs-dismiss="modal">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 3 : Permissions -->
+        <div id="permissions" class="card section-card d-none">
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        @*<div class="admin-dd">
+                            <label class="admin-dd-label">Party</label>
+                            <select class="form-select admin-dd-select">
+                                <option selected disabled>Select Party</option>
+                                <option>Test Admin</option>
+                            </select>
+                        </div>*@
+
+                        <div class="admin-dd">
+                            <label class="admin-dd-label">User</label>
+                            <select class="form-select admin-dd-select">
+                                <option selected disabled>Select User</option>
+                                <option>EZuserA</option>
+                                <option>EZuserB</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        @*<div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>*@
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="d-flex align-items-center gap-2 check-all-wrap">
+                                <input type="checkbox" id="checkAllPermissions" />
+                                <label for="checkAllPermissions" class="mb-0">Check All</label>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="permissionTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Page Name</th>
+                                    <th>Section Name</th>
+                                    <th>View</th>
+                                    <th>Edit</th>
+                                    <th>Create Location</th>
+                                    <th>Create Employee</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissionTableBody">
+                                <tr>
+                                    <td>1</td>
+                                    <td>Dashboard</td>
+                                    <td>License Dashboard</td>
+                                    <td><input type="checkbox" class="perm-check"></td>
+                                    <td><input type="checkbox" class="perm-check"></td>
+                                    <td><input type="checkbox" class="perm-check"></td>
+                                    <td><input type="checkbox" class="perm-check"></td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- CARD 4 : Store Mapping -->
+        <div id="storeMapping" class="card section-card d-none">
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        @*<div class="admin-dd">
+                            <label class="admin-dd-label">Party</label>
+                            <select class="form-select admin-dd-select">
+                                <option selected disabled>Select Party</option>
+                                <option>Test Admin</option>
+                            </select>
+                        </div>*@
+
+                        <div class="admin-dd">
+                            <label class="admin-dd-label">User</label>
+                            <select class="form-select admin-dd-select">
+                                <option selected disabled>Select User</option>
+                                <option>UserA</option>
+                                <option>UserB</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        @*<div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                             </div>
+                        </div>*@
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="d-flex align-items-center gap-2 check-all-wrap">
+                                <input type="checkbox" id="checkAllStoreMapping" />
+                                <label for="checkAllStoreMapping" class="mb-0">Check All</label>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="storeMappingTable">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>S.No</th>
+                                    <th>Location Code</th>
+                                    <th>Ref. Store Code</th>
+                                    <th>Store Name</th>
+                                    <th>Created By</th>
+                                    <th>Client Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="storeMappingTableBody">
+                                <tr>
+                                    <td><input type="checkbox" class="storeMap-check"></td>
+                                    <td>1</td>
+                                    <td>00004293 [Test1]</td>
+                                    <td>Test1</td>
+                                    <td>Eztest1</td>
+                                    <td>EzuserA</td>
+                                    <td>client</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+        <!-- CARD 5 : Industry Mapping -->
+        <div id="industryMapping" class="card section-card d-none">
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="admin-dd">
+                            <label class="admin-dd-label">State</label>
+                            <select class="form-select admin-dd-select">
+                                <option selected disabled>Select State</option>
+                                <option>Uttar Pradesh</option>
+                                <option>Delhi</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="d-flex align-items-center gap-2 check-all-wrap">
+                                <input type="checkbox" id="checkAllIndustryMapping" />
+                                <label for="checkAllIndustryMapping" class="mb-0">Check All</label>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="industryMappingTable">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>S.No</th>
+                                    <th>License Name</th>
+                                    <th>State</th>
+                                    <th>Act</th>
+                                </tr>
+                            </thead>
+                            <tbody id="industryMappingTableBody">
+                                <tr>
+                                    <td><input type="checkbox" class="industryMap-check"></td>
+                                    <td>1</td>
+                                    <td>National & Festival Holidays Registration</td>
+                                    <td>Tamil Nadu</td>
+                                    <td>National & Festival Holidays Registration: Tamil Nadu Industrial Establishments </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- CARD 6 : Activity Report -->
+        <div id="activityReport" class="card section-card d-none">
+            <div class="card-body p-3 d-flex flex-column">
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="admin-dd">
+                            <label class="admin-dd-label">Activity Date</label>
+                            <input type="date"
+                                   class="form-control admin-dd-select"
+                                   placeholder="Select date">
+                        </div>
+                    </div>
+
+                    <!-- RIGHT : Search + Export -->
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-md-end">
+
+                        <!-- Search -->
+                        <div class="search-container">
+                            <div class="input-group input-group-sm">
+                                <input type="text"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search..." />
+                                <button class="btn btn-sm btn-outline-primary" type="button">
+                                    <i class="bi bi-search"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Export -->
+                        <button type="button" class="btn btn-sm export-btn">
+                            <i class="bi bi-download me-1"></i> Export
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table" id="activityReportTable">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>User Name</th>
+                                    <th>Activity</th>
+                                    <th>Created On</th>
+                                    <th>Machine Name</th>
+                                    <th>System Username</th>
+                                    <th>Local IP</th>
+                                    <th>Public IP</th>
+                                    <th>Longitude Latitude</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityReportTableBody">
+                                <tr>
+                                    <td>1</td>
+                                    <td>DemoQSR</td>
+                                    <td>Location Master</td>
+                                    <td>15-Jan-2026 10:49 AM</td>
+                                    <td>EC2AMAZ-Q0F86SC</td>
+                                    <td>DefaultAppPool</td>
+                                    <td>172.31.33.46</td>
+                                    <td>172.31.33.46</td>
+                                    <td>19.076-72.8777</td>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>

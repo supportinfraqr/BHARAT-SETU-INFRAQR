@@ -1,0 +1,767 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Support Grievances";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<link href="~/Content/Dashboards/SupportGrievances/style.css" rel="stylesheet" />
+<script>
+    $(document).ready(function () {
+
+        $('#cardViewBtn').on('click', function () {
+
+            $('#supportCardView').show();
+            $('#supportListView').hide();
+
+            $('#cardViewBtn').addClass('active');
+            $('#listViewBtn').removeClass('active');
+        });
+
+        $('#listViewBtn').on('click', function () {
+
+            $('#supportListView').show();
+            $('#supportCardView').hide();
+
+            $('#listViewBtn').addClass('active');
+            $('#cardViewBtn').removeClass('active');
+        });
+
+    });
+</script>
+<style>
+    .grievancesMessageWrapper {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 12px;
+    }
+
+    .grievancesSentWrapper {
+        align-items: flex-end;
+    }
+
+    .grievancesReceivedMessage {
+        background: #f1f1f1;
+        color: #000;
+        padding: 10px 14px;
+        border-radius: 15px 15px 15px 2px;
+        max-width: 70%;
+    }
+
+    .grievancesSentMessage {
+        background: #ff8c00;
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 15px 15px 2px 15px;
+        max-width: 70%;
+    }
+
+    .grievancesMessageTime {
+        font-size: 11px;
+        color: #888;
+        margin-top: 4px;
+    }
+</style>
+
+<div class="supportGrievances px-4 py-4">
+
+    <!-- Page Header -->
+    <div class="supportGrievancesHeader">
+
+        <div>
+            <h3 class="supportPageTitle mb-1">
+                Grievances & Tickets
+            </h3>
+
+            <p class="supportPageSubTitle mb-0">
+                All tickets raised by workers across sites & contractors
+            </p>
+        </div>
+
+        <div class="supportViewToggle">
+
+            <button class="supportViewBtn active"
+                    id="listViewBtn"
+                    type="button">
+                <i class="bi bi-list-ul"></i>
+            </button>
+
+            <button class="supportViewBtn "
+                    id="cardViewBtn"
+                    type="button">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-3 mb-3">
+
+        <div class="col-xl-3 col-md-6">
+            <div class="supportKpiCard" style="background: #F3F8FF">
+                <div class="supportKpiIcon supportKpiOpen">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+
+                <div>
+                    <h3>02</h3>
+                    <p style="color: #155DFC">Open Tickets</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="supportKpiCard" style="background: #F9F4FF">
+                <div class="supportKpiIcon supportKpiProgress">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+
+                <div>
+                    <h3>02</h3>
+                    <p style="color: purple">In Progress</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="supportKpiCard" style="background: #F3F5FF">
+                <div class="supportKpiIcon supportKpiResolved">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+
+                <div>
+                    <h3>02</h3>
+                    <p style="color: #003BB2">Resolved</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="supportKpiCard" style="background: #F3FFF7">
+                <div class="supportKpiIcon supportKpiTotal">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+
+                <div>
+                    <h3>06</h3>
+                    <p style="color: green">Total Tickets</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- List View-->
+    <div id="supportListView">
+        <!-- GRIEVANCE CARD -->
+        <div class="supportTicketCard mb-2">
+
+            <!-- TOP -->
+            <div class="supportTicketTop">
+
+                <div class="supportTicketLeft">
+
+                    <div class="supportTicketIcon">
+                        <i class="bi bi-chat-left-text"></i>
+                    </div>
+
+                    <div class="supportTicketContent">
+
+                        <div class="supportTicketTitleRow">
+
+                            <h4 class="supportTicketTitle">
+                                Inadequate Safety Equipment
+                            </h4>
+
+                            <div class="supportTicketBadges">
+
+                                @*<span class="supportBadge supportTicketId">
+                                    GRV-2024-001
+                                </span>*@
+
+                                <span class="supportBadge supportBadgeProgress">
+                                    In Progress
+                                </span>
+
+                                @*<span class="supportBadge supportBadgePriority">
+                                    High Priority
+                                </span>*@
+
+                            </div>
+
+                        </div>
+
+                        <p class="supportTicketDesc mb-0">
+                            Safety helmets and harnesses not provided for high-altitude work.
+                            Requesting immediate supply of proper safety gear.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- INFO GRID -->
+            <div class="supportInfoGrid">
+
+                <div class="supportInfoItem">
+                    <label>Raised By</label>
+
+                    <div>
+                        <i class="bi bi-person"></i>
+                        <span>Rajesh Kumar</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Contractor</label>
+
+                    <div>
+                        <i class="bi bi-building"></i>
+                        <span>TechCorp Solutions</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Site Location</label>
+
+                    <div>
+                        <i class="bi bi-geo-alt"></i>
+                        <span>Construction Site A</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Category</label>
+
+                    <div>
+                        <span class="supportCategoryTag">
+                            Safety Issue
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Audio and image section-->
+            <div class="supportEvidenceSection">
+
+                <div class="supportAudioBlock">
+
+                    <h6>Worker's Audio Recording</h6>
+
+                    <div class="supportAudioPlayer">
+
+                        <button>
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+
+                        <div class="supportAudioInfo">
+                            <span>safety_issue_report_rajesh_kumar.mp3</span>
+                            <small>2:34</small>
+                        </div>
+
+                        <i class="bi bi-download"></i>
+
+                    </div>
+
+                </div>
+
+                <div class="supportLetterBlock">
+
+                    <h6>Letter Image</h6>
+
+                    <div class="supportLetterImages">
+
+                        <div class="supportLetterThumb"></div>
+
+                        <div class="supportLetterCount">
+                            +1
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="supportTicketFooter">
+
+                <div class="supportTicketMeta">
+
+                    <div>
+                        <i class="bi bi-clock"></i>
+                        Raised: May 18, 2024
+                    </div>
+
+                    <div>
+                        <i class="bi bi-activity"></i>
+                        Updated: May 19, 2024
+                    </div>
+
+                    <div>
+                        <i class="bi bi-person-workspace"></i>
+                        Assigned: Safety Officer - John Smith
+                    </div>
+
+                </div>
+
+                <div class="supportTicketActions">
+
+                    <button class="supportBtn supportBtnLight">
+                        <i class="bi bi-eye"></i>
+                        View Details
+                    </button>
+
+                    @*<button class="supportBtn supportBtnSuccess">
+                        <i class="bi bi-check-circle"></i>
+                        Mark Resolved
+                    </button>*@
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RESOLVED CARD -->
+        <div class="supportTicketCard mb-2">
+
+            <!-- TOP -->
+            <div class="supportTicketTop">
+
+                <div class="supportTicketLeft">
+
+                    <div class="supportTicketIcon">
+                        <i class="bi bi-chat-left-text"></i>
+                    </div>
+
+                    <div class="supportTicketContent">
+
+                        <div class="supportTicketTitleRow">
+
+                            <h4 class="supportTicketTitle">
+                                Pending Salary for April
+                            </h4>
+
+                            <div class="supportTicketBadges">
+
+                                @*<span class="supportBadge supportTicketId">
+                                    GRV-2024-002
+                                </span>*@
+
+                                <span class="supportBadge supportBadgeResolved">
+                                    Resolved
+                                </span>
+
+                                @*<span class="supportBadge supportBadgePriority">
+                                    High Priority
+                                </span>*@
+
+                            </div>
+
+                        </div>
+
+                        <p class="supportTicketDesc mb-0">
+                            Salary for the month of April has not been credited yet.
+                            Expected payment date was May 5th but still pending.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- INFO GRID -->
+            <div class="supportInfoGrid">
+
+                <div class="supportInfoItem">
+                    <label>Raised By</label>
+
+                    <div>
+                        <i class="bi bi-person"></i>
+                        <span>Rajesh Kumar</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Contractor</label>
+
+                    <div>
+                        <i class="bi bi-building"></i>
+                        <span>TechCorp Solutions</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Site Location</label>
+
+                    <div>
+                        <i class="bi bi-geo-alt"></i>
+                        <span>Construction Site A</span>
+                    </div>
+                </div>
+
+                <div class="supportInfoItem">
+                    <label>Category</label>
+
+                    <div>
+                        <span class="supportCategoryTag">
+                            Payment Delay
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Audio and image section-->
+            <div class="supportEvidenceSection">
+
+                <div class="supportAudioBlock">
+
+                    <h6>Worker's Audio Recording</h6>
+
+                    <div class="supportAudioPlayer">
+
+                        <button>
+                            <i class="bi bi-play-fill"></i>
+                        </button>
+
+                        <div class="supportAudioInfo">
+                            <span>safety_issue_report_rajesh_kumar.mp3</span>
+                            <small>2:34</small>
+                        </div>
+
+                        <i class="bi bi-download"></i>
+
+                    </div>
+
+                </div>
+
+                <div class="supportLetterBlock">
+
+                    <h6>Letter Image</h6>
+
+                    <div class="supportLetterImages">
+
+                        <div class="supportLetterThumb"></div>
+
+                        <div class="supportLetterCount">
+                            +1
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="supportTicketFooter">
+
+                <div class="supportTicketMeta">
+
+                    <div>
+                        <i class="bi bi-clock"></i>
+                        Raised: May 18, 2024
+                    </div>
+
+                    <div>
+                        <i class="bi bi-activity"></i>
+                        Updated: May 19, 2024
+                    </div>
+
+                    <div>
+                        <i class="bi bi-person-workspace"></i>
+                        Assigned: HR Officer - John Smith
+                    </div>
+
+                </div>
+
+                <div class="supportTicketActions">
+                    <a href="../RetailSection/GrievancesDetails">
+                        <button class="supportBtn supportBtnLight">
+                            <i class="bi bi-eye"></i>
+                            View Details
+                        </button>
+                        </a>
+                </div>
+
+            </div>
+
+            <!-- RESOLUTION -->
+            <div class="supportResolutionBox">
+
+                <h6>Resolution:</h6>
+
+                <p class="mb-0">
+                    Payment processed and credited on May 17, 2024
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Card View-->
+    <div id="supportCardView" style="display:none;">
+        <div class="supportCardsGrid">
+
+            <div class="supportGridCard">
+
+                <h4>
+                    Inadequate Safety Equipment
+                </h4>
+
+                <div class="supportStatus supportStatusProgress">
+                    <span></span>
+                    IN PROGRESS
+                </div>
+
+                <p class="supportGridDescription">
+                    Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear. Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear.
+                </p>
+
+                <div class="supportGridDivider"></div>
+
+                <div class="supportGridInfo">
+
+                    <div>
+                        <label>RAISED BY</label>
+                        <span>Rajesh Kumar</span>
+                    </div>
+
+                    <div>
+                        <label>CATEGORY</label>
+                        <span class="supportCategoryChip">
+                            Safety Issue
+                        </span>
+                    </div>
+
+                </div>
+
+                <button class="supportGridViewBtn">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                </button>
+
+            </div>
+
+            <div class="supportGridCard">
+
+                <h4>
+                    Inadequate Safety Equipment
+                </h4>
+
+                <div class="supportStatus supportStatusResolved">
+                    <span></span>
+                    RESOLVED
+                </div>
+
+                <p class="supportGridDescription">
+                    Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear.
+                </p>
+
+                <div class="supportGridDivider"></div>
+
+                <div class="supportGridInfo">
+
+                    <div>
+                        <label>RAISED BY</label>
+                        <span>Rajesh Kumar</span>
+                    </div>
+
+                    <div>
+                        <label>CATEGORY</label>
+                        <span class="supportCategoryChip">
+                            Safety Issue
+                        </span>
+                    </div>
+
+                </div>
+
+                <button class="supportGridViewBtn">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                </button>
+
+            </div>
+
+            <div class="supportGridCard">
+
+                <h4>
+                    Inadequate Safety Equipment
+                </h4>
+
+                <div class="supportStatus supportStatusOpen">
+                    <span></span>
+                    OPEN
+                </div>
+
+                <p class="supportGridDescription">
+                    Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear.
+                </p>
+
+                <div class="supportGridDivider"></div>
+
+                <div class="supportGridInfo">
+
+                    <div>
+                        <label>RAISED BY</label>
+                        <span>Rajesh Kumar</span>
+                    </div>
+
+                    <div>
+                        <label>CATEGORY</label>
+                        <span class="supportCategoryChip">
+                            Safety Issue
+                        </span>
+                    </div>
+
+                </div>
+
+                <button class="supportGridViewBtn">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                </button>
+
+            </div>
+
+            <div class="supportGridCard">
+
+                <h4>
+                    Inadequate Safety Equipment
+                </h4>
+
+                <div class="supportStatus supportStatusProgress">
+                    <span></span>
+                    IN PROGRESS
+                </div>
+
+                <p class="supportGridDescription">
+                    Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear. Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear.
+                </p>
+
+                <div class="supportGridDivider"></div>
+
+                <div class="supportGridInfo">
+
+                    <div>
+                        <label>RAISED BY</label>
+                        <span>Rajesh Kumar</span>
+                    </div>
+
+                    <div>
+                        <label>CATEGORY</label>
+                        <span class="supportCategoryChip">
+                            Safety Issue
+                        </span>
+                    </div>
+
+                </div>
+
+                <button class="supportGridViewBtn">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                </button>
+
+            </div>
+
+            <div class="supportGridCard">
+
+                <h4>
+                    Inadequate Safety Equipment
+                </h4>
+
+                <div class="supportStatus supportStatusProgress">
+                    <span></span>
+                    IN PROGRESS
+                </div>
+
+                <p class="supportGridDescription">
+                    Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear.
+                </p>
+
+                <div class="supportGridDivider"></div>
+
+                <div class="supportGridInfo">
+
+                    <div>
+                        <label>RAISED BY</label>
+                        <span>Rajesh Kumar</span>
+                    </div>
+
+                    <div>
+                        <label>CATEGORY</label>
+                        <span class="supportCategoryChip">
+                            Safety Issue
+                        </span>
+                    </div>
+
+                </div>
+
+                <button class="supportGridViewBtn">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                </button>
+
+            </div>
+
+            <div class="supportGridCard">
+
+                <h4>
+                    Inadequate Safety Equipment
+                </h4>
+
+                <div class="supportStatus supportStatusResolved">
+                    <span></span>
+                    RESOLVED
+                </div>
+
+                <p class="supportGridDescription">
+                    Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear. Safety helmets and harnesses not provided for high-altitude work.
+                    Requesting immediate supply of proper safety gear.
+                </p>
+
+                <div class="supportGridDivider"></div>
+
+                <div class="supportGridInfo">
+
+                    <div>
+                        <label>RAISED BY</label>
+                        <span>Rajesh Kumar</span>
+                    </div>
+
+                    <div>
+                        <label>CATEGORY</label>
+                        <span class="supportCategoryChip">
+                            Safety Issue
+                        </span>
+                    </div>
+
+                </div>
+
+                <button class="supportGridViewBtn">
+                    <i class="bi bi-eye"></i>
+                    View Details
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+
+</div>

@@ -1,0 +1,1325 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Principle Employer Profile";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="~/Content/Dashboards/PrincipleProfile/script.js"></script>
+<link href="~/Content/Dashboards/PrincipleProfile/style.css" rel="stylesheet" />
+<script src="~/scripts/RetailJsLib/PrincipleEmployerCodeController.js"></script>
+
+
+<div class="principleProfile px-4 py-2" ng-init="PrincipleProfile()">
+
+    <!-- Top Bar -->
+    <div class="d-flex align-items-center justify-content-between mb-3 principleProfileTopBar">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h4 class="mb-0 principleProfileHeading">
+                Principle Employer’s Profile
+            </h4>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-edit" id="btneditProfile" type="button" data-bs-toggle="modal" data-bs-target="#editprincipleProfileModal" ng-click="BindRegistration()">
+                <i class="bi bi-pencil-square"></i>
+                <span>Edit Profile</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- EDIT PRINCIPLE PROFILE MODAL -->
+    <div class="modal fade principleProfileModal"
+         id="editprincipleProfileModal"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-fullscreen principleProfileFullscreenModal">
+
+            <div class="modal-content principleProfileModalContent">
+
+                <!-- HEADER -->
+                <div class="modal-header principleProfileModalHeader">
+                    <div class="principleProfileModalTitleWrapper">
+                        <div class="principleProfileModalIcon">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div>
+                            <div class="principleProfileModalTitle">
+                                Edit Principle Employer Profile
+                            </div>
+                            <div class="principleProfileModalSubTitle">
+                                Update Principle information and it's details
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button"
+                            class="btn-close btn-close-white principleProfileModalClose"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+
+                </div>
+
+                <!-- BODY -->
+                <div class="modal-body principleProfileModalBody">
+
+                    <!-- STEPPER -->
+                    <div class="stepper-modern my-3">
+                        <div class="step-item active">Basic</div>
+                        <div class="step-item">Contact</div>
+                        <div class="step-item">Authorized Representative</div>
+                        <div class="step-item" hidden>Policy</div>
+                    </div>
+
+                    <!-- STEP 1 -->
+                    <div class="form-step" data-step="1">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Basic Details</h5>
+
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">Principal Employer Name</label>
+                                    <input type="text" class="form-control" ng-model="AgencyName">
+                                </div>
+                                <div>
+                                    <label class="form-label">LIN Number</label>
+                                    <input type="text" class="form-control" ng-model="LIN">
+                                </div>
+                                <div>
+                                    <label class="form-label">Industry</label>
+                                    <input type="text" class="form-control" ng-model="Industry" ng-disabled="true">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">PE Code</label>
+                                    <input type="text" class="form-control" ng-model="PartyCode" ng-disabled="true">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">GST Number</label>
+                                    <input type="text" class="form-control" id="gst" maxlength="15" ng-model="GSTIN">
+                                    <small class="text-muted validation-msg" id="gstMsg"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">PAN Number</label>
+                                    <input type="text" class="form-control" id="pan" maxlength="10" ng-model="PanNo">
+                                    <small class="text-muted validation-msg" id="panMsg"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Registered Office Address</label>
+                                    <input type="text" class="form-control" ng-model="RegisteredAddress">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">City</label>
+                                    <input type="text" class="form-control" ng-model="City" ng-disabled="true">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">State</label>
+                                    <input type="text" class="form-control" ng-model="State" ng-disabled="true">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Country</label>
+                                    <input type="text" class="form-control" ng-model="Country" ng-disabled="true">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Pincode</label>
+                                    <input type="text" class="form-control" ng-model="Pincode" ng-disabled="true">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">CIN Number(if applicable)</label>
+                                    <input type="text" class="form-control" id="cin" ng-model="CIN">
+                                    <small class="text-muted validation-msg" id="cinMsg"></small>
+                                </div>
+
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn d-none">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn next-btn">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 2 -->
+                    <div class="form-step" data-step="2" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Contact Information</h5>
+
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">Contact Person Name</label>
+                                    <input type="text" class="form-control" ng-model="ContactPerson">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Designation</label>
+                                    <input type="text" class="form-control" ng-model="Designation">
+                                </div>
+                                <div>
+                                    <label class="form-label">Contact Person Number</label>
+                                    <input type="text" class="form-control" ng-disabled="true" ng-model="Mobile" maxlength="10" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Alternate Contact Number</label>
+                                    <input type="text" class="form-control" ng-model="almobile">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Official Email Address</label>
+                                    <input type="email" id="txtEmail" class="form-control" ng-disabled="true" ng-model="Email" onblur="validateEmail('#txtEmail')">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Website</label>
+                                    <input type="text" class="form-control" ng-model="Website">
+                                </div>
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn next-btn" ng-click="SaveStep1()">Next</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 -->
+                    <div class="form-step" data-step="3" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Authorized Representative</h5>
+
+                            <div class="form-grid mt-3">
+
+                                <div>
+                                    <label class="form-label">Representative Name</label>
+                                    <input type="text" class="form-control" ng-model="Representnamet">
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Designation</label>
+                                    <input type="text" class="form-control" ng-model="representDesignation">
+                                    <small id="accMsg" class="text-muted"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Mobile Number</label>
+                                    <input type="text" class="form-control" ng-model="RepMobile" maxlength="10" onKeyUp="$(this).val($(this).val().replace(/[^\d]/ig, ''))">
+                                    <small id="ifscMsg" class="text-muted"></small>
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Email</label>
+                                    <input type="email" id="txtEmail" class="form-control" ng-model="RepEmail" onblur="validateEmail('#txtreEmail')">
+                                    <small id="ifscMsg" class="text-muted"></small>
+                                </div>
+
+                            </div>
+
+                            <!-- BUTTONS -->
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+
+                                    <button class="btn save-btn" ng-click="SaveStep4();FinalSave()">Submit</button>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- STEP 4 -->
+                    <div class="form-step" data-step="4" style="display:none;">
+
+                        <div class="card entity-card p-3">
+
+                            <h5 style="color:var(--primary)">Policy</h5>
+
+                            <div class="declaration-list">
+
+                                <div class="decl-item" data-id="indemnity">
+                                    <div>
+                                        Indemnity Clause
+                                        <div class="status"
+                                             ng-class="Dec1==1 ? 'done' : 'pending'">
+                                            {{ Dec1==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec1==1" ng-click="openDeclaration('Indemnity Clause')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="confidentiality">
+                                    <div>
+                                        Confidentiality Agreement
+                                        <div class="status"
+                                             ng-class="Dec2==1 ? 'done' : 'pending'">
+                                            {{ Dec2==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec2==1" ng-click="openDeclaration('Confidentiality Agreement')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="conduct">
+                                    <div>
+                                        Code of Conduct
+                                        <div class="status"
+                                             ng-class="Dec3==1 ? 'done' : 'pending'">
+                                            {{ Dec3==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec3==1" ng-click="openDeclaration('Code of Conduct')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="aml">
+                                    <div>
+                                        AML Declaration
+                                        <div class="status"
+                                             ng-class="Dec4==1 ? 'done' : 'pending'">
+                                            {{ Dec4==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec4==1" ng-click="openDeclaration('AML Declaration')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="abc">
+                                    <div>
+                                        Anti-Bribery
+                                        <div class="status"
+                                             ng-class="Dec5==1 ? 'done' : 'pending'">
+                                            {{ Dec5==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec5==1" ng-click="openDeclaration('Anti-Bribery')">View & Accept</button>
+                                </div>
+
+                                <div class="decl-item" data-id="dpdp">
+                                    <div>
+                                        DPDP Declaration
+                                        <div class="status"
+                                             ng-class="Dec6==1 ? 'done' : 'pending'">
+                                            {{ Dec6==1 ? 'Done' : 'Pending' }}
+                                        </div>
+                                    </div>
+                                    <button class="btn view-btn open-decl" ng-hide="Dec6==1" ng-click="openDeclaration('DPDP Declaration')">View & Accept</button>
+                                </div>
+
+                            </div>
+
+                            <div class="entity-footer d-flex justify-content-between mt-3">
+                                <button class="btn save-btn prev-btn">Previous</button>
+
+                                <div class="ms-auto d-flex gap-2">
+                                    <button class="btn save-btn" ng-click="FinalSave()">Submit</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!--Modal for Declaration-->
+                    <div class="modal fade" id="declModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+
+                                <div class="modal-header">
+                                    <h6 class="modal-title" id="declTitle"></h6>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div class="legal-box" id="declContent"></div>
+
+                                    <div class="legal-agree mt-3">
+                                        <label>
+                                            <input type="checkbox" id="declAgree">
+                                            I agree
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button class="btn save-btn" id="confirmDecl" ng-click="confirmDeclaration()">Confirm</button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Main Layout -->
+    <div class="row g-3 principleProfileMainWrapper">
+
+        <!-- LEFT SIDEBAR -->
+        <div class="col-xl-3 col-lg-4">
+
+            <div class="principleProfileSidebar">
+
+                <!-- Top Company Card -->
+                <div class="principleProfileCompanyCard">
+
+                    <div class="d-flex align-items-start gap-3">
+
+                        <!-- Logo -->
+                        <div class="principleProfileLogo">
+                        </div>
+
+                        <!-- Company Info -->
+                        <div class="flex-grow-1">
+
+                            <div class="principleProfileCompanyName">
+                                {{Profile.PartyName || '-'}}
+                            </div>
+
+                            <div class="principleProfileCompanyCode">
+                                {{Profile.PartyCode || '-'}}
+                            </div>
+
+                            <div class="principleProfileRatingWrapper">
+
+                                <div class="principleProfileVerified">
+                                    <i class="bi bi-patch-check-fill"></i>
+                                </div>
+
+                                <div class="principleProfileStars">
+                                    <i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star-fill"></i>
+                                </div>
+
+                                <div class="principleProfileRatingText">
+                                    4.3
+                                </div>
+
+                                <div class="principleProfileReviewCount">
+                                    (83)
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="principleProfileDivider"></div>
+
+                    <!-- Contact Info -->
+                    <div class="principleProfileContactList">
+
+                        <div class="principleProfileContactItem">
+                            <i class="bi bi-envelope"></i>
+                            <span>{{Profile.EmailId || '-'}}</span>
+                        </div>
+
+                        <div class="principleProfileContactItem">
+                            <i class="bi bi-telephone"></i>
+                            <span>{{Profile.ContactNo || '-'}}</span>
+                        </div>
+
+                        <div class="principleProfileContactItem">
+                            <i class="bi bi-geo-alt"></i>
+                            <span>{{Profile.Address || '-'}}</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Sidebar Menu -->
+                <div class="principleProfileMenuWrapper">
+
+                    <button class="principleProfileMenuBtn active"
+                            type="button"
+                            data-target="principleBasicTab">
+
+                        <span>Basic</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="principleProfileMenuBtn"
+                            type="button"
+                            data-target="principleRegistrationTab">
+
+                        <span>Contact</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="principleProfileMenuBtn"
+                            type="button"
+                            data-target="principleFinancialTab">
+
+                        <span>Authorized Representative</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="principleProfileMenuBtn"
+                            type="button"
+                            data-target="principleDeclarationTab" hidden>
+
+                        <span>Policy</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                    <button class="principleProfileMenuBtn"
+                            type="button"
+                            data-target="principleSubscriptionTab" hidden>
+
+                        <span>Subscription</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT CONTENT -->
+        <div class="col-xl-9 col-lg-8">
+
+            <div class="principleProfileContentCard">
+
+                <!-- BASIC TAB -->
+                <div class="principleProfileTab active"
+                     id="principleBasicTab">
+
+                    <div class="principleProfileSectionTitle">
+                        Basic Details
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Principal Employer Name
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.AgencyName || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                PE Code
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.PartyCode || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                GSTIN Number
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.GSTIN || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                PAN Number
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.PanNo || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Registered Office Address
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.RegisteredAddress || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                City
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.City || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                State
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.State || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Country
+                            </div>
+
+                            <div class="principleProfileValue">
+                                India
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Pincode
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Pincode || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                CIN Number(if applicable)
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.CIN || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                LIN Number
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.LINNO || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Industry
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Industryname || '-'}}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- CONTACT TAB -->
+                <div class="principleProfileTab"
+                     id="principleRegistrationTab">
+
+                    <div class="principleProfileSectionTitle">
+                        Contact Information
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Contact Person Name
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.ContactPerson || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Designation
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Designation || '-'}}
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Contact Person Number
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Mobile || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Alternate Contact Number
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.ContactMobile || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Official Email Address
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Email || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Website URL
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Website || '-'}}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- AUTHORIZED TAB -->
+                <div class="principleProfileTab"
+                     id="principleFinancialTab">
+
+                    <div class="principleProfileSectionTitle">
+                        Authorized Representative
+                    </div>
+
+                    <div class="row g-4">
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Representative Name
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.Representativename || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Designation
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.RepresentativeDesignation || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Mobile Number
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.RepresentativeMobile   || '-'}}
+                            </div>
+                        </div>
+
+                        <div class="col-xl-6 col-md-6">
+                            <div class="principleProfileLabel">
+                                Email ID
+                            </div>
+
+                            <div class="principleProfileValue">
+                                {{Profile.RepresentativeEmail || '-'}}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- POLICY TAB -->
+                <div class="principleProfileTab"
+                     id="principleDeclarationTab">
+
+                    <div class="principleProfileSectionTitle">
+                        Policy
+                    </div>
+
+                    <div class="principleProfileDeclarationWrapper">
+
+                        <!-- ITEM -->
+                        <div class="principleProfileDeclarationRow">
+
+                            <div class="principleProfileDeclarationName">
+                                Indemnity Clause
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': Profile.IndemnityClause == 1,
+                                        'text-danger': Profile.IndemnityClause != 1}">
+                                {{ Profile.IndemnityClause == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                            @*<button type="button"
+                                      class="principleProfileViewBtn">
+
+                                Upload & View
+
+                            </button>*@
+
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="principleProfileDeclarationRow">
+
+                            <div class="principleProfileDeclarationName">
+                                Confidentiality Agreement
+                            </div>
+
+                            @*<button type="button"
+                                      class="principleProfileViewBtn">
+
+                                Upload & View
+
+                            </button>*@
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': Profile.ConfidentialityAgreement == 1,
+                                        'text-danger': Profile.ConfidentialityAgreement != 1}">
+                                {{ Profile.ConfidentialityAgreement == 1 ? 'Done' : 'Pending' }}
+                            </div>
+
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="principleProfileDeclarationRow">
+
+                            <div class="principleProfileDeclarationName">
+                                Code of Conduct
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': Profile.CodeofConduct == 1,
+                                        'text-danger': Profile.CodeofConduct != 1}">
+                                {{ Profile.CodeofConduct == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="principleProfileDeclarationRow">
+
+                            <div class="principleProfileDeclarationName">
+                                AML Declaration
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': Profile.AMLDeclaration == 1,
+                                        'text-danger': Profile.AMLDeclaration != 1}">
+                                {{ Profile.AMLDeclaration == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="principleProfileDeclarationRow">
+
+                            <div class="principleProfileDeclarationName">
+                                Anti- Bribery
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': Profile.AntiBribery == 1,
+                                        'text-danger': Profile.AntiBribery != 1}">
+                                {{ Profile.AntiBribery == 1 ? 'Done' : 'Pending' }}
+                            </div>
+
+                        </div>
+
+                        <!-- ITEM -->
+                        <div class="principleProfileDeclarationRow">
+
+                            <div class="principleProfileDeclarationName">
+                                DPDP Declaration
+                            </div>
+                            <div class="contractorProfileDeclarationName" ng-class="{'text-success': Profile.DPDPDeclaration == 1,
+                                        'text-danger': Profile.DPDPDeclaration != 1}">
+                                {{ Profile.DPDPDeclaration == 1 ? 'Done' : 'Pending' }}
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- SUBSCRIPTION TAB -->
+                <div class="principleProfileTab"
+                     id="principleSubscriptionTab">
+
+                    <div class="row g-4">
+                        <!-- KPI CARDS -->
+                        <div class="col-xl-3 col-md-6">
+                            <div class="subscriptionKpiCard">
+                                <div class="subscriptionKpiIcon">
+                                    <i class="bi bi-shop"></i>
+                                </div>
+                                <div class="subscriptionKpiContent">
+                                    <span>Total Location</span>
+                                    <h4>500</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="subscriptionKpiCard">
+                                <div class="subscriptionKpiIcon">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                </div>
+                                <div class="subscriptionKpiContent">
+                                    <span>Module Subscribed</span>
+                                    <h4>18</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="subscriptionKpiCard">
+                                <div class="subscriptionKpiIcon">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                                <div class="subscriptionKpiContent">
+                                    <span>Organization Users</span>
+                                    <h4>11</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6">
+                            <div class="subscriptionKpiCard">
+                                <div class="subscriptionKpiIcon">
+                                    <i class="bi bi-diagram-3"></i>
+                                </div>
+                                <div class="subscriptionKpiContent">
+                                    <span>Organization User Limit</span>
+                                    <h4>{{Profile.UserLimit}}</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LEFT COLUMN -->
+                        <div class="col-lg-8">
+                            <div class="subscriptionDashboardCard">
+                                <h5 class="subscriptionCardTitle">
+                                    User Activity Trend
+                                </h5>
+
+                                <div class="subscriptionChartWrapper">
+                                    <canvas id="userActivityChart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="subscriptionDashboardCard mt-4">
+                                <h5 class="subscriptionCardTitle">
+                                    Invoice
+                                </h5>
+
+                                <div class="table-responsive" style="scrollbar-width: thin;">
+                                    <table class="table subscriptionInvoiceTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Invoice ID</th>
+                                                <th>Date</th>
+                                                <th>Description</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th class="text-end">Action</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <tr>
+                                                <td>INV-2024-001</td>
+                                                <td>2024-01-15</td>
+                                                <td>Professional Plan - Q1 2024</td>
+                                                <td>₹15,000</td>
+                                                <td>
+                                                    <span class="subscriptionPaidBadge">
+                                                        Paid
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <button class="subscriptionDownloadBtn">
+                                                        Download
+                                                    </button>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td>INV-2024-002</td>
+                                                <td>2024-04-15</td>
+                                                <td>Professional Plan - Q2 2024</td>
+                                                <td>₹15,000</td>
+                                                <td>
+                                                    <span class="subscriptionPaidBadge">
+                                                        Paid
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <button class="subscriptionDownloadBtn">
+                                                        Download
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT COLUMN -->
+                        <div class="col-lg-4">
+
+                            <div class="subscriptionDashboardCard">
+                                <div class="subscriptionInfoGrid">
+
+                                    <div>
+                                        <label>Email Address</label>
+                                        <span> {{Profile.Email || '-'}}</span>
+                                    </div>
+
+                                    <div>
+                                        <label>Subscription Duration</label>
+                                        <span>{{Profile.duratiodays}}</span>
+                                    </div>
+
+                                    <div>
+                                        <label>Plan</label>
+                                        <span>Professional</span>
+                                    </div>
+
+                                    <div>
+                                        <label>Renewal Date</label>
+                                        <span> {{Profile.ValidTo || '-'}}</span>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <div class="subscriptionDashboardCard mt-4">
+
+                                <h5 class="subscriptionCardTitle">
+                                    User Status Summary
+                                </h5>
+
+                                <div class="subscriptionDonutWrapper">
+                                    <canvas id="userStatusChart"></canvas>
+                                </div>
+
+                                <div class="subscriptionSummaryStats">
+
+                                    <div class="subscriptionSummaryItem">
+                                        <span>8</span>
+                                        <small>Used Users</small>
+                                    </div>
+
+                                    <div class="subscriptionSummaryItem">
+                                        <span>192</span>
+                                        <small>Unused Users</small>
+                                    </div>
+
+                                    <div class="subscriptionSummaryItem">
+                                        <span>200</span>
+                                        <small>Total Users</small>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+
+    /* PAN VALIDATION */
+    document.getElementById("pan").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+        const msg = document.getElementById("panMsg");
+
+        if (val.length === 10) {
+            msg.innerText = regex.test(val) ? "Valid PAN " : "Invalid PAN ";
+            msg.style.color = regex.test(val) ? "green" : "red";
+        } else {
+            msg.innerText = "";
+        }
+    });
+    document.getElementById("gst").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+        const msg = document.getElementById("gstMsg");
+
+        if (val.length === 15) {
+            msg.innerText = regex.test(val) ? "Valid GSTIN " : "Invalid GSTIN ";
+            msg.style.color = regex.test(val) ? "green" : "red";
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+    /* CIN / LLPIN AUTO DETECT */
+    document.getElementById("cin").addEventListener("input", function () {
+        const val = this.value.toUpperCase();
+        this.value = val;
+
+        const msg = document.getElementById("cinMsg");
+
+        const cinRegex = /^[A-Z0-9]{21}$/;   // CIN
+        const llpRegex = /^[A-Z]{3}-[0-9]{4}$/; // LLPIN
+
+        if (val.length > 0) {
+            if (cinRegex.test(val)) {
+                msg.innerText = "Detected: CIN (Company) ";
+                msg.style.color = "green";
+            }
+            else if (llpRegex.test(val)) {
+                msg.innerText = "Detected: LLPIN (LLP) ";
+                msg.style.color = "green";
+            }
+            else {
+                msg.innerText = "Invalid format ";
+                msg.style.color = "red";
+            }
+        } else {
+            msg.innerText = "";
+        }
+    });
+
+</script>
+<script>
+
+    const declData = {
+        indemnity: `
+        <p>Vendor agrees to indemnify...</p>
+        <ul>
+            <li>Non-compliance with laws</li>
+            <li>Non-payment of dues</li>
+        </ul>
+    `,
+        confidentiality: `
+        <p>Vendor acknowledges access to confidential info...</p>
+        <ul>
+            <li>No disclosure</li>
+            <li>Use only for service</li>
+        </ul>
+    `,
+        conduct: `<p>Code of conduct details...</p>`,
+        aml: `<p>AML declaration...</p>`,
+        abc: `<p>Anti-bribery declaration...</p>`,
+        dpdp: `<p>DPDP compliance...</p>`
+    };
+
+    let currentDecl = null;
+    const completedDecl = new Set();
+
+    /* OPEN MODAL */
+    document.querySelectorAll(".open-decl").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const parent = this.closest(".decl-item");
+            const id = parent.dataset.id;
+
+            currentDecl = id;
+
+            document.getElementById("declTitle").innerText = parent.querySelector("strong").innerText;
+            document.getElementById("declContent").innerText = declData[id];
+
+            document.getElementById("declAgree").checked = false;
+            enableScrollCheck();
+
+            new bootstrap.Modal(document.getElementById("declModal")).show();
+        });
+    });
+
+    function enableScrollCheck() {
+        const box = document.getElementById("declContent");
+        const checkbox = document.getElementById("declAgree");
+
+        checkbox.disabled = true;
+
+        box.scrollTop = 0;
+
+        // If content is small → enable directly
+        if (box.scrollHeight <= box.clientHeight + 10) {
+            checkbox.disabled = false;
+            return;
+        }
+
+        box.onscroll = function () {
+            if (box.scrollTop + box.clientHeight >= box.scrollHeight - 5) {
+                checkbox.disabled = false;
+            }
+        };
+    }
+
+    /* CONFIRM */
+    document.getElementById("confirmDecl").addEventListener("click", function () {
+
+        if (!document.getElementById("declAgree").checked) return;
+
+        completedDecl.add(currentDecl);
+
+        const item = document.querySelector(`.decl-item[data-id="${currentDecl}"]`);
+        item.querySelector(".status").innerText = "Done";
+        item.querySelector(".status").classList.remove("pending");
+        item.querySelector(".status").classList.add("done");
+
+        bootstrap.Modal.getInstance(document.getElementById("declModal")).hide();
+    });
+
+    document.getElementById("declNext").addEventListener("click", function () {
+
+        const total = document.querySelectorAll(".decl-item").length;
+
+        //if (completedDecl.size !== total) {
+        //    alert("Please complete all declarations");
+        //    return;
+        //}
+
+        currentStep++;
+        showStep(currentStep);
+    });
+
+
+</script>
+<script>
+    window.onload = function () {
+
+        var input = document.getElementById("ServicesOffered");
+        var dropdown = document.getElementById("serviceDropdown");
+
+        // open dropdown
+        input.addEventListener("click", function (e) {
+            e.stopPropagation();
+            dropdown.style.display = "block";
+        });
+
+        // checkbox change
+        dropdown.addEventListener("change", function () {
+            var selected = [];
+            var checkboxes = dropdown.querySelectorAll("input[type='checkbox']");
+
+            checkboxes.forEach(function (cb) {
+                if (cb.checked) {
+                    selected.push(cb.value);
+                }
+            });
+
+            input.value = selected.join(", ");
+        });
+
+        // close on outside click
+        document.addEventListener("click", function (e) {
+            if (!dropdown.contains(e.target) && e.target !== input) {
+                dropdown.style.display = "none";
+            }
+        });
+
+    };
+</script>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+        // OPEN DROPDOWN
+        document.querySelectorAll(".multi-input").forEach(function (input) {
+            input.addEventListener("click", function (e) {
+                e.stopPropagation();
+
+                // close all first
+                document.querySelectorAll(".multi-select-dropdown").forEach(d => d.style.display = "none");
+
+                var targetId = this.getAttribute("data-target");
+                document.getElementById(targetId).style.display = "block";
+            });
+        });
+
+        document.querySelectorAll(".multi-select-dropdown").forEach(function (dropdown) {
+
+            dropdown.addEventListener("change", function () {
+                var selected = [];
+
+                dropdown.querySelectorAll("input[type='checkbox']").forEach(function (cb) {
+                    if (cb.checked) selected.push(cb.value);
+                });
+
+                // find linked input
+                var input = document.querySelector('[data-target="' + dropdown.id + '"]');
+                input.value = selected.join(", ");
+            });
+
+        });
+
+        // CLOSE ON OUTSIDE CLICK
+        document.addEventListener("click", function () {
+            document.querySelectorAll(".multi-select-dropdown").forEach(d => d.style.display = "none");
+        });
+
+    });
+</script>

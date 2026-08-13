@@ -1,0 +1,677 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Contractor Rozgar";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/RozgarController.js"></script>
+<script src="~/Content/Dashboards/Rozgar/ContractorRozgar/script.js"></script>
+<link href="~/Content/Dashboards/Rozgar/ContractorRozgar/style.css" rel="stylesheet" />
+
+<div class="contractorRozgar px-4 py-4">
+
+    <div class="contractorRozgarHero">
+
+        <div>
+            <h1 class="contractorRozgarHeroTitle">
+                Welcome back, {{MapUser}}
+            </h1>
+        </div>
+
+        <div class="d-flex justify-content-between gap-2">
+            <a href="../Rozgar/JobHistory" class="contractorRozgarHeroButtonLight"  style="text-decoration:none;">
+                <span>Job History</span>
+            </a>
+            <a href="../Rozgar/PostNewJob" class="contractorRozgarHeroButton" style="text-decoration:none;">
+                <i class="bi bi-plus-lg"></i>
+                <span>Post a New Job</span>
+            </a>
+        </div>
+
+    </div>
+
+    <div class="contractorRozgarStats" hidden>
+        <div class="contractorRozgarStatCard">
+            <div class="contractorRozgarStatLabel">Total Profile</div>
+            <div class="contractorRozgarStatValue">{{TotalPost || '0'}}</div>
+        </div>
+
+        <div class="contractorRozgarStatCard">
+            <div class="contractorRozgarStatLabel">Total View</div>
+            <div class="contractorRozgarStatValue">70</div>
+        </div>
+
+        <div class="contractorRozgarStatCard">
+            <div class="contractorRozgarStatLabel">Hired</div>
+            <div class="contractorRozgarStatValue">28</div>
+        </div>
+
+        <div class="contractorRozgarStatCard">
+            <div class="contractorRozgarStatLabel">Remaining</div>
+            <div class="contractorRozgarStatValue">80</div>
+        </div>
+    </div>
+
+    <div class="contractorRozgarMain"  ng-init="BindInActiveWorkers(7)">
+
+        <!-- FILTERS -->
+
+        <aside class="contractorRozgarFilters">
+
+            <h3 class="contractorRozgarFilterTitle">
+                Filters
+            </h3>
+
+            <div class="contractorRozgarFilterCard">
+
+                <div class="contractorRozgarSearch">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Search" ng-model="unsearch">
+                </div>
+
+                <!-- STATE -->
+
+                <div class="contractorRozgarAccordionItem active">
+                    <button class="contractorRozgarAccordionBtn">
+                        <span>State</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="contractorRozgarAccordionBody">
+                        <label class="contractorRozgarCheckbox" ng-repeat="x in Statlist">
+                            <input type="checkbox" ng-model="State">
+                            {{x}}
+                        </label>
+                    </div>
+                </div>
+
+                <!-- DESIGNATION -->
+
+                <div class="contractorRozgarAccordionItem active">
+
+                    <button class="contractorRozgarAccordionBtn">
+                        <span>Designation</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="contractorRozgarAccordionBody">
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>IT & Software</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Sales</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Marketing</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Finance</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Operations</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>HR</span>
+                        </label>
+
+                    </div>
+
+                </div>
+
+                <!-- EXPERIENCE -->
+
+                <div class="contractorRozgarAccordionItem active">
+
+                    <button class="contractorRozgarAccordionBtn">
+                        <span>Experience</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+
+                    <div class="contractorRozgarAccordionBody">
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>0-2</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>2-5</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>5-10</span>
+                        </label>
+
+                        <label class="contractorRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Above 12</span>
+                        </label>
+
+                    </div>
+
+                </div>
+                <!-- STATUS -->
+                <div class="contractorRozgarAccordionItem active">
+                    <button class="contractorRozgarAccordionBtn">
+                        <span>City</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="contractorRozgarAccordionBody">
+                        <label class="contractorRozgarCheckbox" ng-repeat="x in Citylist">
+                            <input type="checkbox" ng-model="City">
+                            {{x}}
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+
+        </aside>
+
+        <!-- CONTENT -->
+
+        <div class="contractorRozgarContent">
+
+            <div class="contractorRozgarContentHeader">
+
+                <h3 class="contractorRozgarWorkerHeading">
+                    All Workers
+                </h3>
+
+                <div class="contractorRozgarViewSwitch">
+
+                    <button class="contractorRozgarViewBtn active"
+                            data-view="grid" ng-click="BindInActiveWorkers(7)">
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
+                    </button>
+
+                    <button class="contractorRozgarViewBtn"
+                            data-view="table" ng-click="BindInActiveWorkers(8)">
+                        <i class="bi bi-list-ul"></i>
+                    </button>
+
+                </div>
+
+            </div>
+
+            <!-- GRID VIEW -->
+
+            <div class="contractorRozgarGridView">
+                <div class="contractorRozgarWorkerCard" ng-repeat="w in WorkerDetails | filter:unsearch">
+                    <div class="contractorRozgarWorkerTop">
+                        <div>
+                            <h4>{{w.EmployeeName}}</h4>
+                            <p>{{w.EmployeeCode}}</p>
+                        </div>
+                        <div class="contractorRozgarLocation">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            {{w.PresentAddress}}
+                        </div>
+                    </div>
+
+                    <div class="contractorRozgarWorkerInfo">
+
+                        <div>
+                            <label>Designation</label>
+                            <span>{{w.Role}}</span>
+                        </div>
+
+                        <div>
+                            <label>Department</label>
+                            <span>{{w.Deprtment}}</span>
+                        </div>
+
+                        <div>
+                            <label>Contact</label>
+                            <span>{{w.MobileNumber}}</span>
+                        </div>
+
+                        <div>
+                            <label>State</label>
+                            <span>{{w.State}}</span>
+                        </div>
+
+                    </div>
+
+                    <button class="contractorRozgarProfileBtn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#contractorRozgarProfileModal" ng-click="ViewProfile(w)">
+                        View Profile
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- TABLE VIEW -->
+
+            <div class="contractorRozgarTableView d-none">
+
+                <div class="table-responsive" style="scroll-behavior: smooth; scrollbar-width: thin">
+
+                    <table class="table contractorRozgarTable align-middle mb-0">
+
+                        <thead>
+                            <tr>
+                                <th>WORKER NAME</th>
+                                <th>WORKER ID</th>
+                                <th>DESIGNATION</th>
+                                <th>DEPARTMENT</th>
+                                <th>LOCATION</th>
+                                <th>CONTACT INFO</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                <tr ng-repeat="x in WorkerDetails">
+                                    <td>{{x.EmployeeName}}</td>
+
+                                    <td>{{x.EmployeeCode}}</td>
+
+                                    <td class="contractorRozgarRole">
+                                        {{x.Role}}
+                                    </td>
+
+                                    <td>{{x.Deprtment}}</td>
+
+                                    <td>
+                                        {{x.PresentAddress}}
+                                    </td>
+
+                                    <td>
+                                        {{x.MobileNumber}}
+                                    </td>
+
+                                    <td>
+                                        <button class="contractorRozgarEyeBtn"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#contractorRozgarProfileModal" ng-click="ViewProfile(x)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+
+                                </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+
+    <div class="contractorRozgarFooter">
+
+        <div class="contractorRozgarRecordCount">
+            
+        </div>
+
+        <nav>
+            <ul class="pagination contractorRozgarPagination mb-0">
+
+                @*<li class="page-item">
+
+                    <a class="page-link" href="#">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>*@
+
+                <li class="page-item active">
+                    <a class="page-link" href="#" data-view="table" ng-click="BindInActiveWorkers(8)">View All</a>
+                </li>
+
+                @*<li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                </li>
+
+                <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                </li>
+
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">...</a>
+                </li>
+
+                <li class="page-item">
+                    <a class="page-link" href="#">25</a>
+                </li>
+
+                <li class="page-item">
+                    <a class="page-link" href="#">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>*@
+
+            </ul>
+        </nav>
+
+    </div>
+
+    <!-- View Profile Modal-->
+    <div class="modal fade contractorRozgarProfileModal"
+         id="contractorRozgarProfileModal"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Worker Profile
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- PROFILE HEADER -->
+
+                    <div class="contractorRozgarProfileHeader">
+
+                        <div class="contractorRozgarProfileTop">
+
+                            <div>
+
+                                <h2>{{EmployeeName}}</h2>
+
+                                <div class="contractorRozgarProfileRole">
+                                    {{Role}}
+                                </div>
+
+                            </div>
+
+                            <span class="contractorRozgarAvailability available">
+                                Available Now
+                            </span>
+
+                        </div>
+
+                        <div class="contractorRozgarProfileMeta">
+
+                            <div>
+                                <label>Department</label>
+                                <span> {{Deprtment}}</span>
+                            </div>
+
+                            <div>
+                                <label>Location</label>
+                                <span>{{PresentAddress}}</span>
+                            </div>
+
+                            <div>
+                                <label>Contact</label>
+                                <span>{{MobileNumber}}</span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- SKILLS + CERTIFICATION -->
+
+                    <div class="row g-3 mt-1">
+
+                        <div class="col-lg-9">
+
+                            <div class="contractorRozgarProfileCard">
+
+                                <h5>
+                                    Worker Grade
+                                </h5>
+
+                                <div class="contractorRozgarSkillWrapper">
+                                    <span>
+                                        {{CoreSkills}}
+                                    </span>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="col-lg-3">
+
+                            <div class="contractorRozgarProfileCard">
+
+                                <h5>
+                                    Certifications
+                                </h5>
+
+                                <ul class="contractorRozgarCertificationList">
+                                    <li>
+                                        <i class="bi bi-patch-check"></i>
+                                        {{Certification}}
+                                    </li>
+
+                                </ul>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- WORK HISTORY -->
+
+                    <div class="contractorRozgarProfileCard mt-3">
+
+                        <h5>
+                            Recent Work History
+                        </h5>
+
+                        <div class="contractorRozgarTimeline">
+
+                            <div class="contractorRozgarTimelineItem">
+
+                                <div class="contractorRozgarTimelineDot"></div>
+
+                                <div class="contractorRozgarTimelineContent">
+
+                                    <div class="contractorRozgarTimelineHead">
+
+                                        <h6>
+                                            {{NatureJob}} - {{SiteName}}
+                                        </h6>
+
+                                        <span>
+                                            {{Tillnow}} - Present
+                                        </span>
+
+                                    </div>
+
+                                    <p>
+                                        {{LocationCode}} ({{TypeWork}})
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            @*<div class="contractorRozgarTimelineItem">
+
+                    <div class="contractorRozgarTimelineDot"></div>
+
+                    <div class="contractorRozgarTimelineContent">
+
+                        <div class="contractorRozgarTimelineHead">
+
+                            <h6>
+                                HVAC Mechanic - EZ Compliance
+                            </h6>
+
+                            <span>
+                                2014 - 2019
+                            </span>
+
+                        </div>
+
+                        <p>
+                            Specialized in maintenance and
+                            emergency repair for industrial
+                            chilling units and ventilation systems.
+                        </p>
+
+                    </div>
+
+                </div>*@
+
+                        </div>
+
+                    </div>
+
+                    <!-- ACTION -->
+
+                    <div class="text-center mt-4 contractorRozgarActionSection">
+
+                        <button class="contractorRozgarInterestBtn" id="contractorRozgarHireBtn" ng-disabled="IsButtonDisabled" ng-click="ChkStatus()">
+
+                            <i class="bi bi-envelope"></i>
+
+                            {{hirenow}}
+
+                        </button>
+
+                    </div>
+
+                    <!-- ================= Worker Detail ================= -->
+
+                    <div class="contractorRozgarHireSection">
+
+                        <div class="contractorRozgarHireCard">
+
+                            <h4 class="contractorRozgarHireTitle">
+                                Worker Detail
+                            </h4>
+
+                            <div class="row gy-4">
+
+                                <!-- Row 1 -->
+
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="contractorRozgarField">
+                                        <label>Name</label>
+                                        <div>{{EmployeeName}}</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="contractorRozgarField">
+                                        <label>Worker ID</label>
+                                        <div>{{EmployeeCode}}</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="contractorRozgarField">
+                                        <label>Phone</label>
+                                        <div>{{MobileNumber}}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2 -->
+
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="contractorRozgarField">
+                                        <label>Email</label>
+                                        <div>{{EmployeeEmailId}}</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="contractorRozgarField">
+                                        <label>Address</label>
+                                        <div>{{PresentAddress}}</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-4 col-md-6" ng-init="BindSiteList()">
+                                    <div class="contractorRozgarField">
+                                        <label>Site</label>
+                                        <select class="form-select" ng-model="SiteId">
+                                            <option value="">Select</option>
+                                            <option ng-repeat="x in SiteList" value="{{x.SiteCode}}">
+                                                {{x.SiteName}} ({{x.SiteCode}})
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3 -->
+
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="contractorRozgarField">
+                                        <label>Joining Date</label>
+
+                                        <div class="input-group">
+
+                                            <input type="date" ng-model="Jdate"
+                                                   id="contractorJoiningDate"
+                                                   class="form-control"
+                                                   placeholder="Select Date">
+
+                                            @*<span class="input-group-text">
+                                                <i class="bi bi-calendar3"></i>
+                                            </span>*@
+
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <p class="contractorRozgarHireNote">
+
+                            <strong>Note:</strong>
+
+                            Full Profile will be visible after worker's Acceptance.
+
+                        </p>
+
+                        <div class="text-end">
+
+                            <button class="contractorRozgarSendBtn" ng-click="SendContractorReq()">
+
+                                {{showbtn}}
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

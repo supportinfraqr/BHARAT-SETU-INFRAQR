@@ -1,0 +1,681 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Auditor Dashboard";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="~/Dashboards/NewAuditorDashboard/script.js"></script>
+<link href="~/Dashboards/NewAuditorDashboard/style.css" rel="stylesheet" />
+
+<div class="auditorDashboard px-2 py-2">
+    <!-- ====== CONTAINER 1 : Filters + Summary Cards ====== -->
+    <div class="container-fluid mt-3" id="container1">
+        <div class="row">
+
+            <!-- Filters -->
+            <div class="col-12">
+                <div class="row gx-3 align-items-center vendor-c1-filters">
+                    <div class="d-flex align-items-center pt-2 gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Month
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Jan</a></li>
+                                <li><a class="dropdown-item" href="#">Feb</a></li>
+                            </ul>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Year
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">2020</a></li>
+                                <li><a class="dropdown-item" href="#">2021</a></li>
+                                <li><a class="dropdown-item" href="#">2022</a></li>
+                                <li><a class="dropdown-item" href="#">2023</a></li>
+                                <li><a class="dropdown-item" href="#">2024</a></li>
+                                <li><a class="dropdown-item" href="#">2025</a></li>
+                                <li><a class="dropdown-item" href="#">2026</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="col-12">
+                <div class="row gx-3 my-2 vendor-c1-cards">
+
+                    <!-- Card 1 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#E45D27;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Total Audits Assigned</h6>
+                                <p>Counts: <strong>18</strong></p>
+                                @*<p>Audit Value: <strong>₹ 4,25,000</strong></p>*@
+                            </div>
+                            <div class="vendor-c1-ring" data-percent="100">
+                                <svg>
+                                    <circle class="bg" cx="35" cy="35" r="30"></circle>
+                                    <circle class="progress" cx="35" cy="35" r="30"></circle>
+                                </svg>
+                                <span>100%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#23B480;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Audits Completed</h6>
+                                <p>Counts: <strong>12</strong></p>
+                                @*<p>Audit Value: <strong>₹ 2,80,000</strong></p>*@
+                            </div>
+                            <div class="vendor-c1-ring" data-percent="67">
+                                <svg>
+                                    <circle class="bg" cx="35" cy="35" r="30"></circle>
+                                    <circle class="progress" cx="35" cy="35" r="30"></circle>
+                                </svg>
+                                <span>67%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#7167AC;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Audits Pending</h6>
+                                <p>Counts: <strong>4</strong></p>
+                                @*<p>Audit Value: <strong>₹ 95,000</strong></p>*@
+                            </div>
+                            <div class="vendor-c1-ring" data-percent="22">
+                                <svg>
+                                    <circle class="bg" cx="35" cy="35" r="30"></circle>
+                                    <circle class="progress" cx="35" cy="35" r="30"></circle>
+                                </svg>
+                                <span>22%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="vendor-c1-card" style="background-color:#FFCA82;">
+                            <div class="vendor-c1-card-left">
+                                <h6>Audits Delaying</h6>
+                                <p>Counts: <strong>2</strong></p>
+                                @*<p>Risk: <strong>High</strong></p>*@
+                            </div>
+                            <div class="vendor-c1-ring" data-percent="78">
+                                <svg>
+                                    <circle class="bg" cx="35" cy="35" r="30"></circle>
+                                    <circle class="progress" cx="35" cy="35" r="30"></circle>
+                                </svg>
+                                <span>78%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <!-- ========================= CONTAINER 5 ========================= -->
+    <div class="container-fluid mt-3 p-0" id="container5">
+
+        <div class="row g-3 align-items-stretch">
+
+            <!-- LEFT SECTION (70%) -->
+            <div class="col-12 col-lg-9 d-flex flex-column gap-3">
+
+                <!-- ================= Container 2 : Audit Aging Summary ================= -->
+                <div class="card flex-fill d-flex flex-column p-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-medium text-orange mb-0">Audit Aging Summary</h6>
+                        <a href="#" class="arrow-btn">
+                            <i class="bi bi-arrow-up-right-circle"></i>
+                        </a>
+                    </div>
+
+                    <div class="container3-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                        <table class="table table-sm mb-0 text-center align-middle">
+                            <thead class="container3-thead sticky-top">
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Aging Bucket</th>
+                                    <th>No. of Audits</th>
+                                    <th>% of Total</th>
+                                    <th>Risk Level</th>
+                                    
+                                </tr>
+                            </thead>
+                            <tbody class="container3-tbody">
+                                <tr>
+                                    <td>1</td>
+                                    <td>0-7 days</td>
+                                    <td>5</td>
+                                    <td>28%</td>
+                                    <td><span class="badge bg-success">Low</span></td>
+                                    @*<td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>*@
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>csac</td>
+                                    <td>hgx</td>
+                                    <td>yw</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm view-btn" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <!-- CONTAINER 3 : Tables -->
+                <div id="container3" class="custom-card d-flex flex-column flex-grow-1 min-height-0">
+                    <div class="d-flex gap-3 flex-grow-1 min-height-0">
+
+                        <!-- Compliance Submission List -->
+                        <div class="card flex-fill d-flex flex-column p-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-medium text-orange mb-0">Compliance Submission List</h6>
+                                <a href="#" class="arrow-btn">
+                                    <i class="bi bi-arrow-up-right-circle"></i>
+                                </a>
+                            </div>
+
+                            <div class="container3-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 text-center align-middle">
+                                    <thead class="container3-thead sticky-top">
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Unique no.</th>
+                                            <th>Location</th>
+                                            <th>Status</th>
+                                            <th>Compliance Score</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="container3-tbody">
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="action-menu">
+                                                <button class="btn btn-sm view-btn" title="View">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Highlights -->
+                        <div class="card flex-fill d-flex flex-column p-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-medium text-orange mb-0">Highlights</h6>
+                                <a href="#" class="arrow-btn">
+                                    <i class="bi bi-arrow-up-right-circle"></i>
+                                </a>
+                            </div>
+
+                            <div class="container3-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                                <table class="table table-sm mb-0 text-center align-middle">
+                                    <thead class="container3-thead sticky-top">
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Document Name</th>
+                                            <th>Description</th>
+                                            <th>Valid From</th>
+                                            <th>Valid To</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="container3-tbody">
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                        <tr>
+                                            <td>csac</td>
+                                            <td>hgx</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                            <td>yw</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTAINER 4: RIGHT SECTION (30%) -->
+            <div class="col-12 col-lg-3 d-flex">
+                <div id="container4" class="custom-card p-2 d-flex flex-column flex-grow-1 gap-3">
+
+                    <!-- Recent Activities -->
+                    <div class="flex-fill d-flex flex-column min-height-0 vendor-c4-recent">
+                        <h6 class="fw-medium text-orange mb-2">Recent Activities</h6>
+
+                        <div class="flex-grow-1 overflow-auto vendor-c4-list">
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-success"></span>
+                                <div>
+                                    <p class="mb-0">Audit report submitted for <strong>ABC Pvt Ltd</strong></p>
+                                    <small>1 hour ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-warning"></span>
+                                <div>
+                                    <p class="mb-0">Compliance pending for <strong>TDS - Jan 2026</strong></p>
+                                    <small>3 hours ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-info"></span>
+                                <div>
+                                    <p class="mb-0">Vendor document verified – <strong>GST Return</strong></p>
+                                    <small>Yesterday</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-danger"></span>
+                                <div>
+                                    <p class="mb-0">Audit overdue for <strong>XYZ Industries</strong></p>
+                                    <small>2 days ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-success"></span>
+                                <div>
+                                    <p class="mb-0">High-risk observation resolved</p>
+                                    <small>3 days ago</small>
+                                </div>
+                            </div>
+
+                            <div class="vendor-c4-item">
+                                <span class="dot bg-info"></span>
+                                <div>
+                                    <p class="mb-0">New audit assigned – <strong>DEF Manufacturing</strong></p>
+                                    <small>4 days ago</small>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Action Required -->
+                    <div class="flex-fill d-flex flex-column min-height-0 vendor-c4-action">
+                        <h6 class="fw-medium text-orange mb-2">Report Action Required</h6>
+
+                        <div class="flex-grow-1 overflow-auto rounded-3">
+                            <table class="table table-sm mb-0 text-center align-middle vendor-c4-table">
+                                <thead>
+                                    <tr>
+                                        <th>Document</th>
+                                        <th>Month/Year</th>
+                                        <th>View</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    <tr>
+                                        <td>Internal Audit Report</td>
+                                        <td>Jan 2026</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>TDS Compliance Review</td>
+                                        <td>Dec 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>GST Filing Verification</td>
+                                        <td>Dec 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Vendor Risk Assessment</td>
+                                        <td>Nov 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>Statutory Compliance Checklist</td>
+                                        <td>Oct 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <tr>
+                                        <td>ESI & PF Verification Report</td>
+                                        <td>Sep 2025</td>
+                                        <td class="action-menu">
+                                            <button class="btn btn-sm view-btn" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+
+
+
+
+
+
+
+
+    <!-- =============== REQUIRED CDNs =============== -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+</div>

@@ -1,0 +1,1816 @@
+﻿
+@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Vendor Admin";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+}
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="~/Dashboards/VendorAdmin/script.js"></script>
+<link href="~/Dashboards/VendorAdmin/style.css" rel="stylesheet" />
+
+
+<div class="vendorAdminPage px-4 py-2">
+    <!-- Capsule Toggle (single capsule container) -->
+    <div class="mb-3">
+        <div class="toggle-pill" role="tablist" aria-label="Overview, Party, User, Site Management, Location Management or Site Mapping">
+            <button type="button" class="btn btn-pill active" data-target="#overview" aria-pressed="true">Overview</button>
+            <button type="button" class="btn btn-pill" data-target="#client" aria-pressed="false">Client</button>
+            <button type="button" class="btn btn-pill" data-target="#user" aria-pressed="false">User</button>
+            <button type="button" class="btn btn-pill" data-target="#siteManagement" aria-pressed="false">Site Management</button>
+            @*<button type="button" class="btn btn-pill" data-target="#locationManagement" aria-pressed="false">Location Management</button>*@
+            @*<button type="button" class="btn btn-pill" data-target="#siteMapping" aria-pressed="false">Site Mapping</button>*@
+            <button type="button" class="btn btn-pill" data-target="#empCompDocs" aria-pressed="false">Employee Compliance Docs</button>
+            <button type="button" class="btn btn-pill" data-target="#siteDocs" aria-pressed="false">Site Doc</button>
+            <button type="button" class="btn btn-pill" data-target="#oneTimeDocs" aria-pressed="false">One Time Doc</button>
+            <button type="button" class="btn btn-pill" data-target="#activityLog" aria-pressed="false">Activity Log</button>
+        </div>
+    </div>
+
+    <!-- Dynamic sections -->
+    <div class="section-wrap">
+
+        <!-- CARD 1 : Overview (default visible) -->
+        <div id="overview" class="card section-card active adminOverview">
+            <div class="card-body">
+
+                <!-- TOP SUMMARY  -->
+                <div class="adminOverview-header">
+
+                    <!-- Left : Org Info -->
+                    <div class="adminOverview-org">
+                        <div class="adminOverview-logo">
+                            <img src="~/AdminSetup/Dashboard/theobroma-logo.png" alt="Organization Logo">
+                        </div>
+
+                        <div class="adminOverview-orgInfo">
+                            <h4>EZcompliance</h4>
+                            <a href="https://www.ezcompliance.in" target="_blank">
+                                www.ezcompliance.in
+                            </a>
+                            <p>Vendor ID: 123456</p>
+                        </div>
+                    </div>
+
+                    <!-- Right : Meta Info -->
+                    <!-- Right : Meta + Attention -->
+                    <div class="adminOverview-right">
+
+                        <!-- Meta Info -->
+                        <div class="adminOverview-meta">
+                            <div class="meta-item">
+                                <label>Email Address</label>
+                                <span>shankar@ezcompliance.in</span>
+                            </div>
+
+                            <div class="meta-item">
+                                <label>Subscription Duration</label>
+                                <span>Yearly</span>
+                            </div>
+
+                            <div class="meta-item">
+                                <label>Plan</label>
+                                <span>Professional</span>
+                            </div>
+
+                            <div class="meta-item">
+                                <label>Renewal Date</label>
+                                <span>11/01/27</span>
+                            </div>
+                        </div>
+
+                        <!-- Attention Card (show only when expired – logic later) -->
+                        <div class="adminOverview-alert">
+                            <div class="alert-icon">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+
+                            <div class="alert-content">
+                                <h6>Subscription Expired</h6>
+                                <p>Your subscription has expired. Renew now to avoid service interruption.</p>
+                                <button class="btn btn-sm renew-btn">Renew Subscription</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- Edit Icon -->
+                    <!--<button class="adminOverview-edit" title="Edit Organization">
+                    <i class="bi bi-pencil"></i>
+                </button>-->
+                </div>
+
+                <!-- KPI CARDS  -->
+                <div class="adminOverview-kpis">
+
+                    <div class="kpiCard">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                        <div>
+                            <h6>Module Subscribed</h6>
+                            <span>15</span>
+                        </div>
+                    </div>
+
+                    <div class="kpiCard">
+                        <i class="bi bi-shop"></i>
+                        <div>
+                            <h6>Total Vendor</h6>
+                            <span>7</span>
+                        </div>
+                    </div>
+
+
+
+                    <div class="kpiCard">
+                        <i class="bi bi-people"></i>
+                        <div>
+                            <h6>Total Users</h6>
+                            <span>7</span>
+                        </div>
+                    </div>
+
+                    <div class="kpiCard">
+                        <i class="bi bi-geo-alt"></i>
+                        <div>
+                            <h6>Total Site</h6>
+                            <span>0</span>
+                        </div>
+                    </div>
+
+                    <div class="kpiCard">
+                        <i class="bi bi-person-badge"></i>
+                        <div>
+                            <h6>Total Employee</h6>
+                            <span>0</span>
+                        </div>
+                    </div>
+
+
+
+                </div>
+
+            </div>
+
+            <!--USER ANALYTICS-->
+            <div class=" adminUserAnalytics mt-4">
+
+                <div class="row g-3 align-items-stretch">
+                    <!-- LEFT : User Activity Trend -->
+                    <div class="col-lg-8">
+                        <div class="card section-card h-100">
+                            <div class="card-body">
+
+                                <div class="analytics-header">
+                                    <h5 class="card-head">User Activity Trend</h5>
+
+                                    <div class="analytics-actions">
+                                        <select class="form-select form-select-sm">
+                                            <option>Last 7 days</option>
+                                            <option>Last 30 days</option>
+                                            <option>Last 90 days</option>
+                                        </select>
+
+                                        @*<a href="javascript:void(0)">View all reports</a>*@
+                                    </div>
+                                </div>
+
+                                <div class="chartWrap">
+                                    <canvas id="userActivityChart"></canvas>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT : User Status Summary -->
+                    <div class="col-lg-4">
+                        <div class="card section-card h-100">
+                            <div class="card-body">
+
+                                <h5 class="mb-3 card-head" style="color: var(--primary)">User Status Summary</h5>
+
+                                <div class="donutWrap">
+                                    <canvas id="userStatusChart"></canvas>
+                                    <div class="donutCenter">
+                                        <span>Total</span>
+                                        <strong>7</strong>
+                                    </div>
+                                </div>
+
+                                <div class="userStats">
+                                    <div>
+                                        <span class="dot active"></span>
+                                        <strong>7</strong>
+                                        <small>Active users</small>
+                                    </div>
+
+                                    <div>
+                                        <span class="dot inactive"></span>
+                                        <strong>0</strong>
+                                        <small>Inactive users</small>
+                                    </div>
+
+                                    <div>
+                                        <span class="dot total"></span>
+                                        <strong>7</strong>
+                                        <small>Total users</small>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CARD 2 : Client -->
+        <div id="client" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Client Management</h4>
+                <div class="dropdown">
+                    <button class="btn btn-sm add-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-plus me-1"></i> Add Client</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addExistingClientModal">Add Existing</a></li>
+                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addNewClientModal">Add New</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total License</div>
+                        </div>
+                        <div class="kpi-value">230</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Expring Soon</div>
+                        </div>
+                        <div class="kpi-value">86</div>
+                    </div>
+
+                    <!-- Expired -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Expired</div>
+                        </div>
+                        <div class="kpi-value">68</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Name
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Signage License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTO</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTE</a></li>
+                                <li><a class="dropdown-item" href="#">Music License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location 1</a></li>
+                                <li><a class="dropdown-item" href="#">Location 2</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 overflow-auto rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Vendor Code</th>
+                                    <th>Party Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Active Date</th>
+                                    <th>Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>12344567</td>
+                                    <td>Demo Party</td>
+                                    <td>party@12gmail.com</td>
+                                    <td>123456789</td>
+                                    <td>15/01/2026</td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!--  Add Existing Client Modal -->
+        <div class="modal fade vendorAdminModal"
+             id="addExistingClientModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Client</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+
+                            <!-- ================= Existing Client Search ================= -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <label class="form-label">Check Existing Client (Choose existing client to auto fill the details)</label>
+
+                                    <div class="position-relative vendor-search-wrapper d-flex gap-3">
+
+                                        <input type="text"
+                                               class="form-control form-control-sm vendor-search-input"
+                                               placeholder="Search Client Name..."
+                                               autocomplete="off">
+
+                                        <!-- Bootstrap Styled Dropdown -->
+                                        <div class="dropdown-menu w-100 shadow-sm vendor-search-menu"
+                                             style="max-height: 220px; overflow-y: auto;">
+
+                                            <button type="button" class="dropdown-item">ABC Security Services</button>
+                                            <button type="button" class="dropdown-item">XYZ Facility Management</button>
+                                            <button type="button" class="dropdown-item">Global Compliance Pvt Ltd</button>
+                                            <button type="button" class="dropdown-item">Secure India Pvt Ltd</button>
+
+                                        </div>
+
+                                        <button type="button" class="btn btn-sm cancel-btn">
+                                            Search
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <!-- Manual Entry Fields  -->
+                            <div class="row g-3">
+
+                                <!-- Party Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Party Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Address</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Email -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Email Id </label>
+                                    <input type="email" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact Person Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact Person Mobile -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Mobile No.</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Store Limit -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Store Limit </label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- User Limit -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">User Limit </label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- PAN -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">PAN </label>
+                                    <input type="text" class="form-control form-control-sm" required>
+                                </div>
+
+                                <!-- TAN -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">TAN </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- GST Number -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">GST Number </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Valid Date -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Industry -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Industry </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select Industry</option>
+                                    </select>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Is Active -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Is Active</label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+
+                                <!-- Month Expired -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Month Expired</label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select</option>
+                                    </select>
+                                </div>
+
+                                <!-- Employee Count-->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Employee Count </label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                            </div>
+
+
+                        </div>
+                    </div>
+
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!--  Add New Client Modal -->
+        <div class="modal fade vendorAdminModal"
+             id="addNewClientModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Client</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+
+                            <!-- ================= Existing Client Search ================= -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <label class="form-label">Check Existing Client (Choose existing client to auto fill the details)</label>
+
+                                    <div class="position-relative vendor-search-wrapper">
+
+                                        <input type="text"
+                                               class="form-control form-control-sm vendor-search-input"
+                                               placeholder="Search Vendor Name..."
+                                               autocomplete="off">
+
+                                        <!-- Bootstrap Styled Dropdown -->
+                                        <div class="dropdown-menu w-100 shadow-sm vendor-search-menu"
+                                             style="max-height: 220px; overflow-y: auto;">
+
+                                            <button type="button" class="dropdown-item">ABC Security Services</button>
+                                            <button type="button" class="dropdown-item">XYZ Facility Management</button>
+                                            <button type="button" class="dropdown-item">Global Compliance Pvt Ltd</button>
+                                            <button type="button" class="dropdown-item">Secure India Pvt Ltd</button>
+
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr />
+
+                            <!-- Manual Entry Fields  -->
+                            <div class="row g-3">
+
+                                <!-- Party Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Party Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Address</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Email -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Email Id </label>
+                                    <input type="email" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact Person Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact Person Mobile -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Mobile No.</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Store Limit -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Store Limit </label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- User Limit -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">User Limit </label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- PAN -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">PAN </label>
+                                    <input type="text" class="form-control form-control-sm" required>
+                                </div>
+
+                                <!-- TAN -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">TAN </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- GST Number -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">GST Number </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Valid Date -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid Date</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Industry -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Industry </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select Industry</option>
+                                    </select>
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Is Active -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Is Active</label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+
+                                <!-- Month Expired -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Month Expired</label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select</option>
+                                    </select>
+                                </div>
+
+                                <!-- Employee Count-->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Employee Count </label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                            </div>
+
+
+                        </div>
+                    </div>
+
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 3 : user -->
+        <div id="user" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">User Management</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i class="bi bi-plus me-1"></i> Add User
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total License</div>
+                        </div>
+                        <div class="kpi-value">230</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Expring Soon</div>
+                        </div>
+                        <div class="kpi-value">86</div>
+                    </div>
+
+                    <!-- Expired -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Expired</div>
+                        </div>
+                        <div class="kpi-value">68</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Name
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Signage License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTO</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTE</a></li>
+                                <li><a class="dropdown-item" href="#">Music License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location 1</a></li>
+                                <li><a class="dropdown-item" href="#">Location 2</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Party Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Active Date</th>
+                                    <th>Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Demo Party</td>
+                                    <td>party@12gmail.com</td>
+                                    <td>123456789</td>
+                                    <td>15/01/2026</td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!--  Add User Modal -->
+        <div class="modal fade vendorAdminModal"
+             id="addUserModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add User</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+
+                                <!-- Party Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Party Name </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select</option>
+                                    </select>
+                                </div>
+
+                                <!-- Party Name -->
+                                @*<div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Party Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>*@
+
+                                <!-- Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- User Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">User Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Password -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Password</label>
+                                    <input type="password" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact No. -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No.</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Email ID -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Email ID</label>
+                                    <input type="email" class="form-control form-control-sm">
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 4 : Site Management -->
+        <div id="siteManagement" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Site Management</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#addSiteModal">
+                    <i class="bi bi-plus me-1"></i> Add Site
+                </button>
+            </div>
+
+            <!-- KPI Bar  -->
+            <div class="container mb-4">
+                <div class="kpi-row d-flex gap-2">
+
+                    <!-- Total License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Total Site</div>
+                        </div>
+                        <div class="kpi-value">230</div>
+                    </div>
+
+                    <!-- Expiring Soon License -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Used</div>
+                        </div>
+                        <div class="kpi-value">86</div>
+                    </div>
+
+                    <!-- Expired -->
+                    <div class="kpi-card">
+                        <div>
+                            <div class="kpi-title">Left</div>
+                        </div>
+                        <div class="kpi-value">68</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Name
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Signage License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTO</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTE</a></li>
+                                <li><a class="dropdown-item" href="#">Music License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location 1</a></li>
+                                <li><a class="dropdown-item" href="#">Location 2</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper flex-grow-1 rounded-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Party Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Active Date</th>
+                                    <th>Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Demo Party</td>
+                                    <td>party@12gmail.com</td>
+                                    <td>123456789</td>
+                                    <td>15/01/2026</td>
+                                    <td class="action-menu">
+                                        <button class="btn btn-sm">
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!--  Add Site Modal -->
+        <div class="modal fade vendorAdminModal"
+             id="addSiteModal"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Site</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+
+                                <!-- Party Type -->
+                                @*<div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Party Type </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Client</option>
+                                    </select>
+                                </div>*@
+
+                                <!-- Party Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Party Name </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select Party</option>
+                                    </select>
+                                </div>
+
+                                <!-- Site Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Site Name </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Location Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Location Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Manpower Count -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Manpower Count</label>
+                                    <input type="number" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Address -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Address </label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Pincode -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Pincode</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Country -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Country </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select Country</option>
+                                    </select>
+                                </div>
+
+                                <!-- State -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">State </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select State</option>
+                                    </select>
+                                </div>
+
+                                <!-- City -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">City </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select City</option>
+                                    </select>
+                                </div>
+
+                                <!-- Contact No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact No</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- PAN No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">PAN No.</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- GSTIN/UIN -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">GSTIN/UIN</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- CLRA RC -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">CLRA RC </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select</option>
+                                    </select>
+                                </div>
+
+                                <!-- Contact Person Name -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact Person Mobile No -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Mobile No.</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Contact Person Email Id -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Contact Person Email Id</label>
+                                    <input type="email" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Description -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Valid From -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid From</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Valid To -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Valid To</label>
+                                    <input type="date" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- File Upload -->
+                                <div class="col-lg-3 col-md-4 col-sm-6">
+                                    <label class="form-label">Only Admin Can Upload, Format Will Be PDF</label>
+                                    <input type="file" class="form-control form-control-sm" accept="application/pdf">
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 5 : Employee Compliance Docs -->
+        <div id="empCompDocs" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Employee Doc Management</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#AddDocumentModel">
+                    <i class="bi bi-plus me-1"></i>Add Document
+                </button>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Name
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Signage License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTO</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTE</a></li>
+                                <li><a class="dropdown-item" href="#">Music License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location 1</a></li>
+                                <li><a class="dropdown-item" href="#">Location 2</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper ">
+                    <div class="table-responsive rounded-3">
+
+                        <table class="table table-sm mb-0 small-table" id="lm-compDoc-Table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Document Name</th>
+                                    <th>Location</th>
+                                    <th>Created On</th>
+                                    <th>Created by</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tr ng-repeat="row in groupedDocs | filter:scSearch track by $index">
+                                <td>{{$index + 1}}</td>
+
+                                <td>
+                                    <span ng-if="!row.isEdit"> {{row.DocumentName}} </span>
+                                    <input type="text" class="form-control form-control-sm" ng-if="row.isEdit" ng-model="row.DocumentName" />
+                                </td>
+
+                                <!-- Location column -->
+                                <td>
+                                    {{row.Locations[0].StoreCode}}
+                                    <a href=""
+                                       ng-if="row.Locations.length > 1"
+                                       ng-click="openLocationPopup(row)">
+                                        +{{row.Locations.length - 1}} more
+                                    </a>
+                                </td>
+
+                                <td>{{row.CreatedDate}}</td>
+                                <td>{{row.UserName}}</td>
+
+                                <!-- Action (ONLY Edit) -->
+                                <td class="action-menu">
+                                    <button class="btn btn-sm" ng-class="row.isEdit ? 'text-success' : ' '" ng-click="row.isEdit ? Updaterow(row) : EditRow(row)">
+                                        <!--I've Removed text-primary from this line-->
+                                        <i class="bi bi-pencil-square" ng-class="row.isEdit ? 'bi-check-lg' : 'bi-pencil-square'"></i>
+                                    </button>
+
+                                </td>
+                            </tr>
+
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!--  Add Document Modal -->
+        <div class="modal fade vendorAdminModal"
+             id="AddDocumentModel"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Document</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+
+                                <!-- Document Name -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Document Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Sites -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Sites </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select</option>
+                                    </select>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <!-- CARD 6 : Site Docs -->
+        <div id="siteDocs" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Site Doc</h4>
+                <button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#AddSiteDocumentModel">
+                    <i class="bi bi-plus me-1"></i>Add Document
+                </button>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                License Name
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Fire NOC</a></li>
+                                <li><a class="dropdown-item" href="#">FSSAI License</a></li>
+                                <li><a class="dropdown-item" href="#">Signage License</a></li>
+                                <li><a class="dropdown-item" href="#">Trade License</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTO</a></li>
+                                <li><a class="dropdown-item" href="#">Pollution NOC - CTE</a></li>
+                                <li><a class="dropdown-item" href="#">Music License</a></li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm filter-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Location Code
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">Location 1</a></li>
+                                <li><a class="dropdown-item" href="#">Location 2</a></li>
+                            </ul>
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" id="exLicSearchBtn" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">CSV</a></li>
+                                    <li><a class="dropdown-item" href="#">PDF</a></li>
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper ">
+                    <div class="table-responsive rounded-3">
+
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Document Name</th>
+                                    <th>Act Name</th>
+                                    <th>Form No.</th>
+                                    <th>Type</th>
+                                    <th>Frequency</th>
+                                    <th>Mandatory</th>
+                                    <th>Required Format</th>
+                                    <th>Note</th>
+                                    <th>View</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tr>
+                                <td><input style="vertical-align:middle" type="checkbox"></td>
+                                <td>PF Challan</td>
+                                <td>Act1</td>
+                                <td>Form1</td>
+                                <td>Statutory</td>
+                                <td>Monthly</td>
+                                <td>Yes</td>
+                                <td>PDF</td>
+                                <td><input type="text" class="form-control form-control-sm"></td>
+
+                                <!-- VIEW COLUMN -->
+                                <td>
+                                    <div class="d-flex  align-items-center">
+                                        <label class="btn btn-sm table-btn px-3" style="white-space:nowrap; cursor:pointer;">
+                                            Choose File
+                                            <input type="file" hidden>
+                                        </label>
+
+                                        <button class="btn btn-sm ">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+
+                                        <button class="btn btn-sm ">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                    </div>
+                                </td>
+
+                                <td><span class="badge status-active">Validated</span></td>
+
+                            </tr>
+
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!--  Add Document Modal -->
+        <div class="modal fade vendorAdminModal"
+             id="AddSiteDocumentModel"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+
+                    <!-- Header -->
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Document</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Close">
+                        </button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="modal-body">
+                        <div class="container-fluid">
+                            <div class="row g-3">
+
+                                <!-- Document Name -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Document Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Act Name -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Act Name</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Form Number -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Form No.</label>
+                                    <input type="text" class="form-control form-control-sm">
+                                </div>
+
+                                <!-- Type -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Type </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Statutory</option>
+                                    </select>
+                                </div>
+
+                                <!-- Frequency -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Frequency </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Monthly</option>
+                                    </select>
+                                </div>
+
+                                <!-- Mandatory -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Mandatory </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Yes</option>
+                                        <option>No</option>
+                                    </select>
+                                </div>
+
+                                <!-- Sites -->
+                                <div class="col-lg-6 col-md-6 col-sm-6">
+                                    <label class="form-label">Sites </label>
+                                    <select class="form-select form-select-sm">
+                                        <option>Select</option>
+                                    </select>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-sm cancel-btn"
+                                data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm save-btn">
+                            Save
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 7 : One time Docs -->
+        <div id="oneTimeDocs" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">One Time Doc</h4>
+                @*<button type="button" class="btn btn-sm add-btn" data-bs-toggle="modal" data-bs-target="#AddSiteDocumentModel">
+                    <i class="bi bi-plus me-1"></i>Add Document
+                </button>*@
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper ">
+                    <div class="table-responsive rounded-3">
+
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Document Name</th>
+                                    <th>Description</th>
+                                    <th>Valid From</th>
+                                    <th>Valid To</th>
+                                    <th>Status</th>
+                                    <th>Upload</th>
+                                    <th>View</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Email ID</td>
+                                    <td><input type="text" class="form-control form-control-sm"></td>
+                                    <td><input type="date" class="form-control form-control-sm"></td>
+                                    <td><input type="date" class="form-control form-control-sm"></td>
+                                    <td>Active</td>
+                                    <!--Upload File column-->
+                                    <td>
+                                        <label class="btn btn-sm table-btn " style="white-space:nowrap; cursor:pointer;">
+                                            Choose File
+                                            <input type="file" hidden>
+                                        </label>
+                                    </td>
+                                    <!--View column-->
+                                    <td>
+                                        <button class="btn btn-sm table-btn">View</button>
+                                    </td>
+                                    <!--Action column-->
+                                    <td>
+                                        <button class="btn btn-sm table-btn ">Submit</button>
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- CARD 8 : Activity Log-->
+        <div id="activityLog" class="card section-card d-none">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="mb-0">Activity Logs</h4>
+            </div>
+
+            <div class="card-body p-3 d-flex flex-column">
+
+                <!-- Toolbar -->
+                <div class="table-toolbar d-flex align-items-center justify-content-between mb-2 gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="admin-dd">
+                            <label class="admin-dd-label">Activity Date</label>
+                            <input id="txtStartDate"
+                                   type="date"
+                                   class="form-control admin-dd-select" />
+                        </div>
+
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center justify-content-md-end">
+                        <div class="flex-grow-1 me-2 search-container" style="max-width:360px;">
+                            <div class="input-group input-group-sm">
+                                <input id="scSearch" type="text" class="form-control form-control-sm" placeholder="Search..." />
+                                <button class="btn btn-sm" style="border-color: #E45D27" type="button"><i class="bi bi-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 justify-content-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm export-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">Print</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table wrapper -->
+                <div class="small-table-wrapper ">
+                    <div class="table-responsive rounded-3">
+
+                        <table class="table table-sm mb-0 small-table">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>User Name</th>
+                                    <th>User Type</th>
+                                    <th>Created On</th>
+                                    <th>Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Demo QSR</td>
+                                    <td>Admin</td>
+                                    <td>23-feb-2026 15:07</td>
+                                    <td>Log Report</td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+

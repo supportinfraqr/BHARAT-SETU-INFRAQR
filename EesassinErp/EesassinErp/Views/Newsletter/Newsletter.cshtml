@@ -1,0 +1,214 @@
+﻿@{
+    ViewBag.Title = "Party Master";
+    ViewBag.TitleList = "Sort By Column";
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    Layout = "~/Views/Common/_IframeMaster.cshtml";
+}
+<script src="~/ckeditor/ckeditor.js"></script>
+<script src="~/Content/ckfinder/ckfinder.js"></script>
+<script src="~/Scripts/myjslib/NewsletterController.js?Ver=@ViewBag.Version"></script>
+
+@*<script src="~/Scripts/myjslib/ddlBindings.js"></script>*@
+<input type="hidden" id="Id" name="Id" value="" ng-model="hfId" />
+<div class="autohide-scroll autoheightset">
+    <div class="br-pageheader">
+        <!-- Title -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 root-t-p-n ">
+            <h5 class="txt-dark">Newsletter</h5>
+        </div>
+        <!-- Breadcrumb -->
+        <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 hidden-sm">
+            <ol class="breadcrumb">
+                <li><span>Global</span></li>
+                <li><span>Master</span></li>
+                <li class="active"><span>Newsletter</span></li>
+            </ol>
+        </div>
+
+    </div>
+    <div class="br-pagebody">
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="panel panel-default card-view shadow-base panel-refresh panel-Search-refresh">
+                    <div class="refresh-container">
+                        <div class="preloader">
+                            <div class="circles-1">
+                                <div class="circles-1-center"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                                <div class="circles-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-wrapper ">
+                        <div class="panel-body">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 no-padding ">
+                                <div class="collapse in" id="collapseinputbox">
+                                    <form id="user-form">
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select Client<span class="vd_red">*</span></label>
+                                            <label class="control-label"><input style="margin-left:10px" type="checkbox" id="allselectclient" ng-model="isChecked" ng-change="toggleSelectAll()" ng-checked="isChecked" />All</label>
+                                            <div class="input-box" ng-init="AllParty()">
+                                                @*ng-model="PartyId"*@
+                                                <select multiple id="ddlPartyId" autocomplete='address-level2' class="select2 form-control validate" ng-model="selectedOptions">
+                                                    <option value="">Select Party</option>
+                                                    <option ng-repeat="x in AllPartyList" value="{{x.PartyId}}">{{x.PartyName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                            @*<button class="form-control form-select validate" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Select Client
+            </button>
+            <div class="dropdown-menu">
+                <div ng-repeat="option in AllPartyList" style="margin-left: 10px;">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="{{option.PartyId}}" ng-click="toggleSelection(option)" ng-checked="selectedOptions.indexOf(option) > -1">
+                        <label class="form-check-label" for="{{option.PartyId}}">{{ option.PartyName }}</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+
+                <div id="IsOpenAct" style="display:none">Selected Act:</div>
+                <ul>
+                    <li ng-repeat="option in selectedOptions">{{ option.PartyName }}</li>
+                </ul>
+
+            </div>*@
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">
+                                                News Category<span class="vd_red">*</span>
+                                            </label>
+                                            <div class="input-box">
+                                                @Html.DropDownList("NewsCategory", new List<SelectListItem>
+                                                    {
+                                                        new SelectListItem { Text = "-- Select Category --", Value = "" },
+                                                        new SelectListItem { Text = "New Labour Codes", Value = "New Labour Codes" },
+                                                        new SelectListItem { Text = "ESIC Notification", Value = "ESIC Notification" },
+                                                        new SelectListItem { Text = "Ministry of Corporate Affairs", Value = "Ministry of Corporate Affairs" },
+                                                        new SelectListItem { Text = "New Labour Codes Rules (Central)", Value = "New Labour Codes Rules (Central)" },
+                                                        new SelectListItem { Text = "Labour Welfare Fund", Value = "Labour Welfare Fund" },
+                                                        new SelectListItem { Text = "FSSAI", Value = "FSSAI" },
+                                                        new SelectListItem { Text = "Shops & Establishment", Value = "Shops & Establishment" },
+                                                        new SelectListItem { Text = "Minimum Wages", Value = "Minimum Wages" },
+                                                        new SelectListItem { Text = "Professional Tax", Value = "Professional Tax" },
+                                                        new SelectListItem { Text = "May Day", Value = "May Day" },
+                                                        new SelectListItem { Text = "New Labour Codes Rules (State)", Value = "New Labour Codes Rules (State)" },
+                                                        new SelectListItem { Text = "Others", Value = "Others" }
+                                                    },
+                                                    new
+                                                    {
+                                                        @class = "form-control clear validate",
+                                                        @ng_model = "NewsCategory"
+                                                    })
+                                                <div class="text-box-msg-r"></div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Subject Line<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtSubjectLine", "", new { @class = "form-control clear validate", @placeholder = "", @ng_model = "SubjectLine" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">State Central Act Tittle </label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtActtitle", "", new { @class = "form-control clear ", @placeholder = "", @ng_model = "ActTittle" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Govt. Department<span class="vd_red">*</span></label>
+                                            <div class="input-box" ng-init="AllDepartment()">
+                                                <select class="form-control form-select validate" ng-model="DepartmentId" ng-change="BindNoticeStoreStatus(DepartmentId)">
+                                                    <option value="">Select</option>
+                                                    <option ng-repeat="x in NoticeDepartmentList" value="{{x.DepartmentId}}">{{x.DepartmentName}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Notification Number</label>
+                                            <div class="input-box">
+                                                <input class="form-control clear" id="txtNotificationNumber" ng-model="NotificationNumber" type="text" onblur="validateNumberAndDecimalOnly('#txtPincode')" />
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Date of Notification<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txtdateofNotification", "", new { @class = "form-control clear validate", @type = "date", @placeholder = "", @ng_model = "DateNot" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Select State<span class="vd_red">*</span> </label>
+                                            <div class="input-box" ng-init="AllState()">
+                                                <select id="ddlstate" autocomplete='address-level2' class="select2 form-control validate" ng-change="AllCity()" ng-model="StateId">
+                                                    <option value="">Select State</option>
+                                                    <option ng-repeat="x in AllStateList" value="{{x.SATE_CODE}}">{{x.STATE_NM}}</option>
+                                                </select>
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Effective Date of Notification<span class="vd_red">*</span></label>
+                                            <div class="input-box">
+                                                @Html.TextBox("txteffofNotification", "", new { @class = "form-control clear validate", @type = "date", @placeholder = "", @ng_model = "EffectiveDate" })
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-sm-6 col-xs-12 mgbt-xs-15">
+                                            <label class="control-label">Upload Files, Format will be PDF</label>
+                                            <div class="input-box">
+                                                @*ng-model="AdminFileDoc"*@
+                                                @*<input type="file" id="fuCandidatePhoto{{$index}}" onchange="angular.element(this).scope().Adminshow(this, '#AlbumIcon')" ng-disabled="loginType !='1'" file-model="AdminFileDoc" accept="application/pdf">*@
+                                                <input type="file" id="fuCandidatePhoto{{$index}}" ng-disabled="loginType !='1'" file-model="AdminFileDoc" accept="application/pdf">
+                                                <div class="text-box-msg-r">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                            @*<textarea ui-tinymce="tinymceOptions" class="text1" id="mytextarea" ng-model="Summary">Hello, World!</textarea>*@
+                                            @Html.TextArea("txtHeaderTemplate", "", new { @class = "form-control clear", @placeholder = "", @ng_model = "Summary", @name = "txtHeaderTemplate", @id = "txtHeaderTemplate", @rows = "10", @cols = "80" })
+                                            <script>$(document).ready(function () { CKEDITOR.replace('txtHeaderTemplate'); });</script>
+                                            <div class="text-box-msg-r"></div>
+
+                                        </div>
+                                        @*<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+            {{content}}
+        </div>*@
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 ">
+                                            @Html.Partial("ActionView")
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+                            @Html.Partial("SearchAngularJs")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Row -->
+    </div>
+
+</div>
+

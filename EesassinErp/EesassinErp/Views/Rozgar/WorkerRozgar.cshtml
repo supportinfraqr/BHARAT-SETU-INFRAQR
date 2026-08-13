@@ -1,0 +1,585 @@
+﻿@{
+    ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
+    ViewBag.Title = "Worker Rozgar";
+    Layout = "~/Views/Common/WorkerLayout.cshtml";
+}
+
+<script src="~/scripts/RetailJsLib/RozgarController.js"></script>
+<script src="~/Content/Dashboards/Rozgar/workerRozgar/script.js"></script>
+<link href="~/Content/Dashboards/Rozgar/workerRozgar/style.css" rel="stylesheet" />
+
+<div class="workerRozgar px-4 py-4">
+
+    <div class="workerRozgarHero">
+
+        <div>
+            <h1 class="workerRozgarHeroTitle">
+                Available Jobs in your Industry
+            </h1>
+
+            <p class="workerRozgarHeroDesc">
+                We found {{TotalRecords}} high-priority openings matching your certification profile as an Electrician
+            </p>
+        </div>
+
+        <div>
+            <a href="../Rozgar/WorkerApplicationHistory" class="workerRozgarHeroButton" style="text-decoration:none;">
+                <span>Application History</span>
+            </a>
+        </div>
+
+    </div>
+
+    <div class="workerRozgarMain">
+
+        <!-- FILTERS -->
+
+        <aside class="workerRozgarFilters">
+
+            <h3 class="workerRozgarFilterTitle">
+                Filters
+            </h3>
+
+            <div class="workerRozgarFilterCard">
+                <div class="workerRozgarSearch">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Search" ng-model="Searchbox">
+                </div>
+                <!-- STATE -->
+
+                <div class="workerRozgarAccordionItem">
+                    <button class="workerRozgarAccordionBtn">
+                        <span>State</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="workerRozgarAccordionBody">
+                        <label class="workerRozgarCheckbox" ng-repeat="x in Statlist">
+                            <input type="checkbox" ng-model="State">
+                            {{x}}
+                        </label>
+                    </div>
+                </div>
+                <!-- DESIGNATION -->
+                <div class="workerRozgarAccordionItem active">
+                    <button class="workerRozgarAccordionBtn">
+                        <span>Designation</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="workerRozgarAccordionBody">
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>IT & Software</span>
+                        </label>
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Sales</span>
+                        </label>
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Marketing</span>
+                        </label>
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Finance</span>
+                        </label>
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Operations</span>
+                        </label>
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>HR</span>
+                        </label>
+                    </div>
+
+                </div>
+
+                <!-- EXPERIENCE -->
+
+                <div class="workerRozgarAccordionItem active">
+
+                    <button class="workerRozgarAccordionBtn">
+                        <span>Experience</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+
+                    <div class="workerRozgarAccordionBody">
+
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>0-2</span>
+                        </label>
+
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>2-5</span>
+                        </label>
+
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>5-10</span>
+                        </label>
+
+                        <label class="workerRozgarCheckbox">
+                            <input type="checkbox">
+                            <span>Above 12</span>
+                        </label>
+
+                    </div>
+
+                </div>
+
+                <!-- STATUS -->
+
+                <div class="workerRozgarAccordionItem">
+                    <button class="workerRozgarAccordionBtn">
+                        <span>City</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="workerRozgarAccordionBody">
+                    <label class="workerRozgarCheckbox">
+                        <input type="checkbox" ng-repeat="x in Citylist">
+                        <input type="checkbox" ng-model="City">
+                        {{x}}
+                    </label>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+        <!-- CONTENT -->
+
+        <div class="workerRozgarContent">
+
+            <div class="workerRozgarContentHeader">
+
+                <h3 class="workerRozgarWorkerHeading">
+                    Available Jobs
+                </h3>
+            </div>
+
+            <!-- GRID VIEW -->
+
+            <div class="workerRozgarGridView" ng-init="BindPostDetails()">
+                <div class="workerRozgarJobCard" ng-repeat="s in PostDetails">
+                    <div class="workerRozgarJobHeader">
+                        <h4 class="workerRozgarJobTitle">
+                            {{s.JobTitle}}
+                        </h4>
+                        <p class="workerRozgarCompanyName">
+                            {{s.PartyName}}
+                        </p>
+                    </div>
+                    <div class="workerRozgarJobInfo">
+                        <div class="workerRozgarInfoItem">
+                            <label>Salary</label>
+                            <span>₹ {{s.MinSallery}} - {{s.MaxSallery}}/Annum</span>
+                        </div>
+                        <div class="workerRozgarInfoItem">
+                            <label>Experience</label>
+                            <span>{{s.Experience}}</span>
+                        </div>
+                       <div class="workerRozgarInfoItem">
+                            <label>City</label>
+                            <span>{{s.City}}</span>
+                        </div>
+                        <div class="workerRozgarInfoItem">
+                            <label>State</label>
+                            <span>{{s.State}}</span>
+                        </div>
+                    </div>
+                    <div class="workerRozgarJobActions">
+
+                        @*<button class="workerRozgarApplyBtn" data-bs-toggle="modal" data-bs-target="#workerRozgarApplyModal">*@
+                        <button class="workerRozgarApplyBtn"
+                                ng-click="OpenApplyform(s)"
+                                data-bs-toggle="modal"
+                                data-bs-target="#workerRozgarApplyModal">
+                        Apply Now
+                        <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                        <button class="workerRozgarViewBtn" data-bs-toggle="modal" data-bs-target="#workerRozgarViewMoreModal" ng-click="ViewPostDetail(s)">
+                            View More
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+        
+    <div class="workerRozgarFooter">
+
+        <div class="workerRozgarRecordCount">
+           
+        </div>
+
+        <nav>
+            <ul class="pagination workerRozgarPagination mb-0">
+                <li class="page-item active">
+                    <a class="page-link" href="#">View All</a>
+                </li>
+            </ul>
+        </nav>
+
+    </div>
+
+    <!-- Apply Modal-->
+    <div class="modal fade workerRozgarApplyModal"
+         id="workerRozgarApplyModal"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-md modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-body">
+
+                    <div class="workerRozgarApplyForm">
+
+                        <div class="workerRozgarApplyHeader">
+
+                            <h2>{{Rozgardetail.JobTitle}} ({{Rozgardetail.JobCaegory}})</h2>
+
+                            <p>
+                                Join our team of certified industrial professionals.
+                            </p>
+
+                        </div>
+
+                        <div class="workerRozgarApplyGrid">
+
+                            <!-- Full Name -->
+
+                            <div class="workerRozgarField">
+
+                                <label>Full Name</label>
+
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Enter full name" ng-model="Fullname">
+
+                            </div>
+
+                            <!-- Job Category -->
+
+                            <div class="workerRozgarField">
+
+                                <label>Workplace Type</label>
+
+                                <select class="form-select validate" ng-model="WorkType">
+                                    <option selected disabled value="">
+                                        Select Workplace Type
+                                    </option>
+                                    <option value="On-Site">On-Site</option>
+                                    <option value="Remote Job">Remote Job</option>
+                                    <option value="Hybrid Job">Hybrid Job</option>
+                                </select>
+
+                            </div>
+
+                            <!-- Email -->
+
+                            <div class="workerRozgarField">
+
+                                <label>Email Address</label>
+
+                                <input type="email"
+                                       class="form-control"
+                                       placeholder="Enter email address" ng-model="EmailID">
+
+                            </div>
+
+                            <!-- Mobile -->
+
+                            <div class="workerRozgarField">
+
+                                <label>Mobile Number</label>
+
+                                <input type="text"
+                                       class="form-control"
+                                       placeholder="Enter mobile number" ng-model="Mobileno">
+
+                            </div>
+
+                            <!-- Location -->
+
+                            <div class="workerRozgarField workerRozgarFullWidth">
+
+                                <label>Current Location</label>
+
+                                <div class="workerRozgarLocationInput">
+
+                                    <i class="bi bi-geo-alt"></i>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           placeholder="Enter current location" ng-model="CurrentLocation">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="workerRozgarApplyFooter">
+
+                            <button class="workerRozgarSubmitBtn" ng-click="ApplyPost(Rozgardetail.JobTitle)">
+                                Submit Application
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- View More Modal-->
+    <div class="modal fade workerRozgarViewMoreModal"
+         id="workerRozgarViewMoreModal"
+         tabindex="-1">
+
+        <div class="modal-dialog modal-fullscreen">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Job Details
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="workerRozgarJobModalWrapper">
+
+                        <!-- TOP SECTION -->
+
+                        <div class="workerRozgarModalTopCard">
+
+                            <div class="d-flex justify-content-between">
+                                <div class="workerRozgarModalTopContent">
+
+                                    <div class="workerRozgarModalJobIcon">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+
+                                    <div class="workerRozgarModalJobInfo">
+
+                                        <h2>{{ViewPost.JobTitle}}</h2>
+
+                                        <div class="workerRozgarModalCompany">
+                                            <span>{{ViewPost.PartyName}}</span>
+                                            <span>
+                                                <i class="bi bi-geo-alt"></i>
+                                                {{ViewPost.Location}}
+                                            </span>
+                                        </div>
+
+                                        <div class="workerRozgarModalPosted">
+                                            <i class="bi bi-clock"></i>
+                                            {{ViewPost.Posteddt}}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="workerRozgarModalActions">
+
+                                    <button class="workerRozgarApplyBtn" data-bs-toggle="modal"data-bs-target="#workerRozgarApplyModal" ng-click="OpenApplyform(ViewPost)">
+                                        Apply Now
+                                    </button>
+
+                                    @*<button class="workerRozgarSaveBtn">
+                                        <i class="bi bi-bookmark"></i>
+                                    </button>*@
+
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarModalStats">
+
+                                <div>
+                                    <label>Salary</label>
+                                    <span>₹ {{ViewPost.MinSallery}} - {{ViewPost.MaxSallery}}/Annum</span>
+                                    @*<small>per month</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Experience</label>
+                                    <span>{{ViewPost.Experience}}</span>
+                                    @*<small>Senior Level</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Job Type</label>
+                                    <span>Full-time</span>
+                                    @*<small class="workerRozgarUrgentTag">Urgent</small>*@
+                                </div>
+
+                                <div>
+                                    <label>Project</label>
+                                    <span>12 Months</span>
+                                    @*<small>Extendable</small>*@
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- EMPLOYER -->
+
+                        <div class="workerRozgarEmployerCard" hidden>
+
+                            <h4>About Employer</h4>
+
+                            <div class="workerRozgarEmployerInfo">
+
+                                <div class="workerRozgarEmployerIcon">
+                                    <i class="bi bi-tools"></i>
+                                </div>
+
+                                <div>
+                                    <h5 style="font-size: 18px; margin-bottom: 0;">L&T Construction</h5>
+                                    <p style="font-size: 14px; margin-bottom: 0;">Infrastructure & Engineering</p>
+                                </div>
+
+                            </div>
+
+                            <p class="workerRozgarEmployerDesc">
+                                Larsen & Toubro is an Indian multinational conglomerate engaged in EPC projects,
+                                hi-tech manufacturing and services. It operates in over 50 countries worldwide.
+                            </p>
+
+                        </div>
+
+                        <!-- JOB DESCRIPTION -->
+
+                        <div class="workerRozgarModalCard workerRozgarJobDesc" >
+
+                            <h4>Job Description</h4>
+
+                            <p>
+                                {{ViewPost.Description}}
+                            </p>
+                        </div>
+
+                        <!-- SKILLS -->
+
+                        <div class="workerRozgarModalCard">
+
+                            <h4>Technical Skills</h4>
+
+                            <div class="workerRozgarSkillTags">
+                                {{ViewPost.RequiredSkills}}
+
+                            </div>
+
+                        </div>
+
+                        <!-- SIMILAR ROLES -->
+
+                        <div class="workerRozgarSimilarRoles" hidden>
+
+                            <h4>Similar Roles</h4>
+
+                            <div class="workerRozgarSimilarCard">
+                                <h5>{{ViewPost.JobTitle}}</h5>
+                                <p>• {{ViewPost.Location}}</p>
+                                <span>₹ {{ViewPost.MinSallery}} - {{ViewPost.MaxSallery}}/Annum</span>
+                            </div>
+
+                            @*<div class="workerRozgarSimilarCard">
+                                <h5>Senior Mechanical Fitter</h5>
+                                <p>Shapoorji Pallonji • Greater Noida</p>
+                                <span>₹32k - 40k</span>
+                            </div>*@
+
+                        </div>
+
+                        <!-- PROJECT DETAILS -->
+
+                        <div class="workerRozgarModalCard">
+
+                            <h4>Project Details</h4>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-calendar-check"></i>
+                                <div>
+                                    <strong>Duration</strong>
+                                    <span>12 Months (Fixed-term Contract)</span>
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-clock"></i>
+                                <div>
+                                    <strong>Shift Timing</strong>
+                                    <span>9:00 AM – 6:00 PM (Mon - Sat)</span>
+                                </div>
+                            </div>
+
+                            <div class="workerRozgarProjectItem">
+                                <i class="bi bi-building"></i>
+                                <div>
+                                    <strong>Site Type</strong>
+                                    <span>Commercial High-Rise Construction</span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- BENEFITS -->
+
+                        <div class="workerRozgarModalCard workerRozgarBenefitsCard">
+
+                            <h4>Benefits</h4>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-shield-check"></i>
+                                Comprehensive Health Insurance
+                            </div>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-house"></i>
+                                On-site Bachelor Accommodation
+                            </div>
+
+                            <div class="workerRozgarBenefitItem">
+                                <i class="bi bi-cash-coin"></i>
+                                Overtime Pay & Performance Bonus
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
