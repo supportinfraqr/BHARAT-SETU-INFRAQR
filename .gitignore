@@ -8,3 +8,13 @@ obj/
 [Oo]bj/
 *.user
 *.suo
+
+# Large / sensitive files (not for GitHub)
+db_extract/
+bss1826.rar
+frontend-package/
+frontend-package.zip
+*.sql
+*.bak
+EesassinErp/nuget.exe
+!BSS_PROJECT_INFRAQR/docs/bss_schema.sql
