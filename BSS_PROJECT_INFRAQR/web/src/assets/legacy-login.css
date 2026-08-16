@@ -1,0 +1,161 @@
+/* Import the legacy BharatShramSetu login styles */
+@import url('/legacy/NewLogin/style.css');
+
+/* Minimal overrides for React rendering */
+.newLoginPage {
+  min-height: 100vh;
+}
+
+.newLoginMain {
+  min-height: 100vh;
+}
+
+.newLoginContent {
+  display: flex;
+  min-height: 100vh;
+}
+
+.newLoginHero {
+  flex: 1.2;
+}
+
+.newLoginCardWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.newLoginCard {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 36px 32px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
+.newLoginCardHeader h3 {
+  font-size: 24px;
+  color: #022B5E;
+  margin-bottom: 4px;
+}
+
+.newLoginCardHeader p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.newLoginRoleRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.newLoginRoleOption {
+  flex: 1;
+  cursor: pointer;
+}
+
+.newLoginRoleOption input {
+  display: none;
+}
+
+.newLoginRoleOption span {
+  display: block;
+  text-align: center;
+  padding: 10px 6px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+}
+
+.newLoginRoleOption input:checked + span {
+  background: #022B5E;
+  color: #fff;
+  border-color: #022B5E;
+}
+
+.newLoginField {
+  margin-bottom: 16px;
+}
+
+.newLoginLabelRow {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #333;
+}
+
+.newLoginField .form-control {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.newLoginPrimaryBtn {
+  width: 100%;
+  padding: 13px;
+  background: #022B5E;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.newLoginPrimaryBtn:hover {
+  background: #043a7a;
+}
+
+.newLoginBottomMessage {
+  text-align: center;
+  margin-top: 18px;
+  color: #666;
+  font-size: 14px;
+}
+
+.newLoginInlineLink {
+  color: #022B5E;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ---------- Mobile responsive ---------- */
+@media (max-width: 768px) {
+  .newLoginContent {
+    flex-direction: column;
+  }
+  .newLoginHero {
+    flex: none;
+    min-height: auto;
+    padding-bottom: 8px;
+  }
+  .newLoginCardWrap {
+    padding: 16px;
+    padding-top: 0;
+  }
+  .newLoginCard {
+    padding: 24px 18px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.1);
+  }
+  .newLoginRoleRow {
+    flex-direction: column;
+  }
+  .newLoginRoleOption span {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .newLoginCardHeader h3 {
+    font-size: 20px;
+  }
+}
+

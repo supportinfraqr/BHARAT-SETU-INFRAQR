@@ -414,10 +414,18 @@ class SubMenuMaster(models.Model):
 
 class RoleMaster(models.Model):
     Id = models.AutoField(primary_key=True, db_column="Id")
+    PartyType = models.IntegerField(db_column="PartyType", null=True, blank=True)
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    UserId = models.IntegerField(db_column="UserId", null=True, blank=True)
+    GradeId = models.IntegerField(db_column="GradeId", null=True, blank=True)
     Name = models.CharField(max_length=100, db_column="Name", blank=True, null=True)
     Description = models.CharField(max_length=255, db_column="Description", blank=True, null=True)
     StartDate = models.CharField(max_length=50, db_column="StartDate", blank=True, null=True)
     EndDate = models.CharField(max_length=50, db_column="EndDate", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    Updatedby = models.IntegerField(db_column="Updatedby", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
 
     class Meta:
         db_table = "bss_legacy_rtl_rolemaster"
@@ -530,9 +538,15 @@ class LicenseMaster(models.Model):
     IsDeleted = models.BooleanField(db_column="IsDeleted", null=True, blank=True)
     PermissionId = models.TextField(db_column="PermissionId", blank=True, null=True)
     StateId = models.IntegerField(db_column="StateId", null=True, blank=True)
+    ApplicationLink = models.TextField(db_column="ApplicationLink", blank=True, null=True)
+    Act = models.TextField(db_column="Act", blank=True, null=True)
+    Detail = models.TextField(db_column="Detail", blank=True, null=True)
     Category = models.TextField(db_column="Category", blank=True, null=True)
     Industry = models.TextField(db_column="Industry", blank=True, null=True)
     LicenseType = models.TextField(db_column="LicenseType", blank=True, null=True)
+    UniqueCode = models.TextField(db_column="UniqueCode", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
 
     class Meta:
         db_table = "bss_legacy_rtl_licensemaster"
@@ -556,7 +570,45 @@ class StoreLicences(models.Model):
     LicenseId = models.IntegerField(db_column="LicenseId", null=True, blank=True)
     Status = models.IntegerField(db_column="Status", null=True, blank=True)
     IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    Dire_Name = models.TextField(db_column="Dire_Name", blank=True, null=True)
+    Dire_FatherName = models.TextField(db_column="Dire_FatherName", blank=True, null=True)
+    Dire_Address = models.TextField(db_column="Dire_Address", blank=True, null=True)
+    Dire_AadhaarNo = models.TextField(db_column="Dire_AadhaarNo", blank=True, null=True)
+    Dire_PanNo = models.TextField(db_column="Dire_PanNo", blank=True, null=True)
+    Dire_DateOfBirth = models.DateField(db_column="Dire_DateOfBirth", null=True, blank=True)
+    Dire_EmailId = models.TextField(db_column="Dire_EmailId", blank=True, null=True)
+    Dire_MobileNo = models.TextField(db_column="Dire_MobileNo", blank=True, null=True)
+    Auth_Name = models.TextField(db_column="Auth_Name", blank=True, null=True)
+    Auth_FatherName = models.TextField(db_column="Auth_FatherName", blank=True, null=True)
+    Auth_Address = models.TextField(db_column="Auth_Address", blank=True, null=True)
+    Auth_AadhaarNo = models.TextField(db_column="Auth_AadhaarNo", blank=True, null=True)
+    Auth_PanNo = models.TextField(db_column="Auth_PanNo", blank=True, null=True)
+    Auth_DateOfBirth = models.DateField(db_column="Auth_DateOfBirth", null=True, blank=True)
+    Auth_EmailId = models.TextField(db_column="Auth_EmailId", blank=True, null=True)
+    Auth_MobileNo = models.TextField(db_column="Auth_MobileNo", blank=True, null=True)
+    NatureofBusiness = models.TextField(db_column="NatureofBusiness", blank=True, null=True)
+    DateofCommencement = models.DateField(db_column="DateofCommencement", null=True, blank=True)
+    ProductCategory = models.TextField(db_column="ProductCategory", blank=True, null=True)
+    AadhaarRegisteredofficeAddressNo = models.TextField(db_column="AadhaarRegisteredofficeAddressNo", blank=True, null=True)
+    AadhaarCardofDirector = models.TextField(db_column="AadhaarCardofDirector", blank=True, null=True)
+    PANCardofDirector = models.TextField(db_column="PANCardofDirector", blank=True, null=True)
+    PassportSizePhoto1 = models.TextField(db_column="PassportSizePhoto1", blank=True, null=True)
+    AuthorizationLetter = models.TextField(db_column="AuthorizationLetter", blank=True, null=True)
+    AadhaarCardofAuthorized = models.TextField(db_column="AadhaarCardofAuthorized", blank=True, null=True)
+    PANCard = models.TextField(db_column="PANCard", blank=True, null=True)
+    PassportSizePhoto2 = models.TextField(db_column="PassportSizePhoto2", blank=True, null=True)
+    ElectricityBill = models.TextField(db_column="ElectricityBill", blank=True, null=True)
+    SaledeedRentAgreement = models.TextField(db_column="SaledeedRentAgreement", blank=True, null=True)
+    FSMSPlan = models.TextField(db_column="FSMSPlan", blank=True, null=True)
+    FormIX = models.TextField(db_column="FormIX", blank=True, null=True)
+    WaterTestReport = models.TextField(db_column="WaterTestReport", blank=True, null=True)
+    RequestedDate = models.DateTimeField(db_column="RequestedDate", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
     Createdon = models.DateTimeField(db_column="Createdon", null=True, blank=True)
+    ModifiedBy = models.IntegerField(db_column="ModifiedBy", null=True, blank=True)
+    ModifiedOn = models.DateTimeField(db_column="ModifiedOn", null=True, blank=True)
+    buttonText = models.IntegerField(db_column="buttonText", null=True, blank=True)
+    ValidLicense = models.DateTimeField(db_column="ValidLicense", null=True, blank=True)
 
     class Meta:
         db_table = "bss_legacy_rtl_storelicences"
@@ -577,10 +629,16 @@ class LicenceRequest(models.Model):
     ValidityStartDate_old = models.TextField(db_column="ValidityStartDate_old", blank=True, null=True)
     ValidityEndDate_old = models.DateTimeField(db_column="ValidityEndDate_old", null=True, blank=True)
     UploadLicenseCopy = models.TextField(db_column="UploadLicenseCopy", blank=True, null=True)
+    RenewalRequestDate = models.TextField(db_column="RenewalRequestDate", blank=True, null=True)
     RenewalStatus = models.TextField(db_column="RenewalStatus", blank=True, null=True)
     RenewalStartDate = models.TextField(db_column="RenewalStartDate", blank=True, null=True)
     RenewalEnddate = models.TextField(db_column="RenewalEnddate", blank=True, null=True)
     UploadRenewedCopy = models.TextField(db_column="UploadRenewedCopy", blank=True, null=True)
+    UserName = models.TextField(db_column="UserName", blank=True, null=True)
+    UserPassword = models.TextField(db_column="UserPassword", blank=True, null=True)
+    MobileNumber = models.TextField(db_column="MobileNumber", blank=True, null=True)
+    EmailId = models.TextField(db_column="EmailId", blank=True, null=True)
+    TentativeDateofComp = models.TextField(db_column="TentativeDateofComp", blank=True, null=True)
     InvoiceStatus = models.TextField(db_column="InvoiceStatus", blank=True, null=True)
     InvoiceDate = models.TextField(db_column="InvoiceDate", blank=True, null=True)
     InvoiceNo = models.TextField(db_column="InvoiceNo", blank=True, null=True)
@@ -594,6 +652,16 @@ class LicenceRequest(models.Model):
     ModifyBy = models.IntegerField(db_column="ModifyBy", null=True, blank=True)
     ModifiedOn = models.DateTimeField(db_column="ModifiedOn", null=True, blank=True)
     LStatus = models.IntegerField(db_column="LStatus", null=True, blank=True)
+    ActualCost = models.TextField(db_column="ActualCost", blank=True, null=True)
+    GovtFees = models.TextField(db_column="GovtFees", blank=True, null=True)
+    ValidityStartDate = models.TextField(db_column="ValidityStartDate", blank=True, null=True)
+    ValidityEndDate = models.TextField(db_column="ValidityEndDate", blank=True, null=True)
+    ValidityStartDate1 = models.TextField(db_column="ValidityStartDate1", blank=True, null=True)
+    ValidityEndDate1 = models.TextField(db_column="ValidityEndDate1", blank=True, null=True)
+    UploadAmendmentCopy = models.TextField(db_column="UploadAmendmentCopy", blank=True, null=True)
+    Remark = models.TextField(db_column="Remark", blank=True, null=True)
+    LicenseCategory = models.TextField(db_column="LicenseCategory", blank=True, null=True)
+    UploadAcknowledgement = models.TextField(db_column="UploadAcknowledgement", blank=True, null=True)
 
     class Meta:
         db_table = "bss_legacy_rtl_licencerequest"
@@ -605,7 +673,12 @@ class StoreMapping(models.Model):
     UserId = models.IntegerField(db_column="UserId", null=True, blank=True)
     PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
     PartyTypeId = models.IntegerField(db_column="PartyTypeId", null=True, blank=True)
+    StartDate = models.TextField(db_column="StartDate", null=True, blank=True)
+    EndDate = models.TextField(db_column="EndDate", null=True, blank=True)
     CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    CreatedBy = models.BigIntegerField(db_column="CreatedBy", null=True, blank=True)
+    ModifiedBy = models.BigIntegerField(db_column="ModifiedBy", null=True, blank=True)
+    ModifiedOn = models.DateTimeField(db_column="ModifiedOn", null=True, blank=True)
 
     class Meta:
         db_table = "bss_legacy_rtl_storemapping"
@@ -616,6 +689,8 @@ class AssignExecuter(models.Model):
     ExecuterId = models.IntegerField(db_column="ExecuterId", null=True, blank=True)
     PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
     ClientId = models.IntegerField(db_column="ClientId", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
 
     class Meta:
         db_table = "bss_legacy_rtl_assignexecuter"
@@ -674,6 +749,10 @@ class PagesSectionRolePermission(models.Model):
     Checkbox1Flag = models.BooleanField(db_column="Checkbox1Flag", null=True, blank=True)
     Checkbox2Flag = models.BooleanField(db_column="Checkbox2Flag", null=True, blank=True)
     VerifyFlag = models.BooleanField(db_column="VerifyFlag", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    Updatedby = models.IntegerField(db_column="Updatedby", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
     IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
     IsDeleted = models.BooleanField(db_column="IsDeleted", null=True, blank=True)
 
@@ -687,7 +766,16 @@ class MenuPermission(models.Model):
     MenuId = models.IntegerField(db_column="MenuId", null=True, blank=True)
     SubMenuId = models.IntegerField(db_column="SubMenuId", null=True, blank=True)
     EmpId = models.TextField(db_column="EmpId", blank=True, null=True)
+    IsAdd = models.BooleanField(db_column="IsAdd", null=True, blank=True)
+    IsEdit = models.BooleanField(db_column="IsEdit", null=True, blank=True)
+    IsDelete = models.BooleanField(db_column="IsDelete", null=True, blank=True)
+    IsPrint = models.BooleanField(db_column="IsPrint", null=True, blank=True)
     IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    BranchCode = models.TextField(db_column="BranchCode", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+    UpdatedBy = models.IntegerField(db_column="UpdatedBy", null=True, blank=True)
     IsDeleted = models.BooleanField(db_column="IsDeleted", null=True, blank=True)
 
     class Meta:
@@ -805,6 +893,52 @@ class VendorRegistration(models.Model):
     YearsOfExperience = models.CharField(max_length=100, db_column="YearsOfExperience", blank=True, null=True)
     KeyClients = models.CharField(max_length=1000, db_column="KeyClients", blank=True, null=True)
     SimilarContracts = models.CharField(max_length=1000, db_column="SimilarContracts", blank=True, null=True)
+    File1 = models.CharField(max_length=1000, db_column="File1", blank=True, null=True)
+    File2 = models.CharField(max_length=1000, db_column="File2", blank=True, null=True)
+    File3 = models.CharField(max_length=1000, db_column="File3", blank=True, null=True)
+    File4 = models.CharField(max_length=1000, db_column="File4", blank=True, null=True)
+    File5 = models.CharField(max_length=1000, db_column="File5", blank=True, null=True)
+    File6 = models.CharField(max_length=1000, db_column="File6", blank=True, null=True)
+    File7 = models.CharField(max_length=1000, db_column="File7", blank=True, null=True)
+    File8 = models.CharField(max_length=1000, db_column="File8", blank=True, null=True)
+    File9 = models.CharField(max_length=1000, db_column="File9", blank=True, null=True)
+    File10 = models.CharField(max_length=1000, db_column="File10", blank=True, null=True)
+    File11 = models.CharField(max_length=1000, db_column="File11", blank=True, null=True)
+    File12 = models.CharField(max_length=1000, db_column="File12", blank=True, null=True)
+    File13 = models.CharField(max_length=1000, db_column="File13", blank=True, null=True)
+    File14 = models.CharField(max_length=1000, db_column="File14", blank=True, null=True)
+    File15 = models.CharField(max_length=1000, db_column="File15", blank=True, null=True)
+    File16 = models.CharField(max_length=1000, db_column="File16", blank=True, null=True)
+    File17 = models.CharField(max_length=1000, db_column="File17", blank=True, null=True)
+    File18 = models.CharField(max_length=1000, db_column="File18", blank=True, null=True)
+    File19 = models.CharField(max_length=1000, db_column="File19", blank=True, null=True)
+    File20 = models.CharField(max_length=1000, db_column="File20", blank=True, null=True)
+    File21 = models.CharField(max_length=1000, db_column="File21", blank=True, null=True)
+    file22 = models.CharField(max_length=1000, db_column="file22", blank=True, null=True)
+    file23 = models.CharField(max_length=1000, db_column="file23", blank=True, null=True)
+    file24 = models.CharField(max_length=1000, db_column="file24", blank=True, null=True)
+    NameOrganization1 = models.CharField(max_length=500, db_column="NameOrganization1", blank=True, null=True)
+    ServiceType1 = models.CharField(max_length=500, db_column="ServiceType1", blank=True, null=True)
+    ConcernPerson1 = models.CharField(max_length=500, db_column="ConcernPerson1", blank=True, null=True)
+    Designation1 = models.CharField(max_length=500, db_column="Designation1", blank=True, null=True)
+    MobileNo1 = models.CharField(max_length=100, db_column="MobileNo1", blank=True, null=True)
+    EmailId1 = models.CharField(max_length=300, db_column="EmailId1", blank=True, null=True)
+    NameOrganization2 = models.CharField(max_length=500, db_column="NameOrganization2", blank=True, null=True)
+    ServiceType2 = models.CharField(max_length=500, db_column="ServiceType2", blank=True, null=True)
+    ConcernPerson2 = models.CharField(max_length=500, db_column="ConcernPerson2", blank=True, null=True)
+    Designation2 = models.CharField(max_length=500, db_column="Designation2", blank=True, null=True)
+    MobileNo2 = models.CharField(max_length=100, db_column="MobileNo2", blank=True, null=True)
+    EmailId2 = models.CharField(max_length=300, db_column="EmailId2", blank=True, null=True)
+    NameOrganization3 = models.CharField(max_length=500, db_column="NameOrganization3", blank=True, null=True)
+    ServiceType3 = models.CharField(max_length=500, db_column="ServiceType3", blank=True, null=True)
+    ConcernPerson3 = models.CharField(max_length=500, db_column="ConcernPerson3", blank=True, null=True)
+    Designation3 = models.CharField(max_length=500, db_column="Designation3", blank=True, null=True)
+    MobileNo3 = models.CharField(max_length=100, db_column="MobileNo3", blank=True, null=True)
+    EmailId3 = models.CharField(max_length=300, db_column="EmailId3", blank=True, null=True)
+    Representativename = models.CharField(max_length=500, db_column="Representativename", blank=True, null=True)
+    RepresentativeDesignation = models.CharField(max_length=500, db_column="RepresentativeDesignation", blank=True, null=True)
+    RepresentativeMobile = models.CharField(max_length=100, db_column="RepresentativeMobile", blank=True, null=True)
+    RepresentativeEmail = models.CharField(max_length=300, db_column="RepresentativeEmail", blank=True, null=True)
     LoginId = models.CharField(max_length=100, db_column="LoginId", blank=True, null=True)
     Createdby = models.CharField(max_length=100, db_column="Createdby", blank=True, null=True)
     CreatedOn = models.CharField(max_length=50, db_column="CreatedOn", blank=True, null=True)
@@ -1979,3 +2113,877 @@ class PaymentRequestLog(models.Model):
 
     class Meta:
         db_table = "bss_legacy_dbo_paymentrequestlog"
+
+
+# ---------------------------------------------------------------------------
+# RetailController master tables (GetSearchModuleReg / Search*Master etc.).
+# Unmanaged — tables already migrated from SQL Server, Django never alters them.
+# ---------------------------------------------------------------------------
+
+
+class ModuleRegMaster(models.Model):
+    """RTL.Usp_Module_Reg_Master backing table (module registration)."""
+    Id = models.IntegerField(primary_key=True, db_column="Id")
+    Module_Name = models.TextField(db_column="Module_Name", blank=True, null=True)
+    Description = models.TextField(db_column="Description", blank=True, null=True)
+    Start_Date = models.DateTimeField(db_column="Start_Date", null=True, blank=True)
+    End_Date = models.DateTimeField(db_column="End_Date", null=True, blank=True)
+    IsActive = models.IntegerField(db_column="IsActive", null=True, blank=True)
+    IsApproval = models.IntegerField(db_column="IsApproval", null=True, blank=True)
+    IsDeleted = models.IntegerField(db_column="IsDeleted", null=True, blank=True)
+    Created_BY = models.IntegerField(db_column="Created_BY", null=True, blank=True)
+    Created_Date = models.DateTimeField(db_column="Created_Date", null=True, blank=True)
+    Updated_By = models.IntegerField(db_column="Updated_By", null=True, blank=True)
+    Updated_Date = models.DateTimeField(db_column="Updated_Date", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_tbl_module_reg_master"
+
+
+class GradeMaster(models.Model):
+    """RTL.Usp_GradeMaster backing table."""
+    Id = models.IntegerField(primary_key=True, db_column="Id")
+    PartyType = models.IntegerField(db_column="PartyType", null=True, blank=True)
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    Name = models.TextField(db_column="Name", blank=True, null=True)
+    Description = models.TextField(db_column="Description", blank=True, null=True)
+    Sequence = models.IntegerField(db_column="Sequence", null=True, blank=True)
+    StartDate = models.DateField(db_column="StartDate", null=True, blank=True)
+    EndDate = models.DateField(db_column="EndDate", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    Updatedby = models.IntegerField(db_column="Updatedby", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_grademaster"
+
+
+class DepartmentMaster(models.Model):
+    """RTL.Usp_DepartmentMaster backing table (store compliance departments)."""
+    DepartmentId = models.IntegerField(primary_key=True, db_column="DepartmentId")
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    PartyType = models.IntegerField(db_column="PartyType", null=True, blank=True)
+    DepartmentName = models.TextField(db_column="DepartmentName", blank=True, null=True)
+    Description = models.TextField(db_column="Description", blank=True, null=True)
+    StartDate = models.TextField(db_column="StartDate", blank=True, null=True)
+    EndDate = models.TextField(db_column="EndDate", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+    UpdatedBy = models.IntegerField(db_column="UpdatedBy", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_departmentmaster"
+
+
+class CreateExecuter(models.Model):
+    """RTL.USP_CreateExecuter backing table."""
+    Id = models.IntegerField(primary_key=True, db_column="Id")
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    ExecuterId = models.IntegerField(db_column="ExecuterId", null=True, blank=True)
+    IsExecuter = models.IntegerField(db_column="IsExecuter", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_createexecuter"
+
+
+class LicenseDocumentMasterList(models.Model):
+    """RTL.GetLicenseMasterDocumentList backing table (licence document list)."""
+    DocumentId = models.IntegerField(primary_key=True, db_column="DocumentId")
+    DocumentName = models.TextField(db_column="DocumentName", blank=True, null=True)
+    DisplayName = models.TextField(db_column="DisplayName", blank=True, null=True)
+    PermissionFor = models.IntegerField(db_column="PermissionFor", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_licensemasterdocumentlist"
+
+
+class VendorClientDocument(models.Model):
+    """RTL.USP_ClientDocumentMapping backing table (client doc mapping)."""
+    Id = models.IntegerField(primary_key=True, db_column="Id")
+    DocumentName = models.TextField(db_column="DocumentName", blank=True, null=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    createdon = models.DateTimeField(db_column="createdon", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_vendorclientdocument"
+
+
+# ---------------------------------------------------------------------------
+# Phase 11 — RetailSection missing endpoints (RetailSectionController.cs).
+# Backing tables already migrated; `managed=False` so Django never alters them.
+# ---------------------------------------------------------------------------
+
+
+class NoticeInspection(models.Model):
+    """RTL.USP_Notice backing table (notice & inspection)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    UserId = models.IntegerField(db_column="UserId", null=True, blank=True)
+    StoreId = models.IntegerField(db_column="StoreId", null=True, blank=True)
+    DepartmentId = models.IntegerField(db_column="DepartmentId", null=True, blank=True)
+    NoticeUpload = models.TextField(db_column="NoticeUpload", blank=True, null=True)
+    ReceiptDate = models.DateTimeField(db_column="ReceiptDate", null=True, blank=True)
+    ExecuterId = models.IntegerField(db_column="ExecuterId", null=True, blank=True)
+    ExecuterStoreId = models.IntegerField(db_column="ExecuterStoreId", null=True, blank=True)
+    ExecuterDepartmentId = models.IntegerField(db_column="ExecuterDepartmentId", null=True, blank=True)
+    ExecuterNoticeUpload = models.TextField(db_column="ExecuterNoticeUpload", blank=True, null=True)
+    ExecuterReceiptDate = models.DateTimeField(db_column="ExecuterReceiptDate", null=True, blank=True)
+    FinalReceiptDate = models.DateTimeField(db_column="FinalReceiptDate", null=True, blank=True)
+    FinalSubmittionbyExecuter = models.TextField(db_column="FinalSubmittionbyExecuter", blank=True, null=True)
+    Status = models.IntegerField(db_column="Status", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    NoticeDate = models.DateTimeField(db_column="NoticeDate", null=True, blank=True)
+    NoticeMode = models.TextField(db_column="NoticeMode", blank=True, null=True)
+    HearingDate = models.DateTimeField(db_column="HearingDate", null=True, blank=True)
+    OfficerName = models.TextField(db_column="OfficerName", blank=True, null=True)
+    Address = models.TextField(db_column="Address", blank=True, null=True)
+    RepresentativeName = models.TextField(db_column="RepresentativeName", blank=True, null=True)
+    RepresentativeEmail = models.TextField(db_column="RepresentativeEmail", blank=True, null=True)
+    Description = models.TextField(db_column="Description", blank=True, null=True)
+    Probability = models.TextField(db_column="Probability", blank=True, null=True)
+    Interest = models.TextField(db_column="Interest", blank=True, null=True)
+    LateFee = models.TextField(db_column="LateFee", blank=True, null=True)
+    Fines = models.TextField(db_column="Fines", blank=True, null=True)
+    Penalities = models.TextField(db_column="Penalities", blank=True, null=True)
+    Other = models.TextField(db_column="Other", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_noticesinspections"
+
+
+class EscalationMaster(models.Model):
+    """RTL.Escalation backing table."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    ClientId = models.IntegerField(db_column="ClientId", null=True, blank=True)
+    Escalation1 = models.IntegerField(db_column="Escalation1", null=True, blank=True)
+    Escalation2 = models.IntegerField(db_column="Escalation2", null=True, blank=True)
+    StoreCode = models.IntegerField(db_column="StoreCode", null=True, blank=True)
+    LicenceId = models.IntegerField(db_column="LicenceId", null=True, blank=True)
+    Remark = models.TextField(db_column="Remark", blank=True, null=True)
+    Escalation1Remark = models.TextField(db_column="Escalation1Remark", blank=True, null=True)
+    IsEscalate2 = models.IntegerField(db_column="IsEscalate2", null=True, blank=True)
+    Escalation2Remark = models.TextField(db_column="Escalation2Remark", blank=True, null=True)
+    Status = models.IntegerField(db_column="Status", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Closedby = models.IntegerField(db_column="Closedby", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_escalationmaster"
+
+
+class PaymentDetail(models.Model):
+    """RTL.USP_Payment backing table."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    LId = models.IntegerField(db_column="LId", null=True, blank=True)
+    StoreId = models.TextField(db_column="StoreId", blank=True, null=True)
+    LicenceId = models.TextField(db_column="LicenceId", blank=True, null=True)
+    OrderId = models.TextField(db_column="OrderId", blank=True, null=True)
+    TransId = models.TextField(db_column="TransId", blank=True, null=True)
+    Amount = models.TextField(db_column="Amount", blank=True, null=True)
+    TotalAmount = models.TextField(db_column="TotalAmount", blank=True, null=True)
+    Name = models.TextField(db_column="Name", blank=True, null=True)
+    MobileNo = models.TextField(db_column="MobileNo", blank=True, null=True)
+    EmailId = models.TextField(db_column="EmailId", blank=True, null=True)
+    returnUrl = models.TextField(db_column="returnUrl", blank=True, null=True)
+    PaymentMode = models.TextField(db_column="PaymentMode", blank=True, null=True)
+    PaymentStatus = models.TextField(db_column="PaymentStatus", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    ResponseCompleteOn = models.DateTimeField(db_column="ResponseCompleteOn", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_paymentdetail"
+
+
+class MailingConfiguration(models.Model):
+    """RTL.Usp_Mailing backing table (mail mapping config)."""
+    MailingId = models.AutoField(primary_key=True, db_column="MailingId")
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    MailFor = models.TextField(db_column="MailFor", blank=True, null=True)
+    TemplateId = models.IntegerField(db_column="TemplateId", null=True, blank=True)
+    To = models.TextField(db_column="To", blank=True, null=True)
+    CC = models.TextField(db_column="CC", blank=True, null=True)
+    BCC = models.TextField(db_column="BCC", blank=True, null=True)
+    IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    ModifiedBy = models.IntegerField(db_column="ModifiedBy", null=True, blank=True)
+    ModifiedOn = models.DateTimeField(db_column="ModifiedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_mailingconfiguration"
+
+
+class TemplateMaster(models.Model):
+    """RTL.Usp_Mailing template rows."""
+    TemplateId = models.AutoField(primary_key=True, db_column="TemplateId")
+    TemplateName = models.TextField(db_column="TemplateName", blank=True, null=True)
+    Subject = models.TextField(db_column="Subject", blank=True, null=True)
+    Detail = models.TextField(db_column="Detail", blank=True, null=True)
+    IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_templatemaster"
+
+
+class RouteMaster(models.Model):
+    """RTL.USP_RouteMaster backing table (transport routes)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    RouteID = models.TextField(db_column="RouteID", blank=True, null=True)
+    RouteName = models.TextField(db_column="RouteName", blank=True, null=True)
+    CompanyName = models.TextField(db_column="CompanyName", blank=True, null=True)
+    Location = models.TextField(db_column="Location", blank=True, null=True)
+    RouteStartLocation = models.TextField(db_column="RouteStartLocation", blank=True, null=True)
+    RouteEndLocation = models.TextField(db_column="RouteEndLocation", blank=True, null=True)
+    Status = models.TextField(db_column="Status", blank=True, null=True)
+    BusNumber = models.TextField(db_column="BusNumber", blank=True, null=True)
+    RCNO = models.TextField(db_column="RCNO", blank=True, null=True)
+    SeatingCapacity = models.IntegerField(db_column="SeatingCapacity", null=True, blank=True)
+    BusType = models.TextField(db_column="BusType", blank=True, null=True)
+    DriverName = models.TextField(db_column="DriverName", blank=True, null=True)
+    DriverContactNumber = models.TextField(db_column="DriverContactNumber", blank=True, null=True)
+    DriverAddress = models.TextField(db_column="DriverAddress", blank=True, null=True)
+    LicenseNumber = models.TextField(db_column="LicenseNumber", blank=True, null=True)
+    ConductorName = models.TextField(db_column="ConductorName", blank=True, null=True)
+    ConductorContact = models.TextField(db_column="ConductorContact", blank=True, null=True)
+    ConductorAddress = models.TextField(db_column="ConductorAddress", blank=True, null=True)
+    LicenseCopy = models.TextField(db_column="LicenseCopy", blank=True, null=True)
+    AadharCardCopy = models.TextField(db_column="AadharCardCopy", blank=True, null=True)
+    ConductorAadhaarCard = models.TextField(db_column="ConductorAadhaarCard", blank=True, null=True)
+    BusRC = models.TextField(db_column="BusRC", blank=True, null=True)
+    PollutionCertificate = models.TextField(db_column="PollutionCertificate", blank=True, null=True)
+    FitnessCertificate = models.TextField(db_column="FitnessCertificate", blank=True, null=True)
+    InsuranceCopy = models.TextField(db_column="InsuranceCopy", blank=True, null=True)
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+    CreatedDate = models.DateTimeField(db_column="CreatedDate", null=True, blank=True)
+    UpdatedBy = models.IntegerField(db_column="UpdatedBy", null=True, blank=True)
+    UpdatedDate = models.DateTimeField(db_column="UpdatedDate", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_routemaster"
+
+
+class DiligenceChecklist(models.Model):
+    """RTL.Usp_Diligence backing table (diligence checks)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    StoreCode = models.TextField(db_column="StoreCode", blank=True, null=True)
+    DiligenceName = models.TextField(db_column="DiligenceName", blank=True, null=True)
+    DiligenceAssigned = models.TextField(db_column="DiligenceAssigned", blank=True, null=True)
+    Diligencedate = models.TextField(db_column="Diligencedate", blank=True, null=True)
+    Note = models.TextField(db_column="Note", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_diligencechecklist"
+
+
+class DiligenceDocumentList(models.Model):
+    """RTL.Usp_Diligence document rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    StoreCode = models.TextField(db_column="StoreCode", blank=True, null=True)
+    DocumentName = models.TextField(db_column="DocumentName", blank=True, null=True)
+    DiligenceId = models.IntegerField(db_column="DiligenceId", null=True, blank=True)
+    uploadOn = models.TextField(db_column="uploadOn", blank=True, null=True)
+    uploadedby = models.IntegerField(db_column="uploadedby", null=True, blank=True)
+    Status = models.TextField(db_column="Status", blank=True, null=True)
+    UploadFile = models.TextField(db_column="UploadFile", blank=True, null=True)
+    LoginId = models.IntegerField(db_column="LoginId", null=True, blank=True)
+    Note = models.TextField(db_column="Note", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_diligencedocumentlist"
+
+
+class ExecuterDocumentMaster(models.Model):
+    """RTL.USP_Compliance backing rows (per-store compliance documents)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    DocId = models.IntegerField(db_column="DocId", null=True, blank=True)
+    ExecuterId = models.IntegerField(db_column="ExecuterId", null=True, blank=True)
+    StoreId = models.IntegerField(db_column="StoreId", null=True, blank=True)
+    ActId = models.TextField(db_column="ActId", blank=True, null=True)
+    FY = models.TextField(db_column="FY", blank=True, null=True)
+    CMonth = models.TextField(db_column="CMonth", blank=True, null=True)
+    DocumentName = models.TextField(db_column="DocumentName", blank=True, null=True)
+    DocumentType = models.TextField(db_column="DocumentType", blank=True, null=True)
+    Frequency = models.TextField(db_column="Frequency", blank=True, null=True)
+    FormatType = models.TextField(db_column="FormatType", blank=True, null=True)
+    Note = models.TextField(db_column="Note", blank=True, null=True)
+    Act = models.TextField(db_column="Act", blank=True, null=True)
+    DocumentPath = models.TextField(db_column="DocumentPath", blank=True, null=True)
+    IsDefault = models.BooleanField(db_column="IsDefault", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.TextField(db_column="Createdby", blank=True, null=True)
+    Updatedby = models.TextField(db_column="Updatedby", blank=True, null=True)
+    UpdatedON = models.DateTimeField(db_column="UpdatedON", null=True, blank=True)
+    Isdelete = models.BooleanField(db_column="Isdelete", null=True, blank=True)
+    FormNo = models.TextField(db_column="FormNo", blank=True, null=True)
+    StateId = models.TextField(db_column="StateId", blank=True, null=True)
+    Criticality = models.TextField(db_column="Criticality", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_executerdocumentmaster"
+
+
+class ComplianceEmployeeDetail(models.Model):
+    """RTL.USP_ComplianceBulk payroll/attendance detail rows."""
+    Uid = models.TextField(db_column="Uid", primary_key=True, blank=True)
+    Employee_Code = models.TextField(db_column="Employee_Code", blank=True, null=True)
+    Employee_Name = models.TextField(db_column="Employee_Name", blank=True, null=True)
+    Gender = models.TextField(db_column="Gender", blank=True, null=True)
+    Father_Name = models.TextField(db_column="Father_Name", blank=True, null=True)
+    Date_of_Birth = models.TextField(db_column="Date_of_Birth", blank=True, null=True)
+    Age = models.TextField(db_column="Age", blank=True, null=True)
+    Date_Of_Joining = models.TextField(db_column="Date_Of_Joining", blank=True, null=True)
+    Date_Of_Leaving = models.TextField(db_column="Date_Of_Leaving", blank=True, null=True)
+    Designation = models.TextField(db_column="Designation", blank=True, null=True)
+    Department = models.TextField(db_column="Department", blank=True, null=True)
+    Branch_Address = models.TextField(db_column="Branch_Address", blank=True, null=True)
+    State = models.TextField(db_column="State", blank=True, null=True)
+    Month = models.TextField(db_column="Month", blank=True, null=True)
+    UAN_No = models.TextField(db_column="UAN_No", blank=True, null=True)
+    ESIC_No = models.TextField(db_column="ESIC_No", blank=True, null=True)
+    StoreCode = models.TextField(db_column="StoreCode", blank=True, null=True)
+    ComplianceCategory = models.TextField(db_column="ComplianceCategory", blank=True, null=True)
+    IsActive = models.IntegerField(db_column="IsActive", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_complianceemployeedetail"
+
+
+class PayrollSalaryUpload(models.Model):
+    """RTL.usp_PayRoll salary-excel rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    uid = models.TextField(db_column="uid", blank=True, null=True)
+    PayRollType = models.TextField(db_column="PayRollType", blank=True, null=True)
+    Mode = models.TextField(db_column="Mode", blank=True, null=True)
+    StoreCode = models.TextField(db_column="StoreCode", blank=True, null=True)
+    Year = models.TextField(db_column="Year", blank=True, null=True)
+    Month = models.TextField(db_column="Month", blank=True, null=True)
+    LoginId = models.TextField(db_column="LoginId", blank=True, null=True)
+    EmployeeCode = models.TextField(db_column="EmployeeCode", blank=True, null=True)
+    EmployeeName = models.TextField(db_column="EmployeeName", blank=True, null=True)
+    DOJ = models.TextField(db_column="DOJ", blank=True, null=True)
+    Designation = models.TextField(db_column="Designation", blank=True, null=True)
+    UANNumber = models.TextField(db_column="UANNumber", blank=True, null=True)
+    TotalWorkingDays = models.TextField(db_column="TotalWorkingDays", blank=True, null=True)
+    EarnedGrossSalary = models.TextField(db_column="EarnedGrossSalary", blank=True, null=True)
+    NetPayableSalary = models.TextField(db_column="NetPayableSalary", blank=True, null=True)
+    TotalDeduction = models.TextField(db_column="TotalDeduction", blank=True, null=True)
+    CreatedDate = models.DateTimeField(db_column="CreatedDate", null=True, blank=True)
+    Status = models.IntegerField(db_column="Status", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_payrollsalaryupload"
+
+
+class PayrollUanMasterUpload(models.Model):
+    """RTL.usp_PayRoll UAN-master rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    UID = models.TextField(db_column="UID", blank=True, null=True)
+    EmployeeCode = models.TextField(db_column="EmployeeCode", blank=True, null=True)
+    PayRollType = models.TextField(db_column="PayRollType", blank=True, null=True)
+    Mode = models.TextField(db_column="Mode", blank=True, null=True)
+    StoreCode = models.TextField(db_column="StoreCode", blank=True, null=True)
+    Year = models.TextField(db_column="Year", blank=True, null=True)
+    Month = models.TextField(db_column="Month", blank=True, null=True)
+    LoginId = models.TextField(db_column="LoginId", blank=True, null=True)
+    UAN = models.TextField(db_column="UAN", blank=True, null=True)
+    MemberID = models.TextField(db_column="MemberID", blank=True, null=True)
+    Name = models.TextField(db_column="Name", blank=True, null=True)
+    Gender = models.TextField(db_column="Gender", blank=True, null=True)
+    DoB = models.TextField(db_column="DoB", blank=True, null=True)
+    DoJ = models.TextField(db_column="DoJ", blank=True, null=True)
+    FatherHusbandName = models.TextField(db_column="FatherHusbandName", blank=True, null=True)
+    Relation = models.TextField(db_column="Relation", blank=True, null=True)
+    MaritalStatus = models.TextField(db_column="MaritalStatus", blank=True, null=True)
+    Mobile = models.TextField(db_column="Mobile", blank=True, null=True)
+    EmailID = models.TextField(db_column="EmailID", blank=True, null=True)
+    AADHAAR = models.TextField(db_column="AADHAAR", blank=True, null=True)
+    PAN = models.TextField(db_column="PAN", blank=True, null=True)
+    BankAccountNo = models.TextField(db_column="BankAccountNo", blank=True, null=True)
+    IFSCCode = models.TextField(db_column="IFSCCode", blank=True, null=True)
+    NominationFiled = models.TextField(db_column="NominationFiled", blank=True, null=True)
+    IsAadhaarVerified = models.TextField(db_column="IsAadhaarVerified", blank=True, null=True)
+    CreatedDate = models.DateTimeField(db_column="CreatedDate", null=True, blank=True)
+    Status = models.IntegerField(db_column="Status", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_payrolluanmasterupload"
+
+
+class LegalCasesStageOne(models.Model):
+    """RTL.Usp_ManageLegalDashboard/Usp_ManageLegalCaseData stage-one rows."""
+    CaseID = models.AutoField(primary_key=True, db_column="CaseID")
+    CaseCode = models.TextField(db_column="CaseCode", blank=True, null=True)
+    CaseTitle = models.TextField(db_column="CaseTitle", blank=True, null=True)
+    CaseType = models.TextField(db_column="CaseType", blank=True, null=True)
+    ForumCourtName = models.TextField(db_column="ForumCourtName", blank=True, null=True)
+    CaseNumber = models.TextField(db_column="CaseNumber", blank=True, null=True)
+    FilingDate = models.DateField(db_column="FilingDate", null=True, blank=True)
+    OppositionParty = models.TextField(db_column="OppositionParty", blank=True, null=True)
+    AdvocateOrLegalCounsel = models.TextField(db_column="AdvocateOrLegalCounsel", blank=True, null=True)
+    ExternalFirm = models.TextField(db_column="ExternalFirm", blank=True, null=True)
+    ExternalFirmName = models.TextField(db_column="ExternalFirmName", blank=True, null=True)
+    SeniorRepName = models.TextField(db_column="SeniorRepName", blank=True, null=True)
+    SeniorRepMobile = models.TextField(db_column="SeniorRepMobile", blank=True, null=True)
+    SeniorRepEmail = models.TextField(db_column="SeniorRepEmail", blank=True, null=True)
+    JuniorRepName = models.TextField(db_column="JuniorRepName", blank=True, null=True)
+    JuniorRepMobile = models.TextField(db_column="JuniorRepMobile", blank=True, null=True)
+    JuniorRepEmail = models.TextField(db_column="JuniorRepEmail", blank=True, null=True)
+    ExternalCounselInitialOpinion = models.TextField(db_column="ExternalCounselInitialOpinion", blank=True, null=True)
+    RepName = models.TextField(db_column="RepName", blank=True, null=True)
+    RepMobile = models.TextField(db_column="RepMobile", blank=True, null=True)
+    RepEmail = models.TextField(db_column="RepEmail", blank=True, null=True)
+    InHouseCounselInitialOpinion = models.TextField(db_column="InHouseCounselInitialOpinion", blank=True, null=True)
+    State = models.TextField(db_column="State", blank=True, null=True)
+    FileUploadPath = models.TextField(db_column="FileUploadPath", blank=True, null=True)
+    FileUploadDate = models.DateField(db_column="FileUploadDate", null=True, blank=True)
+    Createby = models.IntegerField(db_column="Createby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    AppealStatus = models.TextField(db_column="AppealStatus", blank=True, null=True)
+    Appealby = models.TextField(db_column="Appealby", blank=True, null=True)
+    ACaseStatus = models.TextField(db_column="ACaseStatus", blank=True, null=True)
+    Interest = models.TextField(db_column="Interest", blank=True, null=True)
+    LateFee = models.TextField(db_column="LateFee", blank=True, null=True)
+    Fines = models.TextField(db_column="Fines", blank=True, null=True)
+    Penalities = models.TextField(db_column="Penalities", blank=True, null=True)
+    Other = models.TextField(db_column="Other", blank=True, null=True)
+    Probability = models.TextField(db_column="Probability", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_legalcases_stageone"
+
+
+class LegalCaseHearing(models.Model):
+    """RTL.Usp_ManageLegalCaseData hearing rows."""
+    HearingID = models.AutoField(primary_key=True, db_column="HearingID")
+    SNO = models.IntegerField(db_column="SNO", null=True, blank=True)
+    CaseID = models.IntegerField(db_column="CaseID", null=True, blank=True)
+    CaseCode = models.TextField(db_column="CaseCode", blank=True, null=True)
+    DateOfHearing = models.DateField(db_column="DateOfHearing", null=True, blank=True)
+    PurposeOfHearing = models.TextField(db_column="PurposeOfHearing", blank=True, null=True)
+    OutcomeOfHearing = models.TextField(db_column="OutcomeOfHearing", blank=True, null=True)
+    CaseStatus = models.TextField(db_column="CaseStatus", blank=True, null=True)
+    DateOfUpload = models.DateField(db_column="DateOfUpload", null=True, blank=True)
+    HearingFilePath = models.TextField(db_column="HearingFilePath", blank=True, null=True)
+    Createby = models.IntegerField(db_column="Createby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_legalcasehearing"
+
+
+class LegalCasePleading(models.Model):
+    """RTL.Usp_ManageLegalCaseData pleadings rows."""
+    PID = models.AutoField(primary_key=True, db_column="PID")
+    CaseID = models.IntegerField(db_column="CaseID", null=True, blank=True)
+    CaseCode = models.TextField(db_column="CaseCode", blank=True, null=True)
+    PleadingsType = models.TextField(db_column="PleadingsType", blank=True, null=True)
+    DateOfFilling = models.DateField(db_column="DateOfFilling", null=True, blank=True)
+    Note = models.TextField(db_column="Note", blank=True, null=True)
+    DateOfUpload = models.DateField(db_column="DateOfUpload", null=True, blank=True)
+    File1 = models.TextField(db_column="File1", blank=True, null=True)
+    File2 = models.TextField(db_column="File2", blank=True, null=True)
+    File3 = models.TextField(db_column="File3", blank=True, null=True)
+    Createby = models.IntegerField(db_column="Createby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_legalcasepleadings"
+
+
+class LegalCaseOrderJudgment(models.Model):
+    """RTL.Usp_ManageLegalCaseData order/judgment rows."""
+    JudgmentID = models.AutoField(primary_key=True, db_column="JudgmentID")
+    CaseId = models.IntegerField(db_column="CaseId", null=True, blank=True)
+    CaseCode = models.TextField(db_column="CaseCode", blank=True, null=True)
+    JudgmentPassed = models.IntegerField(db_column="JudgmentPassed", null=True, blank=True)
+    JudiciaryName = models.TextField(db_column="JudiciaryName", blank=True, null=True)
+    SummaryOfJudgment = models.TextField(db_column="SummaryOfJudgment", blank=True, null=True)
+    JudgmentTime = models.DateField(db_column="JudgmentTime", null=True, blank=True)
+    BareDate = models.DateField(db_column="BareDate", null=True, blank=True)
+    ExecutionStatus = models.TextField(db_column="ExecutionStatus", blank=True, null=True)
+    CondonationFiled = models.IntegerField(db_column="CondonationFiled", null=True, blank=True)
+    CondonationStatus = models.TextField(db_column="CondonationStatus", blank=True, null=True)
+    JudgmentCopyPath = models.TextField(db_column="JudgmentCopyPath", blank=True, null=True)
+    Createby = models.IntegerField(db_column="Createby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_legalcaseorderandjudgments"
+
+
+class ProjectManagement(models.Model):
+    """RTL.USP_ProjectManagement backing rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    PartyId = models.IntegerField(db_column="PartyId", null=True, blank=True)
+    SiteId = models.IntegerField(db_column="SiteId", null=True, blank=True)
+    ProjectName = models.TextField(db_column="ProjectName", blank=True, null=True)
+    SizeCapacity = models.TextField(db_column="SizeCapacity", blank=True, null=True)
+    GovtPrivate = models.TextField(db_column="GovtPrivate", blank=True, null=True)
+    EndUserParty = models.TextField(db_column="EndUserParty", blank=True, null=True)
+    CommissioningDate = models.DateTimeField(db_column="CommissioningDate", null=True, blank=True)
+    ExecutionDate = models.DateTimeField(db_column="ExecutionDate", null=True, blank=True)
+    AggregatorFees = models.TextField(db_column="AggregatorFees", blank=True, null=True)
+    LandConversion = models.TextField(db_column="LandConversion", blank=True, null=True)
+    ActualCost = models.TextField(db_column="ActualCost", blank=True, null=True)
+    RegistryValue = models.TextField(db_column="RegistryValue", blank=True, null=True)
+    Variance = models.TextField(db_column="Variance", blank=True, null=True)
+    MortgageProperty = models.TextField(db_column="MortgageProperty", blank=True, null=True)
+    LoanAgreements = models.TextField(db_column="LoanAgreements", blank=True, null=True)
+    MortgageAmount = models.TextField(db_column="MortgageAmount", blank=True, null=True)
+    Miscellaenous = models.TextField(db_column="Miscellaenous", blank=True, null=True)
+    AnyOtherDetail = models.TextField(db_column="AnyOtherDetail", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_projectmanagement"
+
+
+class ActIndustryMapping(models.Model):
+    """RTL.USP_ActIndustryMapping backing rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    ActId = models.IntegerField(db_column="ActId", null=True, blank=True)
+    IndustryId = models.IntegerField(db_column="IndustryId", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_actindustrymapping"
+
+
+class AdditionalStoreDoc(models.Model):
+    """RTL.Usp_StoreMaster additional-document rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    StoreCode = models.TextField(db_column="StoreCode", blank=True, null=True)
+    AdditionalDocName = models.TextField(db_column="AdditionalDocName", blank=True, null=True)
+    AdditionalDoc = models.TextField(db_column="AdditionalDoc", blank=True, null=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_additionalstoredoc"
+
+
+class RetailDocumentMaster(models.Model):
+    """RTL document-master rows (compliance document catalogue)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    DocumentName = models.TextField(db_column="DocumentName", blank=True, null=True)
+    DocumentType = models.TextField(db_column="DocumentType", blank=True, null=True)
+    Frequency = models.TextField(db_column="Frequency", blank=True, null=True)
+    FormatType = models.TextField(db_column="FormatType", blank=True, null=True)
+    Note = models.TextField(db_column="Note", blank=True, null=True)
+    Act = models.TextField(db_column="Act", blank=True, null=True)
+    IsDefault = models.BooleanField(db_column="IsDefault", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Createdby = models.TextField(db_column="Createdby", blank=True, null=True)
+    Updatedby = models.TextField(db_column="Updatedby", blank=True, null=True)
+    UpdatedON = models.DateTimeField(db_column="UpdatedON", null=True, blank=True)
+    Isdelete = models.BooleanField(db_column="Isdelete", null=True, blank=True)
+    FormNo = models.TextField(db_column="FormNo", blank=True, null=True)
+    StateId = models.TextField(db_column="StateId", blank=True, null=True)
+    Criticality = models.TextField(db_column="Criticality", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_retaildocumentmaster"
+
+
+# ---------------------------------------------------------------------------
+# Phase 11 — DashboardController.cs (Dashboard data actions). Unmanaged: the
+# tables were migrated from SQL Server and Django must never alter them.
+# ---------------------------------------------------------------------------
+
+
+class BranchMaster(models.Model):
+    """dbo.BranchMaster — company/branch master used by GetCompanyAndBranchMaster."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    BranchCode = models.TextField(db_column="BranchCode", blank=True, null=True)
+    BranchName = models.TextField(db_column="BranchName", blank=True, null=True)
+    BranchAddress = models.TextField(db_column="BranchAddress", blank=True, null=True)
+    IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    ContactNo = models.TextField(db_column="ContactNo", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_branchmaster"
+
+
+class BranchMenuPermission(models.Model):
+    """dbo.BranchMenuPermission — USP_SetBranchMenuPermission backing rows."""
+    BranchMenuPermissionId = models.TextField(primary_key=True, db_column="BranchMenuPermissionId")
+    BranchModuleId = models.IntegerField(db_column="BranchModuleId", null=True, blank=True)
+    BranchMenuId = models.IntegerField(db_column="BranchMenuId", null=True, blank=True)
+    BranchSubMenuId = models.IntegerField(db_column="BranchSubMenuId", null=True, blank=True)
+    IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    BranchCode = models.TextField(db_column="BranchCode", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+    UpdatedBy = models.IntegerField(db_column="UpdatedBy", null=True, blank=True)
+    IsInsertUpdate = models.BooleanField(db_column="IsInsertUpdate", null=True, blank=True)
+    IsDeleted = models.BooleanField(db_column="IsDeleted", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_branchmenupermission"
+
+
+class ReportHeader(models.Model):
+    """dbo.ReportHeader — USP_ReportHeader backing rows."""
+    ReportHeaderId = models.TextField(primary_key=True, db_column="ReportHeaderId")
+    ReportCategoryName = models.TextField(db_column="ReportCategoryName", blank=True, null=True)
+    HeaderHtml = models.TextField(db_column="HeaderHtml", blank=True, null=True)
+    IsActive = models.BooleanField(db_column="IsActive", null=True, blank=True)
+    BranchCode = models.TextField(db_column="BranchCode", blank=True, null=True)
+    CreatedBy = models.IntegerField(db_column="CreatedBy", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    UpdatedBy = models.IntegerField(db_column="UpdatedBy", null=True, blank=True)
+    UpdatedOn = models.DateTimeField(db_column="UpdatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_reportheader"
+
+
+class ManageReportHeader(models.Model):
+    """RTL.ManageReportHeader — usp_ManageReportHeader backing rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    DocumentId = models.IntegerField(db_column="DocumentId", null=True, blank=True)
+    StateId = models.IntegerField(db_column="StateId", null=True, blank=True)
+    Allowed = models.IntegerField(db_column="Allowed", null=True, blank=True)
+    BackupHeaderHtml = models.TextField(db_column="BackupHeaderHtml", blank=True, null=True)
+    HeaderHtml = models.TextField(db_column="HeaderHtml", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_managereportheader"
+
+
+class ContractorGatePass(models.Model):
+    """dbo.TblGatePass — usp_ContractorGatePass backing rows."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    EmployeeId = models.IntegerField(db_column="EmployeeId", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Status = models.IntegerField(db_column="Status", null=True, blank=True)
+    Approvaldate = models.DateTimeField(db_column="Approvaldate", null=True, blank=True)
+    GatePassDays = models.IntegerField(db_column="GatePassDays", null=True, blank=True)
+    GatePassExpiryDate = models.DateTimeField(db_column="GatePassExpiryDate", null=True, blank=True)
+    GatePassType = models.TextField(db_column="GatePassType", blank=True, null=True)
+    GatePassID = models.TextField(db_column="GatePassID", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_tblgatepass"
+
+
+class EmployeeComplianceDoc(models.Model):
+    """dbo.EmployeeComplianceDoc — employee/vendor document rows (IUDEmployeeDoc)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    DocumentId = models.IntegerField(db_column="DocumentId", null=True, blank=True)
+    VendorId = models.IntegerField(db_column="VendorId", null=True, blank=True)
+    EmpCode = models.TextField(db_column="EmpCode", blank=True, null=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+    Filepath = models.TextField(db_column="Filepath", blank=True, null=True)
+    Filepath1 = models.TextField(db_column="Filepath1", blank=True, null=True)
+    Filepath2 = models.TextField(db_column="Filepath2", blank=True, null=True)
+    Filepath3 = models.TextField(db_column="Filepath3", blank=True, null=True)
+    Filepath4 = models.TextField(db_column="Filepath4", blank=True, null=True)
+    Filepath5 = models.TextField(db_column="Filepath5", blank=True, null=True)
+    Filepath6 = models.TextField(db_column="Filepath6", blank=True, null=True)
+    Filepath7 = models.TextField(db_column="Filepath7", blank=True, null=True)
+    Filepath8 = models.TextField(db_column="Filepath8", blank=True, null=True)
+    Filepath9 = models.TextField(db_column="Filepath9", blank=True, null=True)
+    Filepath10 = models.TextField(db_column="Filepath10", blank=True, null=True)
+    Filepath11 = models.TextField(db_column="Filepath11", blank=True, null=True)
+    Filepath12 = models.TextField(db_column="Filepath12", blank=True, null=True)
+    Filepath13 = models.TextField(db_column="Filepath13", blank=True, null=True)
+    CreatedOn1 = models.DateTimeField(db_column="CreatedOn1", null=True, blank=True)
+    CreatedOn2 = models.DateTimeField(db_column="CreatedOn2", null=True, blank=True)
+    CreatedOn3 = models.DateTimeField(db_column="CreatedOn3", null=True, blank=True)
+    CreatedOn4 = models.DateTimeField(db_column="CreatedOn4", null=True, blank=True)
+    CreatedOn5 = models.DateTimeField(db_column="CreatedOn5", null=True, blank=True)
+    CreatedOn6 = models.DateTimeField(db_column="CreatedOn6", null=True, blank=True)
+    CreatedOn7 = models.DateTimeField(db_column="CreatedOn7", null=True, blank=True)
+    CreatedOn8 = models.DateTimeField(db_column="CreatedOn8", null=True, blank=True)
+    CreatedOn9 = models.DateTimeField(db_column="CreatedOn9", null=True, blank=True)
+    CreatedOn10 = models.DateTimeField(db_column="CreatedOn10", null=True, blank=True)
+    CreatedOn11 = models.DateTimeField(db_column="CreatedOn11", null=True, blank=True)
+    CreatedOn12 = models.DateTimeField(db_column="CreatedOn12", null=True, blank=True)
+    CreatedOn13 = models.DateTimeField(db_column="CreatedOn13", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_employeecompliancedoc"
+
+
+class IUDVendorClientDocument(models.Model):
+    """dbo.IUDVendorClientDocument — vendor <-> document mapping (IUDEmployeeDoc)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    DocumentId = models.IntegerField(db_column="DocumentId", null=True, blank=True)
+    VendorId = models.IntegerField(db_column="VendorId", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_iudvendorclientdocument"
+
+
+# ---------------------------------------------------------------------------
+# RetailController missing master tables (RetailController.cs).
+# Unmanaged — tables already migrated from SQL Server.
+# ---------------------------------------------------------------------------
+
+
+class ModuleMappingMaster(models.Model):
+    """RTL.Usp_Module_Mapping_Master backing table (module <-> party mapping)."""
+    Id = models.BigAutoField(primary_key=True, db_column="Id")
+    Module_Reg_Id = models.BigIntegerField(db_column="Module_Reg_Id", null=True, blank=True)
+    Party_Id = models.IntegerField(db_column="Party_Id", null=True, blank=True)
+    Party_Type_Id = models.IntegerField(db_column="Party_Type_Id", null=True, blank=True)
+    IsActive = models.IntegerField(db_column="IsActive", null=True, blank=True)
+    IsApproval = models.IntegerField(db_column="IsApproval", null=True, blank=True)
+    IsDeleted = models.IntegerField(db_column="IsDeleted", null=True, blank=True)
+    Created_BY = models.IntegerField(db_column="Created_BY", null=True, blank=True)
+    Created_Date = models.DateTimeField(db_column="Created_Date", null=True, blank=True)
+    Updated_By = models.IntegerField(db_column="Updated_By", null=True, blank=True)
+    Updated_Date = models.DateTimeField(db_column="Updated_Date", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_tbl_module_mapping_master"
+
+
+class CaseStatusMaster(models.Model):
+    """dbo.CaseStatus — case status lookup (InsertUpdateDelCaseStatusMaster)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    CaseStatus = models.TextField(db_column="CaseStatus", blank=True, null=True)
+    CreatedBy = models.TextField(db_column="CreatedBy", blank=True, null=True)
+    CreatedOn = models.DateTimeField(db_column="CreatedOn", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_dbo_casestatus"
+
+
+class Entify(models.Model):
+    """RTL.usp_Entify backing table (InsertUpdateDelEntify / SearchEntify)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    EntityType = models.TextField(db_column="EntityType", blank=True, null=True)
+    ListedCompany = models.TextField(db_column="ListedCompany", blank=True, null=True)
+    ListedStatus = models.TextField(db_column="ListedStatus", blank=True, null=True)
+    StockExchange = models.TextField(db_column="StockExchange", blank=True, null=True)
+    FundingStatus = models.TextField(db_column="FundingStatus", blank=True, null=True)
+    FundingType = models.TextField(db_column="FundingType", blank=True, null=True)
+    Turnover = models.TextField(db_column="Turnover", blank=True, null=True)
+    NetProfit = models.TextField(db_column="NetProfit", blank=True, null=True)
+    Borrowing = models.TextField(db_column="Borrowing", blank=True, null=True)
+    AuthorizedShareCap = models.TextField(db_column="AuthorizedShareCap", blank=True, null=True)
+    IssuedShareCap = models.TextField(db_column="IssuedShareCap", blank=True, null=True)
+    PaidupCap = models.TextField(db_column="PaidupCap", blank=True, null=True)
+    AverageNetProfit = models.TextField(db_column="AverageNetProfit", blank=True, null=True)
+    HoldingSubsidiary = models.TextField(db_column="HoldingSubsidiary", blank=True, null=True)
+    NBFCRegisterd = models.TextField(db_column="NBFCRegisterd", blank=True, null=True)
+    RBIRegistered = models.TextField(db_column="RBIRegistered", blank=True, null=True)
+    Startup = models.TextField(db_column="Startup", blank=True, null=True)
+    MSMERegistered = models.TextField(db_column="MSMERegistered", blank=True, null=True)
+    RegisteredunderGST = models.TextField(db_column="RegisteredunderGST", blank=True, null=True)
+    CIN = models.TextField(db_column="CIN", blank=True, null=True)
+    PAN = models.TextField(db_column="PAN", blank=True, null=True)
+    TAN = models.TextField(db_column="TAN", blank=True, null=True)
+    IncorporationDate = models.DateTimeField(db_column="IncorporationDate", null=True, blank=True)
+    RegisteredState = models.TextField(db_column="RegisteredState", blank=True, null=True)
+    NICCode = models.TextField(db_column="NICCode", blank=True, null=True)
+    FinancialYearEnd = models.TextField(db_column="FinancialYearEnd", blank=True, null=True)
+    ResidentDirector = models.TextField(db_column="ResidentDirector", blank=True, null=True)
+    IndependentDirectors = models.IntegerField(db_column="IndependentDirectors", null=True, blank=True)
+    WomenDirector = models.TextField(db_column="WomenDirector", blank=True, null=True)
+    CSAppointed = models.TextField(db_column="CSAppointed", blank=True, null=True)
+    KMPAppointed = models.TextField(db_column="KMPAppointed", blank=True, null=True)
+    Module_Name = models.TextField(db_column="Module_Name", blank=True, null=True)
+    Description = models.TextField(db_column="Description", blank=True, null=True)
+    Start_Date = models.DateTimeField(db_column="Start_Date", null=True, blank=True)
+    End_Date = models.DateTimeField(db_column="End_Date", null=True, blank=True)
+    UserId = models.IntegerField(db_column="UserId", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_entify"
+
+
+class CourtMaster(models.Model):
+    """RTL.Usp_RetailCourtMaster backing table (IUDCourtMaster)."""
+    ID = models.AutoField(primary_key=True, db_column="ID")
+    Name = models.TextField(db_column="Name", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_courtmaster"
+
+
+class ClientBoarding(models.Model):
+    """RTL.USP_ClientBoarding backing table (InsertClientOnboarding)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    Boardingtype = models.TextField(db_column="Boardingtype", blank=True, null=True)
+    DocumentName = models.TextField(db_column="DocumentName", blank=True, null=True)
+    Frequency = models.TextField(db_column="Frequency", blank=True, null=True)
+    Month = models.TextField(db_column="Month", blank=True, null=True)
+    Year = models.TextField(db_column="Year", blank=True, null=True)
+    State = models.TextField(db_column="State", blank=True, null=True)
+    Description = models.TextField(db_column="Description", blank=True, null=True)
+    DueDate = models.TextField(db_column="DueDate", blank=True, null=True)
+    Remark = models.TextField(db_column="Remark", blank=True, null=True)
+    UploadFile = models.TextField(db_column="UploadFile", blank=True, null=True)
+    Createdon = models.DateTimeField(db_column="Createdon", null=True, blank=True)
+    Createdby = models.IntegerField(db_column="Createdby", null=True, blank=True)
+    ExcelFile = models.TextField(db_column="ExcelFile", blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_clientboarding"
+
+
+class StoreDocument(models.Model):
+    """RTL.StoreDocument — store licence documents (GetStoreDocumentDetails)."""
+    Id = models.AutoField(primary_key=True, db_column="Id")
+    StoreId = models.IntegerField(db_column="StoreId", null=True, blank=True)
+    LicenseId = models.IntegerField(db_column="LicenseId", null=True, blank=True)
+    DocumentId = models.IntegerField(db_column="DocumentId", null=True, blank=True)
+    DocumentLink = models.TextField(db_column="DocumentLink", blank=True, null=True)
+    Createdon = models.DateTimeField(db_column="Createdon", null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "bss_legacy_rtl_storedocument"

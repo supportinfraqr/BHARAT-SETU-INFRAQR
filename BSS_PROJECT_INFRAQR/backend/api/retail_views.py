@@ -14,7 +14,10 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from legacy.models import (
+    AssignExecuter,
     BoardingMapping,
+    CaseStatusMaster,
+    ClientBoarding,
     ClientFactoryStatutoryInternal,
     ClientFactoryStatutoryInternalEvent,
     ClientFinancialStatutoryInternal,
@@ -23,20 +26,37 @@ from legacy.models import (
     ClientSecretarialStatutoryInternal,
     ClientStatutoryInternal,
     ClientStatutoryInternalEvents,
+    CourtMaster,
+    CreateExecuter,
+    DepartmentMaster,
+    Entify,
+    GradeMaster,
     Industry,
     IndustryMapping,
+    LicenseDocumentMasterList,
+    LicenseMaster,
     LoginTable,
+    ModuleMappingMaster,
+    ModuleRegMaster,
     PartyMaster,
     RetailActCalender,
     RetailActMaster,
+    RetailDepartmentMaster,
+    RetailDocumentMaster,
     RetailFactoryCompliance,
     RetailFinacialActCalender,
     RetailLabourCodeCompliance,
+    RoleMaster,
     State,
     StatutoryFinancialSetup,
     StatutorySecretarialSetup,
     StatutorySetup,
+    StoreComplianceStatusMaster,
+    StoreMapping,
+    StoreMaster,
+    StorePrefix,
     Subsidiary,
+    VendorClientDocument,
 )
 
 from .views import (
@@ -1321,3 +1341,1241 @@ def verifyvalid(request):
         )
         return legacy_json_string([{"msg": "Update Successfully"}])
     return legacy_json_string([])
+
+
+# ---------------------------------------------------------------------------
+# RetailController master lookups (GetSearchModuleReg / Search*Master etc.).
+# Each returns a JSON array of row dicts keyed by the migrated column names.
+# ---------------------------------------------------------------------------
+
+
+def _model_dict(row):
+    """Serialize one model instance to a dict keyed by DB column names."""
+    return {
+        (f.db_column or f.attname): getattr(row, f.attname)
+        for f in row._meta.fields
+    }
+
+
+def _party_name_map():
+    return {p.PartyId: p.PartyName for p in PartyMaster.objects.all()}
+
+
+def _login_name_map():
+    return {l.LoginId: l for l in LoginTable.objects.all()}
+
+
+@csrf_exempt
+def get_search_module_reg(request):
+    """POST /api/Retail/GetSearchModuleReg — RTL.Usp_Module_Reg_Master list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = ModuleRegMaster.objects.all()
+    row_id = body.get("Id")
+    if row_id:
+        qs = qs.filter(Id=row_id)
+    return legacy_json_string([_model_dict(r) for r in qs[:500]])
+
+
+@csrf_exempt
+def search_role_master(request):
+    """POST /api/Retail/SearchRoleMaster — RTL.Usp_RoleMaster list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(RoleMaster.objects.all())
+    return legacy_json_string([
+        {
+            "Id": r.Id,
+            "Name": r.Name,
+            "Description": r.Description,
+            "StartDate": r.StartDate,
+            "EndDate": r.EndDate,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def search_grade_master(request):
+    """POST /api/Retail/SearchGradeMaster — RTL.Usp_GradeMaster list
+    (ActionType + optional PartyId)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = GradeMaster.objects.all()
+    party_id = body.get("PartyId")
+    if party_id:
+        qs = qs.filter(PartyId=party_id)
+    return legacy_json_string([_model_dict(r) for r in qs[:1000]])
+
+
+@csrf_exempt
+def search_store_mapping(request):
+    """POST /api/Retail/SearchStoreMapping — RTL.Usp_StoreMapping list for a
+    user (DAL passes PartyId as @UserId)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = StoreMapping.objects.all()
+    user_id = body.get("UserId") or body.get("PartyId")
+    if user_id:
+        qs = qs.filter(UserId=user_id)
+    rows = list(qs[:2000])
+    store_map = {s.Id: s.StoreName for s in StoreMaster.objects.all()}
+    party_map = _party_name_map()
+    return legacy_json_string([
+        {
+            "Id": r.Id,
+            "StoreId": r.StoreId,
+            "StoreName": store_map.get(r.StoreId),
+            "UserId": r.UserId,
+            "PartyId": r.PartyId,
+            "PartyName": party_map.get(r.PartyId),
+            "PartyTypeId": r.PartyTypeId,
+            "CreatedOn": r.CreatedOn,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def search_store_prefix(request):
+    """POST /api/Retail/SearchStorePrefix — RTL.USP_StorePrefix list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(StorePrefix.objects.all())
+    return legacy_json_string([_model_dict(r) for r in rows])
+
+
+@csrf_exempt
+def search_department_master(request):
+    """POST /api/Retail/SearchDepartmentMaster — RTL.Usp_DepartmentMaster
+    list (store-compliance departments)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(DepartmentMaster.objects.all())
+    return legacy_json_string([_model_dict(r) for r in rows[:1000]])
+
+
+@csrf_exempt
+def search_retail_licence_master(request):
+    """POST /api/Retail/SearchRetailLicenceMaster —
+    RTL.Usp_RetailLicenseDocuementMaster list (licence masters)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = LicenseMaster.objects.all()
+    license_id = body.get("LicenseId") or body.get("Id")
+    if license_id:
+        qs = qs.filter(LicenseId=license_id)
+    search = body.get("Search")
+    if search:
+        qs = qs.filter(LicenseName__icontains=search)
+    rows = list(qs[:1000])
+    return legacy_json_string([
+        {
+            "LicenseId": r.LicenseId,
+            "LicenseName": r.LicenseName,
+            "LicenseMasterType": r.LicenseMasterType,
+            "StartDate": r.StartDate,
+            "EndDate": r.EndDate,
+            "IsDeleted": r.IsDeleted,
+            "PermissionId": r.PermissionId,
+            "StateId": r.StateId,
+            "Category": r.Category,
+            "Industry": r.Industry,
+            "LicenseType": r.LicenseType,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def search_license_document_master_list(request):
+    """POST /api/Retail/SearchLicenseDocumentMasterList — licence document
+    master list (RTL.GetLicenseMasterDocumentList backing table)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(LicenseDocumentMasterList.objects.all())
+    return legacy_json_string([_model_dict(r) for r in rows])
+
+
+@csrf_exempt
+def search_retail_assign_executer(request):
+    """POST /api/Retail/SearchRetailAssignExecuter — RTL.USP_AssignExecuter
+    list (executers assigned to clients)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = AssignExecuter.objects.all()
+    row_id = body.get("Id")
+    if row_id:
+        qs = qs.filter(Id=row_id)
+    rows = list(qs)
+    login_map = _login_name_map()
+    party_map = _party_name_map()
+    return legacy_json_string([
+        {
+            "Id": r.Id,
+            "ExecuterId": r.ExecuterId,
+            "ExecuterName": login_map.get(r.ExecuterId).UserName
+            if login_map.get(r.ExecuterId) else None,
+            "PartyId": r.PartyId,
+            "PartyName": party_map.get(r.PartyId),
+            "ClientId": r.ClientId,
+            "ClientName": party_map.get(r.ClientId),
+            "Createdby": getattr(r, "Createdby", None),
+            "CreatedOn": getattr(r, "CreatedOn", None),
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def search_retail_create_executer(request):
+    """POST /api/Retail/SearchRetailCreateExecuter — RTL.USP_CreateExecuter
+    list (users flagged as executers for a party)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = CreateExecuter.objects.all()
+    row_id = body.get("Id")
+    if row_id:
+        qs = qs.filter(Id=row_id)
+    rows = list(qs)
+    login_map = _login_name_map()
+    party_map = _party_name_map()
+    return legacy_json_string([
+        {
+            "Id": r.Id,
+            "PartyId": r.PartyId,
+            "PartyName": party_map.get(r.PartyId),
+            "ExecuterId": r.ExecuterId,
+            "ExecuterName": login_map.get(r.ExecuterId).UserName
+            if login_map.get(r.ExecuterId) else None,
+            "IsExecuter": r.IsExecuter,
+            "CreatedOn": r.CreatedOn,
+            "Createdby": r.Createdby,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def search_retail_client_doc_mapping(request):
+    """POST /api/Retail/SearchRetailClientDocMapping —
+    RTL.USP_ClientDocumentMapping list for a client (ClientId/Createdby)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = VendorClientDocument.objects.all()
+    client_id = body.get("ClientId") or body.get("Id")
+    if client_id:
+        qs = qs.filter(Createdby=client_id)
+    return legacy_json_string([_model_dict(r) for r in qs[:1000]])
+
+
+# ---------------------------------------------------------------------------
+# RetailController master IUDs (InsertUpdateDel* / GetStore / IUD*).
+# Mirrors RetailController.cs + ModuleRegMasterDAL.cs / RetailSectionDAL.cs.
+# ---------------------------------------------------------------------------
+
+
+def _to_int(value, default=None):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _next_pk(model, field="Id"):
+    """Next integer PK for tables with a plain IntegerField PK (no sequence)."""
+    try:
+        last = model.objects.order_by("-" + field).values_list(field, flat=True).first()
+        return (last or 0) + 1
+    except Exception:
+        return 1
+
+
+@csrf_exempt
+def insert_update_del_module_reg(request):
+    """POST /api/Retail/InsertUpdateDelModuleReg — RTL.Usp_Module_Reg_Master IUD.
+    ActionType 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("userid"))
+    data = {
+        "Module_Name": body.get("Module_Name"),
+        "Description": body.get("Description"),
+        "Start_Date": _parse_date(body.get("Start_Date")),
+        "End_Date": _parse_date(body.get("End_Date")),
+        "IsActive": _to_int(body.get("IsActive")),
+        "IsApproval": _to_int(body.get("IsApproval")),
+        "IsDeleted": _to_int(body.get("IsDeleted"), 0),
+    }
+    if action == 1:
+        row = ModuleRegMaster.objects.create(
+            Id=_next_pk(ModuleRegMaster),
+            Created_BY=login_id, Created_Date=timezone.now(), **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        ModuleRegMaster.objects.filter(Id=row_id).update(
+            Updated_By=login_id, Updated_Date=timezone.now(), **data)
+        return legacy_status_result("1")
+    if row_id:
+        ModuleRegMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def get_search_module_mapping_master(request):
+    """POST /api/Retail/GetSearchModuleMappingMaster —
+    RTL.Usp_Module_Mapping_Master list (module <-> party mapping)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = ModuleMappingMaster.objects.all()
+    row_id = _to_int(body.get("Id"))
+    if row_id:
+        qs = qs.filter(Id=row_id)
+    module_map = {m.Id: m for m in ModuleRegMaster.objects.all()}
+    party_map = _party_name_map()
+    rows = []
+    for r in qs[:500]:
+        m = module_map.get(r.Module_Reg_Id)
+        rows.append({
+            "Id": r.Id,
+            "Module_Reg_Id": r.Module_Reg_Id,
+            "Module_Name": m.Module_Name if m else None,
+            "Party_Id": r.Party_Id,
+            "PartyName": party_map.get(r.Party_Id),
+            "Party_Type_Id": r.Party_Type_Id,
+            "Party_Type": "Client" if r.Party_Type_Id == 4 else "Auditor" if r.Party_Type_Id == 3 else None,
+            "IsActive": r.IsActive,
+            "IsApproval": r.IsApproval,
+            "IsDeleted": r.IsDeleted,
+            "Created_BY": r.Created_BY,
+            "Created_Date": r.Created_Date,
+        })
+    return legacy_json_string(rows)
+
+
+@csrf_exempt
+def insert_update_del_mapping_master(request):
+    """POST /api/Retail/InsertUpdateDelMappingMaster —
+    RTL.Usp_Module_Mapping_Master IUD."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("userid"))
+    data = {
+        "Module_Reg_Id": _to_int(body.get("Module_Reg_Id")),
+        "Party_Id": _to_int(body.get("Party_Id")),
+        "Party_Type_Id": _to_int(body.get("Party_Type_Id")),
+        "IsActive": _to_int(body.get("IsActive"), 1),
+        "IsApproval": _to_int(body.get("IsApproval"), 1),
+        "IsDeleted": _to_int(body.get("IsDeleted"), 0),
+    }
+    if action == 1:
+        row = ModuleMappingMaster.objects.create(
+            Id=_next_pk(ModuleMappingMaster),
+            Created_BY=login_id, Created_Date=timezone.now(), **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        ModuleMappingMaster.objects.filter(Id=row_id).update(
+            Updated_By=login_id, Updated_Date=timezone.now(), **data)
+        return legacy_status_result("1")
+    if row_id:
+        ModuleMappingMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_update_del_role_master(request):
+    """POST /api/Retail/InsertUpdateDelRoleMaster — RTL.Usp_RoleMaster IUD.
+    ActionType 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    data = {
+        "PartyType": _to_int(body.get("PartyType")),
+        "PartyId": _to_int(body.get("PartyId")),
+        "UserId": _to_int(body.get("UserId")),
+        "Name": body.get("PartyName") or body.get("RoleName"),
+        "Description": body.get("Description"),
+        "GradeId": _to_int(body.get("GradeId")),
+        "StartDate": body.get("StartDate"),
+        "EndDate": body.get("EndDate"),
+    }
+    if action == 1:
+        row = RoleMaster.objects.create(
+            Id=_next_pk(RoleMaster),
+            CreatedOn=timezone.now(), Createdby=login_id, **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        RoleMaster.objects.filter(Id=row_id).update(
+            UpdatedOn=timezone.now(), Updatedby=login_id, **data)
+        return legacy_status_result("1")
+    if row_id:
+        RoleMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_update_del_grade_master(request):
+    """POST /api/Retail/InsertUpdateDelGradeMaster — RTL.Usp_GradeMaster IUD."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    data = {
+        "PartyType": _to_int(body.get("PartyType")),
+        "PartyId": _to_int(body.get("PartyId")),
+        "Name": body.get("PartyName") or body.get("GradeName"),
+        "Description": body.get("Description"),
+        "Sequence": _to_int(body.get("Attribute1")),
+        "StartDate": _parse_date(body.get("StartDate")),
+        "EndDate": _parse_date(body.get("EndDate")),
+    }
+    if action == 1:
+        row = GradeMaster.objects.create(
+            Id=_next_pk(GradeMaster),
+            CreatedOn=timezone.now(), Createdby=login_id, **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        GradeMaster.objects.filter(Id=row_id).update(
+            UpdatedOn=timezone.now(), Updatedby=login_id, **data)
+        return legacy_status_result("1")
+    if row_id:
+        GradeMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def get_store(request):
+    """POST /api/Retail/GetStore — RTL.Usp_StoreMaster store list.
+    Action 5/11 returns the stores visible to a user (Id/UserId)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType")) or _to_int(body.get("Action"))
+    user_id = _to_int(body.get("Id")) or _to_int(body.get("UserId")) or _login_id(request)
+    rows = list(StoreMaster.objects.all()[:2000])
+    mapped_ids = set()
+    if user_id:
+        mapped_ids = set(StoreMapping.objects.filter(UserId=user_id)
+                         .values_list("StoreId", flat=True))
+    return legacy_json_string([
+        {
+            "StoreId": s.Id,
+            "Id": s.Id,
+            "StoreName": s.StoreName,
+            "StoreCode": s.StoreCode,
+            "RefStoreCode": s.RefStoreCode,
+            "StoreLocation": s.StoreLocation,
+            "CompleteAddress": s.CompleteAddress,
+            "IsActive": s.IsActive,
+            "IsAllow": s.Id in mapped_ids,
+        }
+        for s in rows
+    ])
+
+
+@csrf_exempt
+def insert_update_del_store_mapping(request):
+    """POST /api/Retail/InsertUpdateDelStoreMapping — RTL.Usp_StoreMapping IUD.
+    ActionType 1=insert (DocumentList of StoreId), 5=delete mapping by party."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    party_id = _to_int(body.get("PartyId"))
+    user_id = _to_int(body.get("UserId"))
+    party_type_id = _to_int(body.get("PartyTypeId"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    store_list = body.get("DocumentList") or body.get("StoreList") or []
+    if action == 1:
+        store_ids = []
+        for item in store_list:
+            if isinstance(item, dict):
+                store_ids.append(_to_int(item.get("StoreId")))
+            elif isinstance(item, str):
+                store_ids.append(_to_int(item.split(",")[0]))
+        for sid in store_ids:
+            if not sid:
+                continue
+            existing = StoreMapping.objects.filter(
+                StoreId=sid, UserId=user_id, PartyId=party_id).first()
+            if existing:
+                StoreMapping.objects.filter(Id=existing.Id).update(
+                    PartyTypeId=party_type_id, CreatedBy=login_id,
+                    CreatedOn=timezone.now())
+            else:
+                StoreMapping.objects.create(
+                    Id=_next_pk(StoreMapping),
+                    StoreId=sid, UserId=user_id, PartyId=party_id,
+                    PartyTypeId=party_type_id, CreatedBy=login_id,
+                    CreatedOn=timezone.now())
+        return legacy_status_result("1")
+    if action in (3, 5):
+        qs = StoreMapping.objects.all()
+        if party_type_id:
+            qs = qs.filter(PartyTypeId=party_type_id)
+        if user_id:
+            qs = qs.filter(UserId=user_id)
+        if party_id:
+            qs = qs.filter(PartyId=party_id)
+        qs.delete()
+        return legacy_status_result("1")
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_update_del_industry_mapping(request):
+    """POST /api/Retail/InsertUpdateDelIndustryMapping — RTL.Usp_StoreMapping IUD.
+    StoreList items are 'StoreId,CategoryId' pairs (industry mapping)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    party_id = _to_int(body.get("PartyId"))
+    user_id = _to_int(body.get("UserId"))
+    party_type_id = _to_int(body.get("PartyTypeId"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    store_list = body.get("DocumentList") or body.get("StoreList") or []
+    if action == 1:
+        store_ids = []
+        for item in store_list:
+            if isinstance(item, dict):
+                store_ids.append(_to_int(item.get("StoreId")))
+            elif isinstance(item, str):
+                store_ids.append(_to_int(item.split(",")[0]))
+        for sid in store_ids:
+            if not sid:
+                continue
+            existing = StoreMapping.objects.filter(
+                StoreId=sid, UserId=user_id, PartyId=party_id).first()
+            if existing:
+                StoreMapping.objects.filter(Id=existing.Id).update(
+                    PartyTypeId=party_type_id, CreatedBy=login_id,
+                    CreatedOn=timezone.now())
+            else:
+                StoreMapping.objects.create(
+                    Id=_next_pk(StoreMapping),
+                    StoreId=sid, UserId=user_id, PartyId=party_id,
+                    PartyTypeId=party_type_id, CreatedBy=login_id,
+                    CreatedOn=timezone.now())
+        return legacy_status_result("1")
+    if action in (3, 5):
+        qs = StoreMapping.objects.all()
+        if party_type_id:
+            qs = qs.filter(PartyTypeId=party_type_id)
+        if user_id:
+            qs = qs.filter(UserId=user_id)
+        if party_id:
+            qs = qs.filter(PartyId=party_id)
+        qs.delete()
+        return legacy_status_result("1")
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_update_del_store_prefix(request):
+    """POST /api/Retail/InsertUpdateDelStorePrefix — RTL.USP_StorePrefix IUD.
+    Action 1=insert, 2=update."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("LoginId"))
+    data = {
+        "PartyId": _to_int(body.get("PartyTypeId")),
+        "Prefix": body.get("Prefix"),
+        "Suffix": body.get("Suffix"),
+        "StartDate": _parse_date(body.get("StartDate")),
+        "EndDate": _parse_date(body.get("EndDate")),
+    }
+    if action == 1:
+        row = StorePrefix.objects.create(
+            Id=_next_pk(StorePrefix),
+            CreatedBy=login_id, CreatedOn=timezone.now(), **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        StorePrefix.objects.filter(Id=row_id).update(
+            ModifyBy=login_id, ModifiedOn=timezone.now(), **data)
+        return legacy_status_result("1")
+    if row_id:
+        StorePrefix.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def del_store_prefix(request):
+    """POST /api/Retail/DelStorePrefix — RTL.USP_StorePrefix delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    row_id = _to_int(body.get("Id"))
+    if row_id:
+        StorePrefix.objects.filter(Id=row_id).delete()
+    return legacy_status_result("1")
+
+
+@csrf_exempt
+def insert_update_del_department_master(request):
+    """POST /api/Retail/InsertUpdateDelDepartmentMaster —
+    RTL.Usp_DepartmentMaster IUD."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    dept_id = _to_int(body.get("Id")) or _to_int(body.get("DepartmentId"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    data = {
+        "PartyType": _to_int(body.get("PartyType")),
+        "PartyId": _to_int(body.get("PartyId")),
+        "DepartmentName": body.get("PartyName") or body.get("DepartmentName"),
+        "Description": body.get("Description"),
+        "StartDate": body.get("StartDate"),
+        "EndDate": body.get("EndDate"),
+    }
+    if action == 1:
+        row = DepartmentMaster.objects.create(
+            DepartmentId=_next_pk(DepartmentMaster, "DepartmentId"),
+            CreatedBy=login_id, CreatedOn=timezone.now(), **data)
+        return legacy_status_result(str(row.DepartmentId))
+    if action == 2 and dept_id:
+        DepartmentMaster.objects.filter(DepartmentId=dept_id).update(
+            UpdatedBy=login_id, UpdatedOn=timezone.now(), **data)
+        return legacy_status_result("1")
+    if dept_id:
+        DepartmentMaster.objects.filter(DepartmentId=dept_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_update_del_store_compliance_status_master(request):
+    """POST /api/Retail/InsertUpdateDelStoreComplianceStatusMaster —
+    RTL.Usp_StoreComplianceStatusMaster IUD."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    sc_type = body.get("PartyName") or body.get("StoreComplinaceStatusType") or body.get("Type")
+    if action == 1:
+        row = StoreComplianceStatusMaster.objects.create(
+            Id=_next_pk(StoreComplianceStatusMaster),
+            Type=sc_type, Createdby=login_id, CreatedOn=timezone.now(),
+            Updatedby=login_id, UpdatedOn=timezone.now())
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        StoreComplianceStatusMaster.objects.filter(Id=row_id).update(
+            Type=sc_type, Updatedby=login_id, UpdatedOn=timezone.now())
+        return legacy_status_result("1")
+    if row_id:
+        StoreComplianceStatusMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_update_del_license_document_master(request):
+    """POST /api/Retail/InsertUpdateDelLicenseDocumentMaster —
+    RTL.Usp_RetailLicenseDocuementMaster IUD (licence masters).
+    ActionType 1=insert, 2=update, 3=delete, 6/7/12 = header/detail update."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    license_id = _to_int(body.get("LicenseId")) or _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    data = {
+        "LicenseName": body.get("LicenseName"),
+        "LicenseMasterType": body.get("LicenseMasterType"),
+        "StartDate": body.get("StartDate"),
+        "EndDate": body.get("EndDate"),
+        "PermissionId": body.get("PermissionId"),
+        "StateId": _to_int(body.get("StateList")) or _to_int(body.get("StateId")),
+        "Category": body.get("CategoryList"),
+        "Industry": body.get("Industry"),
+        "ApplicationLink": body.get("ApplicationLink"),
+        "Act": body.get("Act"),
+        "Detail": body.get("Detail"),
+        "IsDeleted": False,
+    }
+    if action in (1, 6, 7, 12):
+        if action in (6, 7, 12):
+            if license_id:
+                LicenseMaster.objects.filter(LicenseId=license_id).update(
+                    ApplicationLink=data["ApplicationLink"],
+                    Act=data["Act"],
+                    Detail=data["Detail"],
+                    LicenseName=data["LicenseName"] or None,
+                    StartDate=data["StartDate"] or None,
+                    EndDate=data["EndDate"] or None,
+                )
+                return legacy_status_result("1")
+            return legacy_status_result("")
+        row = LicenseMaster.objects.create(
+            LicenseId=_next_pk(LicenseMaster, "LicenseId"),
+            Createdby=login_id, CreatedOn=timezone.now(), **data)
+        return legacy_status_result(str(row.LicenseId))
+    if action == 2 and license_id:
+        LicenseMaster.objects.filter(LicenseId=license_id).update(**data)
+        return legacy_status_result("1")
+    if license_id:
+        LicenseMaster.objects.filter(LicenseId=license_id).update(
+            IsDeleted=True)
+    return legacy_status_result("1")
+
+
+@csrf_exempt
+def iud_retail_licence_master(request):
+    """POST /api/Retail/IUDRetailLicenceMaster — licence master IUD
+    (same backing proc as InsertUpdateDelLicenseDocumentMaster)."""
+    return insert_update_del_license_document_master(request)
+
+
+@csrf_exempt
+def get_license_master_document_list(request):
+    """GET/POST /api/Retail/GetLicenseMasterDocumentList — licence document list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(LicenseDocumentMasterList.objects.all())
+    return legacy_json_string([_model_dict(r) for r in rows])
+
+
+@csrf_exempt
+def search_license_document_master(request):
+    """POST /api/Retail/SearchLicenseDocumentMaster —
+    RTL.Usp_RetailLicenseDocuementMaster licence master search."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = LicenseMaster.objects.all()
+    license_id = _to_int(body.get("Id")) or _to_int(body.get("LicenseId"))
+    if license_id:
+        qs = qs.filter(LicenseId=license_id)
+    search = body.get("Search")
+    if search:
+        qs = qs.filter(LicenseName__icontains=search)
+    rows = list(qs[:1000])
+    return legacy_json_string([
+        {
+            "LicenseId": r.LicenseId,
+            "LicenseName": r.LicenseName,
+            "LicenseMasterType": r.LicenseMasterType,
+            "StartDate": r.StartDate,
+            "EndDate": r.EndDate,
+            "IsDeleted": r.IsDeleted,
+            "PermissionId": r.PermissionId,
+            "StateId": r.StateId,
+            "Category": r.Category,
+            "Industry": r.Industry,
+            "ApplicationLink": r.ApplicationLink,
+            "Act": r.Act,
+            "Detail": r.Detail,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def insert_update_del_retail_document_master(request):
+    """POST /api/Retail/InsertUpdateDelRetailDocumentMaster —
+    RTL.USP_RetailDocumentMaster IUD. Action 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("Createdby"))
+    data = {
+        "DocumentName": body.get("DocumentName"),
+        "DocumentType": body.get("DocumentType"),
+        "Frequency": body.get("Frequency"),
+        "FormatType": body.get("FormatType"),
+        "Note": body.get("Note"),
+        "Act": body.get("Act"),
+        "IsDefault": str(body.get("IsDefault")).lower() in ("true", "1", "yes"),
+        "Isdelete": str(body.get("Isdelete")).lower() in ("true", "1", "yes"),
+        "FormNo": body.get("FormNo"),
+        "StateId": body.get("StateId"),
+        "Criticality": body.get("Criticality"),
+        "Createdby": str(login_id) if login_id else None,
+    }
+    if action == 1:
+        row = RetailDocumentMaster.objects.create(
+            Id=_next_pk(RetailDocumentMaster),
+            CreatedOn=timezone.now(), **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        RetailDocumentMaster.objects.filter(Id=row_id).update(
+            UpdatedON=timezone.now(), Updatedby=str(login_id) if login_id else None,
+            **data)
+        return legacy_status_result("1")
+    if row_id:
+        RetailDocumentMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def search_retail_document_master(request):
+    """POST /api/Retail/SearchRetailDocumentMaster —
+    RTL.USP_RetailDocumentMaster list (Action 4)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(RetailDocumentMaster.objects.all()[:1000])
+    login_map = _login_name_map()
+    return legacy_json_string([
+        {
+            "Id": r.Id,
+            "DocumentName": r.DocumentName,
+            "DocumentType": r.DocumentType,
+            "Frequency": r.Frequency,
+            "FormatType": r.FormatType,
+            "Note": r.Note,
+            "Act": r.Act,
+            "IsDefault": r.IsDefault,
+            "Isdelete": r.Isdelete,
+            "FormNo": r.FormNo,
+            "StateId": r.StateId,
+            "Criticality": r.Criticality,
+            "CreatedOn": r.CreatedOn,
+            "Createdby": r.Createdby,
+            "Updatedby": r.Updatedby,
+            "UpdatedON": _fmt_date(r.UpdatedON, "%d/%m/%Y") if r.UpdatedON else None,
+            "Name": login_map.get(_to_int(r.Updatedby)).Name if r.Updatedby and login_map.get(_to_int(r.Updatedby)) else None,
+            "LastUpdate": _fmt_date(r.UpdatedON, "%d/%m/%Y") if r.UpdatedON else None,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def insert_update_del_case_status_master(request):
+    """POST /api/Retail/InsertUpdateDelCaseStatusMaster —
+    dbo.CaseStatus IUD (Action 1=insert, 2=update, 3=delete)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or body.get("CreatedBy")
+    case_status = body.get("CaseStatus") or body.get("Name")
+    if action == 1:
+        row = CaseStatusMaster.objects.create(
+            Id=_next_pk(CaseStatusMaster),
+            CaseStatus=case_status, CreatedBy=str(login_id) if login_id else None,
+            CreatedOn=timezone.now())
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        CaseStatusMaster.objects.filter(Id=row_id).update(
+            CaseStatus=case_status,
+            CreatedBy=str(login_id) if login_id else None)
+        return legacy_status_result("1")
+    if row_id:
+        CaseStatusMaster.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def search_case_status_master(request):
+    """POST /api/Retail/SearchCaseStatusMaster — dbo.CaseStatus list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(CaseStatusMaster.objects.all()[:1000])
+    return legacy_json_string([
+        {"Id": r.Id, "CaseStatus": r.CaseStatus, "CreatedBy": r.CreatedBy,
+         "CreatedOn": r.CreatedOn}
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def insert_update_del_entify(request):
+    """POST /api/Retail/InsertUpdateDelEntify — RTL.usp_Entify IUD.
+    Action 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("userid")) or _to_int(body.get("UserId"))
+    fields = [
+        "EntityType", "ListedCompany", "ListedStatus", "StockExchange",
+        "FundingStatus", "FundingType", "Turnover", "NetProfit", "Borrowing",
+        "AuthorizedShareCap", "IssuedShareCap", "PaidupCap", "AverageNetProfit",
+        "HoldingSubsidiary", "NBFCRegisterd", "RBIRegistered", "Startup",
+        "MSMERegistered", "RegisteredunderGST", "CIN", "PAN", "TAN",
+        "IncorporationDate", "RegisteredState", "NICCode", "FinancialYearEnd",
+        "ResidentDirector", "IndependentDirectors", "WomenDirector",
+        "CSAppointed", "KMPAppointed",
+    ]
+    data = {}
+    for f in fields:
+        v = body.get(f)
+        if f in ("IndependentDirectors",):
+            data[f] = _to_int(v)
+        elif f == "IncorporationDate":
+            data[f] = _parse_date(v)
+        else:
+            data[f] = v
+    if action == 1:
+        row = Entify.objects.create(
+            Id=_next_pk(Entify), UserId=login_id, **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2:
+        qs = Entify.objects.all()
+        if row_id:
+            qs = qs.filter(Id=row_id)
+        else:
+            qs = qs.filter(UserId=login_id)
+        target = qs.first()
+        if target:
+            Entify.objects.filter(Id=target.Id).update(**data)
+            return legacy_status_result("1")
+        row = Entify.objects.create(
+            Id=_next_pk(Entify), UserId=login_id, **data)
+        return legacy_status_result(str(row.Id))
+    if row_id:
+        Entify.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def search_entify(request):
+    """POST /api/Retail/SearchEntify — RTL.usp_Entify list (Action 4, UserId)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = Entify.objects.all()
+    user_id = _to_int(body.get("UserId")) or _login_id(request)
+    if user_id:
+        qs = qs.filter(UserId=user_id)
+    return legacy_json_string([_model_dict(r) for r in qs[:100]])
+
+
+@csrf_exempt
+def iud_court_master(request):
+    """POST /api/Retail/IUDCourtMaster — RTL.Usp_RetailCourtMaster IUD.
+    Action 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id")) or _to_int(body.get("ID"))
+    name = body.get("Name")
+    if action == 1:
+        row = CourtMaster.objects.create(ID=_next_pk(CourtMaster), Name=name)
+        return legacy_status_result(str(row.ID))
+    if action == 2 and row_id:
+        CourtMaster.objects.filter(ID=row_id).update(Name=name)
+        return legacy_status_result("1")
+    if row_id:
+        CourtMaster.objects.filter(ID=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def search_court_master(request):
+    """POST /api/Retail/SearchCourtMaster — RTL.Usp_RetailCourtMaster list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(CourtMaster.objects.all()[:1000])
+    return legacy_json_string([{"ID": r.ID, "Name": r.Name} for r in rows])
+
+
+@csrf_exempt
+def iud_project_master(request):
+    """POST /api/Retail/IUDProjectMaster — aliased to court master in legacy."""
+    return iud_court_master(request)
+
+
+@csrf_exempt
+def search_project_master(request):
+    """POST /api/Retail/SearchProjectMaster — aliased to court master in legacy."""
+    return search_court_master(request)
+
+
+@csrf_exempt
+def insert_update_del_industry_license_mapping(request):
+    """POST /api/Retail/InsertUpdateDelIndustryLicenseMapping —
+    RTL.Usp_CStoreMapping IUD (client store mapping)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    party_id = _to_int(body.get("PartyId"))
+    user_id = _to_int(body.get("UserId"))
+    party_type_id = _to_int(body.get("PartyTypeId"))
+    login_id = _login_id(request) or _to_int(body.get("CreatedBy"))
+    store_list = body.get("DocumentList") or body.get("StoreList") or []
+    if action == 1:
+        store_ids = []
+        for item in store_list:
+            if isinstance(item, dict):
+                store_ids.append(_to_int(item.get("StoreId")))
+            elif isinstance(item, str):
+                store_ids.append(_to_int(item.split(",")[0]))
+        for sid in store_ids:
+            if not sid:
+                continue
+            existing = StoreMapping.objects.filter(
+                StoreId=sid, UserId=user_id, PartyId=party_id).first()
+            if existing:
+                StoreMapping.objects.filter(Id=existing.Id).update(
+                    PartyTypeId=party_type_id, CreatedBy=login_id,
+                    CreatedOn=timezone.now())
+            else:
+                StoreMapping.objects.create(
+                    Id=_next_pk(StoreMapping),
+                    StoreId=sid, UserId=user_id, PartyId=party_id,
+                    PartyTypeId=party_type_id, CreatedBy=login_id,
+                    CreatedOn=timezone.now())
+        return legacy_status_result("1")
+    if action in (3, 5):
+        qs = StoreMapping.objects.all()
+        if party_type_id:
+            qs = qs.filter(PartyTypeId=party_type_id)
+        if user_id:
+            qs = qs.filter(UserId=user_id)
+        if party_id:
+            qs = qs.filter(PartyId=party_id)
+        qs.delete()
+        return legacy_status_result("1")
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def search_industry_license_mapping(request):
+    """POST /api/Retail/SearchIndustryLicenseMapping —
+    RTL.Usp_CStoreMapping list (ActionType 4/3 + PartyId)."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    qs = StoreMapping.objects.all()
+    user_id = _to_int(body.get("UserId")) or _to_int(body.get("PartyId"))
+    if user_id:
+        qs = qs.filter(UserId=user_id)
+    rows = list(qs[:2000])
+    store_map = {s.Id: s for s in StoreMaster.objects.all()}
+    party_map = _party_name_map()
+    return legacy_json_string([
+        {
+            "Id": r.Id,
+            "StoreId": r.StoreId,
+            "StoreName": store_map.get(r.StoreId).StoreName if store_map.get(r.StoreId) else None,
+            "StoreCode": store_map.get(r.StoreId).StoreCode if store_map.get(r.StoreId) else None,
+            "UserId": r.UserId,
+            "PartyId": r.PartyId,
+            "PartyName": party_map.get(r.PartyId),
+            "PartyTypeId": r.PartyTypeId,
+            "CreatedOn": r.CreatedOn,
+        }
+        for r in rows
+    ])
+
+
+@csrf_exempt
+def iud_retail_assign_executer(request):
+    """POST /api/Retail/IUDRetailAssignExecuter — RTL.USP_AssignExecuter IUD.
+    ActionType 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request)
+    executer_id = _to_int(body.get("UserId")) or _to_int(body.get("ExecuterId"))
+    party_id = _to_int(body.get("PartyId"))
+    client_id = _to_int(body.get("ClientId"))
+    if action == 1:
+        row = AssignExecuter.objects.create(
+            Id=_next_pk(AssignExecuter),
+            ExecuterId=executer_id, PartyId=party_id, ClientId=client_id,
+            Createdby=login_id, CreatedOn=timezone.now())
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        AssignExecuter.objects.filter(Id=row_id).update(
+            ExecuterId=executer_id, PartyId=party_id, ClientId=client_id)
+        return legacy_status_result("1")
+    if row_id:
+        AssignExecuter.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def iud_retail_create_executer(request):
+    """POST /api/Retail/IUDRetailCreateExecuter — RTL.USP_CreateExecuter IUD.
+    ActionType 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("ActionType"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request)
+    party_id = _to_int(body.get("PartyId"))
+    executer_id = _to_int(body.get("UserId")) or _to_int(body.get("ExecuterId"))
+    is_exec = _to_int(body.get("IsActive"), 1)
+    if action == 1:
+        row = CreateExecuter.objects.create(
+            Id=_next_pk(CreateExecuter),
+            PartyId=party_id, ExecuterId=executer_id, IsExecuter=is_exec,
+            Createdby=login_id, CreatedOn=timezone.now())
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        CreateExecuter.objects.filter(Id=row_id).update(
+            PartyId=party_id, ExecuterId=executer_id, IsExecuter=is_exec)
+        return legacy_status_result("1")
+    if row_id:
+        CreateExecuter.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def iud_retail_client_doc_mapping(request):
+    """POST /api/Retail/IUDRetailClientDocMapping — RTL.USP_ClientDocumentMapping
+    IUD. Action + DocumentList (MenuId) + Createdby + ClientId."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    created_by = _to_int(body.get("Createdby")) or _login_id(request)
+    client_id = _to_int(body.get("ClientId"))
+    doc_list = body.get("DocumentList") or []
+    doc_ids = []
+    for item in doc_list:
+        if isinstance(item, dict):
+            doc_ids.append(item.get("MenuId") or item.get("DocumentId"))
+        else:
+            doc_ids.append(item)
+    if action == 3 and client_id:
+        VendorClientDocument.objects.filter(Createdby=client_id).delete()
+        return legacy_status_result("1")
+    if action == 1 and client_id:
+        VendorClientDocument.objects.filter(Createdby=client_id).delete()
+        for d in doc_ids:
+            if d in (None, ""):
+                continue
+            VendorClientDocument.objects.create(
+                Id=_next_pk(VendorClientDocument),
+                DocumentName=str(d), Createdby=created_by or client_id,
+                createdon=timezone.now())
+        return legacy_status_result("1")
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def insert_client_onboarding(request):
+    """POST /api/Retail/InsertClientOnboarding — RTL.USP_ClientBoarding IUD.
+    Action 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id"))
+    login_id = _login_id(request) or _to_int(body.get("Createdby"))
+    data = {
+        "Boardingtype": body.get("Boardingtype"),
+        "DocumentName": body.get("DocumentName"),
+        "Frequency": body.get("Frequency"),
+        "Month": body.get("Month"),
+        "Year": body.get("Year"),
+        "State": body.get("State"),
+        "Description": body.get("Description"),
+        "DueDate": body.get("DueDate"),
+        "Remark": body.get("Remark"),
+        "UploadFile": body.get("UploadFile"),
+        "ExcelFile": body.get("ExcelFile") or body.get("excelFile"),
+    }
+    if action == 1:
+        row = ClientBoarding.objects.create(
+            Id=_next_pk(ClientBoarding),
+            Createdby=login_id, Createdon=timezone.now(), **data)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        ClientBoarding.objects.filter(Id=row_id).update(**data)
+        return legacy_status_result("1")
+    if row_id:
+        ClientBoarding.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")
+
+
+@csrf_exempt
+def search_client_onboarding(request):
+    """POST /api/Retail/SearchClientOnboarding — RTL.USP_ClientBoarding list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(ClientBoarding.objects.all()[:1000])
+    return legacy_json_string([_model_dict(r) for r in rows])
+
+
+@csrf_exempt
+def delete_client_onboarding(request):
+    """POST /api/Retail/DeleteClientOnboarding — client boarding delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    row_id = _to_int(body.get("Id"))
+    if row_id:
+        ClientBoarding.objects.filter(Id=row_id).delete()
+    return legacy_status_result("1")
+
+
+@csrf_exempt
+def insert_boarding_mapping(request):
+    """POST /api/Retail/InsertBoardingMapping — boarding-mapping insert."""
+    return inu_boarding_mapping(request)
+
+
+@csrf_exempt
+def search_boarding_mapping(request):
+    """POST /api/Retail/SearchBoardingMapping — RTL.USP_BoardingMapping list."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    rows = list(BoardingMapping.objects.all()[:1000])
+    return legacy_json_string([_model_dict(r) for r in rows])
+
+
+@csrf_exempt
+def inu_boarding_mapping(request):
+    """POST /api/Retail/INUBoardingMapping — RTL.USP_BoardingMapping IUD.
+    Action 1=insert, 2=update, 3=delete."""
+    if not request.user.is_authenticated:
+        return session_expired()
+    body = _request_params(request)
+    action = _to_int(body.get("Action"), 1)
+    row_id = _to_int(body.get("Id"))
+    party_id = body.get("ClientId") or body.get("PartyId")
+    user_id = body.get("UserId")
+    boarding_type = body.get("BoardingType") or body.get("Boardingtype")
+    if action == 1:
+        row = BoardingMapping.objects.create(
+            Id=_next_pk(BoardingMapping),
+            PartyId=str(party_id) if party_id is not None else None,
+            UserId=str(user_id) if user_id is not None else None,
+            BoardingType=boarding_type)
+        return legacy_status_result(str(row.Id))
+    if action == 2 and row_id:
+        BoardingMapping.objects.filter(Id=row_id).update(
+            PartyId=str(party_id) if party_id is not None else None,
+            UserId=str(user_id) if user_id is not None else None,
+            BoardingType=boarding_type)
+        return legacy_status_result("1")
+    if row_id:
+        BoardingMapping.objects.filter(Id=row_id).delete()
+    return legacy_status_result("")

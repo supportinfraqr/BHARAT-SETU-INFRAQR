@@ -19,6 +19,16 @@ SECRET_KEY = os.environ.get("BSS_SECRET_KEY", "django-insecure-change-me-in-prod
 DEBUG = os.environ.get("BSS_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("BSS_ALLOWED_HOSTS", "*").split(",")
 
+# Origins allowed to POST with session/CSRF (Cloudflare-tunnel frontend domains + localhost dev)
+CSRF_TRUSTED_ORIGINS = [
+    "https://bharat-shramsetu.infraqr.com",
+    "https://bharat-sharansetu.infraqr.com",
+    "https://bharat-setu.infraqr.com",
+    "http://localhost",
+    "http://localhost:8081",
+    "http://localhost:5173",
+]
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -110,7 +120,6 @@ CACHES = {
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

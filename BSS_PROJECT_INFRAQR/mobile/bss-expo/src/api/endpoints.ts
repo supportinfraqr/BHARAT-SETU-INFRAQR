@@ -21,7 +21,7 @@ export const qrApi = {
   scans: () => api.get('/api/qr/scans/'),
   notifications: () => api.get('/api/qr/notifications/'),
   workerCard: (workerId: number, format = 'png') =>
-    `${api.defaults.baseURL}/api/qr/workers/${workerId}/card/?format=${format}`,
+    `${api.defaults.baseURL}/api/qr/workers/${workerId}/card/?fmt=${format}`,
 };
 
 export const legacyApi = {

@@ -399,7 +399,7 @@ class WorkerCardView(APIView):
         qr = QRCode.objects.filter(entity_type="WORKER", entity_id=worker.pk).first()
         if not qr:
             qr = create_qr_for_entity("WORKER", worker.pk)
-        fmt = request.query_params.get("format", "png").lower()
+        fmt = request.query_params.get("fmt", "png").lower()
         if fmt not in ("png", "pdf"):
             fmt = "png"
         return card_response(worker, qr.qr_reference, fmt)
