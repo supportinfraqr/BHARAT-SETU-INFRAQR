@@ -1,6 +1,7 @@
 ﻿using BAL;
 using DAL;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -22,6 +23,14 @@ namespace EesassinErp.Controllers
 
     public class LoginController : Controller
     {
+        private const string V1SessionKey = "ApiV1Session";
+
+        public class LoginV1Request
+        {
+            public string Username { get; set; }
+            public string Password { get; set; }
+            public string Method { get; set; }
+        }
         //public string CaptchaImage()
         //{
         //    bool noisy = true;
@@ -200,6 +209,137 @@ namespace EesassinErp.Controllers
 
     return JsonConvert.SerializeObject(new[] { user });
 }
+
+        [HttpPost]
+        public ActionResult LoginV1(LoginV1Request request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return V1AuthError(400, "VALIDATION_ERROR", "Username and password are required.");
+            }
+
+            string action;
+            switch ((request.Method ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "otp":
+                    action = "43";
+                    break;
+                case "mpin":
+                    action = "44";
+                    break;
+                case "password":
+                    action = "45";
+                    break;
+                default:
+                    return V1AuthError(400, "UNSUPPORTED_LOGIN_METHOD", "Use password, MPIN, or OTP authentication.");
+            }
+
+            string legacyResponse = NGetUserId(new LoginBAL
+            {
+                UserName = request.Username,
+                Password = request.Password,
+                Action = action
+            });
+
+            JArray users;
+            try
+            {
+                users = JArray.Parse(legacyResponse);
+            }
+            catch (JsonException)
+            {
+                if (legacyResponse == "-11")
+                {
+                    return V1AuthError(409, "SESSION_CONFLICT", "Another session is already active.");
+                }
+                return V1AuthError(401, "INVALID_CREDENTIALS", "The supplied credentials are not valid.");
+            }
+
+            if (users.Count == 0)
+            {
+                return V1AuthError(401, "INVALID_CREDENTIALS", "The supplied credentials are not valid.");
+            }
+
+            JToken legacyUser = users[0];
+            string loginId = Convert.ToString(legacyUser["LoginId"]);
+            if (loginId == "-11")
+            {
+                return V1AuthError(409, "SESSION_CONFLICT", "Another session is already active.");
+            }
+            if (string.IsNullOrWhiteSpace(loginId) || loginId == "-1")
+            {
+                return V1AuthError(401, "INVALID_CREDENTIALS", "The supplied credentials are not valid.");
+            }
+
+            var response = new
+            {
+                data = new
+                {
+                    user = new
+                    {
+                        id = loginId,
+                        name = Convert.ToString(legacyUser["Name"]),
+                        role = Convert.ToString(legacyUser["LoginType"]),
+                        email = EmptyToNull(legacyUser["EmailId"]),
+                        branchId = EmptyToNull(legacyUser["BranchCode"]),
+                        branchName = EmptyToNull(legacyUser["BranchName"]),
+                        designation = EmptyToNull(legacyUser["Desig"]),
+                        contactNumber = EmptyToNull(legacyUser["ContactNo"]),
+                        photo = EmptyToNull(legacyUser["Photo"]),
+                        username = EmptyToNull(legacyUser["UserName"]),
+                        mapId = EmptyToNull(legacyUser["MapId"]),
+                        mapUser = EmptyToNull(legacyUser["MapUser"])
+                    },
+                    permissions = new string[0],
+                    redirectPath = EmptyToNull(legacyUser["RPath"])
+                }
+            };
+
+            Session[V1SessionKey] = JsonConvert.SerializeObject(response);
+            return Json(response);
+        }
+
+        [HttpGet]
+        public ActionResult SessionV1()
+        {
+            string sessionJson = Convert.ToString(Session[V1SessionKey]);
+            if (string.IsNullOrWhiteSpace(sessionJson))
+            {
+                return V1AuthError(401, "AUTH_REQUIRED", "Authentication is missing or expired.");
+            }
+
+            return Content(sessionJson, "application/json");
+        }
+
+        [HttpPost]
+        public ActionResult LogoutV1()
+        {
+            Session.Clear();
+            Response.StatusCode = 204;
+            return new EmptyResult();
+        }
+
+        private static string EmptyToNull(JToken value)
+        {
+            string text = Convert.ToString(value);
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+
+        private JsonResult V1AuthError(int statusCode, string code, string message)
+        {
+            Response.StatusCode = statusCode;
+            Response.TrySkipIisCustomErrors = true;
+            return Json(new
+            {
+                error = new
+                {
+                    code = code,
+                    message = message,
+                    fieldErrors = (object)null,
+                    requestId = Response.Headers["X-Request-ID"]
+                }
+            }, JsonRequestBehavior.AllowGet);
+        }
            
             
 

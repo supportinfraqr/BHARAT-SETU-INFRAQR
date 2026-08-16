@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: Bharat Shram Setu API
+  version: 1.0.0-draft
+  description: >-
+    Stable frontend/backend boundary for the incremental ASP.NET to Django and
+    web to React Native migration. Actor identity always comes from the
+    authenticated session or bearer token, never from request payloads.
+servers:
+  - url: /api/v1
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate with a supported login method
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Another session is already active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: End the active session
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "204":
+          description: Session ended
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /session:
+    get:
+      operationId: getSession
+      summary: Return the authenticated user and authorization context
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Active authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /grievances:
+    post:
+      operationId: createGrievance
+      summary: Submit a worker grievance with optional evidence
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateGrievanceRequest"
+      responses:
+        "201":
+          description: Grievance accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrievanceResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: ASP.NET_SessionId
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password, method]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        method:
+          type: string
+          enum: [password, mpin, otp]
+    SessionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Session"
+    Session:
+      type: object
+      required: [user, permissions]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        permissions:
+          type: array
+          items:
+            type: string
+        redirectPath:
+          type: string
+          nullable: true
+    User:
+      type: object
+      required: [id, name, role]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        branchId:
+          type: string
+          nullable: true
+        branchName:
+          type: string
+          nullable: true
+        designation:
+          type: string
+          nullable: true
+        contactNumber:
+          type: string
+          nullable: true
+        photo:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        mapId:
+          type: string
+          nullable: true
+        mapUser:
+          type: string
+          nullable: true
+    CreateGrievanceRequest:
+      type: object
+      required: [subject]
+      properties:
+        subject:
+          type: string
+          maxLength: 150
+        details:
+          type: string
+          maxLength: 5000
+        audio:
+          type: string
+          format: binary
+        documents:
+          type: array
+          items:
+            type: string
+            format: binary
+      description: At least one of details or audio must be supplied.
+    GrievanceResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id, status]
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+              enum: [submitted]
+        meta:
+          type: object
+          additionalProperties: true
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            fieldErrors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+            requestId:
+              type: string
+              nullable: true
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication is missing or expired
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Authenticated user lacks permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: Uploaded evidence exceeds configured limits
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Submission rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: Unexpected service failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

@@ -18,7 +18,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
      
      $scope.Reglogin = 'Log into your BharatShramSetu account';
     $scope.ldynamicback = 'Welcome Back!';
-    sessionStorage.clear();
+    BharatSetuApi.session.clear();
     $scope.MPINMobileNo = localStorage.getItem("LastUserName") || "";
 
     $scope.IsMobileDisabled = $scope.MPINMobileNo != "";
@@ -46,35 +46,20 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
     };
 
     function storeSession(d) { 
-        var sessionData = {
-            LoginId: d.LoginId,
-            MapId: d.MapId,
-            MapUser: d.MapUser,
-            BranchCode: d.BranchCode,
-            LoginType: d.LoginType,
-            LastLogin: d.LastLogin,
-            Desig: d.Desig,
-            Name: d.Name,
-            BranchName: d.BranchName,
-            ContactNo: d.ContactNo,
-            CreatedOn: d.CreatedOn,
-            Photo: d.Photo,
-            UserName: d.UserName,
-            BranchAddress: d.BranchAddress,
-            SessionId: d.SessionId,
-            EmailId: d.EmailId,
-            PartyEMail: d.PartyEMail,
-            Loadonce: 0
-        };
-         
-        sessionStorage.setItem("userSession", JSON.stringify(sessionData));
-        localStorage.setItem("LastUserName", d.UserName);
+        BharatSetuApi.session.saveLegacy(d);
     }
      
     $timeout(function () { $('#username-input').val('').focus(); }, 50);
      
     function postObj(url, obj) {
         return myLoginService.methode('POST', url, '{obj:' + JSON.stringify(obj) + '}');
+    }
+    function authenticate(obj) {
+        return BharatSetuApi.auth.login(obj).then(function (session) {
+            return { data: [session.legacy] };
+        }).catch(function (error) {
+            return { data: [], authError: error };
+        });
     }
     function getPlain(url) {
         return myLoginService.methode('GET', url, '{}');
@@ -177,12 +162,12 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
     }
 
     $scope.SecureLogin = function () { 
-        sessionStorage.clear(); 
+        BharatSetuApi.session.clear();
         if (!isValidate()) return; 
         setBtn('#btnSecureLogin', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.MobileNumber, Password: $scope.Potp, Action: "43" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res) {
+        authenticate(obj).then(function (res) {
             if (res.data.length > 0) {
                 var data = res.data;
                 var d = data[0];
@@ -198,7 +183,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         }).finally();
     };
     $scope.SecureLoginMPin = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.MPINMobileNo) {
             $('#Mobile').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'Mobile Number or Email ID should not be empty.', 'warning', 'btn-warning');
@@ -214,7 +199,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         setBtn('#btnSecureLoginMPin', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.MPINMobileNo, Password: $scope.MPIN, Action: "44" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res) {
+        authenticate(obj).then(function (res) {
             if (res.data.length > 0) {
                 var data = res.data; 
                 var d = data[0];
@@ -231,7 +216,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         }).finally();
     };
     $scope.SecureLoginUserName = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.UserName) {
             $('#user').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'User Name should not be empty', 'warning', 'btn-warning');
@@ -246,7 +231,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         setBtn('#btnSecureLoginUserName', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.UserName, Password: $scope.Password, Action: "45" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res)
+        authenticate(obj).then(function (res)
         {
             setBtn('#btnSecureLoginUserName', 'Secure Login', false);
             if (res.data.length > 0) {
@@ -305,7 +290,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
 
 
         $scope.SecureLoginMPin = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.MPINMobileNo) {
             $('#Mobile').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'Mobile Number or Email ID should not be empty.', 'warning', 'btn-warning');
@@ -321,7 +306,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         setBtn('#btnSecureLoginMPin', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.MPINMobileNo, Password: $scope.MPIN, Action: "44" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res) {
+        authenticate(obj).then(function (res) {
             if (res.data.length > 0) {
                 var data = res.data; 
                 var d = data[0];
@@ -398,7 +383,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
 
 
     $scope.UpdateMpin = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
 
         if (!$scope.MPIN1) {
             $('#MPIN1').css('border-bottom', '1px solid red');
@@ -428,7 +413,12 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         setBtn('#registerNextStep', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.LoginId, Password: $scope.MPIN2, Action: "48" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res) {
+        authenticate(obj).then(function (res) {
+            if (!res.data.length) {
+                setBtn('#registerNextStep', 'Continue', false);
+                showMsgBox('999', 'Alert', res.authError ? res.authError.message : 'Something Went Wrong !', 'warning', 'btn-warning');
+                return;
+            }
             var data = res.data[0];
             if (data.LoginId == '-1') {
                 showMsgBox('999', 'Alert', 'Something Went Wrong !', 'warning', 'btn-warning'); return;
@@ -571,7 +561,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
 
    
     $scope.Updatepass = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.MobileNumber) {
             $('#Mobile').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'Mobile Number or Email ID should not be empty.', 'warning', 'btn-warning');
@@ -609,7 +599,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         setBtn('#forgotPasswordContinue', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.MobileNumber, Password: $scope.Password1, Action: "59" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res) {
+        authenticate(obj).then(function (res) {
             if (res.data.length > 0) {
                 var data = res.data;
                 var d = data[0];
@@ -687,7 +677,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
 
     $scope.DigilockerRegistration = function () {
 
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
 
         if (!LType) {
             LType = 7;
@@ -728,7 +718,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
     };
 
     $scope.ReSendotp= function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.NewMobileNo) {
             $('#userNewMobileNo').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'Mobile No. or Email Id should not be empty', 'warning', 'btn-warning');
@@ -797,7 +787,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
 	
     $scope.Registration = function ()
     {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.NewMobileNo) {
             $('#userNewMobileNo').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'Mobile No. or Email Id should not be empty', 'warning', 'btn-warning');
@@ -852,7 +842,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
    
 
     $scope.ConfirmRegistration = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
         if (!$scope.NewMobileNo) {
             $('#userNewMobileNo').css('border-bottom', '1px solid red');
             showMsgBox('999', 'Alert', 'Mobile No. or Email Id should not be empty', 'warning', 'btn-warning');
@@ -908,7 +898,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
     const step3Next =
         document.getElementById("step3Next");
     $scope.CreateMpin = function () {
-        sessionStorage.clear();
+        BharatSetuApi.session.clear();
          
         if (!$scope.MPIN1) {
             $('#MPIN1').css('border-bottom', '1px solid red');
@@ -938,7 +928,12 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         setBtn('#registerNextStep', '<i class="fa fa-spinner fa-spin"></i> Please wait', true);
         var obj = { Username: $scope.LoginId, Password: $scope.MPIN2, Action: "48" };
 
-        postObj('../Login/NGetUserId', obj).then(function (res) {
+        authenticate(obj).then(function (res) {
+            if (!res.data.length) {
+                setBtn('#registerNextStep', 'Continue', false);
+                showMsgBox('999', 'Alert', res.authError ? res.authError.message : 'Something Went Wrong !', 'warning', 'btn-warning');
+                return;
+            }
             var data = res.data[0];
             if (data.LoginId == '-1') {
                 showMsgBox('999', 'Alert', 'Something Went Wrong !', 'warning', 'btn-warning'); return;
