@@ -27,6 +27,17 @@ export const qrApi = {
   notifications: () => api.get('/qr/notifications/'),
   workerCard: (workerId: number, format = "png") =>
     `/api/qr/workers/${workerId}/card/?fmt=${format}`,
+  geocode: (lat: number, lng: number) =>
+    api.get('/qr/qr/geocode/', { params: { lat, lng } }),
+};
+
+export const locationApi = {
+  list: () => api.get('/qr/locations/'),
+  save: (payload: { name: string; latitude: number; longitude: number; address?: string; is_starred?: boolean }) =>
+    api.post('/qr/locations/', payload),
+  delete: (id: number) => api.delete(`/qr/locations/${id}/`),
+  setContractorLocation: (contractorId: number, payload: { latitude: number; longitude: number; site_name?: string; address?: string }) =>
+    api.post(`/qr/contractors/${contractorId}/location/`, payload),
 };
 
 export const qrMgmtApi = {

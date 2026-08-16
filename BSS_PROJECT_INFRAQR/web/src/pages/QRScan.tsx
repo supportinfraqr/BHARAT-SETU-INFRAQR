@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import './QRScan.css';
 import AppLayout from '../components/AppLayout';
@@ -11,16 +11,29 @@ export default function QRScan() {
   const [locReady, setLocReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [resolved, setResolved] = useState<any>(null);
+
+  const resolveLocation = useCallback(async (la: number, ln: number) => {
+    try {
+      const res = await api.get('/qr/qr/geocode/', { params: { lat: la, lng: ln } });
+      setResolved(res.data?.Data);
+    } catch (e) {
+      setResolved(null);
+    }
+  }, []);
 
   useEffect(() => {
-    // Browser geolocation (web)
+    // Browser geolocation (web) -> auto-resolve the live location via OpenStreetMap
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setLat(pos.coords.latitude);
-          setLng(pos.coords.longitude);
+          const la = pos.coords.latitude;
+          const ln = pos.coords.longitude;
+          setLat(la);
+          setLng(ln);
           setLocStatus('Location captured');
           setLocReady(true);
+          resolveLocation(la, ln);
         },
         (err) => {
           setLocStatus(`Location unavailable: ${err.message}`);
@@ -31,7 +44,7 @@ export default function QRScan() {
     } else {
       setLocStatus('Geolocation not supported');
     }
-  }, []);
+  }, [resolveLocation]);
 
   const doScan = async () => {
     const ref = qrInput.trim();
@@ -76,7 +89,7 @@ export default function QRScan() {
               <div className="qr-corner br"></div>
               <div className="qr-placeholder">
                 <span className="qr-icon">▣</span>
-                <p>Point camera at worker QR</p>
+                <p>Scan the QR code</p>
               </div>
             </div>
             <div className="qr-scanner-line"></div>
@@ -95,6 +108,11 @@ export default function QRScan() {
             {locStatus}
             {lat !== null && lng !== null && ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`}
           </div>
+          {resolved && (
+            <div className="qr-resolved">
+              <b>📍 {resolved.short_name || resolved.display_name}</b>
+            </div>
+          )}
 
           <button className="qr-scan-btn" onClick={doScan} disabled={busy || !qrInput}>
             {busy ? 'Verifying...' : 'Verify & Mark Attendance'}
@@ -153,6 +171,9 @@ export default function QRScan() {
               </div>
               <h3>{attStatus === 'PRESENT' ? 'Present' : attStatus === 'LOCATION_MISMATCH' ? 'Location Mismatch' : 'Verification Failed'}</h3>
               <p>Location: {att.location_status}</p>
+              {result?.Data?.resolved_location?.short_name && (
+                <p className="qr-att-place">📍 {result.Data.resolved_location.short_name}</p>
+              )}
               <p>Date: {att.date} · Time: {att.time}</p>
               {isMismatch && <p className="qr-att-warn">Worker scanned outside permitted location — notified employer.</p>}
             </div>

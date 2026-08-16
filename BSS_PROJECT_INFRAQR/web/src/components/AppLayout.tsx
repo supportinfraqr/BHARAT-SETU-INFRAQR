@@ -83,6 +83,11 @@ export default function AppLayout({ title, children }: { title?: string; childre
                 <i className="mdi mdi-chevron-right"></i> My Contractors
               </a>
             )}
+            {isEmployer && (
+              <a className="nav-submenu qr-mgmt-link" href="#/qr/locations" onClick={() => navigate('/qr/locations')}>
+                <i className="mdi mdi-chevron-right"></i> Set Locations
+              </a>
+            )}
           </div>
           <div className="nav-section-title">LEGACY MODULES</div>
           {nav.map((mod, mi) => (

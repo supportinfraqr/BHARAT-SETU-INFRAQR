@@ -18,6 +18,7 @@ from .models import (
     Employer,
     Notification,
     QRCode,
+    SavedLocation,
     ScanLog,
     Worker,
 )
@@ -205,6 +206,23 @@ class QRCodeView(APIView):
         return Response({"Result": "Error", "Message": "Missing qr_reference or entity_type+entity_id"}, status=400)
 
 
+class ReverseGeocodeView(APIView):
+    """Reverse geocode live coordinates to a human-readable location via OpenStreetMap."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        lat = request.query_params.get("lat")
+        lng = request.query_params.get("lng")
+        if not lat or not lng:
+            return Response({"Result": "Error", "Message": "lat and lng required"}, status=400)
+        from .geocode import reverse_geocode
+        result = reverse_geocode(float(lat), float(lng))
+        if not result:
+            return Response({"Result": "Error", "Message": "Could not resolve location"}, status=404)
+        return Response({"Result": "Success", "Data": result})
+
+
 class QRScanView(APIView):
     """Secure QR scan: verify reference, resolve worker, geo-verify, mark attendance."""
 
@@ -231,12 +249,53 @@ class QRScanView(APIView):
         if lat is None or lng is None:
             location_status = "LOCATION_UNAVAILABLE"
 
-        # Worker scan -> attendance flow
+        emp_id, con_id, scanner_role = resolve_scope(request.user)
+
+        # Worker QR scan
         if qr.entity_type == "WORKER":
             worker = entity
             if not worker.is_active:
                 log_scan(request, qr, worker=worker, scan_result="INACTIVE_WORKER", lat=lat, lng=lng)
                 return Response({"Result": "Error", "Message": "Worker is not active"}, status=400)
+
+            # Employer scans a worker QR -> hierarchy-scoped info (no attendance)
+            if scanner_role == EMPLOYER:
+                if emp_id and worker.employer_id and worker.employer_id != emp_id:
+                    log_scan(request, qr, worker=worker, scan_result="HIERARCHY_DENIED", lat=lat, lng=lng)
+                    return Response({"Result": "Error", "Message": "This worker is not under your hierarchy"}, status=403)
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "WORKER",
+                        "action": "view_info",
+                        "worker": WorkerSerializer(worker).data,
+                    },
+                })
+
+            # Contractor scans a worker QR -> full info if worker is under their contractor
+            if scanner_role in (PRIMARY, SECONDARY):
+                if con_id and worker.contractor_id and worker.contractor_id != con_id:
+                    log_scan(request, qr, worker=worker, scan_result="HIERARCHY_DENIED", lat=lat, lng=lng)
+                    return Response({"Result": "Error", "Message": "This worker is not under your contractor"}, status=403)
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "WORKER",
+                        "action": "view_info",
+                        "worker": WorkerSerializer(worker).data,
+                    },
+                })
+
+            # Worker scans a worker QR -> basic info (same level), no attendance
+            if scanner_role == WORKER:
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "WORKER",
+                        "action": "view_info",
+                        "worker": WorkerSerializer(worker).data,
+                    },
+                })
 
             # Geo-verification against contractor's permitted location
             contractor = worker.contractor
@@ -281,43 +340,88 @@ class QRScanView(APIView):
                        f"Worker {worker.full_name} scanned outside permitted location")
                 write_audit(request, "SCAN_LOCATION_MISMATCH", "WORKER", worker.pk, previous=qr_reference)
 
+            resolved_location = None
+            if lat is not None and lng is not None:
+                try:
+                    from .geocode import reverse_geocode
+                    resolved_location = reverse_geocode(float(lat), float(lng))
+                except Exception:
+                    resolved_location = None
+
             return Response({
                 "Result": "Success",
                 "Data": {
                     "worker": {"id": worker.pk, "full_name": worker.full_name, "worker_id": worker.worker_id},
                     "attendance": AttendanceSerializer(att).data,
                     "location_status": location_status,
+                    "resolved_location": resolved_location,
                 },
             })
 
-        # Employer QR scanned by a contractor -> create a binding request
+        # Contractor QR scanned -> hierarchy-scoped info
+        if qr.entity_type == "CONTRACTOR":
+            contractor = entity
+            log_scan(request, qr, scan_result="CONTRACTOR_SCAN", lat=lat, lng=lng)
+            if scanner_role == EMPLOYER:
+                if emp_id and contractor.employer_id and contractor.employer_id != emp_id:
+                    return Response({"Result": "Error", "Message": "This contractor is not under your hierarchy"}, status=403)
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "CONTRACTOR",
+                        "action": "view_info",
+                        "contractor": ContractorSerializer(contractor).data,
+                    },
+                })
+            return Response({
+                "Result": "Success",
+                "Data": {
+                    "entity_type": "CONTRACTOR",
+                    "action": "view_info",
+                    "contractor": ContractorSerializer(contractor).data,
+                },
+            })
+
+        # Employer QR scanned by a contractor -> basic info + bind/unbind option
         if qr.entity_type == "EMPLOYER":
             employer = entity
             con_id, role = _scanner_contractor(request)
             log_scan(request, qr, scan_result="EMPLOYER_SCAN", lat=lat, lng=lng)
+            basic = {
+                "id": employer.pk,
+                "name": employer.name,
+                "contact_person": employer.contact_person,
+                "contact_mobile": employer.contact_mobile,
+                "email": employer.email,
+                "industry": employer.industry,
+                "state": employer.state,
+                "city": employer.city,
+            }
             if not con_id:
                 return Response({
                     "Result": "Success",
-                    "Data": {
-                        "entity_type": "EMPLOYER",
-                        "employer": {"id": employer.pk, "name": employer.name},
-                        "action": "contractor_login_required",
-                    },
+                    "Data": {"entity_type": "EMPLOYER", "employer": basic, "action": "contractor_login_required"},
                 })
-            # Contractor already bound to another employer?
             contractor = Contractor.objects.filter(pk=con_id).first()
-            if contractor and contractor.employer_id and contractor.employer_id != employer.pk:
-                return Response({"Result": "Error", "Message": "Contractor already bound to another employer"}, status=409)
+            # If contractor is bound to THIS employer -> option to unbind
             if contractor and contractor.employer_id == employer.pk:
+                return Response({
+                    "Result": "Success",
+                    "Data": {"entity_type": "EMPLOYER", "employer": basic, "action": "already_bound", "can_unbind": True},
+                })
+            # If bound to another employer -> show basic info + option to request binding here
+            if contractor and contractor.employer_id:
                 return Response({
                     "Result": "Success",
                     "Data": {
                         "entity_type": "EMPLOYER",
-                        "employer": {"id": employer.pk, "name": employer.name},
-                        "action": "already_bound",
+                        "employer": basic,
+                        "action": "bound_elsewhere",
+                        "can_request": True,
+                        "current_employer_id": contractor.employer_id,
                     },
                 })
-            # Create PENDING binding request (avoid duplicates)
+            # Unbound contractor -> create PENDING request (avoid duplicates)
             existing = Binding.objects.filter(
                 binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor, status="PENDING"
             ).first()
@@ -331,11 +435,7 @@ class QRScanView(APIView):
                        f"Contractor {contractor.name} requested to bind with {employer.name}")
             return Response({
                 "Result": "Success",
-                "Data": {
-                    "entity_type": "EMPLOYER",
-                    "employer": {"id": employer.pk, "name": employer.name},
-                    "action": "binding_requested",
-                },
+                "Data": {"entity_type": "EMPLOYER", "employer": basic, "action": "binding_requested"},
             })
 
         # Non-worker entity lookup
@@ -783,3 +883,96 @@ class MyProfileView(APIView):
         ser.save()
         write_audit(request, "PROFILE_UPDATED", ser.instance._meta.object_name, ser.instance.pk)
         return Response({"Result": "Success", "Data": ser.data})
+
+
+class SavedLocationList(APIView):
+    """Employer's saved/starred locations + save a new one."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        emp_id, con_id, role = resolve_scope(request.user)
+        if role != EMPLOYER or not emp_id:
+            return Response({"Result": "Forbidden", "Message": "Only employers can manage locations"}, status=403)
+        locs = SavedLocation.objects.filter(employer_id=emp_id).order_by("-created_at")
+        data = [{
+            "id": l.pk, "name": l.name, "latitude": l.latitude, "longitude": l.longitude,
+            "address": l.address, "is_starred": l.is_starred,
+        } for l in locs]
+        return Response({"Result": "Success", "Data": data})
+
+    def post(self, request):
+        emp_id, con_id, role = resolve_scope(request.user)
+        if role != EMPLOYER or not emp_id:
+            return Response({"Result": "Forbidden", "Message": "Only employers can save locations"}, status=403)
+        lat = request.data.get("latitude")
+        lng = request.data.get("longitude")
+        if lat is None or lng is None:
+            return Response({"Result": "Error", "Message": "latitude and longitude required"}, status=400)
+        loc = SavedLocation.objects.create(
+            employer_id=emp_id,
+            name=request.data.get("name", ""),
+            latitude=float(lat),
+            longitude=float(lng),
+            address=request.data.get("address", ""),
+            is_starred=bool(request.data.get("is_starred", True)),
+        )
+        write_audit(request, "LOCATION_SAVED", "SavedLocation", loc.pk)
+        return Response({"Result": "Success", "Data": {
+            "id": loc.pk, "name": loc.name, "latitude": loc.latitude, "longitude": loc.longitude,
+            "address": loc.address, "is_starred": loc.is_starred,
+        }}, status=201)
+
+
+class SavedLocationDelete(APIView):
+    """Delete a saved/starred location."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, location_id):
+        emp_id, con_id, role = resolve_scope(request.user)
+        loc = SavedLocation.objects.filter(pk=location_id, employer_id=emp_id).first()
+        if not loc:
+            return Response({"Result": "Error", "Message": "Location not found"}, status=404)
+        loc.delete()
+        return Response({"Result": "Success", "Message": "Location removed"})
+
+
+class SetContractorLocation(APIView):
+    """Employer sets a contractor's working location (lat/lng + reverse-geocoded address)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, contractor_id=None):
+        emp_id, con_id, role = resolve_scope(request.user)
+        if role != EMPLOYER or not emp_id:
+            return Response({"Result": "Forbidden", "Message": "Only employers can set contractor locations"}, status=403)
+        if contractor_id is None:
+            contractor_id = request.data.get("contractor_id")
+        lat = request.data.get("latitude")
+        lng = request.data.get("longitude")
+        if not contractor_id or lat is None or lng is None:
+            return Response({"Result": "Error", "Message": "contractor_id, latitude and longitude required"}, status=400)
+        contractor = Contractor.objects.filter(pk=contractor_id, employer_id=emp_id).first()
+        if not contractor:
+            return Response({"Result": "Error", "Message": "Contractor not in your hierarchy"}, status=404)
+        address = request.data.get("address", "")
+        if not address and lat is not None and lng is not None:
+            try:
+                from .geocode import reverse_geocode
+                res = reverse_geocode(float(lat), float(lng))
+                address = (res or {}).get("display_name", "")
+            except Exception:
+                address = ""
+        contractor.location_lat = float(lat)
+        contractor.location_lng = float(lng)
+        contractor.site_name = request.data.get("site_name", contractor.site_name or "")
+        contractor.save(update_fields=["location_lat", "location_lng", "site_name"])
+        write_audit(request, "CONTRACTOR_LOCATION_SET", "Contractor", contractor.pk,
+                    previous="", new=f"{lat},{lng}")
+        return Response({"Result": "Success", "Data": {
+            "id": contractor.pk, "name": contractor.name,
+            "location_lat": contractor.location_lat, "location_lng": contractor.location_lng,
+            "site_name": contractor.site_name, "address": address,
+        }})
+

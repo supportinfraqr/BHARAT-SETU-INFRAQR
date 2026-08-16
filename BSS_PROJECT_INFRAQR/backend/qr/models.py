@@ -150,6 +150,20 @@ class Worker(models.Model):
         return self.full_name
 
 
+class SavedLocation(models.Model):
+    """A location starred/saved by an employer for reuse as a contractor working location."""
+    employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name="saved_locations")
+    name = models.CharField(max_length=255, blank=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    address = models.CharField(max_length=500, blank=True)
+    is_starred = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name or self.address or 'Location'} ({self.latitude},{self.longitude})"
+
+
 class Binding(models.Model):
     """Employer<->Contractor and Contractor<->Worker bindings with full history."""
     BINDING_TYPE = [

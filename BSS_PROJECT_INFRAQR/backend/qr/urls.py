@@ -10,6 +10,7 @@ urlpatterns = [
     # QR
     path("qr/", views.QRCodeView.as_view(), name="qr-view"),
     path("qr/scan/", views.QRScanView.as_view(), name="qr-scan"),
+    path("qr/geocode/", views.ReverseGeocodeView.as_view(), name="reverse-geocode"),
     path("qr/me/", views.UserQRView.as_view(), name="user-qr"),
     path("workers/<int:worker_id>/card/", views.WorkerCardView.as_view(), name="worker-card"),
     # Binding
@@ -29,4 +30,8 @@ urlpatterns = [
     path("management/employer/plan/", views.EmployerAttachPlan.as_view(), name="employer-plan"),
     path("management/employer/my/", views.MyPlanView.as_view(), name="my-plan"),
     path("profile/me/", views.MyProfileView.as_view(), name="my-profile"),
+    # Locations
+    path("locations/", views.SavedLocationList.as_view(), name="saved-locations"),
+    path("locations/<int:location_id>/", views.SavedLocationDelete.as_view(), name="saved-location-delete"),
+    path("contractors/<int:contractor_id>/location/", views.SetContractorLocation.as_view(), name="set-contractor-location"),
 ]
