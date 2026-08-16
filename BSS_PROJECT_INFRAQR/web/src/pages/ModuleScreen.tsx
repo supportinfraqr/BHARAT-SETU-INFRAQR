@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchPageData } from '../api/pages';
+import AppLayout from '../components/AppLayout';
 import './ModuleScreen.css';
 
 // Normalize a key to a human-friendly header
@@ -41,40 +42,42 @@ export default function ModuleScreen() {
   }, [url]);
 
   return (
-    <div className="module-page">
-      <div className="module-header">
-        <h2>{decodeURIComponent(page || '')}</h2>
-        <button className="btn-primary" onClick={() => window.location.reload()}>Refresh</button>
-      </div>
-
-      {loading && <div className="module-loading">Loading...</div>}
-      {error && <div className="module-error">{error}</div>}
-
-      {!loading && !error && rows.length === 0 && (
-        <div className="module-empty">No records found.</div>
-      )}
-
-      {!loading && !error && rows.length > 0 && (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                {cols.map((c) => <th key={c}>{headerOf(c)}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.slice(0, 100).map((row, i) => (
-                <tr key={i}>
-                  {cols.map((c) => (
-                    <td key={c}>{row[c] != null ? String(row[c]) : '—'}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length > 100 && <div className="module-note">Showing first 100 of {rows.length} records.</div>}
+    <AppLayout title={decodeURIComponent(page || '').split('/').pop() || 'Module'}>
+      <div className="module-page">
+        <div className="module-header">
+          <h2>{decodeURIComponent(page || '')}</h2>
+          <button className="btn-primary" onClick={() => window.location.reload()}>Refresh</button>
         </div>
-      )}
-    </div>
+
+        {loading && <div className="module-loading">Loading...</div>}
+        {error && <div className="module-error">{error}</div>}
+
+        {!loading && !error && rows.length === 0 && (
+          <div className="module-empty">No records found.</div>
+        )}
+
+        {!loading && !error && rows.length > 0 && (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {cols.map((c) => <th key={c}>{headerOf(c)}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 100).map((row, i) => (
+                  <tr key={i}>
+                    {cols.map((c) => (
+                      <td key={c}>{row[c] != null ? String(row[c]) : '—'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length > 100 && <div className="module-note">Showing first 100 of {rows.length} records.</div>}
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
 }

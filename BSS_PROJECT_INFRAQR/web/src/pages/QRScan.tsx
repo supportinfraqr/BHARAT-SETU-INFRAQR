@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
 import './QRScan.css';
+import AppLayout from '../components/AppLayout';
 
 export default function QRScan() {
   const [qrInput, setQrInput] = useState('');
@@ -60,7 +61,8 @@ export default function QRScan() {
   const isMismatch = attStatus === 'LOCATION_MISMATCH';
 
   return (
-    <div className="qr-scan-page">
+    <AppLayout title="QR Scan">
+      <div className="qr-scan-page">
       <h2 className="qr-page-title">QR Scan — Attendance</h2>
 
       <div className="qr-layout">
@@ -136,6 +138,7 @@ export default function QRScan() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

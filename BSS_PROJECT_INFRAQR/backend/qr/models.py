@@ -35,13 +35,31 @@ class QRCode(models.Model):
 
 
 class Employer(models.Model):
+    APPROVAL_STATUS = [
+        ("PENDING", "Pending Approval"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+    PLAN_TYPE = [
+        ("FREE", "Free"),
+        ("SILVER", "Silver"),
+        ("GOLD", "Gold"),
+        ("PLATINUM", "Platinum"),
+    ]
     name = models.CharField(max_length=255)
     legacy_party_id = models.BigIntegerField(null=True, blank=True)
     contact_person = models.CharField(max_length=255, blank=True)
     contact_mobile = models.CharField(max_length=20, blank=True)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(blank=True, null=True)
     address = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS, default="PENDING")
+    plan_type = models.CharField(max_length=20, choices=PLAN_TYPE, default="FREE")
+    plan_expiry = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        "authx.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_employers"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

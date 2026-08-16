@@ -1,0 +1,16 @@
+.terms-page { min-height: 100vh; background: #f4f6fb; padding: 24px; }
+.terms-container { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(2,43,94,.08); padding: 32px; }
+
+.terms-header { border-bottom: 1px solid #e5e9f0; padding-bottom: 16px; margin-bottom: 20px; }
+.terms-back { background: #022B5E; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-bottom: 12px; }
+.terms-back:hover { background: #043a7a; }
+.terms-header h1 { color: #022B5E; margin: 0 0 4px; font-size: 26px; }
+.terms-updated { color: #888; margin: 0; font-size: 13px; }
+
+.terms-body h2 { color: #022B5E; font-size: 18px; margin: 24px 0 8px; }
+.terms-body p { color: #444; line-height: 1.6; margin: 0 0 12px; }
+
+@media (max-width: 480px) {
+  .terms-page { padding: 12px; }
+  .terms-container { padding: 20px; }
+}

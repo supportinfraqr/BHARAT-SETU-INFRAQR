@@ -25,10 +25,24 @@ export const qrApi = {
     `/api/qr/workers/${workerId}/card/?fmt=${format}`,
 };
 
+export const qrMgmtApi = {
+  employers: (status?: string) =>
+    api.get('/qr/management/employers/', { params: status ? { status } : {} }),
+  approve: (id: number, decision: 'APPROVE' | 'REJECT') =>
+    api.post(`/qr/management/employers/${id}/approve/`, { decision }),
+  plans: () => api.get('/qr/management/plans/'),
+  attachPlan: (planType: string, employerId?: number) =>
+    api.post('/qr/management/employer/plan/', { plan_type: planType, employer_id: employerId }),
+  myPlan: () => api.get('/qr/management/employer/my/'),
+};
+
 export const legacyApi = {
   navMenu: () => api.post('/Dashboard/NavMenuList', {}),
   moduleList: () => api.post('/Dashboard/ModuleList', {}),
   employees: (params: any = {}) => api.post('/RetailSection/GetEmployeeMaster', params),
   stores: (params: any = {}) => api.post('/RetailSection/GetStoreMaster', params),
   partyMaster: (params: any = {}) => api.post('/PartyMaster/GetPartyMasterDT', params),
+  peDashboard: (loginId: number) => api.post('/RetailSection/SearchPrincipleEmploye', { Action: 1, LoginId: loginId }),
+  workerDetail: (loginId: number) => api.post('/RetailSection/bindworkerdetail', { ActionType: 1, UserId: loginId }),
+  contractorDashboard: (loginId: number) => api.post('/RetailSection/ContractorDashboard', { Action: 1, LoginId: loginId }),
 };

@@ -36,6 +36,14 @@ def _qr_image(qr_reference, box=(220, 220)):
     return img.resize(box, Image.LANCZOS)
 
 
+def qr_png_bytes(data: str, box=(240, 240)) -> bytes:
+    """Return PNG bytes of a QR encoding arbitrary data."""
+    img = _qr_image(data, box)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
 def worker_card_image(worker, qr_reference):
     """Return a PIL image of the worker ID card (600x380 px)."""
     W, H = 600, 380

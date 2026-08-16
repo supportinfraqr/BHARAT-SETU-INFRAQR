@@ -1,67 +1,171 @@
-/* Import the legacy BharatShramSetu login styles */
+/* Import the EXACT hosted BharatShramSetu login styles (matches login.bharatshramsetu.com) */
 @import url('/legacy/NewLogin/style.css');
 
-/* Minimal overrides for React rendering */
+/* ---------- Minimal React-rendering fixes only ----------
+   (The hosted style.css provides the full layout incl. responsive rules.
+    We do NOT override the legacy layout — only fix what React rendering
+    needs, e.g. the login card padding for the register flow.) */
+
 .newLoginPage {
   min-height: 100vh;
+  width: 100%;
 }
 
-.newLoginMain {
-  min-height: 100vh;
+/* Push the stats banner (50+ Crore Workers, etc.) a bit lower */
+.newLoginHeroBottom {
+  padding-top: 72px;
+  margin-top: 72px;
 }
-
-.newLoginContent {
-  display: flex;
-  min-height: 100vh;
-}
-
-.newLoginHero {
-  flex: 1.2;
+@media (max-width: 767px) {
+  .newLoginHeroBottom {
+    padding-top: 36px;
+    margin-top: 36px;
+  }
 }
 
 .newLoginCardWrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
+  overflow: auto;
 }
 
+/* Compact card content to reduce height */
+.newLoginCard .newLoginCardHeader { margin-bottom: 14px !important; }
+.newLoginCard .newLoginField { margin-bottom: 12px !important; }
+.newLoginCard .newLoginMethodGrid { margin: 12px 0 4px !important; }
+.newLoginCard .newLoginContinueWith { margin: 12px 0 8px !important; }
+.newLoginCard .newLoginRegister { margin-top: 12px !important; }
+.newLoginCard .newLoginPrimaryBtn { margin-top: 2px !important; }
+
+/* Widen the login card and reduce its height */
 .newLoginCard {
-  width: 100%;
-  max-width: 460px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 36px 32px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  flex: 0 0 440px !important;
+  width: 440px !important;
+  min-width: 440px !important;
+  max-width: 440px !important;
+  max-height: calc(100vh - 60px) !important;
+  min-height: 360px !important;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+@media (max-width: 767px) {
+  .newLoginCard {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: none !important;
+  }
 }
 
-.newLoginCardHeader h3 {
-  font-size: 24px;
-  color: #022B5E;
-  margin-bottom: 4px;
+/* ---------- Mobile: stack hero above card (better than legacy side-by-side) ---------- */
+@media (max-width: 767px) {
+  .newLoginPage .newLoginMain {
+    padding: 12px !important;
+    background: #f4f6fb !important;
+  }
+  .newLoginPage .newLoginMain .newLoginContent {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    max-width: 100% !important;
+  }
+  .newLoginPage .newLoginMain .newLoginContent .newLoginHero,
+  .newLoginPage .newLoginMain .newLoginContent .newLoginHeroTop {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+    align-self: auto !important;
+    background: none !important;
+    display: contents !important; /* let hero pieces participate in content order */
+  }
+  .newLoginPage .newLoginMain .newLoginContent .newLoginCardWrap {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    order: 2 !important; /* login card right after the logo */
+  }
+  /* On mobile: logo at top, then login card, then heading/features/stats below */
+  .newLoginPage .newLoginMain .newLoginContent .newLoginHero .newLoginBrandSection { order: 1 !important; }
+  .newLoginPage .newLoginMain .newLoginContent .newLoginHero .newLoginHeroHeading { order: 3 !important; }
+  .newLoginPage .newLoginMain .newLoginContent .newLoginHero .newLoginFeatureRow { order: 4 !important; }
+  .newLoginPage .newLoginMain .newLoginContent .newLoginHero .newLoginHeroBottom { order: 5 !important; }
+  /* Compact hero on mobile: brand + tagline + heading */
+  .newLoginHero .newLoginBrandSection { margin-bottom: 6px !important; }
+  .newLoginHero .newLoginBrandLogo { height: 40px !important; }
+  .newLoginHero .newLoginBrandTitle { font-size: 26px !important; }
+  .newLoginHero .newLoginTagline { margin-top: 2px !important; }
+  .newLoginHero .newLoginTagline p { font-size: 12px !important; margin: 0 !important; }
+  .newLoginHero .newLoginHeroHeading { margin-top: 6px !important; }
+  .newLoginHero .newLoginHeroHeading h2 { font-size: 13px !important; margin: 0 !important; }
+
+  /* Show features compactly on mobile */
+  .newLoginHero .newLoginFeatureRow {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 8px !important;
+  }
+  .newLoginHero .newLoginFeatureBox {
+    flex: 1 1 40% !important;
+    min-width: 0 !important;
+    padding: 6px !important;
+  }
+  .newLoginHero .newLoginFeatureBox img { width: 22px !important; height: 22px !important; }
+  .newLoginHero .newLoginFeatureBox h4 { font-size: 13px !important; margin: 2px 0 0 !important; }
+  .newLoginHero .newLoginFeatureBox p { font-size: 11px !important; margin: 0 !important; }
+  .newLoginHero .newLoginFeatureDivider { display: none !important; }
+
+  /* Stats banner on mobile (compact) */
+  .newLoginHero .newLoginHeroBottom {
+    display: flex !important;
+    margin-top: 8px !important;
+    padding-top: 0 !important;
+  }
+  .newLoginHero .newLoginStatsBanner {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .newLoginHero .newLoginStatsItem {
+    flex: 1 1 40% !important;
+    min-width: 0 !important;
+    padding: 4px !important;
+  }
+  .newLoginHero .newLoginStatsIcon img { width: 20px !important; height: 20px !important; }
+  .newLoginHero .newLoginStatsContent h4 { font-size: 13px !important; margin: 0 !important; }
+  .newLoginHero .newLoginStatsContent p { font-size: 11px !important; margin: 0 !important; }
+  .newLoginHero .newLoginStatsDivider { display: none !important; }
+
+  /* Bottom message on mobile */
+  .newLoginHero .newLoginBottomMessage {
+    margin-top: 6px !important;
+  }
+  .newLoginHero .newLoginBottomMessage p { font-size: 12px !important; margin: 0 !important; }
+  .newLoginHero .newLoginTriLine { display: none !important; }
+
+  .newLoginCard { max-height: none !important; min-height: 0 !important; }
 }
 
-.newLoginCardHeader p {
-  color: #666;
-  margin-bottom: 20px;
+@media (max-width: 480px) {
+  .newLoginPage .newLoginMain .newLoginContent {
+    gap: 10px !important;
+  }
+  .newLoginHero .newLoginBrandLogo { height: 44px !important; }
+  .newLoginHero .newLoginBrandTitle { font-size: 24px !important; }
+  .newLoginHero .newLoginHeroHeading h2 { font-size: 13px !important; }
 }
 
-.newLoginRoleRow {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
+/* Role selector in register (legacy uses radio dots; ours uses pill buttons) */
 .newLoginRoleOption {
   flex: 1;
   cursor: pointer;
 }
-
 .newLoginRoleOption input {
   display: none;
 }
-
 .newLoginRoleOption span {
   display: block;
   text-align: center;
@@ -71,91 +175,324 @@
   font-size: 13px;
   color: #333;
 }
-
 .newLoginRoleOption input:checked + span {
   background: #022B5E;
   color: #fff;
   border-color: #022B5E;
 }
 
-.newLoginField {
-  margin-bottom: 16px;
+/* Method grid cards (MPIN / ID-Password / OTP) */
+.newLoginMethodGrid {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 6px;
 }
-
-.newLoginLabelRow {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
+.newLoginMethodCard {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #d5dce8;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
   color: #333;
 }
+.newLoginMethodCard img { width: 20px; height: 20px; }
+.newLoginMethodCard:hover { border-color: #022B5E; color: #022B5E; }
 
-.newLoginField .form-control {
+/* OR continue-with divider */
+.newLoginContinueWith {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+.newLoginContinueWith .line { flex: 1; height: 1px; background: #e3e7ee; }
+.newLoginContinueWith p { margin: 0; font-size: 12px; color: #888; white-space: nowrap; }
+
+/* WhatsApp / DigiLocker / Call buttons */
+.registerBtnRow {
+  display: flex;
+  gap: 10px;
   width: 100%;
-  padding: 12px;
-  border: 1px solid #ccc;
+  flex-wrap: wrap;
+}
+.newRegisterWhatsappBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px;
   border-radius: 8px;
-  font-size: 15px;
+  border: 1px solid #d5dce8;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  min-width: 100px;
+}
+.newRegisterWhatsappBtn img { width: 20px; height: 20px; }
+.newRegisterWhatsappBtn.whatsappBtn:hover { border-color: #25D366; color: #128C7E; }
+.newRegisterWhatsappBtn.digiLockerBtn:hover { border-color: #1E3A8A; color: #1E3A8A; }
+.newRegisterWhatsappBtn.callBtn:hover { border-color: #F58220; color: #E67E22; }
+
+.newLoginRegister {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
 }
 
+.newRegisterTerms {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+}
+.newRegisterTerms a { color: #022B5E; text-decoration: none; }
+
+/* Override legacy method cards to layout horizontally */
+.newLoginMethodGrid {
+  display: flex !important;
+  gap: 16px !important;
+  margin-top: 16px !important;
+}
+
+.newLoginMethodCard {
+  flex: 1;
+  height: 48px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 0 16px !important;
+  border: 1px solid #d5dce8 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.newLoginMethodCard img {
+  height: 20px !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.newLoginMethodCard span {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #333 !important;
+}
+
+.newLoginMethodCard:hover {
+  border-color: #022B5E !important;
+  background-color: #f8fafc !important;
+  transform: none !important;
+}
+
+/* Premium Form Elements overhaul to match the screenshot design exactly */
+.newLoginCard {
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  padding: 36px 40px !important;
+}
+
+.newLoginCardHeader h3 {
+  color: #0c2340 !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  margin-bottom: 6px !important;
+}
+
+.newLoginCardHeader p {
+  color: #6b7280 !important;
+  font-size: 14px !important;
+}
+
+.newLoginField {
+  margin-bottom: 20px !important;
+}
+
+.newLoginField label {
+  color: #374151 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  margin-bottom: 6px !important;
+}
+
+.newLoginField input.form-control {
+  height: 48px !important;
+  padding: 0 16px !important;
+  padding-right: 48px !important; /* Ensure space for icons on the right */
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-size: 15px !important;
+  color: #1e293b !important;
+  background: #ffffff !important;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+.newLoginField input.form-control:focus {
+  border-color: #082F57 !important;
+  box-shadow: 0 0 0 3px rgba(8, 47, 87, 0.1) !important;
+  outline: none !important;
+}
+
+/* Password Toggle and Cross Buttons */
+.newPasswordToggle {
+  position: absolute !important;
+  right: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.newPasswordToggle:hover {
+  color: #475569 !important;
+}
+
+/* Primary Button Styling */
 .newLoginPrimaryBtn {
-  width: 100%;
-  padding: 13px;
-  background: #022B5E;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 6px;
+  height: 48px !important;
+  background: #082F57 !important; /* Dark navy blue from screenshot */
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  transition: background-color 0.2s ease, transform 0.1s ease !important;
 }
 
 .newLoginPrimaryBtn:hover {
-  background: #043a7a;
+  background: #0c4275 !important;
 }
 
-.newLoginBottomMessage {
-  text-align: center;
-  margin-top: 18px;
-  color: #666;
-  font-size: 14px;
+.newLoginPrimaryBtn:active {
+  transform: scale(0.98) !important;
 }
 
-.newLoginInlineLink {
-  color: #022B5E;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-/* ---------- Mobile responsive ---------- */
-@media (max-width: 768px) {
+/* Mobile Responsiveness Overrides */
+@media (max-width: 767px) {
   .newLoginContent {
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 16px !important;
+    width: 100% !important;
   }
   .newLoginHero {
-    flex: none;
-    min-height: auto;
-    padding-bottom: 8px;
+    flex: none !important;
+    align-items: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   .newLoginCardWrap {
-    padding: 16px;
-    padding-top: 0;
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+  .newLoginBrandRow {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  .newLoginBrandText {
+    text-align: left !important;
+  }
+  .newLoginTagline {
+    justify-content: center !important;
+  }
+  .newLoginHeroHeading {
+    text-align: center !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+  }
+  .newLoginHeroHeading h2 {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #4b5563 !important;
+    max-width: 320px !important;
+    margin: 0 auto !important;
+    line-height: 1.4 !important;
+  }
+  .newLoginFeatureRow,
+  .newLoginHeroBottom {
+    display: none !important;
   }
   .newLoginCard {
-    padding: 24px 18px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.1);
+    flex: none !important;
+    width: 92% !important;
+    max-width: 360px !important;
+    min-width: 0 !important;
+    max-height: none !important;
+    padding: 24px 20px !important;
+    border-radius: 16px !important;
+    margin: 20px auto !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
   }
-  .newLoginRoleRow {
-    flex-direction: column;
+  .newLoginMethodGrid {
+    gap: 12px !important;
   }
-  .newLoginRoleOption span {
-    padding: 12px 8px;
+  .newLoginMethodCard {
+    height: 42px !important;
+    font-size: 12px !important;
+    padding: 0 10px !important;
+  }
+  .newLoginFooter {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    background: #ffffff !important;
+    padding: 12px 16px !important;
+    color: #4b5563 !important;
+    font-size: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 40px !important;
+  }
+  .newLoginFooterLeft {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    margin-bottom: 4px !important;
+  }
+  .newLoginFooterRight {
+    text-align: center !important;
+    width: 100% !important;
+    font-size: 9px !important;
+    margin-top: 4px !important;
   }
 }
 
-@media (max-width: 480px) {
-  .newLoginCardHeader h3 {
-    font-size: 20px;
-  }
-}
+
 

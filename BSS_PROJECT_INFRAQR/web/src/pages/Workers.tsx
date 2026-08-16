@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import './Workers.css';
+import AppLayout from '../components/AppLayout';
 
 export default function Workers() {
   const [workers, setWorkers] = useState<any[]>([]);
@@ -17,8 +18,9 @@ export default function Workers() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="workers-page">
-      <h2 className="qr-page-title">Workers</h2>
+    <AppLayout title="Workers">
+      <div className="workers-page">
+        <h2 className="qr-page-title">Workers</h2>
       {loading && <div className="module-loading">Loading workers...</div>}
       <div className="worker-grid">
         {workers.map((w) => (
@@ -46,6 +48,7 @@ export default function Workers() {
         ))}
       </div>
       {!loading && workers.length === 0 && <div className="module-empty">No workers registered yet.</div>}
-    </div>
+      </div>
+    </AppLayout>
   );
 }

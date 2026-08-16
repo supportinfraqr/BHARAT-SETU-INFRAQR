@@ -157,6 +157,179 @@ def _login(request):
 login_view = csrf_exempt(require_POST(_login))
 
 
+def v_login_verify(request):
+    """POST /api/Login/VLoginVerify — legacy action-based auth flow.
+
+    Replicates the legacy LoginController/VLoginVerify (USP_LoginTable) actions:
+      Action 8  -> login OTP request (returns user + Otp)
+      Action 43 -> secure login with OTP
+      Action 44 -> MPIN login
+      Action 45 -> username/password login
+      Action 46 -> registration OTP request (PassWord = LoginType)
+      Action 47 -> confirm registration (Password = OTP)
+      Action 49 -> resend registration OTP
+    """
+    try:
+        body = json.loads(request.body or b"{}")
+    except Exception:
+        body = {}
+    # legacy frontend sends {obj: {...}}
+    if isinstance(body, dict) and "obj" in body and isinstance(body["obj"], dict):
+        body = body["obj"]
+
+    action = str(body.get("Action") or body.get("action") or "")
+    username = body.get("Username") or body.get("UserName") or body.get("username") or ""
+    password = body.get("Password") or body.get("password") or ""
+
+    lt = LoginTable.objects.filter(UserName__iexact=username).first()
+    login_id = lt.LoginId if lt else None
+
+    # Action 8: login OTP request
+    if action == "8":
+        if not lt:
+            return legacy_json_string([])
+        # generate OTP, store it
+        otp = _generate_otp()
+        LoginTable.objects.filter(LoginId=login_id).update(Otp=str(otp))
+        return legacy_json_string([{
+            "LoginId": str(login_id), "Otp": str(otp),
+            "UserName": lt.UserName, "Name": lt.Name or "", "LoginType": str(lt.LoginType or ""),
+        }])
+
+    # Action 43: secure login with OTP
+    if action == "43":
+        if not lt or not password:
+            return legacy_json_string([])
+        if str(lt.Otp or "") != str(password):
+            return legacy_json_string([])
+        LoginTable.objects.filter(LoginId=login_id).update(Otp="")
+        return _legacy_session_response(lt)
+
+    # Action 44: MPIN login
+    if action == "44":
+        if not lt or not password:
+            return legacy_json_string([])
+        if str(lt.MPIN or "") != str(password):
+            return legacy_json_string([])
+        return _legacy_session_response(lt)
+
+    # Action 45: username/password login
+    if action == "45":
+        if not lt or not password:
+            # Fallback: check Django auth users (e.g. admin created via Django)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            u = User.objects.filter(username__iexact=username).first()
+            if u and u.check_password(password) and u.is_active:
+                return legacy_json_string([{
+                    "LoginId": str(u.pk),
+                    "UserName": u.username,
+                    "Name": u.get_full_name() or u.username,
+                    "LoginType": "1",
+                    "SessionId": "S" + str(u.pk),
+                    "EmailId": u.email or "",
+                    "BranchCode": "",
+                    "ContactNo": u.mobile or "",
+                    "LastLogin": "",
+                    "CurrentLogin": "",
+                    "RPath": "/Dashboard/CommonDashboard",
+                }])
+            return legacy_json_string([])
+        if str(lt.Password or "") != str(password):
+            return legacy_json_string([])
+        return _legacy_session_response(lt)
+
+    # Action 46: registration OTP request
+    if action == "46":
+        # legacy sends PassWord = LoginType (5/6/7)
+        login_type = body.get("PassWord") or body.get("Password") or "7"
+        if lt:
+            return legacy_json_string([{"LoginId": "-1"}])
+        otp = _generate_otp()
+        new_id = _new_login_id()
+        # create a pending user with OTP; record LoginType in MPIN column temporarily
+        LoginTable.objects.create(
+            LoginId=new_id, UserName=username, Password="", Otp=str(otp),
+            LoginType=int(login_type) if str(login_type).isdigit() else 7,
+            IsActive="0", MPIN="",
+        )
+        return legacy_json_string([{"LoginId": str(new_id), "Otp": str(otp)}])
+
+    # Action 47: confirm registration (Password = OTP)
+    if action == "47":
+        if not lt or not password:
+            return legacy_json_string([])
+        if str(lt.Otp or "") != str(password):
+            return legacy_json_string([])
+        LoginTable.objects.filter(LoginId=login_id).update(Otp="", IsActive="1")
+        # If this is a Principal Employer registration, create a PENDING Employer in the QR system
+        try:
+            login_type = int(lt.LoginType or 7)
+        except (TypeError, ValueError):
+            login_type = 7
+        if login_type == 5:
+            from qr.models import Employer as QREmployer
+            from qr.services import create_qr_for_entity
+            emp, created = QREmployer.objects.get_or_create(
+                email=(lt.EmailId or None),
+                defaults={
+                    "name": lt.Name or lt.UserName or f"Employer {lt.LoginId}",
+                    "contact_person": lt.Name or "",
+                    "contact_mobile": lt.ContactNo or "",
+                    "approval_status": "PENDING",
+                    "is_active": False,
+                },
+            )
+            if created:
+                create_qr_for_entity("EMPLOYER", emp.pk)
+        return _legacy_session_response(lt)
+
+    # Action 49: resend registration OTP
+    if action == "49":
+        if not lt:
+            return legacy_json_string([{"LoginId": "-1"}])
+        otp = _generate_otp()
+        LoginTable.objects.filter(LoginId=login_id).update(Otp=str(otp))
+        return legacy_json_string([{"LoginId": str(login_id), "Otp": str(otp)}])
+
+    return legacy_json_string([])
+
+
+def _generate_otp():
+    import random
+    return "".join([str(random.randint(0, 9)) for _ in range(4)])
+
+
+def _new_login_id():
+    from django.db.models import Max
+    return (LoginTable.objects.aggregate(m=Max("LoginId"))["m"] or 0) + 1
+
+
+def _legacy_session_response(lt):
+    """Build the legacy login session row (matches GetUserId/NGetUserId shape)."""
+    user = {
+        "LoginId": str(lt.LoginId),
+        "UserName": lt.UserName or "",
+        "Name": lt.Name or "",
+        "LoginType": str(lt.LoginType or ""),
+        "SessionId": str(lt.SessionId or ""),
+        "EmailId": lt.EmailId or "",
+        "BranchCode": str(lt.BranchCode or ""),
+        "ContactNo": lt.ContactNo or "",
+        "LastLogin": lt.LastLogin or "",
+        "CurrentLogin": "",
+        "RPath": "/Dashboard/CommonDashboard",
+    }
+    # keep SessionId stable for the session (reuse if set, else generate)
+    session_id = lt.SessionId or "S" + str(lt.LoginId)
+    LoginTable.objects.filter(LoginId=lt.LoginId).update(SessionId=session_id, Session="1")
+    user["SessionId"] = session_id
+    return legacy_json_string([user])
+
+
+v_login_verify_view = csrf_exempt(require_POST(v_login_verify))
+
+
 def captcha_view(request):
     """GET /api/Login/CaptchaImage — returns {image, token}."""
     token, answer, image = generate_captcha()

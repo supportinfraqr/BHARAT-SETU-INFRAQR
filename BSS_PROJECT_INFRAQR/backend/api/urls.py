@@ -15,6 +15,7 @@ urlpatterns = [
     # Legacy-compatible login (frontend keeps calling /api/Login/GetUserId)
     path("Login/GetUserId", views.login_view, name="legacy-login"),
     path("Login/NGetUserId", views.login_view, name="legacy-login-n"),
+    path("Login/VLoginVerify", views.v_login_verify_view, name="legacy-vlogin"),
     path("Login/CaptchaImage", views.captcha_view, name="legacy-captcha"),
     # Legacy data endpoints (from migrated PostgreSQL tables)
     path("RetailSection/GetEmployeeMaster", views.employee_master, name="legacy-employee"),

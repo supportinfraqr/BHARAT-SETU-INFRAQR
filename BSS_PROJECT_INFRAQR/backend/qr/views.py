@@ -3,6 +3,7 @@ from datetime import date, datetime
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -405,9 +406,151 @@ class WorkerCardView(APIView):
         return card_response(worker, qr.qr_reference, fmt)
 
 
+class UserQRView(APIView):
+    """Generate a QR code for the logged-in user (identity QR)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        login_id = getattr(user, "legacy_login_id", None) or user.pk
+        identity = f"BSS-USER|{user.username}|{login_id}"
+        from .cards import qr_png_bytes
+        return HttpResponse(qr_png_bytes(identity), content_type="image/png")
+
+
 class NotificationList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         qs = Notification.objects.filter(recipient_role=request.user.role).order_by("-created_at")[:50]
         return Response(NotificationSerializer(qs, many=True).data)
+
+
+# ---------------------------------------------------------------------------
+# QR Management System (employer approvals + plans)
+# ---------------------------------------------------------------------------
+
+PLAN_FEATURES = {
+    "SILVER": ["Static QR security layer", "Worker record lookup", "Basic scan logging", "Date & time capture", "BharatShramSetu integration"],
+    "GOLD": ["All Silver features", "Automated QR scan counting", "Scanning-user capture", "OpenStreetMap scan location", "Role-based access permissions"],
+    "PLATINUM": ["All Gold features", "Advanced audit reporting", "Site / contractor level views", "Exception monitoring", "Enhanced admin controls"],
+}
+
+
+class EmployerListAdmin(APIView):
+    """List all employers (admin). Optional ?status=PENDING|APPROVED|REJECTED."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not role_has_access(request.user, [SUPER, STAFF]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        qs = Employer.objects.all().order_by("approval_status", "-created_at")
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(approval_status=status_filter.upper())
+        data = []
+        for e in qs:
+            qr = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=e.pk).first()
+            data.append({
+                "id": e.pk,
+                "name": e.name,
+                "email": e.email,
+                "contact_person": e.contact_person,
+                "contact_mobile": e.contact_mobile,
+                "approval_status": e.approval_status,
+                "plan_type": e.plan_type,
+                "plan_expiry": e.plan_expiry,
+                "qr_reference": qr.qr_reference if qr else None,
+                "created_at": e.created_at,
+            })
+        return Response({"Result": "Success", "Data": data})
+
+
+class EmployerApprove(APIView):
+    """Admin approves/rejects a pending employer."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, employer_id):
+        if not role_has_access(request.user, [SUPER, STAFF]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp = Employer.objects.filter(pk=employer_id).first()
+        if not emp:
+            return Response({"Result": "Error", "Message": "Employer not found"}, status=404)
+        decision = request.data.get("decision", "APPROVE").upper()
+        if decision == "APPROVE":
+            emp.approval_status = "APPROVED"
+            emp.is_active = True
+            emp.approved_by = request.user
+            emp.approved_at = timezone.now()
+            emp.save()
+            write_audit(request, "EMPLOYER_APPROVED", "EMPLOYER", emp.pk, previous="PENDING", new="APPROVED")
+            notify("EMPLOYER", "EMPLOYER_APPROVED", f"Your employer account '{emp.name}' was approved.")
+        elif decision == "REJECT":
+            emp.approval_status = "REJECTED"
+            emp.is_active = False
+            emp.save()
+            write_audit(request, "EMPLOYER_REJECTED", "EMPLOYER", emp.pk, previous="PENDING", new="REJECTED")
+        return Response({"Result": "Success", "Data": EmployerSerializer(emp).data})
+
+
+class PlanList(APIView):
+    """List available plans with features."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        plans = [{"plan": k, "features": v} for k, v in PLAN_FEATURES.items()]
+        return Response({"Result": "Success", "Data": plans})
+
+
+class EmployerAttachPlan(APIView):
+    """Employer attaches a plan (SILVER/GOLD/PLATINUM) to their account."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        plan = (request.data.get("plan_type") or "").upper()
+        if plan not in ("SILVER", "GOLD", "PLATINUM"):
+            return Response({"Result": "Error", "Message": "Invalid plan. Choose SILVER, GOLD or PLATINUM."}, status=400)
+        # Employer can attach a plan to their own account; admin to any.
+        emp = None
+        if role_has_access(request.user, [SUPER, STAFF]):
+            employer_id = request.data.get("employer_id")
+            emp = Employer.objects.filter(pk=employer_id).first() if employer_id else Employer.objects.filter(email=request.user.email).first()
+        else:
+            emp = Employer.objects.filter(email=request.user.email).first()
+            if not emp:
+                emp = Employer.objects.filter(contact_mobile=request.user.mobile).first()
+        if not emp:
+            return Response({"Result": "Error", "Message": "Employer account not found. Ensure the employer is approved first."}, status=400)
+        if emp.approval_status != "APPROVED":
+            return Response({"Result": "Error", "Message": "Employer must be approved before attaching a plan."}, status=400)
+        emp.plan_type = plan
+        # 30-day plan expiry
+        emp.plan_expiry = timezone.now() + timezone.timedelta(days=30)
+        emp.save()
+        write_audit(request, "EMPLOYER_PLAN_ATTACHED", "EMPLOYER", emp.pk, previous=plan, new=f"{plan} 30d")
+        return Response({"Result": "Success", "Data": EmployerSerializer(emp).data})
+
+
+class MyPlanView(APIView):
+    """Logged-in employer sees their own plan + QR."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        emp = Employer.objects.filter(email=request.user.email).first()
+        if not emp:
+            return Response({"Result": "Error", "Message": "No employer account linked"}, status=404)
+        qr = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=emp.pk).first()
+        return Response({
+            "Result": "Success",
+            "Data": {
+                "employer": EmployerSerializer(emp).data,
+                "qr_reference": qr.qr_reference if qr else None,
+                "plan_features": PLAN_FEATURES.get(emp.plan_type, []),
+            },
+        })
