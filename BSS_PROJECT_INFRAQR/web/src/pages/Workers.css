@@ -15,3 +15,15 @@
 .qr-mini-badge { background: #e8f8f0; color: #148f77; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .worker-card-link { color: #022B5E; font-weight: 600; font-size: 13px; text-decoration: none; }
 .worker-card-link:hover { text-decoration: underline; }
+
+/* Worker detail page */
+.worker-detail-page { padding: 4px; }
+.worker-detail-page > .btn-primary { margin-bottom: 16px; }
+.worker-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.worker-detail-grid > div { min-width: 0; }
+@media (max-width: 800px) { .worker-detail-grid { grid-template-columns: 1fr; } }
+.worker-detail-profile h2 { margin: 0 0 4px; color: #022B5E; }
+.panel-head-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.panel-head-row h3 { margin: 0; color: #022B5E; }
+.worker-id-card-img { width: 100% !important; height: auto !important; max-width: 520px; border: 1px solid #e5e9f0; border-radius: 10px; display: block; }
+

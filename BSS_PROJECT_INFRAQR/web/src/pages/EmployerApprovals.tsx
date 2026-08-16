@@ -27,13 +27,23 @@ export default function EmployerApprovals() {
     } finally { setBusy(false); }
   };
 
+  const setPlan = async (id: number, plan: string) => {
+    setBusy(true);
+    try {
+      await qrMgmtApi.attachPlan(plan, id);
+      await load();
+    } catch (e: any) {
+      alert(e?.response?.data?.Message || 'Failed to set plan');
+    } finally { setBusy(false); }
+  };
+
   const statusBadge = (s: string) => {
     const cls = s === 'APPROVED' ? 'badge-approved' : s === 'REJECTED' ? 'badge-rejected' : 'badge-pending';
     return <span className={`status-badge ${cls}`}>{s}</span>;
   };
 
   return (
-    <AppLayout title="Employer Approvals">
+    <AppLayout title="Employers">
       <div className="qr-mgmt">
         <div className="mgmt-toolbar">
           <div className="mgmt-filters">
@@ -59,7 +69,7 @@ export default function EmployerApprovals() {
                   <td>{e.contact_person || '—'}<div className="muted">{e.contact_mobile || ''}</div></td>
                   <td>{e.email || '—'}</td>
                   <td>{statusBadge(e.approval_status)}</td>
-                  <td>{e.plan_type || 'FREE'}</td>
+                  <td>{e.plan_type || '—'}</td>
                   <td className="actions-cell">
                     {e.approval_status === 'PENDING' && (
                       <>
@@ -67,7 +77,25 @@ export default function EmployerApprovals() {
                         <button className="btn-reject" disabled={busy} onClick={() => decide(e.id, 'REJECT')}>Reject</button>
                       </>
                     )}
-                    {e.approval_status !== 'PENDING' && <span className="muted">—</span>}
+                    {e.approval_status === 'APPROVED' && (
+                      <>
+                        <select
+                          className="plan-select"
+                          value={e.plan_type || ''}
+                          disabled={busy}
+                          onChange={(ev) => setPlan(e.id, ev.target.value)}
+                        >
+                          <option value="">Select plan</option>
+                          <option value="SILVER">Silver</option>
+                          <option value="GOLD">Gold</option>
+                          <option value="PLATINUM">Platinum</option>
+                        </select>
+                        <button className="btn-reject" disabled={busy} onClick={() => decide(e.id, 'REJECT')}>Reject</button>
+                      </>
+                    )}
+                    {e.approval_status === 'REJECTED' && (
+                      <button className="btn-approve" disabled={busy} onClick={() => decide(e.id, 'APPROVE')}>Re-approve</button>
+                    )}
                   </td>
                 </tr>
               ))}

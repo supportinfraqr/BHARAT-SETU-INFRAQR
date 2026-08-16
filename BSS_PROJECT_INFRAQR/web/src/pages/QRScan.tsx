@@ -106,7 +106,7 @@ export default function QRScan() {
           {!result && (
             <div className="qr-result-empty">
               <div className="qr-big-icon">📱</div>
-              <p>Scan a worker's QR to verify identity<br />and mark geo-verified attendance</p>
+              <p>Scan a worker QR for attendance,<br />or an employer QR to request binding</p>
             </div>
           )}
 
@@ -122,6 +122,27 @@ export default function QRScan() {
               <div className="qr-worker-avatar">{result.Data.worker.full_name?.[0]?.toUpperCase() || 'W'}</div>
               <h3>{result.Data.worker.full_name}</h3>
               <p className="qr-worker-id">Worker ID: {result.Data.worker.worker_id}</p>
+            </div>
+          )}
+
+          {result?.Data?.entity_type === 'EMPLOYER' && result?.Data?.employer && (
+            <div className="qr-worker-box">
+              <div className="qr-worker-avatar">{result.Data.employer.name?.[0]?.toUpperCase() || 'E'}</div>
+              <h3>{result.Data.employer.name}</h3>
+              <p className="qr-worker-id">Employer ID: {result.Data.employer.id}</p>
+              <div className={`qr-att-box ${result.Data.action === 'binding_requested' ? 'present' : 'mismatch'}`} style={{ marginTop: 12 }}>
+                <div className="qr-att-badge">{result.Data.action === 'binding_requested' ? '✓' : '!'}</div>
+                <h3>
+                  {result.Data.action === 'binding_requested' && 'Binding Request Sent'}
+                  {result.Data.action === 'already_bound' && 'Already Bound'}
+                  {result.Data.action === 'contractor_login_required' && 'Login as Contractor'}
+                </h3>
+                <p>
+                  {result.Data.action === 'binding_requested' && 'The employer will review and approve your request.'}
+                  {result.Data.action === 'already_bound' && 'This contractor is already bound to this employer.'}
+                  {result.Data.action === 'contractor_login_required' && 'Sign in as a contractor to request binding.'}
+                </p>
+              </div>
             </div>
           )}
 

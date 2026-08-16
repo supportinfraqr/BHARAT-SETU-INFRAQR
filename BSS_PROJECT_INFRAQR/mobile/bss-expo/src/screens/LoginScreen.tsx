@@ -25,7 +25,7 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>BHARAT SHARAM SETU</Text>
+      <Text style={styles.title}>BHARAT SHRAM SETU</Text>
       <Text style={styles.subtitle}>QR-based Workforce System</Text>
       <TextInput
         style={styles.input}

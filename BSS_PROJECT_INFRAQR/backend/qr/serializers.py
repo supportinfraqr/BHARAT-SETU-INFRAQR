@@ -15,14 +15,21 @@ from .models import (
 class EmployerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employer
-        fields = ["id", "name", "contact_person", "contact_mobile", "email", "address", "is_active", "created_at"]
+        fields = [
+            "id", "name", "contact_person", "contact_mobile", "email", "address",
+            "pan_no", "gstin", "cin", "lin", "registration_type", "bank_details",
+            "industry", "state", "city", "pincode",
+            "approval_status", "plan_type", "is_active", "created_at",
+        ]
 
 
 class ContractorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contractor
         fields = [
-            "id", "name", "contact_mobile", "employer", "is_primary", "location_lat",
+            "id", "name", "contact_person", "contact_mobile", "email", "address",
+            "pan_no", "gstin", "registration_type", "bank_details", "industry",
+            "state", "city", "pincode", "employer", "is_primary", "location_lat",
             "location_lng", "site_name", "is_active", "created_at",
         ]
 
@@ -31,8 +38,13 @@ class WorkerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Worker
         fields = [
-            "id", "legacy_employee_code", "full_name", "worker_id", "mobile", "aadhaar_no",
-            "pan_no", "employer", "contractor", "is_active", "created_at",
+            "id", "legacy_employee_code", "full_name", "worker_id", "mobile",
+            "alternative_mobile", "email", "aadhaar_no", "pan_no", "father_name",
+            "gender", "marital_status", "date_of_birth", "designation", "department",
+            "present_address", "permanent_address", "state", "city", "pincode",
+            "bank_account", "bank_ifsc", "previous_uan", "previous_esi", "pf_account",
+            "gross_salary", "doj", "leaving_date", "employer", "contractor",
+            "photo", "is_active", "created_at",
         ]
 
 

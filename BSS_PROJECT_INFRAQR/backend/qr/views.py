@@ -48,8 +48,54 @@ PRIMARY = "PRIMARY_CONTRACTOR"
 SECONDARY = "SECONDARY_CONTRACTOR"
 
 
-class ThrottledScan:
-    pass
+def resolve_scope(user):
+    """Return (employer_id, contractor_id, role) scoping the user's view of the hierarchy.
+
+    - Admin/Staff: no scope (see everything)
+    - Employer: their own employer_id only (own contractors + workers)
+    - Contractor: their own contractor_id only (own workers)
+    """
+    if user.role == SUPER or user.role == STAFF:
+        return (None, None, user.role)
+    if user.role == EMPLOYER:
+        emp_id = user.employer_id
+        if not emp_id:
+            # Fallback: link by email to the Employer record
+            emp = Employer.objects.filter(email=user.email).first()
+            if emp:
+                emp_id = emp.pk
+                user.employer_id = emp.pk
+                try:
+                    user.save(update_fields=["employer_id"])
+                except Exception:
+                    pass
+        return (emp_id, None, user.role)
+    if user.role in (PRIMARY, SECONDARY):
+        con_id = user.contractor_id
+        if not con_id:
+            con = Contractor.objects.filter(contact_mobile=user.mobile).first()
+            if con:
+                con_id = con.pk
+                user.contractor_id = con.pk
+                try:
+                    user.save(update_fields=["contractor_id"])
+                except Exception:
+                    pass
+        return (None, con_id, user.role)
+    return (None, None, user.role)
+
+
+def _scanner_contractor(request):
+    """Return (contractor_id, role) for the scanning user if they are a contractor, else (None, role)."""
+    user = request.user
+    if user.role in (PRIMARY, SECONDARY):
+        con_id = user.contractor_id
+        if not con_id:
+            con = Contractor.objects.filter(contact_mobile=user.mobile).first()
+            if con:
+                con_id = con.pk
+        return (con_id, user.role)
+    return (None, getattr(user, "role", ""))
 
 
 def role_has_access(user, required_roles):
@@ -64,7 +110,11 @@ class EmployerListCreate(APIView):
     def get(self, request):
         if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         qs = Employer.objects.filter(is_active=True)
+        if role == EMPLOYER and emp_id:
+            # Employer sees only their own record
+            qs = qs.filter(pk=emp_id)
         return Response(EmployerSerializer(qs, many=True).data)
 
     def post(self, request):
@@ -85,7 +135,11 @@ class ContractorListCreate(APIView):
     def get(self, request):
         if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         qs = Contractor.objects.filter(is_active=True)
+        if role == EMPLOYER and emp_id:
+            # Employer sees only their own contractors
+            qs = qs.filter(employer_id=emp_id)
         return Response(ContractorSerializer(qs, many=True).data)
 
     def post(self, request):
@@ -106,7 +160,13 @@ class WorkerListCreate(APIView):
     def get(self, request):
         if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         qs = Worker.objects.filter(is_active=True)
+        if role == EMPLOYER and emp_id:
+            # Employer sees only workers in their own tree
+            qs = qs.filter(employer_id=emp_id)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            qs = qs.filter(contractor_id=con_id)
         return Response(WorkerSerializer(qs, many=True).data)
 
     def post(self, request):
@@ -230,6 +290,54 @@ class QRScanView(APIView):
                 },
             })
 
+        # Employer QR scanned by a contractor -> create a binding request
+        if qr.entity_type == "EMPLOYER":
+            employer = entity
+            con_id, role = _scanner_contractor(request)
+            log_scan(request, qr, scan_result="EMPLOYER_SCAN", lat=lat, lng=lng)
+            if not con_id:
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "EMPLOYER",
+                        "employer": {"id": employer.pk, "name": employer.name},
+                        "action": "contractor_login_required",
+                    },
+                })
+            # Contractor already bound to another employer?
+            contractor = Contractor.objects.filter(pk=con_id).first()
+            if contractor and contractor.employer_id and contractor.employer_id != employer.pk:
+                return Response({"Result": "Error", "Message": "Contractor already bound to another employer"}, status=409)
+            if contractor and contractor.employer_id == employer.pk:
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "EMPLOYER",
+                        "employer": {"id": employer.pk, "name": employer.name},
+                        "action": "already_bound",
+                    },
+                })
+            # Create PENDING binding request (avoid duplicates)
+            existing = Binding.objects.filter(
+                binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor, status="PENDING"
+            ).first()
+            if not existing:
+                binding = Binding.objects.create(
+                    binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor,
+                    status="PENDING",
+                )
+                write_audit(request, "BINDING_REQUEST_EMPLOYER_CONTRACTOR", "BINDING", binding.pk)
+                notify("EMPLOYER", "CONTRACTOR_BINDING_REQUEST",
+                       f"Contractor {contractor.name} requested to bind with {employer.name}")
+            return Response({
+                "Result": "Success",
+                "Data": {
+                    "entity_type": "EMPLOYER",
+                    "employer": {"id": employer.pk, "name": employer.name},
+                    "action": "binding_requested",
+                },
+            })
+
         # Non-worker entity lookup
         log_scan(request, qr, scan_result="LOOKUP", lat=lat, lng=lng)
         return Response({"Result": "Success", "Data": {"qr": QRCodeSerializer(qr).data, "entity_type": qr.entity_type}})
@@ -289,6 +397,38 @@ class BindingCreate(APIView):
             return Response({"Result": "Success", "Data": BindingSerializer(binding).data}, status=201)
 
         return Response({"Result": "Error", "Message": "Invalid binding_type"}, status=400)
+
+
+class BindingList(APIView):
+    """List binding requests scoped to the logged-in employer or contractor."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        emp_id, con_id, role = resolve_scope(request.user)
+        qs = Binding.objects.all().order_by("-created_at")
+        if role == EMPLOYER and emp_id:
+            qs = qs.filter(employer_id=emp_id)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            qs = qs.filter(contractor_id=con_id)
+        data = []
+        for b in qs:
+            emp = Employer.objects.filter(pk=b.employer_id).first()
+            con = Contractor.objects.filter(pk=b.contractor_id).first()
+            worker = Worker.objects.filter(pk=b.worker_id).first()
+            data.append({
+                "id": b.pk,
+                "binding_type": b.binding_type,
+                "status": b.status,
+                "employer": {"id": b.employer_id, "name": emp.name if emp else None},
+                "contractor": {"id": b.contractor_id, "name": con.name if con else None},
+                "worker": {"id": b.worker_id, "name": worker.full_name if worker else None},
+                "site_name": b.site_name,
+                "created_at": b.created_at,
+                "started_at": b.started_at,
+                "ended_at": b.ended_at,
+            })
+        return Response({"Result": "Success", "Data": data})
 
 
 class BindingApprove(APIView):
@@ -351,6 +491,34 @@ class ContractorReassign(APIView):
             notify("EMPLOYER", "CONTRACTOR_REASSIGNED",
                    f"{count} workers reassigned from contractor {from_contractor_id} to {to_contractor_id}")
         return Response({"Result": "Success", "Message": f"Reassigned {count} workers"})
+
+
+class WorkerUnbind(APIView):
+    """Unbind a worker from their contractor (end active binding, unlink worker)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        worker_id = request.data.get("worker")
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        worker = Worker.objects.filter(pk=worker_id).first()
+        if not worker:
+            return Response({"Result": "Error", "Message": "Worker not found"}, status=404)
+        with transaction.atomic():
+            binding = Binding.objects.filter(
+                binding_type="WORKER_CONTRACTOR", worker=worker, status="ACTIVE"
+            ).first()
+            if binding:
+                binding.status = "ENDED"
+                binding.ended_at = timezone.now()
+                binding.save()
+            worker.contractor = None
+            worker.employer = None
+            worker.save(update_fields=["contractor", "employer"])
+            write_audit(request, "WORKER_UNBOUND", "WORKER", worker.pk,
+                        previous=str(binding.contractor_id) if binding else "", new="")
+        return Response({"Result": "Success", "Message": f"Worker {worker.full_name} unbound"})
 
 
 class ScanLogList(APIView):
@@ -554,3 +722,64 @@ class MyPlanView(APIView):
                 "plan_features": PLAN_FEATURES.get(emp.plan_type, []),
             },
         })
+
+
+class MyProfileView(APIView):
+    """GET/PUT the logged-in user's own profile (employer/contractor/worker)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        emp_id, con_id, role = resolve_scope(request.user)
+        data = {"role": request.user.role, "username": request.user.username, "email": request.user.email, "mobile": request.user.mobile}
+        if role == EMPLOYER and emp_id:
+            emp = Employer.objects.filter(pk=emp_id).first()
+            if not emp:
+                return Response({"Result": "Error", "Message": "Employer not found"}, status=404)
+            data["entity"] = "employer"
+            data["profile"] = EmployerSerializer(emp).data
+            return Response({"Result": "Success", "Data": data})
+        if role in (PRIMARY, SECONDARY) and con_id:
+            con = Contractor.objects.filter(pk=con_id).first()
+            if not con:
+                return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+            data["entity"] = "contractor"
+            data["profile"] = ContractorSerializer(con).data
+            return Response({"Result": "Success", "Data": data})
+        if request.user.role == WORKER:
+            # Worker scoped by legacy employee code / username
+            worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+            if not worker:
+                worker = Worker.objects.filter(mobile=request.user.mobile).first()
+            if not worker:
+                return Response({"Result": "Error", "Message": "Worker profile not found"}, status=404)
+            data["entity"] = "worker"
+            data["profile"] = WorkerSerializer(worker).data
+            return Response({"Result": "Success", "Data": data})
+        return Response({"Result": "Error", "Message": "No profile linked to this account"}, status=404)
+
+    def put(self, request):
+        emp_id, con_id, role = resolve_scope(request.user)
+        if role == EMPLOYER and emp_id:
+            emp = Employer.objects.filter(pk=emp_id).first()
+            if not emp:
+                return Response({"Result": "Error", "Message": "Employer not found"}, status=404)
+            ser = EmployerSerializer(emp, data=request.data, partial=True)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            con = Contractor.objects.filter(pk=con_id).first()
+            if not con:
+                return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+            ser = ContractorSerializer(con, data=request.data, partial=True)
+        elif request.user.role == WORKER:
+            worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+            if not worker:
+                worker = Worker.objects.filter(mobile=request.user.mobile).first()
+            if not worker:
+                return Response({"Result": "Error", "Message": "Worker profile not found"}, status=404)
+            ser = WorkerSerializer(worker, data=request.data, partial=True)
+        else:
+            return Response({"Result": "Error", "Message": "No profile linked to this account"}, status=404)
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        write_audit(request, "PROFILE_UPDATED", ser.instance._meta.object_name, ser.instance.pk)
+        return Response({"Result": "Success", "Data": ser.data})

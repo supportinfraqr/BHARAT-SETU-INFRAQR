@@ -17,6 +17,10 @@ export default function AppLayout({ title, children }: { title?: string; childre
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem('bss_user') || localStorage.getItem('bss_legacy_user') || '{}');
+  // LoginType: 1=Admin/SA, 5=PE, 6=Contractor, 7=Worker
+  const loginType = String(user.LoginType || user.role || '1');
+  const isAdmin = loginType === '1';
+  const isEmployer = loginType === '5';
 
   useEffect(() => {
     api.post('/Dashboard/NavMenuList', {}).then((r) => setNav(r.data || [])).catch(() => {});
@@ -53,15 +57,32 @@ export default function AppLayout({ title, children }: { title?: string; childre
             <a className="nav-submenu qr-mgmt-link" href="#/qr/scan" onClick={() => navigate('/qr/scan')}>
               <i className="mdi mdi-chevron-right"></i> QR Scan
             </a>
+            <a className="nav-submenu qr-mgmt-link" href="#/qr/binding" onClick={() => navigate('/qr/binding')}>
+              <i className="mdi mdi-chevron-right"></i> Worker Binding
+            </a>
+            {isEmployer && (
+              <a className="nav-submenu qr-mgmt-link" href="#/qr/binding-requests" onClick={() => navigate('/qr/binding-requests')}>
+                <i className="mdi mdi-chevron-right"></i> Binding Requests
+              </a>
+            )}
             <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
-              <i className="mdi mdi-chevron-right"></i> Workers
+              <i className="mdi mdi-chevron-right"></i> All Workers
             </a>
-            <a className="nav-submenu qr-mgmt-link" href="#/qr/management/employers" onClick={() => navigate('/qr/management/employers')}>
-              <i className="mdi mdi-chevron-right"></i> Employer Approvals
-            </a>
-            <a className="nav-submenu qr-mgmt-link" href="#/qr/management/my-plan" onClick={() => navigate('/qr/management/my-plan')}>
-              <i className="mdi mdi-chevron-right"></i> My Plan
-            </a>
+            {isAdmin && (
+              <>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/contractors" onClick={() => navigate('/qr/contractors')}>
+                  <i className="mdi mdi-chevron-right"></i> All Contractors
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/management/employers" onClick={() => navigate('/qr/management/employers')}>
+                  <i className="mdi mdi-chevron-right"></i> Employers
+                </a>
+              </>
+            )}
+            {isEmployer && (
+              <a className="nav-submenu qr-mgmt-link" href="#/qr/contractors" onClick={() => navigate('/qr/contractors')}>
+                <i className="mdi mdi-chevron-right"></i> My Contractors
+              </a>
+            )}
           </div>
           <div className="nav-section-title">LEGACY MODULES</div>
           {nav.map((mod, mi) => (
@@ -132,6 +153,14 @@ export default function AppLayout({ title, children }: { title?: string; childre
                 )}
                 <div className="user-dropdown-qr-label">View My ID →</div>
               </div>
+              <button className="user-dropdown-item" onClick={() => navigate('/qr/my-profile')}>
+                <i className="fa fa-user"></i> My Profile
+              </button>
+              {isEmployer && (
+                <button className="user-dropdown-item" onClick={() => navigate('/qr/management/my-plan')}>
+                  <i className="fa fa-crown"></i> My Plan
+                </button>
+              )}
               <button className="user-dropdown-item logout" onClick={logout}>
                 <i className="fa fa-sign-out-alt"></i> Logout
               </button>

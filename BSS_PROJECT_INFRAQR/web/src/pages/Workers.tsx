@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import './Workers.css';
 import AppLayout from '../components/AppLayout';
 
 export default function Workers() {
+  const navigate = useNavigate();
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,6 +19,8 @@ export default function Workers() {
 
   useEffect(() => { load(); }, [load]);
 
+  const openDetail = (w: any) => navigate(`/qr/workers/${w.id}`, { state: { worker: w } });
+
   return (
     <AppLayout title="Workers">
       <div className="workers-page">
@@ -24,7 +28,7 @@ export default function Workers() {
       {loading && <div className="module-loading">Loading workers...</div>}
       <div className="worker-grid">
         {workers.map((w) => (
-          <div key={w.id} className="worker-card">
+          <div key={w.id} className="worker-card" onClick={() => openDetail(w)} style={{ cursor: 'pointer' }}>
             <div className="worker-card-header">
               <div className="worker-avatar">{w.full_name?.[0]?.toUpperCase() || 'W'}</div>
               <div>
@@ -40,9 +44,7 @@ export default function Workers() {
             </div>
             <div className="worker-card-footer">
               <span className="qr-mini-badge">▣ QR</span>
-              <a className="worker-card-link" href={api.defaults.baseURL + `/qr/workers/${w.id}/card/?fmt=png`} target="_blank" rel="noreferrer">
-                View ID Card
-              </a>
+              <span className="worker-card-link">View ID Card →</span>
             </div>
           </div>
         ))}

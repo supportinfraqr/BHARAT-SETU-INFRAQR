@@ -18,7 +18,11 @@ export const qrApi = {
     api.get('/qr/qr/', { params: { entity_type: entityType, entity_id: entityId } }),
   createWorker: (payload: any) => api.post('/qr/workers/', payload),
   bindings: () => api.get('/qr/bindings/'),
+  bindingList: () => api.get('/qr/bindings/list/'),
   createBinding: (payload: any) => api.post('/qr/bindings/', payload),
+  unbind: (workerId: number) => api.post('/qr/bindings/unbind/', { worker: workerId }),
+  approveBinding: (id: number, decision: 'APPROVE' | 'REJECT') =>
+    api.post(`/qr/bindings/${id}/approve/`, { decision }),
   scans: () => api.get('/qr/scans/'),
   notifications: () => api.get('/qr/notifications/'),
   workerCard: (workerId: number, format = "png") =>
@@ -34,6 +38,8 @@ export const qrMgmtApi = {
   attachPlan: (planType: string, employerId?: number) =>
     api.post('/qr/management/employer/plan/', { plan_type: planType, employer_id: employerId }),
   myPlan: () => api.get('/qr/management/employer/my/'),
+  myProfile: () => api.get('/qr/profile/me/'),
+  updateProfile: (payload: any) => api.put('/qr/profile/me/', payload),
 };
 
 export const legacyApi = {
