@@ -1388,6 +1388,7 @@
     <Content Include="Content\Dashboards\WorkerGrievancesSupport\WorkerGrievanes\style.css" />
     <Content Include="Content\Dashboards\WorkerGrievancesSupport\WorkerLodgeGrievance\script.js" />
     <Content Include="Content\Dashboards\WorkerGrievancesSupport\WorkerLodgeGrievance\style.css" />
+    <Content Include="scripts\api\bharat-setu-api.js" />
     <Content Include="Content\Dashboards\WorkerProfile\script.js" />
     <Content Include="Content\Dashboards\WorkerProfile\style.css" />
     <Content Include="Content\NewLogin\images\app-store.png" />
