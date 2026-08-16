@@ -157,6 +157,158 @@ namespace ezcompliance.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<ActionResult> CreateV1(string subject, string details)
+        {
+            string loginId = Convert.ToString(Session["LoginId"]);
+            if (string.IsNullOrWhiteSpace(loginId))
+            {
+                return V1Error(401, "AUTH_REQUIRED", "Authentication is missing or expired.");
+            }
+
+            subject = (subject ?? string.Empty).Trim();
+            details = (details ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(subject) || subject.Length > 150)
+            {
+                return V1Error(
+                    400,
+                    "VALIDATION_ERROR",
+                    "The grievance could not be submitted.",
+                    new { subject = new[] { "Enter a subject containing no more than 150 characters." } }
+                );
+            }
+
+            if (details.Length > 5000)
+            {
+                return V1Error(
+                    400,
+                    "VALIDATION_ERROR",
+                    "The grievance could not be submitted.",
+                    new { details = new[] { "Enter grievance details containing no more than 5000 characters." } }
+                );
+            }
+
+            var allowedAudioExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".webm", ".mp3", ".wav"
+            };
+            var allowedDocumentExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg", ".jpeg", ".png"
+            };
+            bool hasAudio = false;
+
+            for (int index = 0; index < Request.Files.Count; index++)
+            {
+                HttpPostedFileBase file = Request.Files[index];
+                if (file == null || file.ContentLength <= 0)
+                {
+                    continue;
+                }
+
+                string extension = Path.GetExtension(file.FileName);
+                if (allowedAudioExtensions.Contains(extension))
+                {
+                    hasAudio = true;
+                    continue;
+                }
+
+                if (!allowedDocumentExtensions.Contains(extension))
+                {
+                    return V1Error(
+                        400,
+                        "UNSUPPORTED_DOCUMENT",
+                        "Only JPG and PNG grievance documents are supported."
+                    );
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(details) && !hasAudio)
+            {
+                return V1Error(
+                    400,
+                    "VALIDATION_ERROR",
+                    "The grievance could not be submitted.",
+                    new { details = new[] { "Describe the grievance or provide an audio recording." } }
+                );
+            }
+
+            try
+            {
+                var uploadedDocuments = new List<string>();
+                string audioFileName = string.Empty;
+                string documentFolder = Server.MapPath("~/DownloadMat/Uploads/GrevancesDocuments/");
+                string audioFolder = Server.MapPath("~/DownloadMat/Uploads/Audio/");
+
+                Directory.CreateDirectory(documentFolder);
+                Directory.CreateDirectory(audioFolder);
+
+                for (int index = 0; index < Request.Files.Count; index++)
+                {
+                    HttpPostedFileBase file = Request.Files[index];
+                    if (file == null || file.ContentLength <= 0)
+                    {
+                        continue;
+                    }
+
+                    string extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                    if (allowedAudioExtensions.Contains(extension))
+                    {
+                        audioFileName = Guid.NewGuid() + extension;
+                        file.SaveAs(Path.Combine(audioFolder, audioFileName));
+                    }
+                    else
+                    {
+                        string documentName = Guid.NewGuid() + "_" + Path.GetFileName(file.FileName);
+                        file.SaveAs(Path.Combine(documentFolder, documentName));
+                        uploadedDocuments.Add(documentName);
+                    }
+                }
+
+                var grievance = new RetailBAL
+                {
+                    LoginId = loginId,
+                    AiText = details,
+                    Subject = subject,
+                    Documents = string.Join(",", uploadedDocuments),
+                    AudioFileName = audioFileName,
+                    Action = "1"
+                };
+
+                string grievanceId = await DAL.DLL.InsertGrivances(grievance);
+                Response.StatusCode = 201;
+                return Json(new
+                {
+                    data = new
+                    {
+                        id = grievanceId,
+                        status = "submitted"
+                    }
+                });
+            }
+            catch (Exception)
+            {
+                return V1Error(500, "SERVICE_ERROR", "The grievance service is temporarily unavailable.");
+            }
+        }
+
+        private JsonResult V1Error(int statusCode, string code, string message, object fieldErrors = null)
+        {
+            Response.StatusCode = statusCode;
+            Response.TrySkipIisCustomErrors = true;
+            return Json(new
+            {
+                error = new
+                {
+                    code = code,
+                    message = message,
+                    fieldErrors = fieldErrors,
+                    requestId = Response.Headers["X-Request-ID"]
+                }
+            });
+        }
+
 
 
 
