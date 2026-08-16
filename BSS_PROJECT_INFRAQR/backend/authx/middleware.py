@@ -14,6 +14,8 @@ class LegacySessionAuthMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if request.path.startswith("/api/v1/"):
+            return self.get_response(request)
         legacy_login_id = request.headers.get("X-Legacy-Login-Id")
         if legacy_login_id and legacy_login_id.isdigit():
             login_id = int(legacy_login_id)

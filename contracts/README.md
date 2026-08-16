@@ -22,6 +22,8 @@
 
 The target grievance endpoint returns HTTP `201`. Compatibility endpoints are implemented in ASP.NET MVC because the established server session is available there; Django must implement the same OpenAPI operations before the transport is switched.
 
+Django login returns JWTs in optional session `meta`. `legacyLoginId` is compatibility-only for unversioned routes and is never accepted as authority by `/api/v1`.
+
 ## Migration sequence
 
 1. Screens call a domain client instead of URLs or framework transports.
@@ -30,4 +32,4 @@ The target grievance endpoint returns HTTP `201`. Compatibility endpoints are im
 4. Configuration switches the client from compatibility mode to `/api/v1`.
 5. React Native consumes the same contract through its typed client.
 
-Bearer-token shape, upload size limits, and canonical permission names remain open decisions. The ASP.NET compatibility endpoints currently use the established session cookie; Django and React Native must agree on token issuance before bearer authentication is enabled.
+The ASP.NET compatibility endpoints continue to use the established session cookie. Django issues JWT access and refresh tokens, and enforces environment-configurable grievance evidence limits. Canonical permission names remain an integration decision.

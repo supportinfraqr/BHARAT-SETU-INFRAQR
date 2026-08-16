@@ -8,5 +8,8 @@ django-redis==7.0.0
 django-cors-headers==4.9.0
 redis==8.1.0
 python-dotenv==1.2.2
+bcrypt==4.3.0
+Pillow==11.3.0
+reportlab==4.4.3
 qrcode==8.2
 pycryptodome==3.23.0

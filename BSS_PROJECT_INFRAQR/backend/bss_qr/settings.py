@@ -132,6 +132,7 @@ REST_FRAMEWORK = {
         "anon": "100/day",
         "user": "1000/hour",
         "login": "10/min",
+        "grievance": "10/hour",
         "scan": "120/min",
     },
     "DEFAULT_RENDERER_CLASSES": [
@@ -177,5 +178,9 @@ STATIC_URL = "static/"
 # Uploaded files (worker photos, OCR documents, contractor docs)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+BSS_GRIEVANCE_AUDIO_MAX_BYTES = int(os.environ.get("BSS_GRIEVANCE_AUDIO_MAX_BYTES", 10 * 1024 * 1024))
+BSS_GRIEVANCE_DOCUMENT_MAX_BYTES = int(os.environ.get("BSS_GRIEVANCE_DOCUMENT_MAX_BYTES", 5 * 1024 * 1024))
+BSS_GRIEVANCE_MAX_DOCUMENTS = int(os.environ.get("BSS_GRIEVANCE_MAX_DOCUMENTS", 5))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

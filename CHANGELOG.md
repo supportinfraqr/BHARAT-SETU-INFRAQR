@@ -9,6 +9,13 @@ Use short, telegraphic style:
 
 One entry per task.
 
+## 2026-08-16 — Integrate Django API v1 boundary
+
+Implement normalized authentication, session, logout, and grievance operations
+Files/Modules: Django API/authentication, OpenAPI contract, React web, Expo client
+Impact: Versioned identity and grievance workflows now use JWT authentication without client-authoritative identity
+Reason: Align existing Django and React/Expo migration with decoupled frontend contract
+
 ## 2026-08-16 — Decouple frontend/backend boundary
 
 Add versioned contracts, shared client, session adapter, and ASP.NET compatibility routes

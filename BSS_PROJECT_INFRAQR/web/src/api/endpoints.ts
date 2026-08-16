@@ -2,9 +2,13 @@ import api from './client';
 
 export const authApi = {
   login: (username: string, password: string) =>
-    api.post('/auth/login/', { username, password }),
-  me: () => api.get('/auth/me/'),
-  logout: () => api.post('/auth/logout/', {}),
+    api.post('/v1/auth/login', { username, password, method: 'password' }),
+  me: () => api.get('/v1/session'),
+  logout: (refreshToken?: string) => api.post('/v1/auth/logout', { refreshToken }),
+};
+
+export const grievanceApi = {
+  create: (payload: FormData) => api.post('/v1/grievances', payload),
 };
 
 export const qrApi = {

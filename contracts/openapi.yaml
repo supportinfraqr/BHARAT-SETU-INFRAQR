@@ -126,6 +126,21 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/Session"
+        meta:
+          $ref: "#/components/schemas/SessionMeta"
+    SessionMeta:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          nullable: true
+        refreshToken:
+          type: string
+          nullable: true
+        legacyLoginId:
+          type: string
+          nullable: true
+          description: Compatibility-only identity for calls to unversioned legacy endpoints.
     Session:
       type: object
       required: [user, permissions]

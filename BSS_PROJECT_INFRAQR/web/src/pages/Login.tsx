@@ -16,15 +16,17 @@ export default function LoginPage() {
     setBusy(true);
     setError('');
     try {
-      const res = await api.post('/auth/login/', { username, password });
-      const { access, user } = res.data.Data;
-      localStorage.setItem('bss_token', access);
+      const res = await api.post('/v1/auth/login', { username, password, method: 'password' });
+      const user = res.data.data.user;
+      const { accessToken, refreshToken, legacyLoginId } = res.data.meta;
+      localStorage.setItem('bss_token', accessToken);
+      localStorage.setItem('bss_refresh_token', refreshToken);
       localStorage.setItem('bss_user', JSON.stringify(user));
-      const legacyId = user?.legacy_login_id ? String(user.legacy_login_id) : String(user?.id || 3);
-      localStorage.setItem('bss_legacy_login', legacyId);
+      if (legacyLoginId) localStorage.setItem('bss_legacy_login', legacyLoginId);
+      else localStorage.removeItem('bss_legacy_login');
       navigate('/dashboard');
     } catch (e: any) {
-      setError(e?.response?.data?.Message || 'Invalid credentials');
+      setError(e?.response?.data?.error?.message || 'Invalid credentials');
     } finally {
       setBusy(false);
     }

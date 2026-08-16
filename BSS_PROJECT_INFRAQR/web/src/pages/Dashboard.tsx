@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import { authApi } from '../api/endpoints';
 import './Dashboard.css';
 
 interface SubMenu { SubMenuId: string; SubMenuName: string; SubMenuUrl: string; }
@@ -31,10 +32,16 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  const logout = () => {
-    localStorage.removeItem('bss_token');
-    localStorage.removeItem('bss_user');
-    navigate('/');
+  const logout = async () => {
+    const refreshToken = localStorage.getItem('bss_refresh_token') || undefined;
+    try { await authApi.logout(refreshToken); } catch {}
+    finally {
+      localStorage.removeItem('bss_token');
+      localStorage.removeItem('bss_refresh_token');
+      localStorage.removeItem('bss_user');
+      localStorage.removeItem('bss_legacy_login');
+      navigate('/');
+    }
   };
 
   return (

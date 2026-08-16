@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../api/endpoints';
-import { TOKEN_KEY, USER_KEY, LEGACY_LOGIN_KEY } from '../api/client';
+import { TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, LEGACY_LOGIN_KEY } from '../api/client';
 
 interface AuthContextType {
   user: any;
@@ -33,26 +33,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string) => {
     const res = await authApi.login(username, password);
-    const { access, refresh, user: u } = res.data.Data;
-    await AsyncStorage.setItem(TOKEN_KEY, access);
+    const u = res.data.data.user;
+    const { accessToken, refreshToken, legacyLoginId } = res.data.meta;
+    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
+    await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
-    setToken(access);
+    if (legacyLoginId) await AsyncStorage.setItem(LEGACY_LOGIN_KEY, legacyLoginId);
+    else await AsyncStorage.removeItem(LEGACY_LOGIN_KEY);
+    setToken(accessToken);
     setUser(u);
   };
 
   const legacyLogin = async (username: string, password: string) => {
     const res = await authApi.login(username, password);
-    const { access, user: u } = res.data.Data;
-    const legacyId = u ? String(u.legacy_login_id || u.id) : '3';
-    await AsyncStorage.setItem(TOKEN_KEY, access);
+    const u = res.data.data.user;
+    const { accessToken, refreshToken, legacyLoginId } = res.data.meta;
+    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
+    await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
-    await AsyncStorage.setItem(LEGACY_LOGIN_KEY, legacyId);
-    setToken(access);
+    if (legacyLoginId) await AsyncStorage.setItem(LEGACY_LOGIN_KEY, legacyLoginId);
+    else await AsyncStorage.removeItem(LEGACY_LOGIN_KEY);
+    setToken(accessToken);
     setUser(u);
   };
 
   const logout = async () => {
+    const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+    try { await authApi.logout(refreshToken || undefined); } catch {}
     await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
     await AsyncStorage.removeItem(USER_KEY);
     await AsyncStorage.removeItem(LEGACY_LOGIN_KEY);
     setToken(null);
