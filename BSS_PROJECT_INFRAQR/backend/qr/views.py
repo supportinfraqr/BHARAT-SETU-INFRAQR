@@ -47,6 +47,7 @@ STAFF = "BSS_STAFF"
 EMPLOYER = "EMPLOYER"
 PRIMARY = "PRIMARY_CONTRACTOR"
 SECONDARY = "SECONDARY_CONTRACTOR"
+WORKER = "WORKER"
 
 
 def resolve_scope(user):
@@ -55,6 +56,7 @@ def resolve_scope(user):
     - Admin/Staff: no scope (see everything)
     - Employer: their own employer_id only (own contractors + workers)
     - Contractor: their own contractor_id only (own workers)
+    - Worker: their own employer_id + contractor_id (self only)
     """
     if user.role == SUPER or user.role == STAFF:
         return (None, None, user.role)
@@ -83,6 +85,13 @@ def resolve_scope(user):
                 except Exception:
                     pass
         return (None, con_id, user.role)
+    if user.role == WORKER:
+        worker = Worker.objects.filter(legacy_employee_code=user.username).first()
+        if not worker:
+            worker = Worker.objects.filter(mobile=user.mobile).first()
+        if worker:
+            return (worker.employer_id, worker.contractor_id, user.role)
+        return (None, None, user.role)
     return (None, None, user.role)
 
 
@@ -116,6 +125,9 @@ class EmployerListCreate(APIView):
         if role == EMPLOYER and emp_id:
             # Employer sees only their own record
             qs = qs.filter(pk=emp_id)
+        elif role == EMPLOYER and not emp_id:
+            # Employer not linked yet — show nothing
+            qs = qs.none()
         return Response(EmployerSerializer(qs, many=True).data)
 
     def post(self, request):
@@ -141,6 +153,9 @@ class ContractorListCreate(APIView):
         if role == EMPLOYER and emp_id:
             # Employer sees only their own contractors
             qs = qs.filter(employer_id=emp_id)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            # Contractor sees only themselves
+            qs = qs.filter(pk=con_id)
         return Response(ContractorSerializer(qs, many=True).data)
 
     def post(self, request):
@@ -173,8 +188,21 @@ class WorkerListCreate(APIView):
     def post(self, request):
         if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         ser = WorkerSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
+        # Scope validation: ensure the worker falls within the caller's hierarchy
+        worker_emp_id = request.data.get("employer")
+        worker_con_id = request.data.get("contractor")
+        if role == EMPLOYER and emp_id:
+            if worker_emp_id and str(worker_emp_id) != str(emp_id):
+                return Response({"Result": "Error", "Message": "Cannot create worker outside your hierarchy"}, status=403)
+            if worker_con_id:
+                if not Contractor.objects.filter(pk=worker_con_id, employer_id=emp_id).exists():
+                    return Response({"Result": "Error", "Message": "Contractor not in your hierarchy"}, status=403)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            if worker_con_id and str(worker_con_id) != str(con_id):
+                return Response({"Result": "Error", "Message": "Cannot create worker outside your contractor"}, status=403)
         with transaction.atomic():
             obj = ser.save()
             create_qr_for_entity("WORKER", obj.pk)
@@ -373,6 +401,36 @@ class QRScanView(APIView):
                         "contractor": ContractorSerializer(contractor).data,
                     },
                 })
+            if scanner_role in (PRIMARY, SECONDARY):
+                if con_id and contractor.pk != con_id:
+                    # Contractor scanning another contractor -> basic info only
+                    return Response({
+                        "Result": "Success",
+                        "Data": {
+                            "entity_type": "CONTRACTOR",
+                            "action": "view_info",
+                            "contractor": {"id": contractor.pk, "name": contractor.name, "site_name": contractor.site_name},
+                        },
+                    })
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "CONTRACTOR",
+                        "action": "view_info",
+                        "contractor": ContractorSerializer(contractor).data,
+                    },
+                })
+            if scanner_role == WORKER:
+                # Worker scanning a contractor -> basic info only
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "CONTRACTOR",
+                        "action": "view_info",
+                        "contractor": {"id": contractor.pk, "name": contractor.name, "site_name": contractor.site_name},
+                    },
+                })
+            # Admin/staff -> full info
             return Response({
                 "Result": "Success",
                 "Data": {
@@ -449,6 +507,8 @@ class BindingCreate(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
         binding_type = request.data.get("binding_type")
         employer_id = request.data.get("employer")
         contractor_id = request.data.get("contractor")
@@ -505,12 +565,23 @@ class BindingList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY, WORKER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
         emp_id, con_id, role = resolve_scope(request.user)
         qs = Binding.objects.all().order_by("-created_at")
         if role == EMPLOYER and emp_id:
             qs = qs.filter(employer_id=emp_id)
         elif role in (PRIMARY, SECONDARY) and con_id:
             qs = qs.filter(contractor_id=con_id)
+        elif role == WORKER:
+            # Worker sees only bindings that include them
+            worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+            if not worker:
+                worker = Worker.objects.filter(mobile=request.user.mobile).first()
+            if worker:
+                qs = qs.filter(worker_id=worker.pk)
+            else:
+                qs = qs.none()
         data = []
         for b in qs:
             emp = Employer.objects.filter(pk=b.employer_id).first()
@@ -543,6 +614,11 @@ class BindingApprove(APIView):
             return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
         if not role_has_access(request.user, [SUPER, EMPLOYER]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        # Hierarchy check: employer can only approve their own bindings
+        if request.user.role == EMPLOYER:
+            emp_id, _, _ = resolve_scope(request.user)
+            if emp_id and binding.employer_id and binding.employer_id != emp_id:
+                return Response({"Result": "Error", "Message": "Binding not in your hierarchy"}, status=403)
         if decision == "APPROVE":
             binding.status = "ACTIVE"
             binding.started_at = timezone.now()
@@ -573,6 +649,14 @@ class ContractorReassign(APIView):
         to_c = Contractor.objects.filter(pk=to_contractor_id).first()
         if not from_c or not to_c:
             return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+        # Hierarchy check: employer can only reassign within their own hierarchy
+        if request.user.role == EMPLOYER:
+            emp_id, _, _ = resolve_scope(request.user)
+            if emp_id:
+                if from_c.employer_id != emp_id:
+                    return Response({"Result": "Error", "Message": "Source contractor not in your hierarchy"}, status=403)
+                if to_c.employer_id != emp_id:
+                    return Response({"Result": "Error", "Message": "Target contractor not in your hierarchy"}, status=403)
         with transaction.atomic():
             # End old bindings, preserve history
             Binding.objects.filter(binding_type="WORKER_CONTRACTOR", contractor=from_c, status="ACTIVE").update(
@@ -605,6 +689,14 @@ class WorkerUnbind(APIView):
         worker = Worker.objects.filter(pk=worker_id).first()
         if not worker:
             return Response({"Result": "Error", "Message": "Worker not found"}, status=404)
+        # Hierarchy check
+        emp_id, con_id, role = resolve_scope(request.user)
+        if role == EMPLOYER and emp_id and worker.employer_id != emp_id:
+            return Response({"Result": "Error", "Message": "Worker not in your hierarchy"}, status=403)
+        if role in (PRIMARY, SECONDARY) and con_id and worker.contractor_id != con_id:
+            return Response({"Result": "Error", "Message": "Worker not under your contractor"}, status=403)
+        if role == WORKER and emp_id is not None and worker.employer_id != emp_id:
+            return Response({"Result": "Error", "Message": "Cannot unbind another worker"}, status=403)
         with transaction.atomic():
             binding = Binding.objects.filter(
                 binding_type="WORKER_CONTRACTOR", worker=worker, status="ACTIVE"
@@ -625,9 +717,14 @@ class ScanLogList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not role_has_access(request.user, [SUPER, EMPLOYER, PRIMARY, SECONDARY]):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         qs = ScanLog.objects.all()
+        if role == EMPLOYER and emp_id:
+            qs = qs.filter(employer_id=emp_id)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            qs = qs.filter(contractor_id=con_id)
         worker = request.query_params.get("worker")
         if worker:
             qs = qs.filter(worker_id=worker)
@@ -638,19 +735,32 @@ class DashboardStats(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not role_has_access(request.user, [SUPER, EMPLOYER, PRIMARY, SECONDARY, STAFF]):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         today = timezone.localdate()
+        # Base querysets scoped by role
+        workers = Worker.objects.filter(is_active=True)
+        scans = ScanLog.objects.all()
+        contractors = Contractor.objects.filter(is_active=True, site_name__gt="")
+        if role == EMPLOYER and emp_id:
+            workers = workers.filter(employer_id=emp_id)
+            scans = scans.filter(employer_id=emp_id)
+            contractors = contractors.filter(employer_id=emp_id)
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            workers = workers.filter(contractor_id=con_id)
+            scans = scans.filter(contractor_id=con_id)
+            contractors = contractors.filter(pk=con_id)
         return Response({
             "Result": "Success",
             "Data": {
-                "total_workers": Worker.objects.count(),
-                "total_scans": ScanLog.objects.count(),
-                "active_sites": Contractor.objects.filter(is_active=True, site_name__gt="").values("site_name").distinct().count(),
+                "total_workers": workers.count(),
+                "total_scans": scans.count(),
+                "active_sites": contractors.values("site_name").distinct().count(),
                 "scan_activity": {
-                    "today": ScanLog.objects.filter(created_at__date=today).count(),
-                    "this_week": ScanLog.objects.filter(created_at__date__gte=today - timezone.timedelta(days=7)).count(),
-                    "this_month": ScanLog.objects.filter(created_at__month=today.month, created_at__year=today.year).count(),
+                    "today": scans.filter(created_at__date=today).count(),
+                    "this_week": scans.filter(created_at__date__gte=today - timezone.timedelta(days=7)).count(),
+                    "this_month": scans.filter(created_at__month=today.month, created_at__year=today.year).count(),
                 },
             },
         })

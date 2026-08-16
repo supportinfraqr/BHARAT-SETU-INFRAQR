@@ -19,8 +19,10 @@ def login_type_to_role(login_type):
         return "SUPER_ADMIN"
     if lt == 5:
         return "EMPLOYER"
-    if lt in (2, 6):
+    if lt == 2:
         return "PRIMARY_CONTRACTOR"
+    if lt == 6:
+        return "SECONDARY_CONTRACTOR"
     if lt == 7:
         return "WORKER"
     return "BSS_STAFF"
@@ -81,7 +83,7 @@ class LegacySessionAuthMiddleware:
 
 
 def _link_scope(user, login_type, persist=True):
-    """Link an employer/contractor user to their QR entity by email/mobile."""
+    """Link an employer/contractor/worker user to their QR entity by email/mobile/username."""
     try:
         lt = int(login_type)
     except (TypeError, ValueError):
@@ -107,5 +109,21 @@ def _link_scope(user, login_type, persist=True):
             if persist:
                 try:
                     user.save(update_fields=["contractor_id"])
+                except Exception:
+                    pass
+    elif lt == 7:
+        # Worker -> link to their Worker entity
+        from qr.models import Worker
+        w = Worker.objects.filter(legacy_employee_code=user.username).first()
+        if not w:
+            w = Worker.objects.filter(mobile=user.mobile).first()
+        if w:
+            if w.employer_id:
+                user.employer_id = w.employer_id
+            if w.contractor_id:
+                user.contractor_id = w.contractor_id
+            if persist:
+                try:
+                    user.save(update_fields=["employer_id", "contractor_id"])
                 except Exception:
                     pass
