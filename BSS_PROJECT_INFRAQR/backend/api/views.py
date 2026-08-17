@@ -215,8 +215,11 @@ def v_login_verify(request):
 
     # Action 45: username/password login
     if action == "45":
-        if not lt or not password:
-            # Fallback: check Django auth users (e.g. admin created via Django)
+        legacy_ok = False
+        if lt and password and str(lt.Password or "") == str(password):
+            legacy_ok = True
+        if not legacy_ok:
+            # Fall back to Django auth user (admin/employer/contractor/worker created via Django)
             from django.contrib.auth import get_user_model
             User = get_user_model()
             u = User.objects.filter(username__iexact=username).first()
@@ -237,8 +240,6 @@ def v_login_verify(request):
                     "CurrentLogin": "",
                     "RPath": "/Dashboard/CommonDashboard",
                 }])
-            return legacy_json_string([])
-        if str(lt.Password or "") != str(password):
             return legacy_json_string([])
         return _legacy_session_response(lt)
 
