@@ -874,6 +874,125 @@ class EmployerApprove(APIView):
         return Response({"Result": "Success", "Data": EmployerSerializer(emp).data})
 
 
+class EmployerTreeView(APIView):
+    """Admin sees full employer tree: employer details + contractors + workers."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, employer_id):
+        if not role_has_access(request.user, [SUPER, STAFF]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp = Employer.objects.filter(pk=employer_id).first()
+        if not emp:
+            return Response({"Result": "Error", "Message": "Employer not found"}, status=404)
+        qr = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=emp.pk).first()
+        contractors = Contractor.objects.filter(employer_id=emp.pk, is_active=True).order_by("name")
+        tree_contractors = []
+        for c in contractors:
+            workers = Worker.objects.filter(contractor_id=c.pk, is_active=True).order_by("full_name")
+            c_qr = QRCode.objects.filter(entity_type="CONTRACTOR", entity_id=c.pk).first()
+            tree_contractors.append({
+                "id": c.pk,
+                "name": c.name,
+                "contact_mobile": c.contact_mobile,
+                "site_name": c.site_name,
+                "location_lat": c.location_lat,
+                "location_lng": c.location_lng,
+                "location_address": c.location_address,
+                "is_primary": c.is_primary,
+                "qr_reference": c_qr.qr_reference if c_qr else None,
+                "workers": [
+                    {
+                        "id": w.pk,
+                        "full_name": w.full_name,
+                        "worker_id": w.worker_id,
+                        "mobile": w.mobile,
+                        "designation": w.designation,
+                        "is_active": w.is_active,
+                    } for w in workers
+                ],
+            })
+        return Response({
+            "Result": "Success",
+            "Data": {
+                "employer": EmployerSerializer(emp).data,
+                "qr_reference": qr.qr_reference if qr else None,
+                "contractors": tree_contractors,
+                "total_contractors": len(tree_contractors),
+                "total_workers": sum(len(c["workers"]) for c in tree_contractors),
+            },
+        })
+
+
+class ContractorTreeView(APIView):
+    """Admin sees full contractor tree: contractor details + workers."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, contractor_id):
+        if not role_has_access(request.user, [SUPER, STAFF]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        con = Contractor.objects.filter(pk=contractor_id).first()
+        if not con:
+            return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+        qr = QRCode.objects.filter(entity_type="CONTRACTOR", entity_id=con.pk).first()
+        emp = Employer.objects.filter(pk=con.employer_id).first()
+        workers = Worker.objects.filter(contractor_id=con.pk).order_by("full_name")
+        return Response({
+            "Result": "Success",
+            "Data": {
+                "contractor": ContractorSerializer(con).data,
+                "qr_reference": qr.qr_reference if qr else None,
+                "employer": EmployerSerializer(emp).data if emp else None,
+                "workers": [
+                    {
+                        "id": w.pk,
+                        "full_name": w.full_name,
+                        "worker_id": w.worker_id,
+                        "mobile": w.mobile,
+                        "designation": w.designation,
+                        "is_active": w.is_active,
+                    } for w in workers
+                ],
+            },
+        })
+
+
+class WorkerTreeView(APIView):
+    """Admin sees full worker details: worker + employer + contractor."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, worker_id):
+        if not role_has_access(request.user, [SUPER, STAFF]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        w = Worker.objects.filter(pk=worker_id).first()
+        if not w:
+            return Response({"Result": "Error", "Message": "Worker not found"}, status=404)
+        qr = QRCode.objects.filter(entity_type="WORKER", entity_id=w.pk).first()
+        emp = Employer.objects.filter(pk=w.employer_id).first()
+        con = Contractor.objects.filter(pk=w.contractor_id).first()
+        bindings = Binding.objects.filter(worker_id=w.pk).order_by("-created_at")
+        return Response({
+            "Result": "Success",
+            "Data": {
+                "worker": WorkerSerializer(w).data,
+                "qr_reference": qr.qr_reference if qr else None,
+                "employer": EmployerSerializer(emp).data if emp else None,
+                "contractor": ContractorSerializer(con).data if con else None,
+                "bindings": [
+                    {
+                        "id": b.pk,
+                        "binding_type": b.binding_type,
+                        "status": b.status,
+                        "started_at": b.started_at,
+                        "ended_at": b.ended_at,
+                    } for b in bindings
+                ],
+            },
+        })
+
+
 class PlanList(APIView):
     """List available plans with features."""
 

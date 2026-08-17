@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import LocationModal from '../components/LocationModal';
+import ViewTreeModal from '../components/ViewTreeModal';
 import { qrApi, locationApi } from '../api/endpoints';
 import './QRManagement.css';
 
@@ -10,6 +11,10 @@ export default function ContractorsList() {
   const [selected, setSelected] = useState<any | null>(null);
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [treeView, setTreeView] = useState<{ id: number; name: string } | null>(null);
+
+  const user = JSON.parse(localStorage.getItem('bss_user') || localStorage.getItem('bss_legacy_user') || '{}');
+  const isAdmin = String(user.LoginType || user.role) === '1' || String(user.role) === 'SUPER_ADMIN';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,10 +72,18 @@ export default function ContractorsList() {
                   <td>{c.is_primary ? 'Primary' : 'Secondary'}</td>
                   <td><span className={`status-badge ${c.is_active ? 'badge-approved' : 'badge-rejected'}`}>{c.is_active ? 'Active' : 'Inactive'}</span></td>
                   <td>
-                    <button className="btn-primary" style={{ background: '#1a3c6e', padding: '6px 12px' }}
-                      onClick={() => setSelected(c)}>
-                      Set Location
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {isAdmin && (
+                        <button className="btn-primary" style={{ background: '#047857', padding: '6px 10px' }}
+                          onClick={() => setTreeView({ id: c.id, name: c.name })}>
+                          View Tree
+                        </button>
+                      )}
+                      <button className="btn-primary" style={{ background: '#1a3c6e', padding: '6px 12px' }}
+                        onClick={() => setSelected(c)}>
+                        Set Location
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -86,6 +99,14 @@ export default function ContractorsList() {
           savedLocations={savedLocations}
           onClose={() => setSelected(null)}
           onSaved={() => { load(); }}
+        />
+      )}
+      {treeView && (
+        <ViewTreeModal
+          type="contractor"
+          id={treeView.id}
+          name={treeView.name}
+          onClose={() => setTreeView(null)}
         />
       )}
     </AppLayout>

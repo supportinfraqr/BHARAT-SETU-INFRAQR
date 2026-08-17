@@ -26,6 +26,9 @@ urlpatterns = [
     # QR Management System
     path("management/employers/", views.EmployerListAdmin.as_view(), name="employer-admin-list"),
     path("management/employers/<int:employer_id>/approve/", views.EmployerApprove.as_view(), name="employer-approve"),
+    path("management/employers/<int:employer_id>/tree/", views.EmployerTreeView.as_view(), name="employer-tree"),
+    path("management/contractors/<int:contractor_id>/tree/", views.ContractorTreeView.as_view(), name="contractor-tree"),
+    path("management/workers/<int:worker_id>/tree/", views.WorkerTreeView.as_view(), name="worker-tree"),
     path("management/plans/", views.PlanList.as_view(), name="plan-list"),
     path("management/employer/plan/", views.EmployerAttachPlan.as_view(), name="employer-plan"),
     path("management/employer/my/", views.MyPlanView.as_view(), name="my-plan"),

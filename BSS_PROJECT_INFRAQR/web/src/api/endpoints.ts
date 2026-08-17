@@ -49,6 +49,9 @@ export const qrMgmtApi = {
   attachPlan: (planType: string, employerId?: number, expiryDate?: string) =>
     api.post('/qr/management/employer/plan/', { plan_type: planType, employer_id: employerId, expiry_date: expiryDate }),
   myPlan: () => api.get('/qr/management/employer/my/'),
+  employerTree: (id: number) => api.get(`/qr/management/employers/${id}/tree/`),
+  contractorTree: (id: number) => api.get(`/qr/management/contractors/${id}/tree/`),
+  workerTree: (id: number) => api.get(`/qr/management/workers/${id}/tree/`),
   myProfile: () => api.get('/qr/profile/me/'),
   updateProfile: (payload: any) => api.put('/qr/profile/me/', payload),
 };
