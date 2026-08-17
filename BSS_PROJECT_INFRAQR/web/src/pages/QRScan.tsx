@@ -20,6 +20,7 @@ export default function QRScan() {
   const user = JSON.parse(localStorage.getItem('bss_user') || localStorage.getItem('bss_legacy_user') || '{}');
   const loginType = String(user.LoginType || user.role || '');
   const isContractor = loginType === '2' || loginType === '6' || loginType === 'PRIMARY_CONTRACTOR' || loginType === 'SECONDARY_CONTRACTOR';
+  const isWorker = loginType === '7' || loginType === 'WORKER';
 
   const resolveLocation = useCallback(async (la: number, ln: number) => {
     try {
@@ -308,14 +309,33 @@ export default function QRScan() {
                       </button>
                     )
                   )}
+                  {pending.entity_type === 'CONTRACTOR' && isWorker && (
+                    pending.binding_status === 'ALREADY_BOUND' ? (
+                      <div className="qr-att-box present" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#148f77' }}>✓ Already Bound to this Contractor</h3>
+                      </div>
+                    ) : pending.binding_status === 'PENDING' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Request Sent — Pending Approval</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>The contractor will review and approve your request.</p>
+                      </div>
+                    ) : pending.binding_status === 'BOUND_ELSEWHERE' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Bound to Another Contractor</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>You can still send a request to bind here.</p>
+                        <button className="qr-scan-btn" style={{ width: 'auto', marginTop: 10, padding: '8px 18px' }} onClick={confirmScan} disabled={busy}>
+                          {busy ? 'Sending...' : 'Send Binding Request'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Sending...' : 'Send Binding Request'}
+                      </button>
+                    )
+                  )}
                   {pending.entity_type === 'WORKER' && (
                     <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
                       {busy ? 'Verifying...' : 'Mark Attendance'}
-                    </button>
-                  )}
-                  {pending.entity_type === 'CONTRACTOR' && (
-                    <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
-                      {busy ? 'Verifying...' : 'Continue'}
                     </button>
                   )}
                   <button className="qr-scan-btn" style={{ flex: 1, background: '#9ca3af' }} onClick={() => setPending(null)}>Cancel</button>

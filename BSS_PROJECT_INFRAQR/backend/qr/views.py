@@ -265,6 +265,21 @@ class QRCodeView(APIView):
                     "name": entity.name,
                     "site_name": entity.site_name,
                 }
+                # If scanner is a worker, attach binding status (worker <-> contractor)
+                if role == WORKER:
+                    worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+                    if not worker:
+                        worker = Worker.objects.filter(mobile=request.user.mobile).first()
+                    if worker:
+                        if worker.contractor_id == entity.pk:
+                            data["binding_status"] = "ALREADY_BOUND"
+                        elif worker.contractor_id:
+                            data["binding_status"] = "BOUND_ELSEWHERE"
+                        else:
+                            pending = Binding.objects.filter(
+                                binding_type="WORKER_CONTRACTOR", contractor=entity, worker=worker, status="PENDING"
+                            ).first()
+                            data["binding_status"] = "PENDING" if pending else "NOT_REQUESTED"
             elif qr.entity_type == "WORKER" and entity:
                 full = (role in (SUPER, STAFF) or (role == EMPLOYER and entity.employer_id == emp_id)
                         or (role in (PRIMARY, SECONDARY) and entity.contractor_id == con_id)
@@ -477,14 +492,53 @@ class QRScanView(APIView):
                     },
                 })
             if scanner_role == WORKER:
-                # Worker scanning a contractor -> basic info only
+                # Worker scanning a contractor -> info + binding request
+                worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+                if not worker:
+                    worker = Worker.objects.filter(mobile=request.user.mobile).first()
+                basic = {
+                    "id": contractor.pk,
+                    "name": contractor.name,
+                    "contact_mobile": contractor.contact_mobile,
+                    "site_name": contractor.site_name,
+                    "is_primary": contractor.is_primary,
+                }
+                if not worker:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "worker_login_required"},
+                    })
+                # Worker already bound to this contractor
+                if worker.contractor_id == contractor.pk:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "already_bound", "can_unbind": True},
+                    })
+                # Worker bound to another contractor
+                if worker.contractor_id:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "bound_elsewhere", "can_request": True},
+                    })
+                # Unbound worker -> create PENDING request (avoid duplicates)
+                existing = Binding.objects.filter(
+                    binding_type="WORKER_CONTRACTOR", contractor=contractor, worker=worker, status="PENDING"
+                ).first()
+                if existing:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "request_pending", "request_id": existing.pk},
+                    })
+                binding = Binding.objects.create(
+                    binding_type="WORKER_CONTRACTOR", employer=contractor.employer,
+                    contractor=contractor, worker=worker, status="PENDING",
+                )
+                write_audit(request, "BINDING_REQUEST_WORKER_CONTRACTOR", "BINDING", binding.pk)
+                notify("PRIMARY_CONTRACTOR", "WORKER_BINDING_REQUEST",
+                       f"Worker {worker.full_name} requested to bind with {contractor.name}")
                 return Response({
                     "Result": "Success",
-                    "Data": {
-                        "entity_type": "CONTRACTOR",
-                        "action": "view_info",
-                        "contractor": {"id": contractor.pk, "name": contractor.name, "site_name": contractor.site_name},
-                    },
+                    "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "binding_requested"},
                 })
             # Admin/staff -> full info
             return Response({
@@ -663,7 +717,7 @@ class BindingList(APIView):
 
 
 class BindingApprove(APIView):
-    """Employer approves/rejects a contractor binding request."""
+    """Employer approves/rejects a contractor binding request, or contractor approves a worker binding request."""
 
     permission_classes = [IsAuthenticated]
 
@@ -672,18 +726,34 @@ class BindingApprove(APIView):
         binding = Binding.objects.filter(pk=binding_id).first()
         if not binding:
             return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
-        if not role_has_access(request.user, [SUPER, EMPLOYER]):
-            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
-        # Hierarchy check: employer can only approve their own bindings
-        if request.user.role == EMPLOYER:
-            emp_id, _, _ = resolve_scope(request.user)
+        emp_id, con_id, role = resolve_scope(request.user)
+        is_admin = role in (SUPER, STAFF)
+        can_approve = is_admin
+        # Employer approves EMPLOYER_CONTRACTOR bindings in their tree
+        if role == EMPLOYER and binding.binding_type == "EMPLOYER_CONTRACTOR":
+            can_approve = True
             if emp_id and binding.employer_id and binding.employer_id != emp_id:
                 return Response({"Result": "Error", "Message": "Binding not in your hierarchy"}, status=403)
+        # Contractor approves WORKER_CONTRACTOR bindings for their contractor
+        if role in (PRIMARY, SECONDARY) and binding.binding_type == "WORKER_CONTRACTOR":
+            can_approve = True
+            if con_id and binding.contractor_id != con_id:
+                return Response({"Result": "Error", "Message": "Binding not for your contractor"}, status=403)
+        if not can_approve:
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
         if decision == "APPROVE":
             binding.status = "ACTIVE"
             binding.started_at = timezone.now()
+            binding.approved_by = request.user
             if binding.binding_type == "EMPLOYER_CONTRACTOR" and binding.contractor_id:
                 Contractor.objects.filter(pk=binding.contractor_id).update(employer=binding.employer)
+            if binding.binding_type == "WORKER_CONTRACTOR" and binding.worker_id:
+                worker = Worker.objects.filter(pk=binding.worker_id).first()
+                contractor = Contractor.objects.filter(pk=binding.contractor_id).first()
+                if worker and contractor:
+                    worker.contractor = contractor
+                    worker.employer = contractor.employer
+                    worker.save(update_fields=["contractor", "employer"])
             binding.save()
             write_audit(request, "BINDING_APPROVED", "BINDING", binding.pk, new="APPROVED")
             notify("PRIMARY_CONTRACTOR", "BINDING_APPROVED", "Your binding request was approved",
