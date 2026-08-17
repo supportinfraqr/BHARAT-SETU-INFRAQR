@@ -17,7 +17,7 @@ export default function ContractorsList() {
       const res = await qrApi.contractors();
       setRows(res.data || []);
       const lRes = await locationApi.list();
-      setSavedLocations(lRes.data || []);
+      setSavedLocations(lRes.data?.Data || lRes.data || []);
     } catch (e) {} finally { setLoading(false); }
   }, []);
 

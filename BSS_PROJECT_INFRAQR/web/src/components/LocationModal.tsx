@@ -9,7 +9,7 @@ interface LocationModalProps {
   onSaved: () => void;
 }
 
-export default function LocationModal({ contractor, savedLocations, onClose, onSaved }: LocationModalProps) {
+export default function LocationModal({ contractor, savedLocations = [], onClose, onSaved }: LocationModalProps) {
   const [siteName, setSiteName] = useState(contractor.site_name || '');
   const [lat, setLat] = useState<number | undefined>(contractor.location_lat || undefined);
   const [lng, setLng] = useState<number | undefined>(contractor.location_lng || undefined);
