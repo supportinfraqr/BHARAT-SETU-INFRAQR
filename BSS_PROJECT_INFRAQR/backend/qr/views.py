@@ -791,9 +791,35 @@ class UserQRView(APIView):
 
     def get(self, request):
         user = request.user
+        from .cards import qr_png_bytes
+        # Resolve the user's entity QR so the identity card is scannable
+        qr_ref = None
+        if user.role in (EMPLOYER, PRIMARY, SECONDARY, WORKER):
+            if user.role == EMPLOYER:
+                emp_id = user.employer_id or resolve_scope(user)[0]
+                if emp_id:
+                    qr_obj = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=emp_id).first()
+                    if qr_obj:
+                        qr_ref = qr_obj.qr_reference
+            elif user.role in (PRIMARY, SECONDARY):
+                con_id = user.contractor_id or resolve_scope(user)[1]
+                if con_id:
+                    qr_obj = QRCode.objects.filter(entity_type="CONTRACTOR", entity_id=con_id).first()
+                    if qr_obj:
+                        qr_ref = qr_obj.qr_reference
+            elif user.role == WORKER:
+                worker = Worker.objects.filter(legacy_employee_code=user.username).first()
+                if not worker:
+                    worker = Worker.objects.filter(mobile=user.mobile).first()
+                if worker:
+                    qr_obj = QRCode.objects.filter(entity_type="WORKER", entity_id=worker.pk).first()
+                    if qr_obj:
+                        qr_ref = qr_obj.qr_reference
+        if qr_ref:
+            return HttpResponse(qr_png_bytes(qr_ref), content_type="image/png")
+        # Fallback: plain identity QR (not scannable, informational only)
         login_id = getattr(user, "legacy_login_id", None) or user.pk
         identity = f"BSS-USER|{user.username}|{login_id}"
-        from .cards import qr_png_bytes
         return HttpResponse(qr_png_bytes(identity), content_type="image/png")
 
 
