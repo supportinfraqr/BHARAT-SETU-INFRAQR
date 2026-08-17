@@ -61,12 +61,15 @@ export default function CameraScanner({ onScan }: CameraScannerProps) {
   };
 
   useEffect(() => {
+    const t = setTimeout(() => start(), 400);
     return () => {
+      clearTimeout(t);
       if (scannerRef.current) {
         try { scannerRef.current.stop(); } catch {}
         try { scannerRef.current.clear(); } catch {}
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isPermissionError = /permission|notallowed|denied/i.test(cameraError);
@@ -76,10 +79,10 @@ export default function CameraScanner({ onScan }: CameraScannerProps) {
       <div id="bss-camera-scanner" ref={containerRef} style={{ width: '100%', minHeight: 250 }} />
       {!started && !starting && !cameraError && (
         <button className="qr-scan-btn" style={{ marginTop: 10 }} onClick={start} disabled={starting}>
-          📷 {starting ? 'Starting camera...' : 'Enable Camera Scanner'}
+          📷 {starting ? 'Starting camera...' : 'Start Camera Scanner'}
         </button>
       )}
-      {starting && <div style={{ marginTop: 10, color: '#6b7280', fontSize: 13 }}>Requesting camera access...</div>}
+      {!started && starting && <div style={{ marginTop: 10, color: '#6b7280', fontSize: 13 }}>Requesting camera access...</div>}
       {cameraError && (
         <div style={{ marginTop: 10 }}>
           <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 8 }}>
