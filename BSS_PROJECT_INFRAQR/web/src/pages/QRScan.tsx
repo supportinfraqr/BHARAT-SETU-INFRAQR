@@ -66,19 +66,7 @@ export default function QRScan() {
         setPending({ error: 'Could not identify this QR' });
         return;
       }
-      // Fetch entity details
-      let details: any = null;
-      if (info.entity_type === 'EMPLOYER') {
-        const d = await api.get('/qr/employers/');
-        details = (d.data || []).find((e: any) => e.id === info.entity_id) || null;
-      } else if (info.entity_type === 'CONTRACTOR') {
-        const d = await api.get('/qr/contractors/');
-        details = (d.data || []).find((c: any) => c.id === info.entity_id) || null;
-      } else if (info.entity_type === 'WORKER') {
-        const d = await api.get('/qr/workers/');
-        details = (d.data || []).find((w: any) => w.id === info.entity_id) || null;
-      }
-      setPending({ ...info, details });
+      setPending({ ...info, details: info.entity_details || null });
     } catch (e: any) {
       setPending({ error: e?.response?.data?.Message || 'Invalid QR reference' });
     }

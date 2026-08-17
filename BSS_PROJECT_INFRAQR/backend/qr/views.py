@@ -225,7 +225,50 @@ class QRCodeView(APIView):
                 log_scan(request, None, scan_result="INVALID_QR")
                 return Response({"Result": "Error", "Message": "Invalid QR reference"}, status=400)
             log_scan(request, qr, scan_result="LOOKUP")
-            return Response({"Result": "Success", "Data": QRCodeSerializer(qr).data})
+            data = QRCodeSerializer(qr).data
+            # Attach scoped entity details so any role can show scan-info popup
+            entity = resolve_entity(qr)
+            emp_id, con_id, role = resolve_scope(request.user)
+            if qr.entity_type == "EMPLOYER" and entity:
+                data["entity_details"] = {
+                    "id": entity.pk,
+                    "name": entity.name,
+                    "contact_person": entity.contact_person,
+                    "contact_mobile": entity.contact_mobile,
+                    "email": entity.email,
+                    "industry": entity.industry,
+                    "city": entity.city,
+                }
+            elif qr.entity_type == "CONTRACTOR" and entity:
+                full = (role in (SUPER, STAFF, EMPLOYER) and (role != EMPLOYER or entity.employer_id == emp_id))
+                data["entity_details"] = {
+                    "id": entity.pk,
+                    "name": entity.name,
+                    "contact_mobile": entity.contact_mobile,
+                    "site_name": entity.site_name,
+                    "is_primary": entity.is_primary,
+                } if full or role in (PRIMARY, SECONDARY) and entity.pk == con_id else {
+                    "id": entity.pk,
+                    "name": entity.name,
+                    "site_name": entity.site_name,
+                }
+            elif qr.entity_type == "WORKER" and entity:
+                full = (role in (SUPER, STAFF) or (role == EMPLOYER and entity.employer_id == emp_id)
+                        or (role in (PRIMARY, SECONDARY) and entity.contractor_id == con_id)
+                        or (role == WORKER and entity.pk == (Worker.objects.filter(
+                            legacy_employee_code=request.user.username).values_list("pk", flat=True).first())))
+                data["entity_details"] = {
+                    "id": entity.pk,
+                    "full_name": entity.full_name,
+                    "worker_id": entity.worker_id,
+                    "mobile": entity.mobile,
+                    "designation": entity.designation,
+                } if full else {
+                    "id": entity.pk,
+                    "full_name": entity.full_name,
+                    "worker_id": entity.worker_id,
+                }
+            return Response({"Result": "Success", "Data": data})
         if entity_type and entity_id:
             qr = QRCode.objects.filter(entity_type=entity_type.upper(), entity_id=entity_id).first()
             if not qr:
