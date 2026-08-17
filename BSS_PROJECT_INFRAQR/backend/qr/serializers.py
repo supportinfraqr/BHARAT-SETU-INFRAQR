@@ -30,7 +30,7 @@ class ContractorSerializer(serializers.ModelSerializer):
             "id", "name", "contact_person", "contact_mobile", "email", "address",
             "pan_no", "gstin", "registration_type", "bank_details", "industry",
             "state", "city", "pincode", "employer", "is_primary", "location_lat",
-            "location_lng", "site_name", "is_active", "created_at",
+            "location_lng", "location_address", "site_name", "is_active", "created_at",
         ]
 
 

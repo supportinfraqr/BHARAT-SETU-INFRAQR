@@ -1079,13 +1079,15 @@ class SetContractorLocation(APIView):
                 address = ""
         contractor.location_lat = float(lat)
         contractor.location_lng = float(lng)
+        contractor.location_address = address
         contractor.site_name = request.data.get("site_name", contractor.site_name or "")
-        contractor.save(update_fields=["location_lat", "location_lng", "site_name"])
+        contractor.save(update_fields=["location_lat", "location_lng", "location_address", "site_name"])
         write_audit(request, "CONTRACTOR_LOCATION_SET", "Contractor", contractor.pk,
                     previous="", new=f"{lat},{lng}")
         return Response({"Result": "Success", "Data": {
             "id": contractor.pk, "name": contractor.name,
             "location_lat": contractor.location_lat, "location_lng": contractor.location_lng,
+            "location_address": contractor.location_address,
             "site_name": contractor.site_name, "address": address,
         }})
 

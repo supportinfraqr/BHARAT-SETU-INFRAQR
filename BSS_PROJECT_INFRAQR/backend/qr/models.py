@@ -99,6 +99,7 @@ class Contractor(models.Model):
     is_primary = models.BooleanField(default=True)
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
+    location_address = models.TextField(blank=True)
     site_name = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

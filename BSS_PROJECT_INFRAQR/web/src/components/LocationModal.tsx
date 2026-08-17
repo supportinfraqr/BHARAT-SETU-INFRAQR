@@ -10,9 +10,9 @@ interface LocationModalProps {
 }
 
 export default function LocationModal({ contractor, savedLocations, onClose, onSaved }: LocationModalProps) {
-  const [lat, setLat] = useState<number | undefined>(contractor.location_lat || undefined);
+const [lat, setLat] = useState<number | undefined>(contractor.location_lat || undefined);
   const [lng, setLng] = useState<number | undefined>(contractor.location_lng || undefined);
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(contractor.location_address || '');
   const [siteName, setSiteName] = useState(contractor.site_name || '');
   const [locName, setLocName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -74,6 +74,15 @@ export default function LocationModal({ contractor, savedLocations, onClose, onS
         </div>
 
         <MapPicker latitude={lat} longitude={lng} onChange={handleMapChange} height="320px" />
+
+        <div style={{ marginTop: 12 }}>
+          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Address (auto-filled from map)</label>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Pick a location on the map to auto-fill address"
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, marginTop: 4, fontSize: 13, color: '#374151' }} />
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            Coordinates: {lat !== undefined && lng !== undefined ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '—'}
+          </div>
+        </div>
 
         {savedLocations.length > 0 && (
           <div style={{ marginTop: 12 }}>

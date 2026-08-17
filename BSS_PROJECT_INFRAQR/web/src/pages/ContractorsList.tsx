@@ -41,7 +41,7 @@ export default function ContractorsList() {
                   <td>{c.contact_mobile || '—'}</td>
                   <td>{c.site_name || '—'}</td>
                   <td style={{ fontSize: 12, color: c.location_lat ? '#374151' : '#9ca3af' }}>
-                    {c.location_lat ? `${c.location_lat.toFixed(4)}, ${c.location_lng.toFixed(4)}` : 'Not set'}
+                    {c.location_address || (c.location_lat ? `${c.location_lat.toFixed(4)}, ${c.location_lng.toFixed(4)}` : 'Not set')}
                   </td>
                   <td>{c.is_primary ? 'Primary' : 'Secondary'}</td>
                   <td><span className={`status-badge ${c.is_active ? 'badge-approved' : 'badge-rejected'}`}>{c.is_active ? 'Active' : 'Inactive'}</span></td>
