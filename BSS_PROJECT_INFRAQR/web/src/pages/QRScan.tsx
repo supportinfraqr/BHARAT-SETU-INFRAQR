@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
 import CameraScanner from '../components/CameraScanner';
+import { beep } from '../utils/beep';
 import './QRScan.css';
 import AppLayout from '../components/AppLayout';
 
@@ -13,31 +14,12 @@ export default function QRScan() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [resolved, setResolved] = useState<any>(null);
+  const [pending, setPending] = useState<any>(null);
   const [scanFlash, setScanFlash] = useState('');
 
-  const doScan = useCallback(async (ref: string) => {
-    const trimmed = ref?.trim();
-    if (!trimmed) return;
-    setBusy(true);
-    setResult(null);
-    setScanFlash(`Scanned: ${trimmed}`);
-    setTimeout(() => setScanFlash(''), 2500);
-    try {
-      const res = await api.post('/qr/qr/scan/', {
-        qr_reference: trimmed,
-        latitude: lat ?? undefined,
-        longitude: lng ?? undefined,
-      });
-      setResult(res.data);
-    } catch (e: any) {
-      setResult({
-        Result: 'Error',
-        Message: e?.response?.data?.Message || 'Could not process QR',
-      });
-    } finally {
-      setBusy(false);
-    }
-  }, [lat, lng]);
+  const user = JSON.parse(localStorage.getItem('bss_user') || localStorage.getItem('bss_legacy_user') || '{}');
+  const loginType = String(user.LoginType || user.role || '');
+  const isContractor = loginType === '2' || loginType === '6' || loginType === 'PRIMARY_CONTRACTOR' || loginType === 'SECONDARY_CONTRACTOR';
 
   const resolveLocation = useCallback(async (la: number, ln: number) => {
     try {
@@ -49,7 +31,6 @@ export default function QRScan() {
   }, []);
 
   useEffect(() => {
-    // Browser geolocation (web) -> auto-resolve the live location via OpenStreetMap
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -72,9 +53,80 @@ export default function QRScan() {
     }
   }, [resolveLocation]);
 
+  // Look up the scanned QR and show its details for confirmation
+  const lookup = async (ref: string) => {
+    setResult(null);
+    setScanFlash(`Scanned!`);
+    beep();
+    setTimeout(() => setScanFlash(''), 1800);
+    try {
+      const res = await api.get('/qr/qr/', { params: { qr_reference: ref } });
+      const info = res.data?.Data;
+      if (!info) {
+        setPending({ error: 'Could not identify this QR' });
+        return;
+      }
+      // Fetch entity details
+      let details: any = null;
+      if (info.entity_type === 'EMPLOYER') {
+        const d = await api.get('/qr/employers/');
+        details = (d.data || []).find((e: any) => e.id === info.entity_id) || null;
+      } else if (info.entity_type === 'CONTRACTOR') {
+        const d = await api.get('/qr/contractors/');
+        details = (d.data || []).find((c: any) => c.id === info.entity_id) || null;
+      } else if (info.entity_type === 'WORKER') {
+        const d = await api.get('/qr/workers/');
+        details = (d.data || []).find((w: any) => w.id === info.entity_id) || null;
+      }
+      setPending({ ...info, details });
+    } catch (e: any) {
+      setPending({ error: e?.response?.data?.Message || 'Invalid QR reference' });
+    }
+  };
+
+  // User confirms -> send the actual scan/binding request
+  const confirmScan = async () => {
+    if (!pending?.qr_reference) return;
+    setBusy(true);
+    try {
+      const res = await api.post('/qr/qr/scan/', {
+        qr_reference: pending.qr_reference,
+        latitude: lat ?? undefined,
+        longitude: lng ?? undefined,
+      });
+      setResult(res.data);
+      setPending(null);
+    } catch (e: any) {
+      setResult({ Result: 'Error', Message: e?.response?.data?.Message || 'Could not process QR' });
+      setPending(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleCameraScan = (decoded: string) => {
     setQrInput(decoded);
-    doScan(decoded);
+    lookup(decoded);
+  };
+
+  const doScan = async () => {
+    const ref = qrInput.trim();
+    if (!ref) return;
+    setResult(null);
+    setBusy(true);
+    beep();
+    try {
+      const res = await api.post('/qr/qr/scan/', {
+        qr_reference: ref,
+        latitude: lat ?? undefined,
+        longitude: lng ?? undefined,
+      });
+      setResult(res.data);
+    } catch (e: any) {
+      setResult({ Result: 'Error', Message: e?.response?.data?.Message || 'Could not process QR' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const att = result?.Data?.attendance;
@@ -82,10 +134,17 @@ export default function QRScan() {
   const isPresent = attStatus === 'PRESENT';
   const isMismatch = attStatus === 'LOCATION_MISMATCH';
 
+  const fieldRow = (label: string, value: any) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', borderBottom: '1px dashed #e2e8f0' }}>
+      <span style={{ color: '#6b7280' }}>{label}</span>
+      <b style={{ color: '#022B5E' }}>{value || '—'}</b>
+    </div>
+  );
+
   return (
     <AppLayout title="QR Scan">
       <div className="qr-scan-page">
-      <h2 className="qr-page-title">QR Scan — Attendance</h2>
+      <h2 className="qr-page-title">QR Scan — Attendance & Binding</h2>
 
       <div className="qr-layout">
         {/* Scanner panel */}
@@ -102,7 +161,7 @@ export default function QRScan() {
             placeholder="Or paste QR reference here"
             value={qrInput}
             onChange={(e) => setQrInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && doScan(qrInput)}
+            onKeyDown={(e) => e.key === 'Enter' && lookup(qrInput)}
           />
 
           <div className={`qr-loc ${locReady ? 'ok' : 'warn'}`}>
@@ -116,17 +175,81 @@ export default function QRScan() {
             </div>
           )}
 
-          <button className="qr-scan-btn" onClick={() => doScan(qrInput)} disabled={busy || !qrInput}>
+          <button className="qr-scan-btn" onClick={doScan} disabled={busy || !qrInput}>
             {busy ? 'Verifying...' : 'Verify & Mark Attendance'}
           </button>
         </div>
 
         {/* Result panel */}
         <div className="qr-result-panel">
-          {!result && (
+          {!result && !pending && (
             <div className="qr-result-empty">
               <div className="qr-big-icon">📱</div>
               <p>Scan a worker QR for attendance,<br />or an employer QR to request binding</p>
+            </div>
+          )}
+
+          {/* Pending confirmation: show scanned entity fields + send button */}
+          {pending && (
+            <div className="qr-worker-box">
+              {pending.error ? (
+                <div className="qr-error-box">
+                  <h3>Scan Failed</h3>
+                  <p>{pending.error}</p>
+                </div>
+              ) : (
+                <>
+                  <h3 style={{ marginBottom: 12 }}>Confirm Details</h3>
+                  {pending.entity_type === 'EMPLOYER' && pending.details && (
+                    <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                      {fieldRow('Type', 'Employer')}
+                      {fieldRow('Name', pending.details.name)}
+                      {fieldRow('Contact', pending.details.contact_person)}
+                      {fieldRow('Mobile', pending.details.contact_mobile)}
+                      {fieldRow('Email', pending.details.email)}
+                      {fieldRow('Industry', pending.details.industry)}
+                      {fieldRow('City', pending.details.city)}
+                    </div>
+                  )}
+                  {pending.entity_type === 'CONTRACTOR' && pending.details && (
+                    <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                      {fieldRow('Type', 'Contractor')}
+                      {fieldRow('Name', pending.details.name)}
+                      {fieldRow('Mobile', pending.details.contact_mobile)}
+                      {fieldRow('Site', pending.details.site_name)}
+                      {fieldRow('Type', pending.details.is_primary ? 'Primary' : 'Secondary')}
+                    </div>
+                  )}
+                  {pending.entity_type === 'WORKER' && pending.details && (
+                    <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                      {fieldRow('Type', 'Worker')}
+                      {fieldRow('Name', pending.details.full_name)}
+                      {fieldRow('Worker ID', pending.details.worker_id)}
+                      {fieldRow('Mobile', pending.details.mobile)}
+                      {fieldRow('Designation', pending.details.designation)}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
+                    {pending.entity_type === 'EMPLOYER' && isContractor && (
+                      <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px' }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Sending...' : 'Send Binding Request'}
+                      </button>
+                    )}
+                    {pending.entity_type === 'WORKER' && (
+                      <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px' }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Verifying...' : 'Mark Attendance'}
+                      </button>
+                    )}
+                    {pending.entity_type === 'CONTRACTOR' && (
+                      <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px' }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Verifying...' : 'Continue'}
+                      </button>
+                    )}
+                    <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px', background: '#9ca3af' }}
+                      onClick={() => setPending(null)}>Cancel</button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -155,11 +278,13 @@ export default function QRScan() {
                 <h3>
                   {result.Data.action === 'binding_requested' && 'Binding Request Sent'}
                   {result.Data.action === 'already_bound' && 'Already Bound'}
+                  {result.Data.action === 'bound_elsewhere' && 'Bound Elsewhere'}
                   {result.Data.action === 'contractor_login_required' && 'Login as Contractor'}
                 </h3>
                 <p>
                   {result.Data.action === 'binding_requested' && 'The employer will review and approve your request.'}
                   {result.Data.action === 'already_bound' && 'This contractor is already bound to this employer.'}
+                  {result.Data.action === 'bound_elsewhere' && 'This contractor is bound to another employer.'}
                   {result.Data.action === 'contractor_login_required' && 'Sign in as a contractor to request binding.'}
                 </p>
               </div>
