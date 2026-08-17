@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { Button } from '../components';
 import './QRScan.css';
 
 export default function QRScan() {
@@ -12,7 +13,6 @@ export default function QRScan() {
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    // Browser geolocation (web)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -80,9 +80,13 @@ export default function QRScan() {
             <div className="qr-scanner-line"></div>
           </div>
 
+          <label htmlFor="qr-ref-input" className="sr-only" style={{ display: 'none' }}>
+            QR Reference Code
+          </label>
           <input
+            id="qr-ref-input"
             className="qr-input"
-            placeholder="Or paste QR reference here"
+            placeholder="Paste worker QR reference (e.g. WKR-2026-9812)"
             value={qrInput}
             onChange={(e) => setQrInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && doScan()}
@@ -94,9 +98,15 @@ export default function QRScan() {
             {lat !== null && lng !== null && ` (${lat.toFixed(4)}, ${lng.toFixed(4)})`}
           </div>
 
-          <button className="qr-scan-btn" onClick={doScan} disabled={busy || !qrInput}>
-            {busy ? 'Verifying...' : 'Verify & Mark Attendance'}
-          </button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={doScan}
+            loading={busy}
+            disabled={!qrInput.trim()}
+          >
+            Verify Identity &amp; Mark Attendance
+          </Button>
         </div>
 
         {/* Result panel */}
@@ -104,13 +114,13 @@ export default function QRScan() {
           {!result && (
             <div className="qr-result-empty">
               <div className="qr-big-icon">📱</div>
-              <p>Scan a worker's QR to verify identity<br />and mark geo-verified attendance</p>
+              <p>Scan or paste a worker's QR code to verify identity<br />and record geo-verified site attendance.</p>
             </div>
           )}
 
           {result?.Result === 'Error' && (
-            <div className="qr-error-box">
-              <h3>Scan Failed</h3>
+            <div className="qr-error-box" role="alert">
+              <h3>Verification Failed</h3>
               <p>{result.Message}</p>
             </div>
           )}
@@ -128,10 +138,10 @@ export default function QRScan() {
               <div className="qr-att-badge">
                 {isPresent ? '✓' : isMismatch ? '✕' : '!'}
               </div>
-              <h3>{attStatus === 'PRESENT' ? 'Present' : attStatus === 'LOCATION_MISMATCH' ? 'Location Mismatch' : 'Verification Failed'}</h3>
-              <p>Location: {att.location_status}</p>
+              <h3>{attStatus === 'PRESENT' ? 'Attendance Recorded' : attStatus === 'LOCATION_MISMATCH' ? 'Location Mismatch' : 'Verification Failed'}</h3>
+              <p>Location Status: {att.location_status}</p>
               <p>Date: {att.date} · Time: {att.time}</p>
-              {isMismatch && <p className="qr-att-warn">Worker scanned outside permitted location — notified employer.</p>}
+              {isMismatch && <p className="qr-att-warn">Location Warning: Worker scanned outside permitted site radius — management has been notified.</p>}
             </div>
           )}
         </div>

@@ -15,9 +15,13 @@ export default function Dashboard() {
   const [openModule, setOpenModule] = useState<number>(0);
   const [openMenu, setOpenMenu] = useState<number>(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const user = JSON.parse(localStorage.getItem('bss_user') || '{}');
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
       const [navRes, dashRes] = await Promise.all([
         api.post('/Dashboard/NavMenuList', {}),
@@ -25,8 +29,10 @@ export default function Dashboard() {
       ]);
       setNav(navRes.data || []);
       setStats(dashRes.data?.Data);
-    } catch (e) {
-      console.error('load failed', e);
+    } catch (e: any) {
+      setError(e?.response?.data?.Message || e?.message || 'Unable to connect to dashboard services.');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -49,7 +55,7 @@ export default function Dashboard() {
       <div className={`mobile-overlay ${menuOpen ? 'show' : ''}`} onClick={() => setMenuOpen(false)}></div>
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <img src="/legacy/NewLogin/images/bharatshramsetu-logo.png" alt="" style={{ width: 34, height: 34 }} />
+          <img src="/legacy/NewLogin/images/bharatshramsetu-logo.png" alt="BharatShramSetu Logo" width="34" height="34" decoding="async" />
           <span>BharatShramSetu</span>
         </div>
         <nav className="sidebar-nav">
@@ -108,6 +114,17 @@ export default function Dashboard() {
         </header>
 
         <div className="content">
+          {error && (
+            <div className="module-error" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+              <p>{error}</p>
+              <button className="logout-btn" style={{ width: 'auto', background: 'var(--color-primary)', marginTop: 'var(--space-2)' }} onClick={load}>
+                Retry Loading Dashboard
+              </button>
+            </div>
+          )}
+
+          {loading && <div className="module-loading">Loading dashboard stats...</div>}
+
           <div className="qr-quick-row">
             <a href="#/qr/scan" className="qr-quick-card scan" onClick={() => navigate('/qr/scan')}>
               <span className="qr-quick-icon">▣</span>
@@ -120,19 +137,19 @@ export default function Dashboard() {
           </div>
 
           <div className="stat-cards">
-            <div className="stat-card" style={{ background: '#022B5E' }}>
+            <div className="stat-card blue">
               <h3>{stats?.total_workers ?? '—'}</h3>
               <p>Total Workers</p>
             </div>
-            <div className="stat-card" style={{ background: '#148f77' }}>
+            <div className="stat-card green">
               <h3>{stats?.total_scans ?? '—'}</h3>
               <p>Total Scans</p>
             </div>
-            <div className="stat-card" style={{ background: '#b9770e' }}>
+            <div className="stat-card orange">
               <h3>{stats?.active_sites ?? '—'}</h3>
               <p>Active Sites</p>
             </div>
-            <div className="stat-card" style={{ background: '#7d3c98' }}>
+            <div className="stat-card purple">
               <h3>{stats?.scan_activity?.today ?? '—'}</h3>
               <p>Scans Today</p>
             </div>

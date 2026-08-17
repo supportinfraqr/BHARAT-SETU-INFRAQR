@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchPageData } from '../api/pages';
+import { Button } from '../components';
 import './ModuleScreen.css';
 
-// Normalize a key to a human-friendly header
 function headerOf(key: string): string {
   return key
     .replace(/([A-Z])/g, ' $1')
@@ -44,11 +44,13 @@ export default function ModuleScreen() {
     <div className="module-page">
       <div className="module-header">
         <h2>{decodeURIComponent(page || '')}</h2>
-        <button className="btn-primary" onClick={() => window.location.reload()}>Refresh</button>
+        <Button variant="primary" onClick={() => window.location.reload()}>
+          Refresh Data
+        </Button>
       </div>
 
-      {loading && <div className="module-loading">Loading...</div>}
-      {error && <div className="module-error">{error}</div>}
+      {loading && <div className="module-loading">Loading page records...</div>}
+      {error && <div className="module-error" role="alert">{error}</div>}
 
       {!loading && !error && rows.length === 0 && (
         <div className="module-empty">No records found.</div>
