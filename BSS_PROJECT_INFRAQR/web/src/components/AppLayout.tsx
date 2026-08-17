@@ -21,6 +21,7 @@ export default function AppLayout({ title, children }: { title?: string; childre
   const loginType = String(user.LoginType || user.role || '1');
   const isAdmin = loginType === '1';
   const isEmployer = loginType === '5';
+  const isContractor = loginType === '2' || loginType === '6';
 
   useEffect(() => {
     api.post('/Dashboard/NavMenuList', {}).then((r) => setNav(r.data || [])).catch(() => {});
@@ -60,7 +61,7 @@ export default function AppLayout({ title, children }: { title?: string; childre
             <a className="nav-submenu qr-mgmt-link" href="#/qr/binding" onClick={() => navigate('/qr/binding')}>
               <i className="mdi mdi-chevron-right"></i> Worker Binding
             </a>
-            {isEmployer && (
+            {(isEmployer || isContractor) && (
               <a className="nav-submenu qr-mgmt-link" href="#/qr/binding-requests" onClick={() => navigate('/qr/binding-requests')}>
                 <i className="mdi mdi-chevron-right"></i> Binding Requests
               </a>
