@@ -189,70 +189,6 @@ export default function QRScan() {
             </div>
           )}
 
-          {/* Pending confirmation: show scanned entity fields + send button */}
-          {pending && (
-            <div className="qr-worker-box">
-              {pending.error ? (
-                <div className="qr-error-box">
-                  <h3>Scan Failed</h3>
-                  <p>{pending.error}</p>
-                </div>
-              ) : (
-                <>
-                  <h3 style={{ marginBottom: 12 }}>Confirm Details</h3>
-                  {pending.entity_type === 'EMPLOYER' && pending.details && (
-                    <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
-                      {fieldRow('Type', 'Employer')}
-                      {fieldRow('Name', pending.details.name)}
-                      {fieldRow('Contact', pending.details.contact_person)}
-                      {fieldRow('Mobile', pending.details.contact_mobile)}
-                      {fieldRow('Email', pending.details.email)}
-                      {fieldRow('Industry', pending.details.industry)}
-                      {fieldRow('City', pending.details.city)}
-                    </div>
-                  )}
-                  {pending.entity_type === 'CONTRACTOR' && pending.details && (
-                    <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
-                      {fieldRow('Type', 'Contractor')}
-                      {fieldRow('Name', pending.details.name)}
-                      {fieldRow('Mobile', pending.details.contact_mobile)}
-                      {fieldRow('Site', pending.details.site_name)}
-                      {fieldRow('Type', pending.details.is_primary ? 'Primary' : 'Secondary')}
-                    </div>
-                  )}
-                  {pending.entity_type === 'WORKER' && pending.details && (
-                    <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
-                      {fieldRow('Type', 'Worker')}
-                      {fieldRow('Name', pending.details.full_name)}
-                      {fieldRow('Worker ID', pending.details.worker_id)}
-                      {fieldRow('Mobile', pending.details.mobile)}
-                      {fieldRow('Designation', pending.details.designation)}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
-                    {pending.entity_type === 'EMPLOYER' && isContractor && (
-                      <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px' }} onClick={confirmScan} disabled={busy}>
-                        {busy ? 'Sending...' : 'Send Binding Request'}
-                      </button>
-                    )}
-                    {pending.entity_type === 'WORKER' && (
-                      <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px' }} onClick={confirmScan} disabled={busy}>
-                        {busy ? 'Verifying...' : 'Mark Attendance'}
-                      </button>
-                    )}
-                    {pending.entity_type === 'CONTRACTOR' && (
-                      <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px' }} onClick={confirmScan} disabled={busy}>
-                        {busy ? 'Verifying...' : 'Continue'}
-                      </button>
-                    )}
-                    <button className="qr-scan-btn" style={{ width: 'auto', padding: '10px 24px', background: '#9ca3af' }}
-                      onClick={() => setPending(null)}>Cancel</button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
           {result?.Result === 'Error' && (
             <div className="qr-error-box">
               <h3>Scan Failed</h3>
@@ -308,6 +244,80 @@ export default function QRScan() {
         </div>
       </div>
       </div>
+
+      {/* Scan result popup: shows scanned person details + send binding request */}
+      {pending && (
+        <div className="qr-modal-overlay" onClick={() => pending.error && setPending(null)}>
+          <div className="qr-modal" style={{ width: 'min(460px, 94vw)', padding: 24 }} onClick={(e) => e.stopPropagation()}>
+            {pending.error ? (
+              <div className="qr-error-box">
+                <h3>Scan Failed</h3>
+                <p>{pending.error}</p>
+                <div style={{ marginTop: 16 }}>
+                  <button className="qr-scan-btn" onClick={() => setPending(null)}>Close</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, color: '#022B5E' }}>Scan Details</h3>
+                  <button className="qr-modal-close" onClick={() => setPending(null)}>✕</button>
+                </div>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <div className="qr-worker-avatar" style={{ width: 60, height: 60, fontSize: 26 }}>
+                    {pending.details?.name?.[0]?.toUpperCase() || pending.details?.full_name?.[0]?.toUpperCase() || (pending.entity_type === 'EMPLOYER' ? 'E' : pending.entity_type === 'CONTRACTOR' ? 'C' : 'W')}
+                  </div>
+                  <h3 style={{ margin: '8px 0 2px', color: '#022B5E' }}>{pending.details?.name || pending.details?.full_name || '—'}</h3>
+                  <p style={{ margin: 0, color: '#6b7280', fontSize: 13 }}>
+                    {pending.entity_type === 'EMPLOYER' ? 'Employer' : pending.entity_type === 'CONTRACTOR' ? 'Contractor' : 'Worker'}
+                  </p>
+                </div>
+                {pending.entity_type === 'EMPLOYER' && pending.details && (
+                  <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                    {fieldRow('Contact Person', pending.details.contact_person)}
+                    {fieldRow('Mobile', pending.details.contact_mobile)}
+                    {fieldRow('Email', pending.details.email)}
+                    {fieldRow('Industry', pending.details.industry)}
+                    {fieldRow('City', pending.details.city)}
+                  </div>
+                )}
+                {pending.entity_type === 'CONTRACTOR' && pending.details && (
+                  <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                    {fieldRow('Mobile', pending.details.contact_mobile)}
+                    {fieldRow('Site', pending.details.site_name)}
+                    {fieldRow('Type', pending.details.is_primary ? 'Primary' : 'Secondary')}
+                  </div>
+                )}
+                {pending.entity_type === 'WORKER' && pending.details && (
+                  <div style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                    {fieldRow('Worker ID', pending.details.worker_id)}
+                    {fieldRow('Mobile', pending.details.mobile)}
+                    {fieldRow('Designation', pending.details.designation)}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+                  {pending.entity_type === 'EMPLOYER' && isContractor && (
+                    <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                      {busy ? 'Sending...' : 'Send Binding Request'}
+                    </button>
+                  )}
+                  {pending.entity_type === 'WORKER' && (
+                    <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                      {busy ? 'Verifying...' : 'Mark Attendance'}
+                    </button>
+                  )}
+                  {pending.entity_type === 'CONTRACTOR' && (
+                    <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                      {busy ? 'Verifying...' : 'Continue'}
+                    </button>
+                  )}
+                  <button className="qr-scan-btn" style={{ flex: 1, background: '#9ca3af' }} onClick={() => setPending(null)}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
