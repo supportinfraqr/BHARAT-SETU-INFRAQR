@@ -46,8 +46,8 @@ export const qrMgmtApi = {
   approve: (id: number, decision: 'APPROVE' | 'REJECT') =>
     api.post(`/qr/management/employers/${id}/approve/`, { decision }),
   plans: () => api.get('/qr/management/plans/'),
-  attachPlan: (planType: string, employerId?: number) =>
-    api.post('/qr/management/employer/plan/', { plan_type: planType, employer_id: employerId }),
+  attachPlan: (planType: string, employerId?: number, expiryDate?: string) =>
+    api.post('/qr/management/employer/plan/', { plan_type: planType, employer_id: employerId, expiry_date: expiryDate }),
   myPlan: () => api.get('/qr/management/employer/my/'),
   myProfile: () => api.get('/qr/profile/me/'),
   updateProfile: (payload: any) => api.put('/qr/profile/me/', payload),

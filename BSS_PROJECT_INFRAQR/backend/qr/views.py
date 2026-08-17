@@ -907,10 +907,19 @@ class EmployerAttachPlan(APIView):
         if emp.approval_status != "APPROVED":
             return Response({"Result": "Error", "Message": "Employer must be approved before attaching a plan."}, status=400)
         emp.plan_type = plan
-        # 30-day plan expiry
-        emp.plan_expiry = timezone.now() + timezone.timedelta(days=30)
+        # Expiry date: explicit date or default 30 days
+        expiry_date = request.data.get("expiry_date") or request.data.get("plan_expiry")
+        if expiry_date:
+            try:
+                from datetime import datetime
+                parsed = datetime.strptime(str(expiry_date)[:10], "%Y-%m-%d")
+                emp.plan_expiry = timezone.make_aware(parsed)
+            except (ValueError, TypeError):
+                return Response({"Result": "Error", "Message": "Invalid expiry date. Use YYYY-MM-DD."}, status=400)
+        else:
+            emp.plan_expiry = timezone.now() + timezone.timedelta(days=30)
         emp.save()
-        write_audit(request, "EMPLOYER_PLAN_ATTACHED", "EMPLOYER", emp.pk, previous=plan, new=f"{plan} 30d")
+        write_audit(request, "EMPLOYER_PLAN_ATTACHED", "EMPLOYER", emp.pk, previous=plan, new=f"{plan} until {emp.plan_expiry.date()}")
         return Response({"Result": "Success", "Data": EmployerSerializer(emp).data})
 
 

@@ -7,6 +7,7 @@ export default function EmployerApprovals() {
   const [employers, setEmployers] = useState<any[]>([]);
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
+  const [expiryByEmp, setExpiryByEmp] = useState<Record<number, string>>({});
 
   const load = useCallback(async () => {
     try {
@@ -28,9 +29,10 @@ export default function EmployerApprovals() {
   };
 
   const setPlan = async (id: number, plan: string) => {
+    if (!plan) return;
     setBusy(true);
     try {
-      await qrMgmtApi.attachPlan(plan, id);
+      await qrMgmtApi.attachPlan(plan, id, expiryByEmp[id]);
       await load();
     } catch (e: any) {
       alert(e?.response?.data?.Message || 'Failed to set plan');
@@ -59,7 +61,7 @@ export default function EmployerApprovals() {
           <table className="mgmt-table">
             <thead>
               <tr>
-                <th>Employer</th><th>Contact</th><th>Email</th><th>Status</th><th>Plan</th><th>Actions</th>
+                <th>Employer</th><th>Contact</th><th>Email</th><th>Status</th><th>Plan</th><th>Expiry</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -70,6 +72,14 @@ export default function EmployerApprovals() {
                   <td>{e.email || '—'}</td>
                   <td>{statusBadge(e.approval_status)}</td>
                   <td>{e.plan_type || '—'}</td>
+                  <td>
+                    {e.plan_expiry ? (
+                      <div style={{ fontSize: 12, color: new Date(e.plan_expiry) < new Date() ? '#ef4444' : '#374151' }}>
+                        {new Date(e.plan_expiry).toLocaleDateString()}
+                        {new Date(e.plan_expiry) < new Date() && <div style={{ color: '#ef4444' }}>Expired</div>}
+                      </div>
+                    ) : '—'}
+                  </td>
                   <td className="actions-cell">
                     {e.approval_status === 'PENDING' && (
                       <>
@@ -79,18 +89,30 @@ export default function EmployerApprovals() {
                     )}
                     {e.approval_status === 'APPROVED' && (
                       <>
-                        <select
-                          className="plan-select"
-                          value={e.plan_type || ''}
-                          disabled={busy}
-                          onChange={(ev) => setPlan(e.id, ev.target.value)}
-                        >
-                          <option value="">Select plan</option>
-                          <option value="SILVER">Silver</option>
-                          <option value="GOLD">Gold</option>
-                          <option value="PLATINUM">Platinum</option>
-                        </select>
-                        <button className="btn-reject" disabled={busy} onClick={() => decide(e.id, 'REJECT')}>Reject</button>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <select
+                            className="plan-select"
+                            value={e.plan_type || ''}
+                            disabled={busy}
+                            onChange={(ev) => setPlan(e.id, ev.target.value)}
+                          >
+                            <option value="">Select plan</option>
+                            <option value="SILVER">Silver</option>
+                            <option value="GOLD">Gold</option>
+                            <option value="PLATINUM">Platinum</option>
+                          </select>
+                          <input
+                            type="date"
+                            className="plan-select"
+                            value={expiryByEmp[e.id] || (e.plan_expiry ? new Date(e.plan_expiry).toISOString().slice(0, 10) : '')}
+                            disabled={busy}
+                            onChange={(ev) => setExpiryByEmp((prev) => ({ ...prev, [e.id]: ev.target.value }))}
+                            title="Set plan expiry date"
+                          />
+                          <button className="btn-primary" style={{ padding: '6px 10px' }} disabled={busy}
+                            onClick={() => setPlan(e.id, e.plan_type)}>Set Expiry</button>
+                        </div>
+                        <button className="btn-reject" disabled={busy} onClick={() => decide(e.id, 'REJECT')} style={{ marginTop: 6 }}>Reject</button>
                       </>
                     )}
                     {e.approval_status === 'REJECTED' && (
@@ -99,7 +121,7 @@ export default function EmployerApprovals() {
                   </td>
                 </tr>
               ))}
-              {employers.length === 0 && <tr><td colSpan={6} className="empty-row">No employers found.</td></tr>}
+              {employers.length === 0 && <tr><td colSpan={7} className="empty-row">No employers found.</td></tr>}
             </tbody>
           </table>
         </div>
