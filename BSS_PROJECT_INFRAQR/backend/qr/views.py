@@ -239,6 +239,19 @@ class QRCodeView(APIView):
                     "industry": entity.industry,
                     "city": entity.city,
                 }
+                # If scanner is a contractor, attach binding status
+                con_id2, role2 = _scanner_contractor(request)
+                if con_id2:
+                    contractor = Contractor.objects.filter(pk=con_id2).first()
+                    if contractor and contractor.employer_id == entity.pk:
+                        data["binding_status"] = "ALREADY_BOUND"
+                    elif contractor and contractor.employer_id:
+                        data["binding_status"] = "BOUND_ELSEWHERE"
+                    else:
+                        pending = Binding.objects.filter(
+                            binding_type="EMPLOYER_CONTRACTOR", employer=entity, contractor=contractor, status="PENDING"
+                        ).first()
+                        data["binding_status"] = "PENDING" if pending else "NOT_REQUESTED"
             elif qr.entity_type == "CONTRACTOR" and entity:
                 full = (role in (SUPER, STAFF, EMPLOYER) and (role != EMPLOYER or entity.employer_id == emp_id))
                 data["entity_details"] = {
@@ -526,14 +539,18 @@ class QRScanView(APIView):
             existing = Binding.objects.filter(
                 binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor, status="PENDING"
             ).first()
-            if not existing:
-                binding = Binding.objects.create(
-                    binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor,
-                    status="PENDING",
-                )
-                write_audit(request, "BINDING_REQUEST_EMPLOYER_CONTRACTOR", "BINDING", binding.pk)
-                notify("EMPLOYER", "CONTRACTOR_BINDING_REQUEST",
-                       f"Contractor {contractor.name} requested to bind with {employer.name}")
+            if existing:
+                return Response({
+                    "Result": "Success",
+                    "Data": {"entity_type": "EMPLOYER", "employer": basic, "action": "request_pending", "request_id": existing.pk},
+                })
+            binding = Binding.objects.create(
+                binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor,
+                status="PENDING",
+            )
+            write_audit(request, "BINDING_REQUEST_EMPLOYER_CONTRACTOR", "BINDING", binding.pk)
+            notify("EMPLOYER", "CONTRACTOR_BINDING_REQUEST",
+                   f"Contractor {contractor.name} requested to bind with {employer.name}")
             return Response({
                 "Result": "Success",
                 "Data": {"entity_type": "EMPLOYER", "employer": basic, "action": "binding_requested"},

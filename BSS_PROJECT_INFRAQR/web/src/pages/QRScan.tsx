@@ -285,9 +285,28 @@ export default function QRScan() {
                 )}
                 <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
                   {pending.entity_type === 'EMPLOYER' && isContractor && (
-                    <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
-                      {busy ? 'Sending...' : 'Send Binding Request'}
-                    </button>
+                    pending.binding_status === 'ALREADY_BOUND' ? (
+                      <div className="qr-att-box present" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#148f77' }}>✓ Already Bound to this Employer</h3>
+                      </div>
+                    ) : pending.binding_status === 'PENDING' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Request Sent — Pending Approval</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>The employer will review and approve your request.</p>
+                      </div>
+                    ) : pending.binding_status === 'BOUND_ELSEWHERE' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Bound to Another Employer</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>You can still send a request to bind here.</p>
+                        <button className="qr-scan-btn" style={{ width: 'auto', marginTop: 10, padding: '8px 18px' }} onClick={confirmScan} disabled={busy}>
+                          {busy ? 'Sending...' : 'Send Binding Request'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Sending...' : 'Send Binding Request'}
+                      </button>
+                    )
                   )}
                   {pending.entity_type === 'WORKER' && (
                     <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
