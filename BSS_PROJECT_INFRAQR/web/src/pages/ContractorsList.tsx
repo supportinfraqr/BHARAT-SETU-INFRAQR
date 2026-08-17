@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
-import { qrApi } from '../api/endpoints';
+import LocationModal from '../components/LocationModal';
+import { qrApi, locationApi } from '../api/endpoints';
 import './QRManagement.css';
 
 export default function ContractorsList() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [selected, setSelected] = useState<any | null>(null);
+  const [savedLocations, setSavedLocations] = useState<any[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await qrApi.contractors();
       setRows(res.data || []);
+      const lRes = await locationApi.list();
+      setSavedLocations(lRes.data || []);
     } catch (e) {} finally { setLoading(false); }
   }, []);
 
@@ -24,17 +27,12 @@ export default function ContractorsList() {
       <div className="qr-mgmt">
         <div className="mgmt-toolbar">
           <div className="mgmt-filters"><b>{rows.length} contractors</b></div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-primary" onClick={() => navigate('/qr/locations')} style={{ background: '#1a3c6e' }}>
-              Set Locations
-            </button>
-            <button className="btn-primary" onClick={load}>Refresh</button>
-          </div>
+          <button className="btn-primary" onClick={load}>Refresh</button>
         </div>
         <div className="mgmt-table-wrap">
           <table className="mgmt-table">
             <thead>
-              <tr><th>Name</th><th>Mobile</th><th>Site</th><th>Location</th><th>Type</th><th>Status</th></tr>
+              <tr><th>Name</th><th>Mobile</th><th>Site</th><th>Location</th><th>Type</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               {rows.map((c) => (
@@ -47,13 +45,28 @@ export default function ContractorsList() {
                   </td>
                   <td>{c.is_primary ? 'Primary' : 'Secondary'}</td>
                   <td><span className={`status-badge ${c.is_active ? 'badge-approved' : 'badge-rejected'}`}>{c.is_active ? 'Active' : 'Inactive'}</span></td>
+                  <td>
+                    <button className="btn-primary" style={{ background: '#1a3c6e', padding: '6px 12px' }}
+                      onClick={() => setSelected(c)}>
+                      Set Location
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {!loading && rows.length === 0 && <tr><td colSpan={6} className="empty-row">No contractors.</td></tr>}
+              {!loading && rows.length === 0 && <tr><td colSpan={7} className="empty-row">No contractors.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
+      {selected && (
+        <LocationModal
+          contractor={selected}
+          savedLocations={savedLocations}
+          onClose={() => setSelected(null)}
+          onSaved={() => { load(); }}
+        />
+      )}
     </AppLayout>
   );
 }

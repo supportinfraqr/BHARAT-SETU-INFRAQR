@@ -11,7 +11,7 @@ export default function LoginPage() {
   // view: 'login' | 'register'
   const [view, setView] = useState<'login' | 'register'>('login');
   // login method
-  const [method, setMethod] = useState<Method>('mpin');
+  const [method, setMethod] = useState<Method>('password');
 
   // password visibility toggles
   const [showMpin, setShowMpin] = useState(false);

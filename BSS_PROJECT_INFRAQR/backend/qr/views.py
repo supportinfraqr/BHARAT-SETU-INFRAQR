@@ -1049,13 +1049,14 @@ class SavedLocationDelete(APIView):
 
 
 class SetContractorLocation(APIView):
-    """Employer sets a contractor's working location (lat/lng + reverse-geocoded address)."""
+    """Employer/admin sets a contractor's working location (lat/lng + reverse-geocoded address)."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, contractor_id=None):
         emp_id, con_id, role = resolve_scope(request.user)
-        if role != EMPLOYER or not emp_id:
+        is_admin = role in (SUPER, STAFF)
+        if not is_admin and (role != EMPLOYER or not emp_id):
             return Response({"Result": "Forbidden", "Message": "Only employers can set contractor locations"}, status=403)
         if contractor_id is None:
             contractor_id = request.data.get("contractor_id")
@@ -1063,9 +1064,11 @@ class SetContractorLocation(APIView):
         lng = request.data.get("longitude")
         if not contractor_id or lat is None or lng is None:
             return Response({"Result": "Error", "Message": "contractor_id, latitude and longitude required"}, status=400)
-        contractor = Contractor.objects.filter(pk=contractor_id, employer_id=emp_id).first()
+        contractor = Contractor.objects.filter(pk=contractor_id).first()
         if not contractor:
-            return Response({"Result": "Error", "Message": "Contractor not in your hierarchy"}, status=404)
+            return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+        if not is_admin and contractor.employer_id != emp_id:
+            return Response({"Result": "Error", "Message": "Contractor not in your hierarchy"}, status=403)
         address = request.data.get("address", "")
         if not address and lat is not None and lng is not None:
             try:

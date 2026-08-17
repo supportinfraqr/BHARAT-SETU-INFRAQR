@@ -220,12 +220,15 @@ def v_login_verify(request):
             from django.contrib.auth import get_user_model
             User = get_user_model()
             u = User.objects.filter(username__iexact=username).first()
+            if not u:
+                u = User.objects.filter(email__iexact=username).first()
             if u and u.check_password(password) and u.is_active:
+                role_login_type = {"SUPER_ADMIN": "1", "EMPLOYER": "5", "PRIMARY_CONTRACTOR": "2", "SECONDARY_CONTRACTOR": "6", "WORKER": "7"}.get(u.role, "1")
                 return legacy_json_string([{
-                    "LoginId": str(u.pk),
+                    "LoginId": str(u.legacy_login_id or u.pk),
                     "UserName": u.username,
                     "Name": u.get_full_name() or u.username,
-                    "LoginType": "1",
+                    "LoginType": role_login_type,
                     "SessionId": "S" + str(u.pk),
                     "EmailId": u.email or "",
                     "BranchCode": "",

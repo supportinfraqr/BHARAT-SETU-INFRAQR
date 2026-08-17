@@ -83,11 +83,6 @@ export default function AppLayout({ title, children }: { title?: string; childre
                 <i className="mdi mdi-chevron-right"></i> My Contractors
               </a>
             )}
-            {isEmployer && (
-              <a className="nav-submenu qr-mgmt-link" href="#/qr/locations" onClick={() => navigate('/qr/locations')}>
-                <i className="mdi mdi-chevron-right"></i> Set Locations
-              </a>
-            )}
           </div>
           <div className="nav-section-title">LEGACY MODULES</div>
           {nav.map((mod, mi) => (
@@ -161,11 +156,6 @@ export default function AppLayout({ title, children }: { title?: string; childre
               <button className="user-dropdown-item" onClick={() => navigate('/qr/my-profile')}>
                 <i className="fa fa-user"></i> My Profile
               </button>
-              {isEmployer && (
-                <button className="user-dropdown-item" onClick={() => navigate('/qr/management/my-plan')}>
-                  <i className="fa fa-crown"></i> My Plan
-                </button>
-              )}
               <button className="user-dropdown-item logout" onClick={logout}>
                 <i className="fa fa-sign-out-alt"></i> Logout
               </button>

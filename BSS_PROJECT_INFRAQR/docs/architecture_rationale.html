@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BSS Project — Migration & Architecture Rationale</title>
+  <!-- Modern Premium Typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-light: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --brand-navy: #022B5E;
+      --brand-blue: #0369a1;
+      --brand-gold: #b45309;
+      --accent-gradient: linear-gradient(135deg, #022B5E 0%, #0369a1 100%);
+      --accent-orange: #ea580c;
+      --accent-green: #047857;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      line-height: 1.65;
+      padding: 50px 24px;
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 60px;
+      position: relative;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 30px;
+      background: rgba(2, 43, 94, 0.06);
+      border: 1px solid rgba(2, 43, 94, 0.12);
+      color: var(--brand-navy);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--brand-navy);
+      margin-bottom: 14px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 17px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    /* Grid Sections */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 36px;
+      box-shadow: 0 10px 25px rgba(2, 43, 94, 0.04);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: var(--accent-gradient);
+    }
+
+    .card.orange::before {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+      box-shadow: 0 12px 30px rgba(2, 43, 94, 0.08);
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--brand-navy);
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card.orange h2 {
+      color: var(--accent-orange);
+    }
+
+    h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--brand-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 24px;
+      margin-bottom: 10px;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .card.orange h3 {
+      color: var(--accent-orange);
+    }
+
+    .reason-box {
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: #f8fafc;
+      border-left: 4px solid var(--brand-blue);
+      border-radius: 4px;
+    }
+
+    .card.orange .reason-box {
+      background: #fff8f6;
+      border-left-color: var(--accent-orange);
+    }
+
+    .reason-box h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      color: var(--text-main);
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 14px;
+    }
+
+    .reason-box p {
+      margin-bottom: 0;
+      font-size: 14px;
+      color: var(--text-main);
+    }
+
+    ul {
+      list-style: none;
+      margin-bottom: 14px;
+    }
+
+    li {
+      position: relative;
+      padding-left: 22px;
+      margin-bottom: 10px;
+      font-size: 14.5px;
+      color: var(--text-main);
+    }
+
+    li::before {
+      content: '✦';
+      position: absolute;
+      left: 0;
+      color: var(--brand-navy);
+      font-weight: 700;
+    }
+
+    .card.orange li::before {
+      color: var(--accent-orange);
+    }
+
+    /* Comparison Table Section */
+    .table-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 36px;
+      margin-top: 40px;
+      box-shadow: 0 10px 25px rgba(2, 43, 94, 0.04);
+    }
+
+    .table-section h2 {
+      margin-bottom: 24px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    th {
+      color: var(--brand-navy);
+      background: rgba(2, 43, 94, 0.02);
+      padding: 16px;
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 700;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      color: var(--text-main);
+      background: rgba(2, 43, 94, 0.01);
+    }
+
+    .tech-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #e2e8f0;
+      color: var(--text-main);
+    }
+
+    .tech-pill.react { background: rgba(56, 189, 248, 0.15); color: #0369a1; }
+    .tech-pill.django { background: rgba(16, 185, 129, 0.15); color: #047857; }
+
+    footer {
+      text-align: center;
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 13.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Architecture Migration Ledger</div>
+      <h1>Technical Rationale Document</h1>
+      <p class="subtitle">System Architecture documentation details explaining why we shifted from Microsoft ASP.NET to containerized Python/Django and React SPA environments.</p>
+    </header>
+
+    <div class="grid">
+      <!-- FRONTEND: React vs Server Templates -->
+      <div class="card">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand-navy)"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+          Frontend: React CSR vs Server HTML
+        </h2>
+        <p>A transition from server-side template generation (ASP.NET Razor Views) to Client-Side Rendered (CSR) React components.</p>
+        
+        <h3>Virtual DOM & Reconciliation</h3>
+        <ul>
+          <li><b>Targeted Component Edits:</b> React's reconciliation engine tracks layout shifts in a Virtual DOM, applying minimal patches instead of reloading page documents.</li>
+        </ul>
+
+        <h3>Content Delivery (CDN) Offloading</h3>
+        <ul>
+          <li><b>CDN Edge Caching:</b> vite compiles the React SPA into lightweight static HTML/JS bundles. These reside on edge CDNs (like Cloudflare) close to users.</li>
+        </ul>
+
+        <div class="reason-box">
+          <h4>Why we did it (Simple Terms)</h4>
+          <p><b>To stop full-page browser refreshes and cut down response lag.</b> By shifting UI rendering to the client's browser and distributing static code files globally on CDNs, the interface reacts instantly. This shields our server databases from handling page-delivery requests during peak shifts.</p>
+        </div>
+      </div>
+
+      <!-- BACKEND: Django vs .NET Framework -->
+      <div class="card orange">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-orange)"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          Backend: DRF API vs ASP.NET API
+        </h2>
+        <p>Migrating from .NET Framework 4.6.1 Web API 2 with stateful settings to Python 3 with stateless Django REST Framework (DRF).</p>
+
+        <h3>Stateless API & Token Auth</h3>
+        <ul>
+          <li><b>Stateless JWT Bearer Auth:</b> Replaced local IIS server sessions with JWT tokens. Each API container validates cryptographic token signatures without looking up databases.</li>
+        </ul>
+
+        <h3>Platform Independence & Costs</h3>
+        <ul>
+          <li><b>Linux/Open-Source Compatibility:</b> Retiring SQL Server and .NET Framework removes IIS server licensing and Microsoft software costs.</li>
+        </ul>
+
+        <div class="reason-box">
+          <h4>Why we did it (Simple Terms)</h4>
+          <p><b>To eliminate licensing fees and enable horizontal scaling.</b> Stateless JWT authentication allows us to spin up as many backend server replicas as we need behind a load balancer without users logging out. Transitioning to Django and PostgreSQL lets us host everything on cheap, open-source Linux servers.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- DATABASE & SCALABILITY -->
+      <div class="card">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand-navy)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          Database Scaling & Pgpool-II
+        </h2>
+        <p>Architectural enhancements to manage large transactional volumes and high-concurrency worker scan spikes.</p>
+        
+        <h3>Pgpool-II Connection Pooling</h3>
+        <ul>
+          <li><b>Connection Reuse:</b> Pgpool-II pre-allocates database connections and distributes read queries across replication databases while writing strictly to the master node.</li>
+        </ul>
+
+        <h3>Redis Caching Layer</h3>
+        <ul>
+          <li><b>Low Latency In-Memory Cache:</b> Frequently accessed database tables (like menus, user roles, permission states) are stored in Redis RAM cache.</li>
+        </ul>
+
+        <div class="reason-box">
+          <h4>Why we did it (Simple Terms)</h4>
+          <p><b>To prevent the database from getting overloaded and crashing when workers check in.</b> When hundreds of workers scan their QR codes at shift change, Pgpool-II recycles active database connections instead of opening new ones, while Redis serves static stats and layouts instantly from memory.</p>
+        </div>
+      </div>
+
+      <!-- HOSTING & DEPLOYMENT -->
+      <div class="card orange">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-orange)"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          Hosting, DevOps & Deployments
+        </h2>
+        <p>Standardizing environments and scaling deployments smoothly via containerized setups.</p>
+        
+        <h3>Docker Containerization</h3>
+        <ul>
+          <li><b>Isolated Environments:</b> Package Django application setups, libraries, and runtime dependencies into light Docker container images.</li>
+        </ul>
+
+        <h3>Nginx Proxy Routing</h3>
+        <ul>
+          <li><b>Single Port Server:</b> Nginx routes API routes (`/api/*`) to Django while directly serving compiled static React SPA bundles on port 80/443.</li>
+        </ul>
+
+        <div class="reason-box">
+          <h4>Why we did it (Simple Terms)</h4>
+          <p><b>To eliminate manual server setups and automate system deployment.</b> Docker guarantees that the exact same environment runs on our local development PCs, staging sites, and production. It packages our services into lightweight containers that can auto-scale instantly in Kubernetes.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr;">
+      <!-- PORTED LEGACY ENDPOINTS & STUBS -->
+      <div class="card">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--brand-navy)"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          Ported Legacy Routes &amp; Implementation Stubs
+        </h2>
+        <p>To retain backwards compatibility with older client mobile applications in transition, the Django backend implements 167 legacy endpoints (matching the ASP.NET DataTable schema format), while deliberately leaving non-critical integration routes as empty log placeholders.</p>
+        
+        <h3>Compatibility Mapping</h3>
+        <ul>
+          <li><b>Route Porting:</b> Implements historical DataTable formats returning raw column-value list structures, enabling older client software versions to fetch data cleanly.</li>
+          <li><b>Security Isolation:</b> Isolates legacy database operations from new QR validation routes, ensuring older entry points can be deprecated step-by-step.</li>
+        </ul>
+
+        <h3>Integration Stubs &amp; Mock Logs</h3>
+        <ul>
+          <li><b>Mail &amp; Communication Stubs:</b> Email triggers write locally to `emaillog` instead of calling external SMTP servers, preventing database task blocks.</li>
+          <li><b>Payment Integration:</b> Order creation endpoints are mock logged to local registers, removing external payment gateway dependencies during staging tests.</li>
+          <li><b>OCR Document Parsing:</b> Accepting `raw_text` inputs as text substitutes to test workflows without needing continuous OCR server calls.</li>
+        </ul>
+
+        <div class="reason-box">
+          <h4>Why we did it (Simple Terms)</h4>
+          <p><b>To ensure old mobile apps keep working without breaking while we migrate, leaving retired or non-essential features as safe placeholders.</b> By retaining legacy paths returning the exact data structures the old apps expect, we prevent them from crashing. Using simple log files for retired features (like payment and email gateways) keeps the backend light, secure, and easy to run locally without external service subscriptions.</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- COMPARISON TABLE -->
+    <div class="table-section">
+      <h2>Architecture Comparison Ledger</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Vector</th>
+              <th>Legacy IIS / .NET Stack</th>
+              <th>Target Docker / Python & React Stack</th>
+              <th>Business Reason (Why We Did It)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Render Strategy</b></td>
+              <td>ASP.NET MVC 5 / Razor templates (Server-side).</td>
+              <td><span class="tech-pill react">React SPA</span> CSR via static HTML/JS bundles.</td>
+              <td><b>Instant responsiveness.</b> No browser page refreshes, lowering server layout load stress.</td>
+            </tr>
+            <tr>
+              <td><b>Backend Core</b></td>
+              <td>.NET Framework 4.6.1 / ASP.NET MVC 5 / Web API 2.</td>
+              <td><span class="tech-pill django">Django 6.1 / DRF</span> (Python 3). Stateless.</td>
+              <td><b>Stateless scale.</b> Backend instances handle APIs instantly without lookup overhead.</td>
+            </tr>
+            <tr>
+              <td><b>Database Engine</b></td>
+              <td>Microsoft SQL Server (high per-core pricing).</td>
+              <td>PostgreSQL 16 via Pgpool-II connection pooling.</td>
+              <td><b>Zero licensing costs.</b> Unlimited database scaling without license cost bounds.</td>
+            </tr>
+            <tr>
+              <td><b>Hosting Platform</b></td>
+              <td>Windows Server VMs running IIS. Manual configurations.</td>
+              <td>Linux VMs / Nginx + Gunicorn (Docker containerized).</td>
+              <td><b>Automated scaling.</b> Standardized container deployments running on cheap Linux servers.</td>
+            </tr>
+            <tr>
+              <td><b>Authentication</b></td>
+              <td>Stateful server sessions (requires memory replication or sticky sessions).</td>
+              <td>Stateless JWT tokens (signed, cross-node compatibility).</td>
+              <td><b>Stateless session capacity.</b> Replicating servers don't need database/memory syncs for login check.</td>
+            </tr>
+            <tr>
+              <td><b>Scalability</b></td>
+              <td>Vertical scaling (upgrading VM cores/RAM).</td>
+              <td>Horizontal auto-scaling (adding stateless container replicas).</td>
+              <td><b>Infinite scaling.</b> Adding cheap server nodes dynamically to handle traffic bursts.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>
+      © BharatShramSetu Technology Operations. All rights reserved.
+    </footer>
+  </div>
+</body>
+</html>

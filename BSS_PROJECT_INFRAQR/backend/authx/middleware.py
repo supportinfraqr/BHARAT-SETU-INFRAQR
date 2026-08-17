@@ -65,6 +65,9 @@ class LegacySessionAuthMiddleware:
                 lt = LoginTable.objects.filter(LoginId=login_id).first()
                 if lt:
                     desired_role = login_type_to_role(lt.LoginType)
+                    # Django superuser is always admin regardless of legacy LoginType
+                    if user.is_superuser:
+                        desired_role = "SUPER_ADMIN"
                     changed = False
                     if user.role != desired_role:
                         user.role = desired_role
