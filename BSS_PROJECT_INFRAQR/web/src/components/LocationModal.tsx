@@ -100,7 +100,7 @@ export default function LocationModal({ contractor, savedLocations = [], onClose
             style={{ padding: '8px 16px', background: lat !== undefined ? '#1a3c6e' : '#9ca3af', color: '#fff', border: 'none', borderRadius: 6, cursor: lat !== undefined ? 'pointer' : 'not-allowed', fontWeight: 600 }}>
             {saving ? 'Saving...' : 'Set Working Location'}
           </button>
-          {msg && <span style={{ fontSize: 13, color: msg.includes('saved') ? '#16a34a' : '#ef4444' }}>{msg}</span>}
+          {msg && <span style={{ fontSize: 13, color: msg.toLowerCase().includes('saved') ? '#16a34a' : '#ef4444' }}>{msg}</span>}
         </div>
 
         <div style={{ marginTop: 16 }}>
