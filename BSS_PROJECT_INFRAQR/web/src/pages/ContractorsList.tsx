@@ -9,6 +9,7 @@ export default function ContractorsList() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -22,12 +23,32 @@ export default function ContractorsList() {
 
   useEffect(() => { load(); }, [load]);
 
+  const filtered = rows.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return [c.name, c.contact_mobile, c.site_name, c.location_address, c.location_lat, c.location_lng]
+      .some((v) => v != null && String(v).toLowerCase().includes(q));
+  });
+
   return (
     <AppLayout title="All Contractors">
       <div className="qr-mgmt">
         <div className="mgmt-toolbar">
-          <div className="mgmt-filters"><b>{rows.length} contractors</b></div>
-          <button className="btn-primary" onClick={load}>Refresh</button>
+          <div className="mgmt-filters">
+            <b>{filtered.length} / {rows.length} contractors</b>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, mobile, site, address..."
+              style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, minWidth: 260 }}
+            />
+            {search && (
+              <button className="btn-primary" style={{ background: '#ef4444', padding: '6px 12px' }} onClick={() => setSearch('')}>Clear</button>
+            )}
+            <button className="btn-primary" onClick={load}>Refresh</button>
+          </div>
         </div>
         <div className="mgmt-table-wrap">
           <table className="mgmt-table">
@@ -35,7 +56,7 @@ export default function ContractorsList() {
               <tr><th>Name</th><th>Mobile</th><th>Site</th><th>Location</th><th>Type</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
-              {rows.map((c) => (
+              {filtered.map((c) => (
                 <tr key={c.id}>
                   <td><b>{c.name}</b></td>
                   <td>{c.contact_mobile || '—'}</td>
@@ -53,7 +74,7 @@ export default function ContractorsList() {
                   </td>
                 </tr>
               ))}
-              {!loading && rows.length === 0 && <tr><td colSpan={7} className="empty-row">No contractors.</td></tr>}
+              {!loading && filtered.length === 0 && <tr><td colSpan={7} className="empty-row">No contractors match "{search}".</td></tr>}
             </tbody>
           </table>
         </div>

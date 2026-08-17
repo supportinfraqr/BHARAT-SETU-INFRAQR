@@ -996,31 +996,36 @@ class MyProfileView(APIView):
 
 
 class SavedLocationList(APIView):
-    """Employer's saved/starred locations + save a new one."""
+    """Saved/starred locations for reuse (employer or admin)."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         emp_id, con_id, role = resolve_scope(request.user)
-        if role != EMPLOYER or not emp_id:
+        is_admin = role in (SUPER, STAFF)
+        if not is_admin and (role != EMPLOYER or not emp_id):
             return Response({"Result": "Forbidden", "Message": "Only employers can manage locations"}, status=403)
-        locs = SavedLocation.objects.filter(employer_id=emp_id).order_by("-created_at")
+        if is_admin:
+            locs = SavedLocation.objects.all().order_by("-created_at")
+        else:
+            locs = SavedLocation.objects.filter(employer_id=emp_id).order_by("-created_at")
         data = [{
             "id": l.pk, "name": l.name, "latitude": l.latitude, "longitude": l.longitude,
-            "address": l.address, "is_starred": l.is_starred,
+            "address": l.address, "is_starred": l.is_starred, "employer_id": l.employer_id,
         } for l in locs]
         return Response({"Result": "Success", "Data": data})
 
     def post(self, request):
         emp_id, con_id, role = resolve_scope(request.user)
-        if role != EMPLOYER or not emp_id:
+        is_admin = role in (SUPER, STAFF)
+        if not is_admin and (role != EMPLOYER or not emp_id):
             return Response({"Result": "Forbidden", "Message": "Only employers can save locations"}, status=403)
         lat = request.data.get("latitude")
         lng = request.data.get("longitude")
         if lat is None or lng is None:
             return Response({"Result": "Error", "Message": "latitude and longitude required"}, status=400)
         loc = SavedLocation.objects.create(
-            employer_id=emp_id,
+            employer_id=emp_id if not is_admin else request.data.get("employer_id"),
             name=request.data.get("name", ""),
             latitude=float(lat),
             longitude=float(lng),
@@ -1041,9 +1046,12 @@ class SavedLocationDelete(APIView):
 
     def delete(self, request, location_id):
         emp_id, con_id, role = resolve_scope(request.user)
-        loc = SavedLocation.objects.filter(pk=location_id, employer_id=emp_id).first()
+        is_admin = role in (SUPER, STAFF)
+        loc = SavedLocation.objects.filter(pk=location_id).first()
         if not loc:
             return Response({"Result": "Error", "Message": "Location not found"}, status=404)
+        if not is_admin and loc.employer_id != emp_id:
+            return Response({"Result": "Error", "Message": "Location not yours"}, status=403)
         loc.delete()
         return Response({"Result": "Success", "Message": "Location removed"})
 

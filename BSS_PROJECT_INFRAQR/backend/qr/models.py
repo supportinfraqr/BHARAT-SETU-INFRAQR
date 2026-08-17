@@ -153,7 +153,9 @@ class Worker(models.Model):
 
 class SavedLocation(models.Model):
     """A location starred/saved by an employer for reuse as a contractor working location."""
-    employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name="saved_locations")
+    employer = models.ForeignKey(
+        Employer, on_delete=models.CASCADE, related_name="saved_locations", null=True, blank=True
+    )
     name = models.CharField(max_length=255, blank=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
