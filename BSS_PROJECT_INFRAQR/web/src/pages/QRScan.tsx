@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../api/client';
+import CameraScanner from '../components/CameraScanner';
 import './QRScan.css';
 import AppLayout from '../components/AppLayout';
 
@@ -12,6 +13,31 @@ export default function QRScan() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [resolved, setResolved] = useState<any>(null);
+  const [scanFlash, setScanFlash] = useState('');
+
+  const doScan = useCallback(async (ref: string) => {
+    const trimmed = ref?.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setResult(null);
+    setScanFlash(`Scanned: ${trimmed}`);
+    setTimeout(() => setScanFlash(''), 2500);
+    try {
+      const res = await api.post('/qr/qr/scan/', {
+        qr_reference: trimmed,
+        latitude: lat ?? undefined,
+        longitude: lng ?? undefined,
+      });
+      setResult(res.data);
+    } catch (e: any) {
+      setResult({
+        Result: 'Error',
+        Message: e?.response?.data?.Message || 'Could not process QR',
+      });
+    } finally {
+      setBusy(false);
+    }
+  }, [lat, lng]);
 
   const resolveLocation = useCallback(async (la: number, ln: number) => {
     try {
@@ -46,26 +72,9 @@ export default function QRScan() {
     }
   }, [resolveLocation]);
 
-  const doScan = async () => {
-    const ref = qrInput.trim();
-    if (!ref) return;
-    setBusy(true);
-    setResult(null);
-    try {
-      const res = await api.post('/qr/qr/scan/', {
-        qr_reference: ref,
-        latitude: lat ?? undefined,
-        longitude: lng ?? undefined,
-      });
-      setResult(res.data);
-    } catch (e: any) {
-      setResult({
-        Result: 'Error',
-        Message: e?.response?.data?.Message || 'Could not process QR',
-      });
-    } finally {
-      setBusy(false);
-    }
+  const handleCameraScan = (decoded: string) => {
+    setQrInput(decoded);
+    doScan(decoded);
   };
 
   const att = result?.Data?.attendance;
@@ -82,17 +91,10 @@ export default function QRScan() {
         {/* Scanner panel */}
         <div className="qr-panel">
           <div className="qr-scanner-box">
-            <div className="qr-frame">
-              <div className="qr-corner tl"></div>
-              <div className="qr-corner tr"></div>
-              <div className="qr-corner bl"></div>
-              <div className="qr-corner br"></div>
-              <div className="qr-placeholder">
-                <span className="qr-icon">▣</span>
-                <p>Scan the QR code</p>
-              </div>
-            </div>
-            <div className="qr-scanner-line"></div>
+            <CameraScanner onScan={handleCameraScan} />
+            {scanFlash && (
+              <div className="qr-scanner-flash">{scanFlash}</div>
+            )}
           </div>
 
           <input
@@ -100,7 +102,7 @@ export default function QRScan() {
             placeholder="Or paste QR reference here"
             value={qrInput}
             onChange={(e) => setQrInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && doScan()}
+            onKeyDown={(e) => e.key === 'Enter' && doScan(qrInput)}
           />
 
           <div className={`qr-loc ${locReady ? 'ok' : 'warn'}`}>
@@ -114,7 +116,7 @@ export default function QRScan() {
             </div>
           )}
 
-          <button className="qr-scan-btn" onClick={doScan} disabled={busy || !qrInput}>
+          <button className="qr-scan-btn" onClick={() => doScan(qrInput)} disabled={busy || !qrInput}>
             {busy ? 'Verifying...' : 'Verify & Mark Attendance'}
           </button>
         </div>

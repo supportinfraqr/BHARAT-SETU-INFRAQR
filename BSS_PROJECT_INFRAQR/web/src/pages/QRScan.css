@@ -70,3 +70,7 @@
 .qr-att-warn { color: #b9770e; font-weight: 600; margin-top: 8px !important; }
 
 @media (max-width: 800px) { .qr-layout { grid-template-columns: 1fr; } }
+
+.camera-scanner { width: 100%; }
+.camera-scanner #bss-camera-scanner video { border-radius: 10px; width: 100% !important; }
+.qr-scanner-flash { margin-top: 8px; padding: 8px 12px; background: #e8f8f0; border: 1px solid #148f77; color: #148f77; border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600; }
