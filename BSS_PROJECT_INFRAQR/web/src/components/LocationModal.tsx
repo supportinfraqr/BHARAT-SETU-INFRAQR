@@ -10,11 +10,10 @@ interface LocationModalProps {
 }
 
 export default function LocationModal({ contractor, savedLocations, onClose, onSaved }: LocationModalProps) {
-const [lat, setLat] = useState<number | undefined>(contractor.location_lat || undefined);
+  const [siteName, setSiteName] = useState(contractor.site_name || '');
+  const [lat, setLat] = useState<number | undefined>(contractor.location_lat || undefined);
   const [lng, setLng] = useState<number | undefined>(contractor.location_lng || undefined);
   const [address, setAddress] = useState(contractor.location_address || '');
-  const [siteName, setSiteName] = useState(contractor.site_name || '');
-  const [locName, setLocName] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -43,10 +42,10 @@ const [lat, setLat] = useState<number | undefined>(contractor.location_lat || un
     setSaving(true);
     setMsg('');
     try {
-      await locationApi.save({ name: locName || address || 'Saved Location', latitude: lat, longitude: lng, address });
-      setMsg('Location starred for reuse!');
+      await locationApi.save({ name: siteName || address || 'Saved Location', latitude: lat, longitude: lng, address });
+      setMsg('Saved as starred site!');
       onSaved();
-    } catch { setMsg('Failed to save starred location'); }
+    } catch { setMsg('Failed to save starred site'); }
     setSaving(false);
   };
 
@@ -54,7 +53,8 @@ const [lat, setLat] = useState<number | undefined>(contractor.location_lat || un
     setLat(loc.latitude);
     setLng(loc.longitude);
     setAddress(loc.address || '');
-    setLocName(loc.name || '');
+    setSiteName(loc.name || '');
+    setMsg('');
   };
 
   const handleDeleteStarred = async (id: number) => {
@@ -75,58 +75,56 @@ const [lat, setLat] = useState<number | undefined>(contractor.location_lat || un
 
         <MapPicker latitude={lat} longitude={lng} onChange={handleMapChange} height="320px" />
 
-        <div style={{ marginTop: 12 }}>
-          <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Address (auto-filled from map)</label>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Pick a location on the map to auto-fill address"
-            style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, marginTop: 4, fontSize: 13, color: '#374151' }} />
-          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-            Coordinates: {lat !== undefined && lng !== undefined ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '—'}
-          </div>
-        </div>
-
-        {savedLocations.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '0 0 6px', fontSize: 13, color: '#6b7280' }}>
-              <i className="fa fa-star" style={{ color: '#f59e0b' }}></i> Saved Locations (click to reuse)
-            </h4>
-            <div style={{ maxHeight: 120, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 8 }}>
-              {savedLocations.map((loc) => (
-                <div key={loc.id} style={{ padding: '7px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ cursor: 'pointer', flex: 1 }} onClick={() => handleApplyStarred(loc)}>
-                    <div style={{ fontWeight: 500, fontSize: 13 }}>{loc.name || 'Unnamed'}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}</div>
-                  </div>
-                  <button onClick={() => handleDeleteStarred(loc.id)}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, padding: 4 }} title="Remove">✕</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
             <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Site Name</label>
             <input value={siteName} onChange={(e) => setSiteName(e.target.value)} placeholder="e.g. Site A, Office B"
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, marginTop: 4 }} />
           </div>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Save as Starred</label>
-            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-              <input value={locName} onChange={(e) => setLocName(e.target.value)} placeholder="Location name"
-                style={{ flex: 1, padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6 }} />
-              <button type="button" onClick={handleSaveAsStarred}
-                style={{ padding: '8px 12px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>★ Save</button>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Address</label>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Auto-filled from map"
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, marginTop: 4, fontSize: 13, color: '#374151' }} />
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              Coordinates: {lat !== undefined && lng !== undefined ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '—'}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button type="button" onClick={handleSaveAsStarred} disabled={saving || lat === undefined}
+            style={{ padding: '8px 16px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 6, cursor: lat !== undefined ? 'pointer' : 'not-allowed', fontWeight: 600 }}>
+            ★ Save this place as Starred
+          </button>
           <button type="button" onClick={handleSave} disabled={saving || lat === undefined}
-            style={{ padding: '10px 28px', background: lat !== undefined ? '#1a3c6e' : '#9ca3af', color: '#fff', border: 'none', borderRadius: 6, cursor: lat !== undefined ? 'pointer' : 'not-allowed', fontWeight: 600 }}>
+            style={{ padding: '8px 16px', background: lat !== undefined ? '#1a3c6e' : '#9ca3af', color: '#fff', border: 'none', borderRadius: 6, cursor: lat !== undefined ? 'pointer' : 'not-allowed', fontWeight: 600 }}>
             {saving ? 'Saving...' : 'Set Working Location'}
           </button>
-          {msg && <span style={{ fontSize: 13, color: msg.includes('saved') || msg.includes('starred') ? '#16a34a' : '#ef4444' }}>{msg}</span>}
+          {msg && <span style={{ fontSize: 13, color: msg.includes('saved') ? '#16a34a' : '#ef4444' }}>{msg}</span>}
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: 13, color: '#6b7280' }}>
+            <i className="fa fa-star" style={{ color: '#f59e0b' }}></i> Starred Sites (select to fill site + address)
+          </h4>
+          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+            {savedLocations.length === 0 && (
+              <div style={{ padding: 10, color: '#9ca3af', fontSize: 13, textAlign: 'center' }}>No starred sites yet. Pick a location on the map and save it as starred.</div>
+            )}
+            {savedLocations.map((loc) => (
+              <div key={loc.id} style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                onClick={() => handleApplyStarred(loc)}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: '#022B5E' }}>{loc.name || 'Unnamed'}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 480 }}>
+                    {loc.address || `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`}
+                  </div>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleDeleteStarred(loc.id); }}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, padding: 4, marginLeft: 8 }} title="Remove">✕</button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
