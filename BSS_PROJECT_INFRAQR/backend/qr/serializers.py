@@ -60,6 +60,8 @@ class BindingSerializer(serializers.ModelSerializer):
         fields = [
             "id", "binding_type", "employer", "contractor", "worker", "status",
             "request_reference", "site_name", "started_at", "ended_at", "created_at",
+            "initiator_consent", "approver_consent", "consent_channel",
+            "consent_expires_at", "initiator_consent_at", "approver_consent_at",
         ]
 
 

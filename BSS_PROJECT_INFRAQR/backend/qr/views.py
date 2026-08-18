@@ -765,6 +765,87 @@ class BindingApprove(APIView):
         return Response({"Result": "Success", "Data": BindingSerializer(binding).data})
 
 
+class ConsentRequest(APIView):
+    """Request consent for one party of a binding (APP push, SMS OTP, or IVR)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, binding_id):
+        binding = Binding.objects.filter(pk=binding_id).first()
+        if not binding:
+            return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
+        party = (request.data.get("party") or "").lower()
+        if party not in ("initiator", "approver"):
+            return Response({"Result": "Error", "Message": "party must be 'initiator' or 'approver'"}, status=400)
+        channel = (request.data.get("channel") or "APP").upper()
+        if channel not in ("APP", "SMS_OTP", "IVR", "VOICE"):
+            return Response({"Result": "Error", "Message": "Invalid channel"}, status=400)
+        from .consent import request_consent
+        data = request_consent(binding, party, channel)
+        return Response({"Result": "Success", "Data": data})
+
+
+class ConsentResolve(APIView):
+    """Resolve a pending consent: approve/reject, optionally with OTP (SMS channel)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, binding_id):
+        binding = Binding.objects.filter(pk=binding_id).first()
+        if not binding:
+            return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
+        party = (request.data.get("party") or "").lower()
+        if party not in ("initiator", "approver"):
+            return Response({"Result": "Error", "Message": "party must be 'initiator' or 'approver'"}, status=400)
+        decision = str(request.data.get("decision", "approve")).lower() in ("approve", "true", "1", "yes")
+        otp = request.data.get("otp", "")
+        from .consent import resolve_consent, finalize_binding
+        data = resolve_consent(binding, party, decision, otp)
+        # When both parties approved, finalize the binding (assign hierarchy + site)
+        if data.get("binding_complete"):
+            binding.refresh_from_db()
+            finalize_binding(binding)
+            write_audit(request, "BINDING_ACTIVATED", "BINDING", binding.pk, new="ACTIVE")
+            data["binding_status"] = "ACTIVE"
+        return Response({"Result": "Success", "Data": data})
+
+
+class ProfileLookup(APIView):
+    """GUIDE.MD Fetch_Profile_Data interceptor: full profile if bound, else general."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        entity_type = (request.query_params.get("entity_type") or "").upper()
+        entity_id = request.query_params.get("entity_id")
+        if not entity_type or not entity_id:
+            return Response({"Result": "Error", "Message": "entity_type and entity_id required"}, status=400)
+        target = None
+        if entity_type == "EMPLOYER":
+            target = Employer.objects.filter(pk=entity_id).first()
+        elif entity_type == "CONTRACTOR":
+            target = Contractor.objects.filter(pk=entity_id).first()
+        elif entity_type == "WORKER":
+            target = Worker.objects.filter(pk=entity_id).first()
+        else:
+            return Response({"Result": "Error", "Message": "Invalid entity_type"}, status=400)
+        if target is None:
+            return Response({"Result": "Error", "Message": "Entity not found"}, status=404)
+        from .consent import fetch_profile_data, is_bound
+        bound = is_bound(request.user, target)
+        profile = fetch_profile_data(request.user, target, bound)
+        return Response({
+            "Result": "Success",
+            "Data": {
+                "entity_type": entity_type,
+                "entity_id": target.pk,
+                "bound": bound,
+                "visibility": "FULL" if bound else "GENERAL",
+                "profile": profile,
+            },
+        })
+
+
 class ContractorReassign(APIView):
     """Reassign workers from one contractor to another, preserving history."""
 

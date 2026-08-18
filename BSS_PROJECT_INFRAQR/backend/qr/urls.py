@@ -17,6 +17,9 @@ urlpatterns = [
     path("bindings/", views.BindingCreate.as_view(), name="binding-create"),
     path("bindings/list/", views.BindingList.as_view(), name="binding-list"),
     path("bindings/<int:binding_id>/approve/", views.BindingApprove.as_view(), name="binding-approve"),
+    path("bindings/<int:binding_id>/consent/request/", views.ConsentRequest.as_view(), name="consent-request"),
+    path("bindings/<int:binding_id>/consent/resolve/", views.ConsentResolve.as_view(), name="consent-resolve"),
+    path("profile/lookup/", views.ProfileLookup.as_view(), name="profile-lookup"),
     path("bindings/unbind/", views.WorkerUnbind.as_view(), name="worker-unbind"),
     path("contractors/reassign/", views.ContractorReassign.as_view(), name="contractor-reassign"),
     # Activity
