@@ -66,6 +66,11 @@ export default function AppLayout({ title, children }: { title?: string; childre
                 <i className="mdi mdi-chevron-right"></i> Binding Requests
               </a>
             )}
+            {(isAdmin || isEmployer) && (
+              <a className="nav-submenu qr-mgmt-link" href="#/qr/sites" onClick={() => navigate('/qr/sites')}>
+                <i className="mdi mdi-chevron-right"></i> Sites
+              </a>
+            )}
             <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
               <i className="mdi mdi-chevron-right"></i> All Workers
             </a>

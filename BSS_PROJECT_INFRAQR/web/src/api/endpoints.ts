@@ -56,6 +56,13 @@ export const qrMgmtApi = {
   updateProfile: (payload: any) => api.put('/qr/profile/me/', payload),
 };
 
+export const siteApi = {
+  list: () => api.get('/qr/sites/'),
+  create: (payload: any) => api.post('/qr/sites/', payload),
+  update: (id: number, payload: any) => api.put(`/qr/sites/${id}/`, payload),
+  remove: (id: number) => api.delete(`/qr/sites/${id}/`),
+};
+
 export const legacyApi = {
   navMenu: () => api.post('/Dashboard/NavMenuList', {}),
   moduleList: () => api.post('/Dashboard/ModuleList', {}),

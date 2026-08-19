@@ -11,6 +11,7 @@ import ContractorsList from './pages/ContractorsList';
 import WorkerBinding from './pages/WorkerBinding';
 import BindingRequests from './pages/BindingRequests';
 import MyProfile from './pages/MyProfile';
+import Sites from './pages/Sites';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('bss_token');
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/qr/workers" element={<RequireAuth><Workers /></RequireAuth>} />
         <Route path="/qr/workers/:id" element={<RequireAuth><WorkerDetail /></RequireAuth>} />
         <Route path="/qr/contractors" element={<RequireAuth><ContractorsList /></RequireAuth>} />
+        <Route path="/qr/sites" element={<RequireAuth><Sites /></RequireAuth>} />
         <Route path="/qr/binding" element={<RequireAuth><WorkerBinding /></RequireAuth>} />
         <Route path="/qr/binding-requests" element={<RequireAuth><BindingRequests /></RequireAuth>} />
         <Route path="/qr/my-profile" element={<RequireAuth><MyProfile /></RequireAuth>} />
