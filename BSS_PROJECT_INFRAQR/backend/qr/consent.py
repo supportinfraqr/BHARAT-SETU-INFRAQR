@@ -186,7 +186,7 @@ def general_profile(target) -> dict:
             "Age": target.date_of_birth or "",
             "Sex": target.gender or "",
             "Company": None,
-            "BloodGroup": "",
+            "BloodGroup": target.blood_group or "",
         }
     if isinstance(target, Contractor) or isinstance(target, Employer):
         return {
@@ -212,6 +212,7 @@ def full_profile(target) -> dict:
             "DOB": target.date_of_birth or "",
             "Designation": target.designation or "",
             "Sex": target.gender or "",
+            "BloodGroup": target.blood_group or "",
             "Address": target.present_address or "",
             "State": target.state or "",
             "City": target.city or "",

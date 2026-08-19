@@ -122,6 +122,7 @@ class Worker(models.Model):
     gender = models.CharField(max_length=20, blank=True)
     marital_status = models.CharField(max_length=50, blank=True)
     date_of_birth = models.CharField(max_length=50, blank=True)
+    blood_group = models.CharField(max_length=10, blank=True)
     designation = models.CharField(max_length=150, blank=True)
     department = models.CharField(max_length=150, blank=True)
     present_address = models.TextField(blank=True)

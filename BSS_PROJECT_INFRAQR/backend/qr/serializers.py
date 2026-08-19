@@ -40,7 +40,7 @@ class WorkerSerializer(serializers.ModelSerializer):
         fields = [
             "id", "legacy_employee_code", "full_name", "worker_id", "mobile",
             "alternative_mobile", "email", "aadhaar_no", "pan_no", "father_name",
-            "gender", "marital_status", "date_of_birth", "designation", "department",
+            "gender", "marital_status", "date_of_birth", "blood_group", "designation", "department",
             "present_address", "permanent_address", "state", "city", "pincode",
             "bank_account", "bank_ifsc", "previous_uan", "previous_esi", "pf_account",
             "gross_salary", "doj", "leaving_date", "employer", "contractor",

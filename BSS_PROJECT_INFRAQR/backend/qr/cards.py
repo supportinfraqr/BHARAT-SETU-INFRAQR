@@ -142,47 +142,66 @@ def qr_png_bytes(data: str, box=(240, 240)) -> bytes:
 
 
 def worker_card_image(worker, qr_reference):
-    """Return a PIL image of the worker ID card (600x380 px)."""
-    W, H = 600, 380
-    # Create background
+    """Return a PIL image of the worker ID card (700x460 px) with detailed fields."""
+    W, H = 700, 460
     img = Image.new("RGB", (W, H), "#f8fafc")
     d = ImageDraw.Draw(img)
 
-    # Main card border
-    d.rectangle([0, 0, W - 1, H - 1], outline="#e2e8f0", width=2)
-
-    # Header bar
     BRAND_NAVY = "#022b5e"
     BRAND_GOLD = "#e2b13c"
-    d.rectangle([0, 0, W, 52], fill=BRAND_NAVY)
-    d.text((20, 14), "BHARAT SHRAM SETU", font=_card_font(21), fill="white")
-    d.text((W - 165, 17), "WORKER ID CARD", font=_card_font(13), fill=BRAND_GOLD)
+    TEXT_DARK = "#0f172a"
+    TEXT_MUTED = "#475569"
 
-    # Photo placeholder (rounded rect background with user silhouette)
-    photo_box = [30, 80, 150, 200]
-    d.rounded_rectangle(photo_box, radius=8, fill="#e2e8f0")
-    # Draw silhouette icon
-    d.ellipse([75, 105, 105, 135], fill="#cbd5e1") # head
-    d.chord([60, 142, 120, 192], start=180, end=360, fill="#cbd5e1") # body
+    # Main card border
+    d.rectangle([0, 0, W - 1, H - 1], outline="#cbd5e1", width=2)
 
-    # Details
+    # Header bar
+    d.rectangle([0, 0, W, 56], fill=BRAND_NAVY)
+    d.text((20, 16), "BHARAT SHRAM SETU", font=_card_font(22), fill="white")
+    d.text((W - 185, 19), "WORKER ID CARD", font=_card_font(14), fill=BRAND_GOLD)
+
+    # Left: photo placeholder
+    photo_box = [30, 82, 170, 220]
+    d.rounded_rectangle(photo_box, radius=10, fill="#e2e8f0")
+    d.ellipse([85, 112, 115, 142], fill="#cbd5e1")       # head
+    d.chord([68, 152, 132, 206], start=180, end=360, fill="#cbd5e1")  # body
+
+    # Name + ID under photo
     name = worker.full_name or "N/A"
     wid = worker.worker_id or f"WRK{worker.pk:06d}"
-    d.text((180, 85), f"Name:  {name}", font=_card_font(19), fill="#0f172a")
-    d.text((180, 118), f"Worker ID:  {wid}", font=_card_font(15), fill="#475569")
-    d.text((180, 148), f"Role:  Worker", font=_card_font(15), fill="#475569")
-    d.text((180, 178), f"Employer:  {worker.employer.name if worker.employer else '—'}",
-           font=_card_font(15), fill="#475569")
+    d.text((30, 232), name, font=_card_font(20), fill=TEXT_DARK)
+    d.text((30, 260), wid, font=_card_font(14), fill=TEXT_MUTED)
+
+    # Right: details block (two columns)
+    col_x = 205
+    details = [
+        ("Father's Name", worker.father_name or "—"),
+        ("Date of Birth", worker.date_of_birth or "—"),
+        ("Gender", worker.gender or "—"),
+        ("Blood Group", worker.blood_group or "—"),
+        ("Aadhaar No", worker.aadhaar_no or "—"),
+        ("PAN No", worker.pan_no or "—"),
+        ("Mobile", worker.mobile or "—"),
+        ("Designation", worker.designation or "—"),
+        ("Department", worker.department or "—"),
+        ("Employer", worker.employer.name if worker.employer else "—"),
+    ]
+    y = 82
+    for label, value in details:
+        d.text((col_x, y), f"{label}:", font=_card_font(13), fill=TEXT_MUTED)
+        d.text((col_x + 110, y), str(value), font=_card_font(13), fill=TEXT_DARK)
+        y += 32
 
     # QR on the right
-    qr_size = 140
+    qr_size = 150
     qr_img = _qr_image(qr_reference, (qr_size, qr_size))
-    img.paste(qr_img, (W - 180, 80))
+    img.paste(qr_img, (W - 190, 90))
+    d.text((W - 190, 252), "SCAN TO VERIFY", font=_card_font(11), fill=TEXT_MUTED)
 
     # Footer
-    d.rectangle([0, H - 36, W, H], fill=BRAND_NAVY)
-    d.text((20, H - 26), "BSS – Building a Transparent & Accountable Workforce Ecosystem",
-           font=_card_font(11), fill="white")
+    d.rectangle([0, H - 40, W, H], fill=BRAND_NAVY)
+    d.text((20, H - 29), "BSS – Building a Transparent & Accountable Workforce Ecosystem",
+           font=_card_font(12), fill="white")
     return img
 
 
