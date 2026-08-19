@@ -126,15 +126,37 @@ def resolve_consent(binding: Binding, party: str, decision: bool, otp: str = "")
 
 def finalize_binding(binding: Binding) -> None:
     """Activate a binding once both parties have consented, assigning hierarchy + site."""
+    from .models import ContractorEmployment, Site
     if binding.binding_type == "EMPLOYER_CONTRACTOR" and binding.contractor_id:
-        Contractor.objects.filter(pk=binding.contractor_id).update(employer=binding.employer)
+        contractor = Contractor.objects.filter(pk=binding.contractor_id).first()
+        if contractor:
+            # GOLDEN RULE: create a many-to-many employment record (C -> E at Site)
+            ContractorEmployment.objects.get_or_create(
+                contractor=contractor, employer_id=binding.employer_id, site=binding.site,
+                defaults={"status": "ACTIVE", "started_at": timezone.now()},
+            )
+            # Keep primary employer in sync
+            Contractor.objects.filter(pk=binding.contractor_id).update(employer=binding.employer)
+            if binding.site:
+                Contractor.objects.filter(pk=binding.contractor_id).update(site=binding.site)
     if binding.binding_type == "WORKER_CONTRACTOR" and binding.worker_id:
         worker = Worker.objects.filter(pk=binding.worker_id).first()
         contractor = Contractor.objects.filter(pk=binding.contractor_id).first()
         if worker and contractor:
-            worker.contractor = contractor
-            worker.employer = contractor.employer
-            worker.save(update_fields=["contractor", "employer"])
+            # Worker -> contractor at the binding's site; employer derived from site
+            site = binding.site or contractor.site
+            from .hierarchy import assign_worker_to_system
+            try:
+                if site:
+                    assign_worker_to_system(worker, contractor, site)
+                else:
+                    worker.contractor = contractor
+                    worker.employer = contractor.employer
+                    worker.save(update_fields=["contractor", "employer"])
+            except ValueError:
+                worker.contractor = contractor
+                worker.employer = contractor.employer
+                worker.save(update_fields=["contractor", "employer"])
     binding.status = "ACTIVE"
     binding.started_at = timezone.now()
     binding.save()

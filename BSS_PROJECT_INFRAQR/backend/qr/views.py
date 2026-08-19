@@ -970,19 +970,10 @@ class BindingApprove(APIView):
         if not can_approve:
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
         if decision == "APPROVE":
-            binding.status = "ACTIVE"
-            binding.started_at = timezone.now()
+            from .consent import finalize_binding
+            finalize_binding(binding)
             binding.approved_by = request.user
-            if binding.binding_type == "EMPLOYER_CONTRACTOR" and binding.contractor_id:
-                Contractor.objects.filter(pk=binding.contractor_id).update(employer=binding.employer)
-            if binding.binding_type == "WORKER_CONTRACTOR" and binding.worker_id:
-                worker = Worker.objects.filter(pk=binding.worker_id).first()
-                contractor = Contractor.objects.filter(pk=binding.contractor_id).first()
-                if worker and contractor:
-                    worker.contractor = contractor
-                    worker.employer = contractor.employer
-                    worker.save(update_fields=["contractor", "employer"])
-            binding.save()
+            binding.save(update_fields=["approved_by"])
             write_audit(request, "BINDING_APPROVED", "BINDING", binding.pk, new="APPROVED")
             notify("PRIMARY_CONTRACTOR", "BINDING_APPROVED", "Your binding request was approved",
                    recipient_user=binding.approved_by)
