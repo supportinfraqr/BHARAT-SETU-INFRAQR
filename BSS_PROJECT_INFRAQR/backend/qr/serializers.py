@@ -4,6 +4,7 @@ from .models import (
     Attendance,
     Binding,
     Contractor,
+    ContractorEmployment,
     Employer,
     Notification,
     QRCode,
@@ -48,6 +49,15 @@ class ContractorSerializer(serializers.ModelSerializer):
         ]
 
 
+class ContractorEmploymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContractorEmployment
+        fields = [
+            "id", "contractor", "employer", "site", "status", "started_at",
+            "ended_at", "created_at",
+        ]
+
+
 class WorkerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Worker
@@ -89,7 +99,7 @@ class WorkerSerializer(serializers.ModelSerializer):
             "photos_1_file_path", "photos_2_file_path", "photos_3_file_path", "photos_4_file_path",
             "trainer_name", "trainer_date", "supervisor1", "supervisor2",
             "escalation1", "escalation2", "remark", "field_name", "is_deleted",
-            "doj", "leaving_date", "employer", "contractor", "site",
+            "doj", "leaving_date", "employer", "contractor", "site", "ecsw_tuple",
             "photo", "is_active", "created_at",
         ]
 

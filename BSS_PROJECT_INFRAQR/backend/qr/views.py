@@ -15,6 +15,7 @@ from .models import (
     Attendance,
     Binding,
     Contractor,
+    ContractorEmployment,
     Employer,
     Notification,
     QRCode,
@@ -26,6 +27,7 @@ from .models import (
 from .serializers import (
     AttendanceSerializer,
     BindingSerializer,
+    ContractorEmploymentSerializer,
     ContractorSerializer,
     EmployerSerializer,
     NotificationSerializer,
@@ -153,8 +155,8 @@ class ContractorListCreate(APIView):
         emp_id, con_id, role = resolve_scope(request.user)
         qs = Contractor.objects.filter(is_active=True)
         if role == EMPLOYER and emp_id:
-            # Employer sees only their own contractors
-            qs = qs.filter(employer_id=emp_id)
+            # Employer sees contractors employed by them (many-to-many via employments)
+            qs = qs.filter(employments__employer_id=emp_id, employments__status="ACTIVE").distinct()
         elif role in (PRIMARY, SECONDARY) and con_id:
             # Contractor sees only themselves
             qs = qs.filter(pk=con_id)
@@ -163,13 +165,143 @@ class ContractorListCreate(APIView):
     def post(self, request):
         if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
         ser = ContractorSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         with transaction.atomic():
             obj = ser.save()
             create_qr_for_entity("CONTRACTOR", obj.pk)
+            # Create an employment record for the employer (many-to-many)
+            employer_id = request.data.get("employer") or emp_id
+            if employer_id:
+                from .models import ContractorEmployment
+                ContractorEmployment.objects.get_or_create(
+                    contractor=obj, employer_id=employer_id,
+                    defaults={"status": "ACTIVE", "started_at": timezone.now()},
+                )
             write_audit(request, "CONTRACTOR_CREATED", "CONTRACTOR", obj.pk, new=str(obj.pk))
-        return Response({"Result": "Success", "Data": ser.data}, status=201)
+        return Response({"Result": "Success", "Data": ContractorSerializer(obj).data}, status=201)
+
+
+class ContractorEmploy(APIView):
+    """Assign a contractor to an employer at a site (many-to-many employment)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, contractor_id):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
+        contractor = Contractor.objects.filter(pk=contractor_id).first()
+        if not contractor:
+            return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+        employer_id = request.data.get("employer") or emp_id
+        site_id = request.data.get("site")
+        if not employer_id:
+            return Response({"Result": "Error", "Message": "employer required"}, status=400)
+        # GOLDEN RULE: verify site belongs to employer
+        site = None
+        if site_id:
+            site = Site.objects.filter(pk=site_id, employer_id=employer_id).first()
+            if not site:
+                return Response({"Result": "Error", "Message": "Site not found or not owned by employer"}, status=400)
+        emp, created = ContractorEmployment.objects.get_or_create(
+            contractor=contractor, employer_id=employer_id, site=site,
+            defaults={"status": "ACTIVE", "started_at": timezone.now()},
+        )
+        if not created:
+            emp.status = "ACTIVE"
+            emp.started_at = timezone.now()
+            emp.ended_at = None
+            emp.site = site
+            emp.save()
+        # Sync contractor primary employer/site
+        contractor.employer_id = employer_id
+        if site:
+            contractor.site = site
+            contractor.site_name = site.name
+            contractor.location_lat = site.latitude
+            contractor.location_lng = site.longitude
+            contractor.location_address = site.location_address
+        contractor.save()
+        write_audit(request, "CONTRACTOR_EMPLOYED", "CONTRACTOR", contractor.pk,
+                    previous="", new=f"emp={employer_id} site={site_id}")
+        return Response({"Result": "Success", "Data": ContractorEmploymentSerializer(emp).data}, status=201)
+
+
+class ContractorUnemploy(APIView):
+    """End a contractor's employment with an employer."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, contractor_id):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
+        employer_id = request.data.get("employer") or emp_id
+        empl = ContractorEmployment.objects.filter(
+            contractor_id=contractor_id, employer_id=employer_id, status="ACTIVE"
+        ).first()
+        if not empl:
+            return Response({"Result": "Error", "Message": "Active employment not found"}, status=404)
+        empl.status = "ENDED"
+        empl.ended_at = timezone.now()
+        empl.save()
+        write_audit(request, "CONTRACTOR_UNEMPLOYED", "CONTRACTOR", contractor_id, new="ended")
+        return Response({"Result": "Success", "Message": "Employment ended"})
+
+
+class ContractorEmployments(APIView):
+    """GUIDE.MD Get_Contractor_Employers / Get_Contractor_Sites: a contractor's employers + sites."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, contractor_id):
+        contractor = Contractor.objects.filter(pk=contractor_id).first()
+        if not contractor:
+            return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
+        from .hierarchy import get_contractor_employers, get_contractor_sites
+        employers = [EmployerSerializer(e).data for e in get_contractor_employers(contractor)]
+        sites = [SiteSerializer(s).data for s in get_contractor_sites(contractor)]
+        return Response({
+            "Result": "Success",
+            "Data": {
+                "contractor": ContractorSerializer(contractor).data,
+                "employers": employers,
+                "sites": sites,
+            },
+        })
+
+
+class WorkerAssign(APIView):
+    """GUIDE.MD Assign_Worker_To_System(W, C, S): bind a worker to a contractor at a site.
+
+    Enforces: one worker one site, employer derived from site, unique ECSW tuple.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, worker_id):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        worker = Worker.objects.filter(pk=worker_id).first()
+        contractor = Contractor.objects.filter(pk=request.data.get("contractor")).first()
+        site = Site.objects.filter(pk=request.data.get("site")).first()
+        if not worker or not contractor or not site:
+            return Response({"Result": "Error", "Message": "worker, contractor and site required"}, status=400)
+        # GOLDEN RULE: contractor must be employed by the site's employer at this site
+        empl = ContractorEmployment.objects.filter(
+            contractor=contractor, employer_id=site.employer_id, site=site, status="ACTIVE"
+        ).first()
+        if not empl:
+            return Response({"Result": "Error", "Message": "Contractor is not employed by this employer at this site"}, status=400)
+        try:
+            from .hierarchy import assign_worker_to_system
+            worker = assign_worker_to_system(worker, contractor, site)
+        except ValueError as e:
+            return Response({"Result": "Error", "Message": str(e)}, status=400)
+        write_audit(request, "WORKER_ASSIGNED", "WORKER", worker.pk, new=worker.ecsw_tuple)
+        return Response({"Result": "Success", "Data": WorkerSerializer(worker).data})
 
 
 class WorkerListCreate(APIView):
@@ -1219,19 +1351,26 @@ class EmployerTreeView(APIView):
         if not emp:
             return Response({"Result": "Error", "Message": "Employer not found"}, status=404)
         qr = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=emp.pk).first()
-        contractors = Contractor.objects.filter(employer_id=emp.pk, is_active=True).order_by("name")
+        # Contractors employed by this employer (many-to-many via employments)
+        contractors = Contractor.objects.filter(
+            employments__employer_id=emp.pk, employments__status="ACTIVE", is_active=True
+        ).distinct().order_by("name")
         tree_contractors = []
         for c in contractors:
             workers = Worker.objects.filter(contractor_id=c.pk, is_active=True).order_by("full_name")
             c_qr = QRCode.objects.filter(entity_type="CONTRACTOR", entity_id=c.pk).first()
+            empl = ContractorEmployment.objects.filter(
+                contractor=c, employer_id=emp.pk, status="ACTIVE"
+            ).first()
             tree_contractors.append({
                 "id": c.pk,
                 "name": c.name,
                 "contact_mobile": c.contact_mobile,
-                "site_name": c.site_name,
-                "location_lat": c.location_lat,
-                "location_lng": c.location_lng,
-                "location_address": c.location_address,
+                "site": empl.site.name if empl and empl.site else c.site_name,
+                "site_id": empl.site_id if empl else None,
+                "location_lat": empl.site.latitude if empl and empl.site else c.location_lat,
+                "location_lng": empl.site.longitude if empl and empl.site else c.location_lng,
+                "location_address": empl.site.location_address if empl and empl.site else c.location_address,
                 "is_primary": c.is_primary,
                 "qr_reference": c_qr.qr_reference if c_qr else None,
                 "workers": [

@@ -149,6 +149,38 @@ class Contractor(models.Model):
         return self.name
 
 
+class ContractorEmployment(models.Model):
+    """A contractor can work for MULTIPLE employers, each at a site (many-to-many).
+
+    GOLDEN RULE: the site always belongs to the employer on this record.
+    Each row = contractor is employed by `employer` at `site`.
+    """
+    contractor = models.ForeignKey(
+        Contractor, on_delete=models.CASCADE, related_name="employments"
+    )
+    employer = models.ForeignKey(
+        Employer, on_delete=models.CASCADE, related_name="contractor_employments"
+    )
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="contractor_employments"
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=[("ACTIVE", "Active"), ("ENDED", "Ended"), ("SUSPENDED", "Suspended")],
+        default="ACTIVE",
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("contractor", "employer", "site")]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.contractor.name} @ {self.employer.name}"
+
+
 class Worker(models.Model):
     # --- Core identity ---
     legacy_employee_code = models.CharField(max_length=64, blank=True, null=True)
@@ -335,6 +367,8 @@ class Worker(models.Model):
     site = models.ForeignKey(
         Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="workers"
     )
+    # GUIDE.MD: unique constant E-C-S-W tuple (never duplicated)
+    ecsw_tuple = models.CharField(max_length=64, unique=True, blank=True, null=True)
     photo = models.URLField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -6,6 +6,10 @@ urlpatterns = [
     # Entities
     path("employers/", views.EmployerListCreate.as_view(), name="employer-list"),
     path("contractors/", views.ContractorListCreate.as_view(), name="contractor-list"),
+    path("contractors/<int:contractor_id>/employ/", views.ContractorEmploy.as_view(), name="contractor-employ"),
+    path("contractors/<int:contractor_id>/unemploy/", views.ContractorUnemploy.as_view(), name="contractor-unemploy"),
+    path("contractors/<int:contractor_id>/employments/", views.ContractorEmployments.as_view(), name="contractor-employments"),
+    path("workers/<int:worker_id>/assign/", views.WorkerAssign.as_view(), name="worker-assign"),
     path("workers/", views.WorkerListCreate.as_view(), name="worker-list"),
     # Sites (GOLDEN RULE: site belongs to employer)
     path("sites/", views.SiteListCreate.as_view(), name="site-list"),
