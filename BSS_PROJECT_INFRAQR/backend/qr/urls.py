@@ -7,6 +7,9 @@ urlpatterns = [
     path("employers/", views.EmployerListCreate.as_view(), name="employer-list"),
     path("contractors/", views.ContractorListCreate.as_view(), name="contractor-list"),
     path("workers/", views.WorkerListCreate.as_view(), name="worker-list"),
+    # Sites (GOLDEN RULE: site belongs to employer)
+    path("sites/", views.SiteListCreate.as_view(), name="site-list"),
+    path("sites/<int:site_id>/", views.SiteDetail.as_view(), name="site-detail"),
     # QR
     path("qr/", views.QRCodeView.as_view(), name="qr-view"),
     path("qr/scan/", views.QRScanView.as_view(), name="qr-scan"),

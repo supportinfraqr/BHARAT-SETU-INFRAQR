@@ -8,6 +8,7 @@ from .models import (
     Notification,
     QRCode,
     ScanLog,
+    Site,
     Worker,
 )
 
@@ -23,14 +24,27 @@ class EmployerSerializer(serializers.ModelSerializer):
         ]
 
 
+class SiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Site
+        fields = [
+            "id", "name", "site_code", "employer", "address", "latitude", "longitude",
+            "location_address", "state", "city", "pincode", "contact_person",
+            "contact_mobile", "email", "description", "pan_no", "gstin", "clrarc",
+            "clrlic", "manpower_type", "manpower_count", "valid_from", "valid_to",
+            "is_active", "created_at",
+        ]
+
+
 class ContractorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contractor
         fields = [
             "id", "name", "contact_person", "contact_mobile", "email", "address",
             "pan_no", "gstin", "registration_type", "bank_details", "industry",
-            "state", "city", "pincode", "employer", "is_primary", "location_lat",
-            "location_lng", "location_address", "site_name", "is_active", "created_at",
+            "state", "city", "pincode", "employer", "is_primary", "site",
+            "location_lat", "location_lng", "location_address", "site_name",
+            "is_active", "created_at",
         ]
 
 
@@ -48,7 +62,7 @@ class WorkerSerializer(serializers.ModelSerializer):
             "post_office", "street", "house", "state", "city", "pincode",
             "permanent_address", "p_state", "p_city", "p_pincode",
             "designation", "department", "worker_grade", "type_work", "nature_job",
-            "s_date", "en_date", "s_name", "site_id", "site_location", "site_state",
+            "s_date", "en_date", "s_name", "legacy_site_id", "site_location", "site_state",
             "bank_account", "bank_ifsc", "bank_name", "account_holder_name",
             "previous_uan", "previous_esi", "pf_account", "gross_salary",
             "minimum_wage_category", "wage_type", "wage_disbursement_mode", "lwf", "wc_policy",
@@ -75,7 +89,7 @@ class WorkerSerializer(serializers.ModelSerializer):
             "photos_1_file_path", "photos_2_file_path", "photos_3_file_path", "photos_4_file_path",
             "trainer_name", "trainer_date", "supervisor1", "supervisor2",
             "escalation1", "escalation2", "remark", "field_name", "is_deleted",
-            "doj", "leaving_date", "employer", "contractor",
+            "doj", "leaving_date", "employer", "contractor", "site",
             "photo", "is_active", "created_at",
         ]
 
@@ -90,7 +104,7 @@ class BindingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Binding
         fields = [
-            "id", "binding_type", "employer", "contractor", "worker", "status",
+            "id", "binding_type", "employer", "contractor", "worker", "site", "status",
             "request_reference", "site_name", "started_at", "ended_at", "created_at",
             "initiator_consent", "approver_consent", "consent_channel",
             "consent_expires_at", "initiator_consent_at", "approver_consent_at",

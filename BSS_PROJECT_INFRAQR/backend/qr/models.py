@@ -77,6 +77,43 @@ class Employer(models.Model):
         return self.name
 
 
+class Site(models.Model):
+    """A work site. GOLDEN RULE: a site always belongs to an Employer, nothing else.
+
+    Contractors and Workers are assigned to a site, but never own it.
+    Mirrors the legacy evm_tbl_sitemanager structure.
+    """
+    name = models.CharField(max_length=255)
+    site_code = models.CharField(max_length=100, blank=True)
+    employer = models.ForeignKey(
+        Employer, on_delete=models.CASCADE, related_name="sites"
+    )
+    address = models.TextField(blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    location_address = models.TextField(blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    pincode = models.CharField(max_length=20, blank=True)
+    contact_person = models.CharField(max_length=255, blank=True)
+    contact_mobile = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True, null=True)
+    description = models.TextField(blank=True)
+    pan_no = models.CharField(max_length=50, blank=True)
+    gstin = models.CharField(max_length=50, blank=True)
+    clrarc = models.CharField(max_length=100, blank=True)
+    clrlic = models.CharField(max_length=100, blank=True)
+    manpower_type = models.CharField(max_length=100, blank=True)
+    manpower_count = models.CharField(max_length=50, blank=True)
+    valid_from = models.CharField(max_length=50, blank=True)
+    valid_to = models.CharField(max_length=50, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Contractor(models.Model):
     name = models.CharField(max_length=255)
     legacy_party_id = models.BigIntegerField(null=True, blank=True)
@@ -97,6 +134,10 @@ class Contractor(models.Model):
         Employer, on_delete=models.SET_NULL, null=True, blank=True, related_name="contractors"
     )
     is_primary = models.BooleanField(default=True)
+    # Assigned site (site belongs to employer - golden rule)
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="contractors"
+    )
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
     location_address = models.TextField(blank=True)
@@ -170,7 +211,7 @@ class Worker(models.Model):
     s_date = models.CharField(max_length=50, blank=True)
     en_date = models.CharField(max_length=50, blank=True)
     s_name = models.CharField(max_length=255, blank=True)
-    site_id = models.CharField(max_length=50, blank=True)
+    legacy_site_id = models.CharField(max_length=50, blank=True)
     site_location = models.CharField(max_length=255, blank=True)
     site_state = models.CharField(max_length=100, blank=True)
 
@@ -291,6 +332,9 @@ class Worker(models.Model):
     contractor = models.ForeignKey(
         Contractor, on_delete=models.SET_NULL, null=True, blank=True, related_name="workers"
     )
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="workers"
+    )
     photo = models.URLField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -338,6 +382,9 @@ class Binding(models.Model):
     )
     worker = models.ForeignKey(
         Worker, on_delete=models.CASCADE, null=True, blank=True, related_name="bindings"
+    )
+    site = models.ForeignKey(
+        Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="bindings"
     )
     status = models.CharField(max_length=16, choices=STATUS, default="PENDING")
     # Consent lifecycle (GUIDE.MD: dual handshake - both parties must consent)

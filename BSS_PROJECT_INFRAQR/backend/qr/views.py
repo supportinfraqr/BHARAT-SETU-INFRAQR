@@ -20,6 +20,7 @@ from .models import (
     QRCode,
     SavedLocation,
     ScanLog,
+    Site,
     Worker,
 )
 from .serializers import (
@@ -30,6 +31,7 @@ from .serializers import (
     NotificationSerializer,
     QRCodeSerializer,
     ScanLogSerializer,
+    SiteSerializer,
     WorkerSerializer,
 )
 from .services import (
@@ -208,6 +210,82 @@ class WorkerListCreate(APIView):
             create_qr_for_entity("WORKER", obj.pk)
             write_audit(request, "WORKER_CREATED", "WORKER", obj.pk, new=str(obj.pk))
         return Response({"Result": "Success", "Data": ser.data}, status=201)
+
+
+class SiteListCreate(APIView):
+    """List/create sites. GOLDEN RULE: a site always belongs to an Employer.
+
+    Admin/Staff: all sites. Employer: only their own sites.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
+        qs = Site.objects.filter(is_active=True).order_by("-created_at")
+        if role == EMPLOYER and emp_id:
+            qs = qs.filter(employer_id=emp_id)
+        elif role == EMPLOYER and not emp_id:
+            qs = qs.none()
+        return Response({"Result": "Success", "Data": SiteSerializer(qs, many=True).data})
+
+    def post(self, request):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        emp_id, con_id, role = resolve_scope(request.user)
+        employer_id = request.data.get("employer")
+        if role == EMPLOYER:
+            employer_id = emp_id
+        if not employer_id:
+            return Response({"Result": "Error", "Message": "employer is required (site belongs to employer)"}, status=400)
+        if role == EMPLOYER and str(employer_id) != str(emp_id):
+            return Response({"Result": "Error", "Message": "Cannot create site for another employer"}, status=403)
+        ser = SiteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        with transaction.atomic():
+            obj = ser.save(employer_id=employer_id)
+            write_audit(request, "SITE_CREATED", "SITE", obj.pk, new=str(obj.pk))
+        return Response({"Result": "Success", "Data": SiteSerializer(obj).data}, status=201)
+
+
+class SiteDetail(APIView):
+    """Update/delete a site. Only its employer or admin."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_site(self, request, site_id):
+        emp_id, con_id, role = resolve_scope(request.user)
+        site = Site.objects.filter(pk=site_id).first()
+        if not site:
+            return None
+        if role == EMPLOYER and site.employer_id != emp_id:
+            return None
+        return site
+
+    def put(self, request, site_id):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        site = self._get_site(request, site_id)
+        if not site:
+            return Response({"Result": "Error", "Message": "Site not found"}, status=404)
+        ser = SiteSerializer(site, data=request.data, partial=True)
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        write_audit(request, "SITE_UPDATED", "SITE", site.pk)
+        return Response({"Result": "Success", "Data": ser.data})
+
+    def delete(self, request, site_id):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        site = self._get_site(request, site_id)
+        if not site:
+            return Response({"Result": "Error", "Message": "Site not found"}, status=404)
+        site.is_active = False
+        site.save(update_fields=["is_active"])
+        write_audit(request, "SITE_DEACTIVATED", "SITE", site.pk)
+        return Response({"Result": "Success", "Message": "Site deactivated"})
 
 
 class QRCodeView(APIView):
@@ -1450,15 +1528,38 @@ class SetContractorLocation(APIView):
                 address = (res or {}).get("display_name", "")
             except Exception:
                 address = ""
+        # Assign a Site (GOLDEN RULE: site always belongs to the employer)
+        site = None
+        site_id = request.data.get("site_id")
+        if site_id:
+            site = Site.objects.filter(pk=site_id, employer_id=contractor.employer_id).first()
+        else:
+            # Find or create a site owned by the contractor's employer
+            site = Site.objects.filter(
+                employer_id=contractor.employer_id,
+                latitude=float(lat), longitude=float(lng),
+            ).first()
+            if not site and contractor.employer_id:
+                site = Site.objects.create(
+                    name=request.data.get("site_name", "Site") or "Site",
+                    employer_id=contractor.employer_id,
+                    address=address,
+                    latitude=float(lat),
+                    longitude=float(lng),
+                    location_address=address,
+                    is_active=True,
+                )
+        contractor.site = site
         contractor.location_lat = float(lat)
         contractor.location_lng = float(lng)
         contractor.location_address = address
         contractor.site_name = request.data.get("site_name", contractor.site_name or "")
-        contractor.save(update_fields=["location_lat", "location_lng", "location_address", "site_name"])
+        contractor.save(update_fields=["site", "location_lat", "location_lng", "location_address", "site_name"])
         write_audit(request, "CONTRACTOR_LOCATION_SET", "Contractor", contractor.pk,
                     previous="", new=f"{lat},{lng}")
         return Response({"Result": "Success", "Data": {
             "id": contractor.pk, "name": contractor.name,
+            "site": site.pk if site else None,
             "location_lat": contractor.location_lat, "location_lng": contractor.location_lng,
             "location_address": contractor.location_address,
             "site_name": contractor.site_name, "address": address,
