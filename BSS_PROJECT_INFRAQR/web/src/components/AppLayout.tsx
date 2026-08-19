@@ -85,41 +85,45 @@ export default function AppLayout({ title, children }: { title?: string; childre
               </a>
             )}
           </div>
-          <div className="nav-section-title">LEGACY MODULES</div>
-          {nav.map((mod, mi) => (
-            <div key={mod.ModuleId} className="nav-module">
-              <div
-                className={`nav-module-head ${openModule === mi ? 'active' : ''}`}
-                onClick={() => setOpenModule(openModule === mi ? -1 : mi)}
-              >
-                <i className={`${mod.ModuleIcon}`}></i>
-                <span>{mod.ModuleName}</span>
-                <i className="fa fa-chevron-down nav-arrow"></i>
-              </div>
-              {openModule === mi && mod.menu?.map((men, mei) => (
-                <div key={men.MenuId} className="nav-menu">
+          {isAdmin && (
+            <>
+              <div className="nav-section-title">LEGACY MODULES</div>
+              {nav.map((mod, mi) => (
+                <div key={mod.ModuleId} className="nav-module">
                   <div
-                    className={`nav-menu-head ${openMenu === mei ? 'active' : ''}`}
-                    onClick={() => setOpenMenu(openMenu === mei ? -1 : mei)}
+                    className={`nav-module-head ${openModule === mi ? 'active' : ''}`}
+                    onClick={() => setOpenModule(openModule === mi ? -1 : mi)}
                   >
-                    <span>{men.MenuName}</span>
-                    <i className="fa fa-chevron-right nav-arrow"></i>
+                    <i className={`${mod.ModuleIcon}`}></i>
+                    <span>{mod.ModuleName}</span>
+                    <i className="fa fa-chevron-down nav-arrow"></i>
                   </div>
-                  {openMenu === mei && men.submenu?.map((sub) => (
-                    <a
-                      key={sub.SubMenuId}
-                      href={`#/module/${encodeURIComponent(sub.SubMenuUrl.replace(/^\//, ''))}`}
-                      className="nav-submenu"
-                      onClick={() => navigate(`/module/${encodeURIComponent(sub.SubMenuUrl.replace(/^\//, ''))}`)}
-                    >
-                      <i className="mdi mdi-chevron-right"></i>
-                      {sub.SubMenuName}
-                    </a>
+                  {openModule === mi && mod.menu?.map((men, mei) => (
+                    <div key={men.MenuId} className="nav-menu">
+                      <div
+                        className={`nav-menu-head ${openMenu === mei ? 'active' : ''}`}
+                        onClick={() => setOpenMenu(openMenu === mei ? -1 : mei)}
+                      >
+                        <span>{men.MenuName}</span>
+                        <i className="fa fa-chevron-right nav-arrow"></i>
+                      </div>
+                      {openMenu === mei && men.submenu?.map((sub) => (
+                        <a
+                          key={sub.SubMenuId}
+                          href={`#/module/${encodeURIComponent(sub.SubMenuUrl.replace(/^\//, ''))}`}
+                          className="nav-submenu"
+                          onClick={() => navigate(`/module/${encodeURIComponent(sub.SubMenuUrl.replace(/^\//, ''))}`)}
+                        >
+                          <i className="mdi mdi-chevron-right"></i>
+                          {sub.SubMenuName}
+                        </a>
+                      ))}
+                    </div>
                   ))}
                 </div>
               ))}
-            </div>
-          ))}
+            </>
+          )}
         </nav>
         <div className="sidebar-footer">
           <button className="logout-btn" onClick={logout}>Logout</button>
