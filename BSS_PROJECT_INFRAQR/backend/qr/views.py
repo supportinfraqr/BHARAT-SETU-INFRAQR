@@ -491,6 +491,16 @@ class QRScanView(APIView):
                 else "PRESENT"
             )
 
+            # PLAN ENFORCEMENT: block attendance if the worker's employer plan is inactive/expired
+            if worker.employer_id:
+                from .plan import is_plan_active
+                if not is_plan_active(worker.employer):
+                    log_scan(request, qr, worker=worker, scan_result="PLAN_INACTIVE", lat=lat, lng=lng)
+                    return Response({
+                        "Result": "Error",
+                        "Message": "Employer plan is inactive or expired. Contact admin to renew.",
+                    }, status=403)
+
             with transaction.atomic():
                 att, _ = Attendance.objects.update_or_create(
                     worker=worker,
@@ -709,6 +719,14 @@ class BindingCreate(APIView):
         lat = request.data.get("latitude")
         lng = request.data.get("longitude")
 
+        # PLAN ENFORCEMENT: block binding creation if employer plan inactive/expired
+        from .plan import is_plan_active
+        emp_check = Employer.objects.filter(pk=employer_id).first() if employer_id else None
+        if emp_check and not is_plan_active(emp_check):
+            return Response({
+                "Result": "Error",
+                "Message": "Employer plan is inactive or expired. Contact admin to renew.",
+            }, status=403)
         if binding_type == "EMPLOYER_CONTRACTOR":
             # One contractor <=> one employer rule
             contractor = Contractor.objects.filter(pk=contractor_id).first()
@@ -1367,11 +1385,13 @@ class MyPlanView(APIView):
         if not emp:
             return Response({"Result": "Error", "Message": "No employer account linked"}, status=404)
         qr = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=emp.pk).first()
+        from .plan import plan_status
         return Response({
             "Result": "Success",
             "Data": {
                 "employer": EmployerSerializer(emp).data,
                 "qr_reference": qr.qr_reference if qr else None,
+                "plan_status": plan_status(emp),
                 "plan_features": PLAN_FEATURES.get(emp.plan_type, []),
             },
         })
