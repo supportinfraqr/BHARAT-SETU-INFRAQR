@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import api from '../api/client';
+import { qrApi } from '../api/endpoints';
 import './Workers.css';
 
 export default function WorkerDetail() {
@@ -9,6 +10,8 @@ export default function WorkerDetail() {
   const location = useLocation();
   const w = (location.state as any)?.worker || null;
   const [cardDataUrl, setCardDataUrl] = useState('');
+  const [visibility, setVisibility] = useState<'FULL' | 'GENERAL'>('FULL');
+  const [general, setGeneral] = useState<any>(null);
 
   useEffect(() => {
     if (!w?.id) return;
@@ -17,6 +20,13 @@ export default function WorkerDetail() {
       reader.onloadend = () => setCardDataUrl(reader.result as string);
       reader.readAsDataURL(r.data);
     }).catch(() => setCardDataUrl(''));
+    qrApi.profileLookup('WORKER', w.id).then((r) => {
+      const d = r.data?.Data;
+      if (d) {
+        setVisibility(d.visibility);
+        setGeneral(d.profile);
+      }
+    }).catch(() => {});
   }, [w?.id]);
 
   if (!w) {
@@ -42,17 +52,37 @@ export default function WorkerDetail() {
               <div>
                 <h2>{w.full_name}</h2>
                 <span className="worker-id">{w.worker_id}</span>
+                <span
+                  className={`status-badge ${visibility === 'FULL' ? 'badge-approved' : 'badge-pending'}`}
+                  style={{ marginLeft: 8, fontSize: 11, verticalAlign: 'middle' }}
+                >
+                  {visibility === 'FULL' ? 'BOUND · FULL VIEW' : 'UNBOUND · LIMITED'}
+                </span>
               </div>
             </div>
-            <div className="worker-meta">
-              <p><b>Mobile:</b> {w.mobile || '—'}</p>
-              <p><b>Aadhaar:</b> {w.aadhaar_no || '—'}</p>
-              <p><b>PAN:</b> {w.pan_no || '—'}</p>
-              <p><b>Status:</b> <span className={w.is_active ? 'tag-active' : 'tag-inactive'}>{w.is_active ? 'Active' : 'Inactive'}</span></p>
-              <p><b>Employer:</b> {w.employer ? `#${w.employer}` : 'Unbound'}</p>
-              <p><b>Contractor:</b> {w.contractor ? `#${w.contractor}` : 'Unbound'}</p>
-              <p><b>Created:</b> {w.created_at ? new Date(w.created_at).toLocaleDateString() : '—'}</p>
-            </div>
+            {visibility === 'GENERAL' && (
+              <div className="worker-meta" style={{ border: '1px solid #fde68a', background: '#fffbeb', borderRadius: 8, padding: 10 }}>
+                <p style={{ margin: '0 0 8px', fontSize: 13, color: '#92400e' }}>
+                  You are not bound to this worker. Showing general info only (GUIDE.MD Rules 5 &amp; 6).
+                </p>
+                <p><b>Name:</b> {general?.Name || w.full_name || '—'}</p>
+                <p><b>Age:</b> {general?.Age || '—'}</p>
+                <p><b>Sex:</b> {general?.Sex || '—'}</p>
+                <p><b>Company:</b> {general?.Company || '—'}</p>
+                <p><b>Blood Group:</b> {general?.BloodGroup || '—'}</p>
+              </div>
+            )}
+            {visibility === 'FULL' && (
+              <div className="worker-meta">
+                <p><b>Mobile:</b> {w.mobile || '—'}</p>
+                <p><b>Aadhaar:</b> {w.aadhaar_no || '—'}</p>
+                <p><b>PAN:</b> {w.pan_no || '—'}</p>
+                <p><b>Status:</b> <span className={w.is_active ? 'tag-active' : 'tag-inactive'}>{w.is_active ? 'Active' : 'Inactive'}</span></p>
+                <p><b>Employer:</b> {w.employer ? `#${w.employer}` : 'Unbound'}</p>
+                <p><b>Contractor:</b> {w.contractor ? `#${w.contractor}` : 'Unbound'}</p>
+                <p><b>Created:</b> {w.created_at ? new Date(w.created_at).toLocaleDateString() : '—'}</p>
+              </div>
+            )}
           </div>
 
           {/* ID Card */}

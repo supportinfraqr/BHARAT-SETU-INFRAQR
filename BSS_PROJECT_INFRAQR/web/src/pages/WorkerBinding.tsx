@@ -10,6 +10,17 @@ export default function WorkerBinding() {
   const [selContractor, setSelContractor] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -26,14 +37,15 @@ export default function WorkerBinding() {
   const bind = async (worker: any) => {
     const cid = selContractor[worker.id];
     if (!cid) { setMsg(`Select a contractor for ${worker.full_name}`); return; }
+    if (!loc) { setMsg('Location unavailable — allow geolocation to bind by geo-verification.'); return; }
     setBusy(true); setMsg('');
     try {
       await qrApi.createBinding({
         binding_type: 'WORKER_CONTRACTOR',
         worker: worker.id,
         contractor: Number(cid),
-        latitude: 28.6139,
-        longitude: 77.2090,
+        latitude: loc.lat,
+        longitude: loc.lng,
       });
       setMsg(`${worker.full_name} bound.`);
       await load();

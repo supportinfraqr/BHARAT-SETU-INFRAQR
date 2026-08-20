@@ -26,6 +26,7 @@ from .models import (
     Notification,
     QRCode,
     ScanLog,
+    Site,
     Worker,
 )
 
@@ -79,13 +80,15 @@ def verify_qr_reference(qr_reference: str) -> QRCode | None:
 
 
 def resolve_entity(qr: QRCode):
-    """Resolve a QRCode to its entity (Employer/Contractor/Worker)."""
+    """Resolve a QRCode to its entity (Employer/Contractor/Worker/Site)."""
     if qr.entity_type == "EMPLOYER":
         return Employer.objects.filter(pk=qr.entity_id).first()
     if qr.entity_type == "CONTRACTOR":
         return Contractor.objects.filter(pk=qr.entity_id).first()
     if qr.entity_type == "WORKER":
         return Worker.objects.filter(pk=qr.entity_id).first()
+    if qr.entity_type == "SITE":
+        return Site.objects.filter(pk=qr.entity_id).first()
     return None
 
 

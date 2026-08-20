@@ -226,7 +226,25 @@ def v_login_verify(request):
             if not u:
                 u = User.objects.filter(email__iexact=username).first()
             if u and u.check_password(password) and u.is_active:
+                # Block EMPLOYER accounts whose employer isn't approved yet.
+                if getattr(u, "role", "") == "EMPLOYER":
+                    from qr.models import Employer as QREmployer
+                    emp = None
+                    if u.employer_id:
+                        emp = QREmployer.objects.filter(pk=u.employer_id).first()
+                    if emp is None and u.email:
+                        emp = QREmployer.objects.filter(email__iexact=u.email).first()
+                    if emp is None or emp.approval_status != "APPROVED":
+                        return legacy_json_string([])
                 role_login_type = {"SUPER_ADMIN": "1", "EMPLOYER": "5", "PRIMARY_CONTRACTOR": "2", "SECONDARY_CONTRACTOR": "6", "WORKER": "7"}.get(u.role, "1")
+                # Persist legacy_login_id so the legacy X-Legacy-Login-Id header auth
+                # (LegacyHeaderAuthentication) can resolve this user on later calls.
+                if not u.legacy_login_id:
+                    u.legacy_login_id = u.pk
+                    try:
+                        u.save(update_fields=["legacy_login_id"])
+                    except Exception:
+                        pass
                 return legacy_json_string([{
                     "LoginId": str(u.legacy_login_id or u.pk),
                     "UserName": u.username,

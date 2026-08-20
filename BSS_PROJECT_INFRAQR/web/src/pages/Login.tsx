@@ -140,9 +140,20 @@ export default function LoginPage() {
     }, 1000);
   };
 
-  const digilockerLogin = () => {
-    // Legacy redirects to DigiLocker OAuth. For now navigate to a placeholder action.
-    window.open('https://digilocker.meripehchaan.gov.in/public/oauth2/2/authorize', '_blank');
+  const digilockerLogin = async () => {
+    // Ask the backend for a DigiLocker authorize URL, then redirect the browser.
+    setError('');
+    try {
+      const res = await api.get('/auth/digilocker/start/');
+      const url = res.data?.Data?.authorize_url;
+      if (!url) {
+        setError(res.data?.Message || 'DigiLocker is not configured yet.');
+        return;
+      }
+      window.location.href = url;
+    } catch (e: any) {
+      setError(e?.response?.data?.Message || 'Could not start DigiLocker login.');
+    }
   };
 
   const switchMethod = (m: Method) => { setMethod(m); setError(''); };
@@ -170,45 +181,46 @@ export default function LoginPage() {
               <div className="newLoginHeroHeading">
                 <h2>A Unified Digital Platform for Workforce Identity, Welfare and Empowerment.</h2>
               </div>
-                <div className="newLoginFeatureRow">
-                  <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-trust.svg" alt="" /><h4 style={{ color: '#1E3A8A' }}>Trust</h4><p>Secure &amp; Verified</p></div>
-                  <div className="newLoginFeatureDivider"></div>
-                  <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-transparency.svg" alt="" /><h4 style={{ color: '#F58220' }}>Transparency</h4><p>Clear &amp; Accountable</p></div>
-                  <div className="newLoginFeatureDivider"></div>
-                  <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-inclusivity.svg" alt="" /><h4 style={{ color: '#009245' }}>Inclusivity</h4><p>For Every Worker</p></div>
-                  <div className="newLoginFeatureDivider"></div>
-                  <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-empowerment.svg" alt="" /><h4 style={{ color: '#1E3A8A' }}>Empowerment</h4><p>Growth &amp; Welfare</p></div>
+              <div className="newLoginFeatureRow">
+                <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-trust.svg" alt="" /><h4 style={{ color: '#1E3A8A' }}>Trust</h4><p>Secure &amp; Verified</p></div>
+                <div className="newLoginFeatureDivider"></div>
+                <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-transparency.svg" alt="" /><h4 style={{ color: '#F58220' }}>Transparency</h4><p>Clear &amp; Accountable</p></div>
+                <div className="newLoginFeatureDivider"></div>
+                <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-inclusivity.svg" alt="" /><h4 style={{ color: '#009245' }}>Inclusivity</h4><p>For Every Worker</p></div>
+                <div className="newLoginFeatureDivider"></div>
+                <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-empowerment.svg" alt="" /><h4 style={{ color: '#1E3A8A' }}>Empowerment</h4><p>Growth &amp; Welfare</p></div>
+              </div>
+
+              </div>
+
+              {/* STATS BANNER */}
+              <div className="newLoginHeroBottom">
+                <div className="newLoginStatsBanner">
+                  <div className="newLoginStatsItem">
+                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-workers.svg" alt="" /></div>
+                    <div className="newLoginStatsContent"><h4>50+ Crore</h4><p>Workers</p></div>
+                  </div>
+                  <div className="newLoginStatsDivider"></div>
+                  <div className="newLoginStatsItem">
+                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-establishments.svg" alt="" /></div>
+                    <div className="newLoginStatsContent"><h4>Millions</h4><p>Establishments</p></div>
+                  </div>
+                  <div className="newLoginStatsDivider"></div>
+                  <div className="newLoginStatsItem">
+                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-platform.svg" alt="" /></div>
+                    <div className="newLoginStatsContent"><h4>One Trusted</h4><p>Platform</p></div>
+                  </div>
+                  <div className="newLoginStatsDivider"></div>
+                  <div className="newLoginStatsItem">
+                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-vision.svg" alt="" /></div>
+                    <div className="newLoginStatsContent"><h4>One Nation</h4><p>One Vision</p></div>
+                  </div>
                 </div>
 
-                {/* STATS BANNER */}
-                <div className="newLoginHeroBottom">
-                  <div className="newLoginStatsBanner">
-                    <div className="newLoginStatsItem">
-                      <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-workers.svg" alt="" /></div>
-                      <div className="newLoginStatsContent"><h4>50+ Crore</h4><p>Workers</p></div>
-                    </div>
-                    <div className="newLoginStatsDivider"></div>
-                    <div className="newLoginStatsItem">
-                      <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-establishments.svg" alt="" /></div>
-                      <div className="newLoginStatsContent"><h4>Millions</h4><p>Establishments</p></div>
-                    </div>
-                    <div className="newLoginStatsDivider"></div>
-                    <div className="newLoginStatsItem">
-                      <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-platform.svg" alt="" /></div>
-                      <div className="newLoginStatsContent"><h4>One Trusted</h4><p>Platform</p></div>
-                    </div>
-                    <div className="newLoginStatsDivider"></div>
-                    <div className="newLoginStatsItem">
-                      <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-vision.svg" alt="" /></div>
-                      <div className="newLoginStatsContent"><h4>One Nation</h4><p>One Vision</p></div>
-                    </div>
-                  </div>
-
-                  <div className="newLoginBottomMessage">
-                    <div className="newLoginTriLine"></div>
-                    <p>Building a Stronger, Safer and Empowered Bharat</p>
-                    <div className="newLoginTriLine"></div>
-                  </div>
+                <div className="newLoginBottomMessage">
+                  <div className="newLoginTriLine"></div>
+                  <p>Building a Stronger, Safer and Empowered Bharat</p>
+                  <div className="newLoginTriLine"></div>
                 </div>
               </div>
             </div>
@@ -434,33 +446,82 @@ export default function LoginPage() {
                   )}
                 </>
               )}
-             </div>
-           </div>
-         </div>
-       </div>
+            </div>
+          </div>
+        </div>
+        </div>
 
-       {/* FOOTER */}
-       <footer className="newLoginFooter">
-         <div className="newLoginFooterLeft">
-           <div className="newLoginFooterItem">
-             <img src="/legacy/NewLogin/images/icon-secure.svg" alt="" />
-             <span>Secure Platform</span>
-           </div>
-           <div className="newLoginFooterItem">
-             <img src="/legacy/NewLogin/images/icon-government.svg" alt="" />
-             <span>Digital Governance</span>
-           </div>
-           <div className="newLoginFooterItem">
-             <img src="/legacy/NewLogin/images/icon-accessible.svg" alt="" />
-             <span>Accessible Anytime</span>
-           </div>
-           <div className="newLoginFooterItem">
-             <img src="/legacy/NewLogin/images/icon-support.svg" alt="" />
-             <span>Support</span>
-           </div>
-         </div>
-         <div className="newLoginFooterRight">© BharatShramSetu. All rights reserved.</div>
-       </footer>
-     </div>
-   );
- }
+      {/* GOVERNMENT & WORKER INITIATIVES */}
+      <section className="bss-initiatives">
+        <div className="bss-init-head">
+          <h2>Nation First, Worker First</h2>
+          <p>Empowering India's workforce through digital identity, welfare and transparency.</p>
+        </div>
+
+        <div className="bss-init-grid">
+          <div className="bss-init-card">
+            <img src="/legacy/NewLogin/images/skill-india.png" alt="Skill India" className="bss-init-card-logo" />
+            <h4>Skill India</h4>
+            <p>Enabling skill development and a skilled workforce for a self-reliant nation.</p>
+          </div>
+          <div className="bss-init-card">
+            <img src="/legacy/NewLogin/images/make-in-india.png" alt="Make in India" className="bss-init-card-logo" />
+            <h4>Make in India</h4>
+            <p>Supporting every establishment and worker driving India's manufacturing growth.</p>
+          </div>
+          <div className="bss-init-card">
+            <img src="/legacy/NewLogin/images/digital-india.png" alt="Digital India" className="bss-init-card-logo" />
+            <h4>Digital India</h4>
+            <p>One Nation, One ID, One Platform — transparent digital governance for all.</p>
+          </div>
+          <div className="bss-init-card">
+            <img src="/legacy/NewLogin/images/govt-logo.png" alt="Govt of India" className="bss-init-card-logo" />
+            <h4>Worker Welfare</h4>
+            <p>Secure identity, fair wages and grievance redressal for every worker.</p>
+          </div>
+        </div>
+
+        {/* GOVT LOGOS STRIP — moved lower & prominent */}
+        <div className="bss-logo-strip">
+          <img src="/legacy/NewLogin/images/govt-logo.png" alt="Govt of India" className="bss-logo-item bss-logo-govt" />
+          <div className="bss-logo-divider"></div>
+          <img src="/legacy/NewLogin/images/digital-india.png" alt="Digital India" className="bss-logo-item bss-logo-digital" />
+          <div className="bss-logo-divider"></div>
+          <img src="/legacy/NewLogin/images/skill-india.png" alt="Skill India" className="bss-logo-item bss-logo-skill" />
+          <div className="bss-logo-divider"></div>
+          <img src="/legacy/NewLogin/images/make-in-india.png" alt="Make in India" className="bss-logo-item bss-logo-make" />
+        </div>
+
+        <div className="bss-worker-strip">
+          <p>
+            <b>जय हिन्द · जय भारत · भारत माता की जय</b> — BharatShramSetu stands with every worker
+            building a New India.
+          </p>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="newLoginFooter">
+        <div className="newLoginFooterLeft">
+          <div className="newLoginFooterItem">
+            <img src="/legacy/NewLogin/images/icon-secure.svg" alt="" />
+            <span>Secure Platform</span>
+          </div>
+          <div className="newLoginFooterItem">
+            <img src="/legacy/NewLogin/images/icon-government.svg" alt="" />
+            <span>Digital Governance</span>
+          </div>
+          <div className="newLoginFooterItem">
+            <img src="/legacy/NewLogin/images/icon-accessible.svg" alt="" />
+            <span>Accessible Anytime</span>
+          </div>
+          <div className="newLoginFooterItem">
+            <img src="/legacy/NewLogin/images/icon-support.svg" alt="" />
+            <span>Support</span>
+          </div>
+        </div>
+        <div className="newLoginFooterRight">© BharatShramSetu. All rights reserved.</div>
+      </footer>
+    </div>
+  );
+}

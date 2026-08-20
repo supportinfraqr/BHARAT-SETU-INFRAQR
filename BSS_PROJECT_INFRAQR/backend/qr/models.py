@@ -14,7 +14,12 @@ QR_STATUS = [
     ("REASSIGNED", "Reassigned / Historical"),
 ]
 
-ENTITY_TYPE = [("EMPLOYER", "Employer"), ("CONTRACTOR", "Contractor"), ("WORKER", "Worker")]
+ENTITY_TYPE = [
+    ("EMPLOYER", "Employer"),
+    ("CONTRACTOR", "Contractor"),
+    ("WORKER", "Worker"),
+    ("SITE", "Site"),
+]
 
 
 class QRCode(models.Model):

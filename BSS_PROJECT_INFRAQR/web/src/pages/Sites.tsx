@@ -66,10 +66,12 @@ export default function Sites() {
         {msg && <div style={{ color: msg.includes('!') ? '#16a34a' : '#ef4444', marginBottom: 10 }}>{msg}</div>}
         <div className="mgmt-toolbar">
           <div className="mgmt-filters"><b>{sites.length} sites</b></div>
-          <button className="btn-primary" onClick={() => { setShowForm(!showForm); setMsg(''); }}>{showForm ? 'Close' : '+ Add Site'}</button>
+          {!isAdmin && (
+            <button className="btn-primary" onClick={() => { setShowForm(!showForm); setMsg(''); }}>{showForm ? 'Close' : '+ Add Site'}</button>
+          )}
         </div>
 
-        {showForm && (
+        {showForm && !isAdmin && (
           <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 20, marginBottom: 16, background: '#f8fafc' }}>
             <h4 style={{ margin: '0 0 16px', color: '#022B5E' }}>New Site (belongs to Employer)</h4>
             {isAdmin && (
@@ -119,7 +121,9 @@ export default function Sites() {
                   <td style={{ fontSize: 12 }}>{s.latitude ? `${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)}` : '—'}</td>
                   <td><span className={`status-badge ${s.is_active ? 'badge-approved' : 'badge-rejected'}`}>{s.is_active ? 'Active' : 'Inactive'}</span></td>
                   <td>
-                    <button className="btn-reject" style={{ padding: '4px 10px', fontSize: 12 }} disabled={busy} onClick={() => deactivate(s.id)}>Deactivate</button>
+                    {!isAdmin && (
+                      <button className="btn-reject" style={{ padding: '4px 10px', fontSize: 12 }} disabled={busy} onClick={() => deactivate(s.id)}>Deactivate</button>
+                    )}
                   </td>
                 </tr>
               ))}

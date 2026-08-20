@@ -22,6 +22,8 @@ export default function AppLayout({ title, children }: { title?: string; childre
   const isAdmin = loginType === '1';
   const isEmployer = loginType === '5';
   const isContractor = loginType === '2' || loginType === '6';
+  const isWorker = loginType === '7';
+  const displayName = user?.username || user?.UserName || user?.Name || 'User';
 
   useEffect(() => {
     api.post('/Dashboard/NavMenuList', {}).then((r) => setNav(r.data || [])).catch(() => {});
@@ -29,12 +31,21 @@ export default function AppLayout({ title, children }: { title?: string; childre
 
   useEffect(() => {
     if (!userMenuOpen) return;
+    loadQr();
+  }, [userMenuOpen]);
+
+  useEffect(() => {
+    if (isWorker) loadQr();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadQr = () => {
     api.get('/qr/qr/me/', { responseType: 'blob' }).then((r) => {
       const reader = new FileReader();
       reader.onloadend = () => setQrDataUrl(reader.result as string);
       reader.readAsDataURL(r.data);
     }).catch(() => setQrDataUrl(''));
-  }, [userMenuOpen]);
+  };
 
   const logout = () => {
     localStorage.removeItem('bss_token');
@@ -58,38 +69,75 @@ export default function AppLayout({ title, children }: { title?: string; childre
             <a className="nav-submenu qr-mgmt-link" href="#/qr/scan" onClick={() => navigate('/qr/scan')}>
               <i className="mdi mdi-chevron-right"></i> QR Scan
             </a>
-            <a className="nav-submenu qr-mgmt-link" href="#/qr/binding" onClick={() => navigate('/qr/binding')}>
-              <i className="mdi mdi-chevron-right"></i> Worker Binding
-            </a>
-            {(isEmployer || isContractor) && (
-              <a className="nav-submenu qr-mgmt-link" href="#/qr/binding-requests" onClick={() => navigate('/qr/binding-requests')}>
-                <i className="mdi mdi-chevron-right"></i> Binding Requests
-              </a>
-            )}
-            {(isAdmin || isEmployer) && (
-              <a className="nav-submenu qr-mgmt-link" href="#/qr/sites" onClick={() => navigate('/qr/sites')}>
-                <i className="mdi mdi-chevron-right"></i> Sites
-              </a>
-            )}
-            <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
-              <i className="mdi mdi-chevron-right"></i> All Workers
-            </a>
-            {isAdmin && (
+            {isAdmin ? (
               <>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
+                  <i className="mdi mdi-chevron-right"></i> Workers
+                </a>
                 <a className="nav-submenu qr-mgmt-link" href="#/qr/contractors" onClick={() => navigate('/qr/contractors')}>
-                  <i className="mdi mdi-chevron-right"></i> All Contractors
+                  <i className="mdi mdi-chevron-right"></i> Contractors
                 </a>
                 <a className="nav-submenu qr-mgmt-link" href="#/qr/management/employers" onClick={() => navigate('/qr/management/employers')}>
                   <i className="mdi mdi-chevron-right"></i> Employers
                 </a>
               </>
-            )}
-            {isEmployer && (
-              <a className="nav-submenu qr-mgmt-link" href="#/qr/contractors" onClick={() => navigate('/qr/contractors')}>
-                <i className="mdi mdi-chevron-right"></i> My Contractors
-              </a>
+            ) : isEmployer ? (
+              <>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/binding-requests" onClick={() => navigate('/qr/binding-requests')}>
+                  <i className="mdi mdi-chevron-right"></i> Binding Requests
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/sites" onClick={() => navigate('/qr/sites')}>
+                  <i className="mdi mdi-chevron-right"></i> My Sites
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
+                  <i className="mdi mdi-chevron-right"></i> My Workers
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/contractors" onClick={() => navigate('/qr/contractors')}>
+                  <i className="mdi mdi-chevron-right"></i> My Contractors
+                </a>
+              </>
+            ) : isContractor ? (
+              <>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
+                  <i className="mdi mdi-chevron-right"></i> My Workers
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/binding-requests" onClick={() => navigate('/qr/binding-requests')}>
+                  <i className="mdi mdi-chevron-right"></i> Binding Requests
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/sites" onClick={() => navigate('/qr/sites')}>
+                  <i className="mdi mdi-chevron-right"></i> My Sites
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/my-employers" onClick={() => navigate('/qr/my-employers')}>
+                  <i className="mdi mdi-chevron-right"></i> My Employers
+                </a>
+              </>
+            ) : isWorker ? (
+              <>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/sites" onClick={() => navigate('/qr/sites')}>
+                  <i className="mdi mdi-chevron-right"></i> My Site
+                </a>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/contractors" onClick={() => navigate('/qr/contractors')}>
+                  <i className="mdi mdi-chevron-right"></i> My Contractor
+                </a>
+              </>
+            ) : (
+              <>
+                <a className="nav-submenu qr-mgmt-link" href="#/qr/workers" onClick={() => navigate('/qr/workers')}>
+                  <i className="mdi mdi-chevron-right"></i> All Workers
+                </a>
+              </>
             )}
           </div>
+          {isWorker && (
+            <div className="sidebar-qr-block">
+              <div className="nav-section-title">MY QR</div>
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="My QR" className="sidebar-qr-img" />
+              ) : (
+                <div className="sidebar-qr-loading">Loading QR...</div>
+              )}
+            </div>
+          )}
           {isAdmin && (
             <>
               <div className="nav-section-title">LEGACY MODULES</div>
@@ -142,16 +190,16 @@ export default function AppLayout({ title, children }: { title?: string; childre
             <h1>{title || 'Dashboard'}</h1>
           </div>
           <div className="topbar-user" onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}>
-            <span className="avatar">{user?.username?.[0]?.toUpperCase() || 'U'}</span>
-            <span>{user?.username || 'User'}</span>
+            <span className="avatar">{displayName?.[0]?.toUpperCase() || 'U'}</span>
+            <span>{displayName}</span>
             <i className="fa fa-chevron-down nav-arrow" style={{ fontSize: 10, marginLeft: 4 }}></i>
           </div>
           {userMenuOpen && (
             <div className="user-dropdown" onClick={(e) => e.stopPropagation()}>
               <div className="user-dropdown-header">
-                <div className="avatar">{user?.username?.[0]?.toUpperCase() || 'U'}</div>
+                <div className="avatar">{displayName?.[0]?.toUpperCase() || 'U'}</div>
                 <div>
-                  <div className="user-dropdown-name">{user?.username || 'User'}</div>
+                  <div className="user-dropdown-name">{displayName}</div>
                   <div className="user-dropdown-role">{user?.role || user?.LoginType || ''}</div>
                 </div>
               </div>
@@ -187,7 +235,7 @@ export default function AppLayout({ title, children }: { title?: string; childre
                   <div className="user-qr-loading">Loading QR...</div>
                 )}
                 <div className="qr-modal-info">
-                  <div><b>User:</b> {user?.username || '—'}</div>
+                  <div><b>User:</b> {displayName}</div>
                   <div><b>Role:</b> {user?.role || user?.LoginType || '—'}</div>
                   <div><b>Email:</b> {user?.email || user?.EmailId || '—'}</div>
                 </div>

@@ -169,6 +169,25 @@ QR_REFERENCE_PREFIX = "BSS"
 
 AUTH_USER_MODEL = "authx.User"
 
+# ---------- DigiLocker OAuth (Aadhaar-based signup/login) ----------
+# Credentials below are from the client's legacy repo (EesassinErp).
+DIGILOCKER_CLIENT_ID = os.environ.get("BSS_DIGILOCKER_CLIENT_ID", "MS53AA158D")
+DIGILOCKER_CLIENT_SECRET = os.environ.get("BSS_DIGILOCKER_CLIENT_SECRET", "727f64249a2d50ac2019")
+DIGILOCKER_REDIRECT_URI = os.environ.get(
+    "BSS_DIGILOCKER_REDIRECT_URI",
+    "https://login.bharatshramsetu.com/Return/Digilocker",
+)
+DIGILOCKER_SCOPE = os.environ.get(
+    "BSS_DIGILOCKER_SCOPE",
+    "files.issueddocs+userdetails+address+picture+avs",
+)
+DIGILOCKER_AUTHORIZE_URL = "https://digilocker.meripehchaan.gov.in/public/oauth2/2/authorize"
+DIGILOCKER_TOKEN_URL = "https://digilocker.meripehchaan.gov.in/public/oauth2/2/token"
+DIGILOCKER_DETAILS_URL = os.environ.get(
+    "BSS_DIGILOCKER_DETAILS_URL",
+    "https://digilocker.meripehchaan.gov.in/public/oauth2/1/user",
+)
+
 TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True

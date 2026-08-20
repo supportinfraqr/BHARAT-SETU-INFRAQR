@@ -23,6 +23,16 @@ export const qrApi = {
   unbind: (workerId: number) => api.post('/qr/bindings/unbind/', { worker: workerId }),
   approveBinding: (id: number, decision: 'APPROVE' | 'REJECT') =>
     api.post(`/qr/bindings/${id}/approve/`, { decision }),
+  consentRequest: (bindingId: number, party: 'initiator' | 'approver', channel: 'APP' | 'SMS_OTP' | 'IVR' | 'VOICE') =>
+    api.post(`/qr/bindings/${bindingId}/consent/request/`, { party, channel }),
+  consentResolve: (bindingId: number, party: 'initiator' | 'approver', decision: boolean, otp?: string) =>
+    api.post(`/qr/bindings/${bindingId}/consent/resolve/`, { party, decision, otp }),
+  profileLookup: (entityType: string, entityId: number) =>
+    api.get('/qr/profile/lookup/', { params: { entity_type: entityType, entity_id: entityId } }),
+  contractorEmployments: (contractorId: number) =>
+    api.get(`/qr/contractors/${contractorId}/employments/`),
+  reassignContractors: (fromContractor: number, toContractor: number) =>
+    api.post('/qr/contractors/reassign/', { from_contractor: fromContractor, to_contractor: toContractor }),
   scans: () => api.get('/qr/scans/'),
   notifications: () => api.get('/qr/notifications/'),
   workerCard: (workerId: number, format = "png") =>

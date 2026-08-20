@@ -285,6 +285,9 @@
     grid-template-columns: 1fr;
   }
   .topbar-user span:last-child { display: none; }
+  .topbar h1 { font-size: 16px !important; }
+  .topbar { padding: 10px 12px !important; }
+  .topbar-user .avatar { width: 30px !important; height: 30px !important; font-size: 14px !important; }
 }
 
 .qr-quick-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -312,3 +315,24 @@
 }
 .activity-item span { display: block; color: #666; font-size: 13px; }
 .activity-item b { font-size: 24px; color: #022B5E; }
+
+/* Worker sidebar QR block */
+.sidebar-qr-block {
+  padding: 12px 16px;
+}
+.sidebar-qr-img {
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+  display: block;
+  margin: 0 auto;
+}
+.sidebar-qr-loading {
+  color: #94a3b8;
+  font-size: 12px;
+  text-align: center;
+  padding: 8px 0;
+}

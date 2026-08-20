@@ -11,15 +11,14 @@
   width: 100%;
 }
 
-/* Push the stats banner (50+ Crore Workers, etc.) a bit lower */
+/* Push the stats banner (50+ Crore Workers, etc.) up on the left of the login card */
 .newLoginHeroBottom {
-  padding-top: 72px;
-  margin-top: 72px;
+  margin-top: auto;
+  padding-top: 8px;
 }
 @media (max-width: 767px) {
   .newLoginHeroBottom {
-    padding-top: 36px;
-    margin-top: 36px;
+    padding-top: 8px;
   }
 }
 
@@ -496,3 +495,107 @@
 
 
 
+
+/* ===== Government & Worker Initiatives ===== */
+.bss-initiatives {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+  padding: 60px 24px 40px;
+  text-align: center;
+}
+.bss-init-head h2 {
+  font-size: 30px;
+  color: #1E3A8A;
+  margin: 0 0 8px;
+  font-weight: 800;
+}
+.bss-init-head p {
+  color: #475569;
+  margin: 0 0 32px;
+  font-size: 15px;
+}
+.bss-init-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  max-width: 980px;
+  margin: 0 auto 36px;
+}
+.bss-init-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 26px 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 6px 18px rgba(2,43,94,.06);
+  transition: transform .2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.bss-init-card:hover { transform: translateY(-4px); }
+.bss-init-card-logo {
+  width: 76px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+.bss-init-card h4 { margin: 0 0 8px; color: #022B5E; font-size: 18px; }
+.bss-init-card p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.5; }
+
+/* Government logos strip (prominent, centered) */
+.bss-logo-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 0 auto 32px;
+  padding: 22px 28px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(2,43,94,.06);
+}
+.bss-logo-item {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+.bss-logo-govt { height: 52px; }
+.bss-logo-skill { height: 64px; }
+.bss-logo-divider {
+  width: 1px;
+  height: 40px;
+  background: #e2e8f0;
+}
+
+.bss-worker-strip {
+  background: #022B5E;
+  color: #fff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  max-width: 860px;
+  margin: 0 auto;
+  font-size: 14px;
+}
+.bss-worker-strip b { color: #F5C518; }
+
+/* Mobile: govt logos strip = 3 in a row, 1 below */
+@media (max-width: 767px) {
+  .bss-logo-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px 12px;
+    padding: 18px 12px;
+  }
+  .bss-logo-item {
+    justify-self: center;
+    align-self: center;
+    height: 42px;
+    max-width: 90%;
+  }
+  .bss-logo-govt { height: 46px; }
+  .bss-logo-skill { height: 54px; }
+  .bss-logo-divider { display: none; }
+}

@@ -378,6 +378,7 @@ class SiteListCreate(APIView):
         ser.is_valid(raise_exception=True)
         with transaction.atomic():
             obj = ser.save(employer_id=employer_id)
+            create_qr_for_entity("SITE", obj.pk)
             write_audit(request, "SITE_CREATED", "SITE", obj.pk, new=str(obj.pk))
         return Response({"Result": "Success", "Data": SiteSerializer(obj).data}, status=201)
 
@@ -830,6 +831,58 @@ class QRScanView(APIView):
                 "Data": {"entity_type": "EMPLOYER", "employer": basic, "action": "binding_requested"},
             })
 
+        # Site QR scanned by a contractor -> binding request to site's employer (site pre-assigned)
+        if qr.entity_type == "SITE":
+            site = entity
+            log_scan(request, qr, scan_result="SITE_SCAN", lat=lat, lng=lng)
+            basic = {
+                "id": site.pk,
+                "name": site.name,
+                "employer_id": site.employer_id,
+                "address": site.address,
+                "city": site.city,
+                "state": site.state,
+            }
+            con_id, role = _scanner_contractor(request)
+            if not con_id:
+                return Response({
+                    "Result": "Success",
+                    "Data": {"entity_type": "SITE", "site": basic, "action": "contractor_login_required"},
+                })
+            contractor = Contractor.objects.filter(pk=con_id).first()
+            # Contractor already employed at this site's employer -> info
+            from .models import ContractorEmployment
+            if contractor:
+                existing_empl = ContractorEmployment.objects.filter(
+                    contractor=contractor, employer_id=site.employer_id, site=site, status="ACTIVE"
+                ).first()
+                if existing_empl:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "SITE", "site": basic, "action": "already_bound", "can_unbind": True},
+                    })
+            # Create PENDING binding request for this site (site pre-assigned)
+            existing = Binding.objects.filter(
+                binding_type="EMPLOYER_CONTRACTOR", employer_id=site.employer_id,
+                contractor=contractor, site=site, status="PENDING",
+            ).first()
+            if existing:
+                return Response({
+                    "Result": "Success",
+                    "Data": {"entity_type": "SITE", "site": basic, "action": "request_pending", "request_id": existing.pk},
+                })
+            binding = Binding.objects.create(
+                binding_type="EMPLOYER_CONTRACTOR", employer_id=site.employer_id,
+                contractor=contractor, site=site, status="PENDING",
+            )
+            write_audit(request, "BINDING_REQUEST_SITE", "BINDING", binding.pk)
+            notify("EMPLOYER", "CONTRACTOR_BINDING_REQUEST",
+                   f"Contractor {contractor.name} requested to bind at site {site.name}")
+            return Response({
+                "Result": "Success",
+                "Data": {"entity_type": "SITE", "site": basic, "action": "binding_requested"},
+            })
+
         # Non-worker entity lookup
         log_scan(request, qr, scan_result="LOOKUP", lat=lat, lng=lng)
         return Response({"Result": "Success", "Data": {"qr": QRCodeSerializer(qr).data, "entity_type": qr.entity_type}})
@@ -940,6 +993,12 @@ class BindingList(APIView):
                 "created_at": b.created_at,
                 "started_at": b.started_at,
                 "ended_at": b.ended_at,
+                "initiator_consent": b.initiator_consent,
+                "approver_consent": b.approver_consent,
+                "consent_channel": b.consent_channel,
+                "consent_expires_at": b.consent_expires_at,
+                "initiator_consent_at": b.initiator_consent_at,
+                "approver_consent_at": b.approver_consent_at,
             })
         return Response({"Result": "Success", "Data": data})
 
