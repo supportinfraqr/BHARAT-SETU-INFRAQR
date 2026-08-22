@@ -1,0 +1,198 @@
+@{
+    Layout = "~/Views/Common/_QrLayout.cshtml";
+    ViewBag.Title = "QR Gateway Portal";
+    string loginType = ViewBag.LoginType ?? "1";
+    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    body { background: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
+
+    .gateway-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: #fff;
+        padding: 32px;
+        border-radius: 16px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+    }
+
+    .gateway-title { font-size: 24px; font-weight: 800; letter-spacing: 0.5px; }
+    .gateway-subtitle { font-size: 14px; color: #94a3b8; margin-top: 4px; }
+
+    .role-badge {
+        font-size: 12px;
+        font-weight: 700;
+        background: #38bdf8;
+        color: #0f172a;
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-top: 10px;
+    }
+
+    .op-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+        border: 1px solid #e2e8f0;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        cursor: pointer;
+    }
+    .op-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        border-color: #38bdf8;
+    }
+
+    .op-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: #f0f9ff;
+        color: #0284c7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+    .op-title { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+    .op-desc { font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 20px; }
+    .op-link { font-size: 13px; font-weight: 600; color: #0284c7; display: flex; align-items: center; gap: 6px; }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Header -->
+    <div class="gateway-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="gateway-title"><i class="fa fa-qrcode me-2"></i>Labour Code QR Portal</div>
+                <div class="gateway-subtitle">Access identity cards, scan audits, and bind relationships directly from Eesassin ERP</div>
+                <span class="role-badge" id="roleLabel">Detecting Role...</span>
+            </div>
+            <a href="/DashBoard/DashBoard" class="btn btn-outline-light btn-sm fw-semibold">
+                <i class="fa fa-arrow-left me-1"></i> Back to ERP
+            </a>
+        </div>
+    </div>
+
+    <!-- Operations Grid -->
+    <div class="row g-4" id="operationsGrid">
+        <!-- Javascript dynamic rendering -->
+    </div>
+</div>
+
+<script>
+    var LOGIN_TYPE = '@loginType';
+
+    $(function() {
+        renderPortal();
+    });
+
+    function renderPortal() {
+        var grid = $('#operationsGrid');
+        var roleLbl = $('#roleLabel');
+        var cards = [];
+
+        if (LOGIN_TYPE === '1') {
+            roleLbl.text('Administrator');
+            cards = [
+                {
+                    icon: 'fa-id-badge',
+                    title: 'Worker Directory',
+                    desc: 'Manage worker enrollment, view profiles, download QR identity cards, and view activity logs.',
+                    url: '/Worker/QrDashboard'
+                },
+                {
+                    icon: 'fa-camera',
+                    title: 'Scan / Bind QR',
+                    desc: 'Activate device camera or enter reference code to scan and bind worker QR cards, logging immediate site presence.',
+                    url: '/Worker/QrScan'
+                }
+            ];
+        } else if (LOGIN_TYPE === '5') {
+            roleLbl.text('Principal Employer');
+            cards = [
+                {
+                    icon: 'fa-user-check',
+                    title: 'Binding Requests',
+                    desc: 'Approve or reject card binding requests initiated by contractors or workers linked to your sites.',
+                    url: '/Worker/QrScan'
+                },
+                {
+                    icon: 'fa-users',
+                    title: 'My Workers',
+                    desc: 'Access profiles and details of all enrolled workers operating on your site locations.',
+                    url: '/Worker/QrDashboard'
+                }
+            ];
+        } else if (LOGIN_TYPE === '2' || LOGIN_TYPE === '6') {
+            roleLbl.text('Contractor');
+            cards = [
+                {
+                    icon: 'fa-users',
+                    title: 'My Workers',
+                    desc: 'Enrol workers under your deployment and view active card binding statuses.',
+                    url: '/Worker/QrDashboard'
+                },
+                {
+                    icon: 'fa-qrcode',
+                    title: 'Worker Card Bindings',
+                    desc: 'Initialize card binding and associate physical QR tags with enrolled workers.',
+                    url: '/Worker/QrScan'
+                }
+            ];
+        } else if (LOGIN_TYPE === '7') {
+            roleLbl.text('Worker');
+            cards = [
+                {
+                    icon: 'fa-address-card',
+                    title: 'My Identity Card',
+                    desc: 'View your digital ID profile card, download PDF certificates, and check active registration.',
+                    url: '/Worker/QrMyCard'
+                }
+            ];
+        } else {
+            roleLbl.text('Unknown Role');
+        }
+
+        if (cards.length === 0) {
+            grid.html('<div class="col-12"><div class="empty-state"><h3>Access Denied</h3><p>Your user profile role does not have authorization parameters configured.</p></div></div>');
+            return;
+        }
+
+        var html = '';
+        cards.forEach(function(c) {
+            html += '<div class="col-12 col-md-6 col-lg-4">' +
+                '<div class="op-card" onclick="location.href=\'' + c.url + '\'">' +
+                    '<div>' +
+                        '<div class="op-icon"><i class="fa ' + c.icon + '"></i></div>' +
+                        '<div class="op-title">' + c.title + '</div>' +
+                        '<div class="op-desc">' + c.desc + '</div>' +
+                    '</div>' +
+                    '<div class="op-link">Open Feature <i class="fa fa-arrow-right"></i></div>' +
+                '</div>' +
+            '</div>';
+        });
+        grid.html(html);
+    }
+</script>

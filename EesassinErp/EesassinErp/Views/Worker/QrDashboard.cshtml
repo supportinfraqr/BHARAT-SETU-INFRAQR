@@ -1,0 +1,222 @@
+@{
+    Layout = "~/Views/Common/_QrLayout.cshtml";
+    ViewBag.Title = "QR Workers";
+    string loginType = ViewBag.LoginType ?? "1";
+    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    body { background: #f3f4f6; font-family: 'Segoe UI', system-ui, sans-serif; color: #1f2937; }
+    .workers-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    
+    .qr-page-title { font-size: 24px; font-weight: 700; color: #111827; }
+    .search-input {
+        padding: 8px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        min-width: 280px;
+        outline: none;
+    }
+    .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+    
+    .btn-action {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: 13px;
+        transition: background 0.15s;
+    }
+    .btn-action:hover { background: #1d4ed8; color: #fff; }
+
+    .worker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .worker-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .worker-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-color: #3b82f6;
+    }
+
+    .worker-card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .worker-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #eff6ff;
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .worker-card-header h4 { margin: 0; font-size: 16px; font-weight: 700; color: #111827; }
+    .worker-id { font-size: 12px; color: #6b7280; font-weight: 500; }
+
+    .worker-meta p { margin: 0 0 6px; font-size: 13px; color: #4b5563; }
+    .worker-meta b { color: #374151; }
+
+    .tag-active { background: #def7ec; color: #03543f; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .tag-inactive { background: #fde8e8; color: #9b1c1c; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+    .worker-card-footer {
+        border-top: 1px solid #f3f4f6;
+        padding-top: 12px;
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .qr-mini-badge { font-size: 12px; font-weight: 700; color: #2563eb; }
+    .card-link { font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; }
+    .card-link:hover { text-decoration: underline; }
+</style>
+
+<div class="workers-container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="qr-page-title m-0">Workers</h2>
+            <div id="countLabel" style="font-size: 13px; color: #6b7280; margin-top: 4px;">Loading count...</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search by name, ID, mobile, designation..." />
+            <button class="btn-action" onclick="loadWorkers()">Refresh</button>
+            <a href="/Worker/QrGateway" class="btn btn-outline-secondary btn-sm fw-semibold">
+                <i class="fa fa-arrow-left me-1"></i> Portal
+            </a>
+        </div>
+    </div>
+
+    <!-- Workers Loading Grid -->
+    <div id="loadingIndicator" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-2 text-muted" style="font-size:13px;">Loading workers...</div>
+    </div>
+
+    <!-- Error Block -->
+    <div id="errorIndicator" class="alert alert-danger" style="display:none;"></div>
+
+    <!-- Worker Cards Grid -->
+    <div class="worker-grid" id="workerGrid" style="display:none;"></div>
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+    var allWorkers = [];
+
+    $(function() {
+        loadWorkers();
+
+        $('#searchInput').on('input', function() {
+            filterWorkers();
+        });
+    });
+
+    function loadWorkers() {
+        $('#loadingIndicator').show();
+        $('#errorIndicator').hide();
+        $('#workerGrid').hide();
+
+        $.get(QR_BRIDGE + '/qr/workers/')
+            .done(function(data) {
+                allWorkers = Array.isArray(data) ? data : (data.results || []);
+                filterWorkers();
+                $('#loadingIndicator').hide();
+                $('#workerGrid').show();
+            })
+            .fail(function(xhr) {
+                $('#loadingIndicator').hide();
+                var msg = 'Failed to load workers. Make sure you are authenticated.';
+                if(xhr.status === 401 || xhr.status === 403) {
+                    msg = 'Session expired. Please navigate through the QR Portal Home to reconnect.';
+                }
+                $('#errorIndicator').text(msg).show();
+            });
+    }
+
+    function filterWorkers() {
+        var query = $('#searchInput').val().toLowerCase().trim();
+        var filtered = allWorkers.filter(function(w) {
+            if (!query) return true;
+            return (w.full_name || w.name || '').toLowerCase().includes(query) ||
+                   (w.worker_id || '').toLowerCase().includes(query) ||
+                   (w.mobile || '').toLowerCase().includes(query) ||
+                   (w.designation || '').toLowerCase().includes(query);
+        });
+
+        $('#countLabel').text(filtered.length + ' / ' + allWorkers.length + ' workers');
+
+        var grid = $('#workerGrid');
+        if (filtered.length === 0) {
+            grid.html('<div class="col-12 text-center text-muted py-5">No workers found matching criteria.</div>');
+            return;
+        }
+
+        var html = '';
+        filtered.forEach(function(w) {
+            var letter = (w.full_name || w.name || 'W')[0].toUpperCase();
+            var statusClass = w.is_active !== false ? 'tag-active' : 'tag-inactive';
+            var statusText = w.is_active !== false ? 'Active' : 'Inactive';
+            var employer = w.employer_name || (w.employer ? '#' + w.employer : 'Unbound');
+            var contractor = w.contractor_name || (w.contractor ? '#' + w.contractor : 'Unbound');
+
+            html += '<div class="worker-card" onclick="location.href=\'/Worker/QrWorkerCard/' + w.id + '\'">' +
+                '<div>' +
+                    '<div class="worker-card-header">' +
+                        '<div class="worker-avatar">' + letter + '</div>' +
+                        '<div>' +
+                            '<h4>' + escHtml(w.full_name || w.name || 'Unknown') + '</h4>' +
+                            '<span class="worker-id">' + escHtml(w.worker_id || 'ID pending') + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="worker-meta">' +
+                        '<p><b>Mobile:</b> ' + escHtml(w.mobile || '—') + '</p>' +
+                        '<p><b>Status:</b> <span class="' + statusClass + '">' + statusText + '</span></p>' +
+                        '<p><b>Employer:</b> ' + escHtml(employer) + '</p>' +
+                        '<p><b>Contractor:</b> ' + escHtml(contractor) + '</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="worker-card-footer">' +
+                    '<span class="qr-mini-badge">▣ QR ID</span>' +
+                    '<span class="card-link">View ID Card →</span>' +
+                '</div>' +
+            '</div>';
+        });
+        grid.html(html);
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>

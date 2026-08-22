@@ -1,0 +1,317 @@
+@{
+    Layout = "~/Views/Common/_QrLayout.cshtml";
+    ViewBag.Title = "QR Scan";
+    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- QR Scanner library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+    body { background: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
+
+    .scan-header {
+        background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+        color: #fff;
+        padding: 20px 26px;
+        border-radius: 14px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 18px rgba(26,35,126,.25);
+    }
+
+    .scan-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 14px rgba(0,0,0,.07);
+        margin-bottom: 20px;
+    }
+
+    #reader {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 3px solid #3949ab;
+    }
+
+    .result-card {
+        background: #e8f5e9;
+        border-left: 4px solid #43a047;
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin-top: 20px;
+        display: none;
+    }
+    .result-card.error {
+        background: #fce4ec;
+        border-color: #e53935;
+    }
+
+    .worker-detail-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 2px 14px rgba(0,0,0,.08);
+        margin-top: 20px;
+        display: none;
+    }
+    .worker-detail-card .wname  { font-size: 20px; font-weight: 700; color: #1a237e; }
+    .worker-detail-card .wfield { font-size: 13px; color: #7b8fa1; margin-bottom: 4px; }
+    .worker-detail-card .wval   { font-size: 14px; font-weight: 600; color: #333; }
+
+    .qr-card-img {
+        width: 100%;
+        max-width: 360px;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.15);
+        margin-top: 16px;
+    }
+
+    .btn-qr-action {
+        background: linear-gradient(135deg, #1a237e, #3949ab);
+        color: #fff; border: none;
+        border-radius: 8px;
+        padding: 10px 22px;
+        font-weight: 600;
+        transition: opacity .2s;
+    }
+    .btn-qr-action:hover { opacity: .88; color: #fff; }
+
+    .tab-btn {
+        background: #f0f4f8;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1a237e;
+        margin-right: 8px;
+        cursor: pointer;
+        transition: background .2s;
+    }
+    .tab-btn.active { background: #1a237e; color: #fff; }
+</style>
+
+<!-- Header -->
+<div class="scan-header">
+    <div style="font-size:20px;font-weight:700;">
+        <i class="fa fa-camera me-2"></i> QR Code Scanner
+    </div>
+    <div style="font-size:13px;opacity:.8;margin-top:3px;">
+        Scan a worker's QR card to view their profile
+    </div>
+</div>
+
+<!-- Mode Tabs -->
+<div class="scan-card">
+    <div class="mb-3">
+        <button class="tab-btn active" id="tabCamera" onclick="switchTab('camera')">
+            <i class="fa fa-camera me-1"></i> Camera
+        </button>
+        <button class="tab-btn" id="tabManual" onclick="switchTab('manual')">
+            <i class="fa fa-keyboard me-1"></i> Manual Entry
+        </button>
+        <a href="/Worker/QrDashboard" class="btn btn-outline-secondary btn-sm float-end fw-semibold">
+            <i class="fa fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Camera Tab -->
+    <div id="cameraPanel">
+        <p class="text-muted" style="font-size:13px;">Allow camera access and point at a QR code.</p>
+        <div id="reader" style="width:100%;max-width:500px;margin:0 auto;"></div>
+        <div class="text-center mt-3">
+            <button class="btn btn-qr-action" id="btnStartScan" onclick="startScan()">
+                <i class="fa fa-play me-2"></i> Start Camera
+            </button>
+            <button class="btn btn-outline-danger ms-2" id="btnStopScan" onclick="stopScan()" style="display:none;">
+                <i class="fa fa-stop me-2"></i> Stop
+            </button>
+        </div>
+    </div>
+
+    <!-- Manual Tab -->
+    <div id="manualPanel" style="display:none;">
+        <p class="text-muted" style="font-size:13px;">Enter the QR reference code printed on the worker's card.</p>
+        <div class="input-group">
+            <input type="text" id="manualQrRef" class="form-control" placeholder="QR reference code (e.g. INF-WRK-12345)" />
+            <button class="btn btn-qr-action" onclick="submitManual()">
+                <i class="fa fa-search me-1"></i> Lookup
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Result -->
+<div class="result-card" id="resultCard">
+    <span id="resultMsg"></span>
+</div>
+
+<!-- Worker Detail -->
+<div class="worker-detail-card" id="workerDetailCard">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <div class="wname" id="wdName">—</div>
+            <div class="text-muted" style="font-size:13px;" id="wdRef">—</div>
+        </div>
+        <div>
+            <span id="wdBadge" class="badge" style="font-size:12px;padding:6px 14px;"></span>
+        </div>
+    </div>
+    <hr />
+    <div class="row g-3 mt-1">
+        <div class="col-6 col-md-4">
+            <div class="wfield">Mobile</div>
+            <div class="wval" id="wdMobile">—</div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="wfield">Aadhaar</div>
+            <div class="wval" id="wdAadhaar">—</div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="wfield">Employer</div>
+            <div class="wval" id="wdEmployer">—</div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="wfield">Contractor</div>
+            <div class="wval" id="wdContractor">—</div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="wfield">Site</div>
+            <div class="wval" id="wdSite">—</div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="wfield">Scan Time</div>
+            <div class="wval" id="wdScanTime">—</div>
+        </div>
+    </div>
+    <div class="text-center">
+        <img id="wdCardImg" class="qr-card-img" style="display:none;" alt="Worker QR Card" />
+    </div>
+    <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-qr-action" onclick="downloadCard()" id="btnDownloadCard" style="display:none;">
+            <i class="fa fa-download me-1"></i> Download QR Card
+        </button>
+        <button class="btn btn-outline-secondary" onclick="resetScan()">
+            <i class="fa fa-redo me-1"></i> Scan Another
+        </button>
+    </div>
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+    var scanner = null;
+    var currentWorkerId = null;
+
+    function switchTab(tab) {
+        $('#tabCamera').toggleClass('active', tab === 'camera');
+        $('#tabManual').toggleClass('active', tab === 'manual');
+        $('#cameraPanel').toggle(tab === 'camera');
+        $('#manualPanel').toggle(tab === 'manual');
+        if (tab !== 'camera' && scanner) stopScan();
+    }
+
+    function startScan() {
+        scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 260 }, false);
+        scanner.render(onScanSuccess, onScanError);
+        $('#btnStartScan').hide();
+        $('#btnStopScan').show();
+    }
+
+    function stopScan() {
+        if (scanner) { scanner.clear(); scanner = null; }
+        $('#btnStartScan').show();
+        $('#btnStopScan').hide();
+    }
+
+    function onScanSuccess(text) {
+        stopScan();
+        processQr(text);
+    }
+    function onScanError() {}
+
+    function submitManual() {
+        var ref = $('#manualQrRef').val().trim();
+        if (!ref) { Swal.fire('Missing', 'Please enter a QR reference code.', 'warning'); return; }
+        processQr(ref);
+    }
+
+    function processQr(qrReference) {
+        $('#resultCard').hide();
+        $('#workerDetailCard').hide();
+
+        var lat = null, lng = null;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (p) {
+                lat = p.coords.latitude; lng = p.coords.longitude;
+            });
+        }
+
+        $.ajax({
+            url: QR_BRIDGE + '/qr/qr/scan/',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ qr_reference: qrReference, latitude: lat, longitude: lng }),
+            success: function (data) {
+                showResult(true, '✅ QR scanned successfully');
+                renderWorker(data);
+            },
+            error: function (xhr) {
+                var msg = '❌ Scan failed.';
+                try { var e = JSON.parse(xhr.responseText); msg = '❌ ' + (e.detail || e.error || JSON.stringify(e)); } catch(ex){}
+                showResult(false, msg);
+            }
+        });
+    }
+
+    function showResult(ok, msg) {
+        $('#resultCard').removeClass('error').addClass(ok ? '' : 'error').show();
+        $('#resultMsg').html(msg);
+    }
+
+    function renderWorker(data) {
+        currentWorkerId = data.worker_id || (data.worker && data.worker.id) || null;
+        var w = data.worker || data;
+
+        $('#wdName').text(w.name || w.full_name || '—');
+        $('#wdRef').text('Ref: ' + (data.qr_reference || '—'));
+        $('#wdMobile').text(w.mobile || w.phone || '—');
+
+        var aadh = w.aadhaar || '';
+        $('#wdAadhaar').text(aadh ? ('••••••••' + aadh.slice(-4)) : '—');
+
+        $('#wdEmployer').text((w.employer && (w.employer.name || w.employer)) || '—');
+        $('#wdContractor').text((w.contractor && (w.contractor.name || w.contractor)) || '—');
+        $('#wdSite').text((w.site && (w.site.name || w.site)) || '—');
+        $('#wdScanTime').text(new Date().toLocaleTimeString());
+
+        var active = w.is_active !== false;
+        $('#wdBadge').text(active ? 'Active' : 'Inactive')
+            .css({ background: active ? '#e8f5e9' : '#fce4ec', color: active ? '#2e7d32' : '#c62828' });
+
+        if (currentWorkerId) {
+            $('#btnDownloadCard').show();
+            var cardUrl = QR_BRIDGE + '/qr/workers/' + currentWorkerId + '/card/?fmt=png';
+            $('#wdCardImg').attr('src', cardUrl).show();
+        }
+
+        $('#workerDetailCard').show();
+    }
+
+    function downloadCard() {
+        if (!currentWorkerId) return;
+        var url = '/Api/QrBridge/qr/workers/' + currentWorkerId + '/card/?fmt=pdf';
+        window.open(url, '_blank');
+    }
+
+    function resetScan() {
+        $('#resultCard').hide();
+        $('#workerDetailCard').hide();
+        currentWorkerId = null;
+        switchTab('camera');
+    }
+</script>

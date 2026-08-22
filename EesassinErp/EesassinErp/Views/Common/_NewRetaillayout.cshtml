@@ -1,8 +1,29 @@
-﻿ 
+ 
 
 <!DOCTYPE html>
 <html ng-app="myApp" ng-controller="myController" ng-cloak>
 <head>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            var errDiv = document.createElement('div');
+            errDiv.style.position = 'fixed';
+            errDiv.style.bottom = '10px';
+            errDiv.style.right = '10px';
+            errDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '15px';
+            errDiv.style.zIndex = '999999';
+            errDiv.style.maxHeight = '250px';
+            errDiv.style.width = '350px';
+            errDiv.style.overflow = 'auto';
+            errDiv.style.borderRadius = '5px';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.style.fontSize = '12px';
+            errDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            errDiv.innerText = "JS Error:\n" + message + "\n\nSource: " + source + "\nLine: " + lineno;
+            document.body.appendChild(errDiv);
+        };
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bharatshramsetu</title>
@@ -365,6 +386,13 @@
                     </li>
 
                 </ul>
+            </div>
+
+            <!-- QR System -->
+            <div class="dropdown">
+                <a href="/Worker/QrGateway" class="dropbtn d-flex align-items-center" style="text-decoration: none;">
+                    QR System
+                </a>
             </div>
         </div>
 

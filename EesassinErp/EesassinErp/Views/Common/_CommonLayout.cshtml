@@ -1,4 +1,4 @@
-﻿
+
 @{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     Layout = null;
@@ -8,6 +8,27 @@
 
 <html ng-app="myApp" ng-controller="myController">
 <head>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            var errDiv = document.createElement('div');
+            errDiv.style.position = 'fixed';
+            errDiv.style.bottom = '10px';
+            errDiv.style.right = '10px';
+            errDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '15px';
+            errDiv.style.zIndex = '999999';
+            errDiv.style.maxHeight = '250px';
+            errDiv.style.width = '350px';
+            errDiv.style.overflow = 'auto';
+            errDiv.style.borderRadius = '5px';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.style.fontSize = '12px';
+            errDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            errDiv.innerText = "JS Error:\n" + message + "\n\nSource: " + source + "\nLine: " + lineno;
+            document.body.appendChild(errDiv);
+        };
+    </script>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
@@ -44,8 +65,8 @@
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.9.5/tinymce.min.js"></script>
-    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/Rootfile/tinymce.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/Rootfile/tinymce.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js?Ver="+ViewBag.Version+"")"></script>
