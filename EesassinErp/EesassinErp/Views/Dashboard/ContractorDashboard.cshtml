@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     ViewBag.Title = "Contractor Dashboard";
     Layout = "~/Views/Common/_NewRetailLayout.cshtml";
@@ -187,7 +187,7 @@
                 <div class="contractorHighlightsGrid" ng-init="BindRequestWorker()">
 
                     <!-- CARD -->
-                    <div class="contractorWorkerCard accepted" ng-repeat="x in RequestWorker" ng-class="x.Status==pending then pending else accepted">
+                    <div class="contractorWorkerCard accepted" ng-repeat="x in RequestWorker" ng-class="x.Status == 'Pending' ? 'pending' : 'accepted'">
                         <div>
                             <h6>{{x.EmployeeName}}</h6>
                             <p>{{x.EmployeeCode}}</p>

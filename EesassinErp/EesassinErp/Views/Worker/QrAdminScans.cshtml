@@ -1,0 +1,132 @@
+@{
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+    ViewBag.Title = "QR Scan Logs";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<style>
+    body { background: #f3f4f6; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .mgmt-container { padding: 24px; max-width: 1300px; margin: 0 auto; }
+    .mgmt-header h2 { font-size: 24px; font-weight: 700; color: #111827; }
+    .mgmt-header p { font-size: 14px; color: #6b7280; margin-top: 4px; margin-bottom: 20px; }
+
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .worker-input { border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 12px; font-size: 13px; width: 220px; }
+    .btn-action { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .btn-ghost { background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 14px; font-weight: 600; font-size: 13px; cursor: pointer; }
+
+    .mgmt-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; }
+    .mgmt-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
+    .mgmt-table th { background: #f9fafb; padding: 12px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+    .mgmt-table td { padding: 10px 14px; font-size: 13px; color: #1f2937; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .empty-row { text-align: center; color: #9ca3af; padding: 28px !important; }
+    .muted { color: #6b7280; }
+    .mono { font-family: monospace; font-size: 11px; }
+    .scan-ok { color: #15803d; font-weight: 700; }
+    .scan-fail { color: #b91c1c; font-weight: 700; }
+</style>
+
+<div class="mgmt-container">
+    <div id="msgBox" class="alert" style="display:none;"></div>
+
+    <div class="mgmt-header">
+        <h2>QR Scan Logs</h2>
+        <p>Every QR code scan recorded by the system, newest first.</p>
+    </div>
+
+    <div class="toolbar">
+        <input type="text" id="workerFilter" class="worker-input" placeholder="Worker ID (optional)" />
+        <button class="btn-action" onclick="loadScans()">Search</button>
+        <button class="btn-ghost" onclick="$('#workerFilter').val('');loadScans()">Clear</button>
+        <span id="countInfo" class="muted ms-2"></span>
+    </div>
+
+    <div class="mgmt-table-wrap">
+        <table class="mgmt-table">
+            <thead>
+                <tr>
+                    <th>#</th><th>When</th><th>Worker</th><th>Employer</th><th>Contractor</th><th>Action</th><th>Result</th><th>Detail</th>
+                </tr>
+            </thead>
+            <tbody id="scanTableBody">
+                <tr><td colspan="8"><div class="spinner-border text-primary m-3" role="status"></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+
+    $(function () { loadScans(); });
+
+    function loadScans() {
+        $('#msgBox').hide();
+        var tbody = $('#scanTableBody');
+        tbody.html('<tr><td colspan="8"><div class="spinner-border text-primary m-3" role="status"></div></td></tr>');
+        var w = $.trim($('#workerFilter').val());
+        var url = QR_BRIDGE + '/qr/scans/' + (w ? '?worker=' + encodeURIComponent(w) : '');
+
+        $.get(url)
+            .done(function (res) {
+                if (res && res.Result === 'Error') { showMsg(res.Message || 'Failed to load scans.', true); return; }
+                render((res && res.Data) || []);
+            })
+            .fail(function (xhr) {
+                var m = 'Failed to load scan logs.';
+                if (xhr.status === 401) m = 'Session expired. Please log in again.';
+                showMsg(m, true);
+                tbody.html('<tr><td colspan="8" class="empty-row">No data.</td></tr>');
+            });
+    }
+
+    function escHtml(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function fmtDate(s) {
+        if (!s) return '—';
+        try {
+            var d = new Date(s);
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleString();
+        } catch (e) { return '—'; }
+    }
+
+    function val(v) { return (v === null || v === undefined || v === '') ? '<span class="muted">—</span>' : escHtml(v); }
+
+    function render(rows) {
+        $('#countInfo').text(rows.length + ' record(s)');
+        var tbody = $('#scanTableBody');
+        if (!rows.length) { tbody.html('<tr><td colspan="8" class="empty-row">No scans recorded.</td></tr>'); return; }
+
+        var html = '';
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            var ok = String(r.result || '').toUpperCase() !== 'FAILED' && String(r.result || '').toUpperCase() !== 'DENIED';
+            html += '<tr>' +
+                '<td>' + val(r.id) + '</td>' +
+                '<td>' + fmtDate(r.scanned_at || r.created_at) + '</td>' +
+                '<td>' + val(r.worker_id) + '</td>' +
+                '<td>' + val(r.employer_id) + '</td>' +
+                '<td>' + val(r.contractor_id) + '</td>' +
+                '<td>' + escHtml(r.action || 'SCAN') + '</td>' +
+                '<td class="' + (ok ? 'scan-ok' : 'scan-fail') + '">' + escHtml(r.result || 'OK') + '</td>' +
+                '<td><span class="mono">' + escHtml(r.detail || '') + '</span></td>' +
+            '</tr>';
+        }
+        tbody.html(html);
+    }
+
+    function showMsg(text, isError) {
+        var $m = $('#msgBox');
+        $m.removeClass('alert-danger alert-success')
+          .addClass(isError ? 'alert-danger' : 'alert-success')
+          .text(text).show();
+        clearTimeout(showMsg._t);
+        showMsg._t = setTimeout(function () { $m.hide(); }, 8000);
+    }
+</script>

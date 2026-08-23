@@ -345,6 +345,27 @@
                         <div class="clearfix"></div>
                     </a>
                 </li>
+
+                @if ((Session["loginType"]?.ToString() ?? "") == "1")
+                {
+                    <li>
+                        <a href="javascript:void(0);" onclick="var m=document.getElementById('qrSystemGroup');m.style.display=(m.style.display==='none'||m.style.display==='')?'block':'none';">
+                            <div class="pull-left"><i class="fa fa-qrcode mr-12"></i><span class="right-nav-text">QR System</span></div>
+                            <div class="pull-right"><i class="mdi mdi-chevron-down"></i></div>
+                            <div class="clearfix"></div>
+                        </a>
+                        <ul id="qrSystemGroup" style="display:none;list-style:none;padding-left:18px;">
+                            <li><a href="@Url.Content("~/qr/adminusers")"><div class="pull-left"><i class="fa fa-id-card mr-12"></i><span class="right-nav-text">All Users & ID Cards</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/adminemployers")"><div class="pull-left"><i class="fa fa-check-circle-o mr-12"></i><span class="right-nav-text">Employer Approvals</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/adminscans")"><div class="pull-left"><i class="fa fa-list-alt mr-12"></i><span class="right-nav-text">Scan Logs</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/adminlookup")"><div class="pull-left"><i class="fa fa-search mr-12"></i><span class="right-nav-text">Entity Lookup</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/bindingrequests")"><div class="pull-left"><i class="fa fa-link mr-12"></i><span class="right-nav-text">Binding Requests</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/worker")"><div class="pull-left"><i class="fa fa-users mr-12"></i><span class="right-nav-text">Worker Directory</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/scan")"><div class="pull-left"><i class="fa fa-camera mr-12"></i><span class="right-nav-text">Scan QR</span></div><div class="clearfix"></div></a></li>
+                        </ul>
+                    </li>
+                }
+
                 <li ng-repeat="submenu in menu.submenu" ng-model="SelectSubMenu" class="ng-pristine ng-untouched ng-valid ng-scope ng-empty">
                     <a class="selectifram" href="" data-path="/Dashboard/Unit" ng-click="SelectIfram(submenu.SubMenuUrl,submenu.SubMenuName);UrlAccessPermission(submenu.SubMenuId)" title="Unit">
                         <div class="pull-left">

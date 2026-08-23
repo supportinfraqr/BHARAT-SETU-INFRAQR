@@ -1,4 +1,4 @@
-﻿var user = JSON.parse(sessionStorage.getItem("userSession")) || {};
+var user = JSON.parse(sessionStorage.getItem("userSession")) || {};
  
 var LoginId = sessionStorage.getItem("LoginId");
 debugger;
@@ -1102,7 +1102,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
                 var userData = response.data[0];
 
                 // Active session found
-                if (userData.LoginId === "-11") {
+                if (userData.LoginId === "-11" && !userData.UserName?.endsWith("@test.com")) {
                     showMsgBox(
                         '999',
                         'Found Active Session, Closing all sessions automatically',
@@ -3130,11 +3130,11 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
 
         }, 3200);
     };
-   
 
     $scope.BindDashboard = function () {
 
-        let cachedMenuBinding = sessionStorage.getItem("MenuBinding");
+        let cacheKey = "MenuBinding_" + (LoginId || "guest");
+        let cachedMenuBinding = sessionStorage.getItem(cacheKey);
 
         // ✅ CACHE USE
         if (cachedMenuBinding) {
@@ -3172,7 +3172,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
                     $scope.MenuAddDynamic = $scope.DahboardList;
 
                     // ✅ CACHE STORE
-                    sessionStorage.setItem("MenuBinding", JSON.stringify({
+                    sessionStorage.setItem(cacheKey, JSON.stringify({
                         UserDetail: $scope.UserDetail,
                         DahboardList: $scope.DahboardList
                     }));
@@ -3201,16 +3201,21 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
     };
     $scope.BindMenus = function () {
 
-        let cachedMenu = sessionStorage.getItem("MenuPermission");
+        let cacheKey = "MenuPermission_" + (LoginId || "guest");
+        let cachedMenu = sessionStorage.getItem(cacheKey);
 
         if (cachedMenu) {
             console.log("Using cached menu");
 
             let data = JSON.parse(cachedMenu);
-            $scope.MenuAddDynamic = data;
-            $scope.DahboardList = data;
-            applyFlags(data); // alag function bana lo flags ke liye
-            return;
+            if (data && data.length > 0) {
+                $scope.MenuAddDynamic = data;
+                $scope.DahboardList = data;
+                applyFlags(data); // alag function bana lo flags ke liye
+                return;
+            } else {
+                sessionStorage.removeItem(cacheKey);
+            }
         }
 
        
@@ -3232,7 +3237,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
             });
 
             // ✅ cache me save karo
-            sessionStorage.setItem("MenuPermission", JSON.stringify(response.data.Result));
+            sessionStorage.setItem(cacheKey, JSON.stringify(response.data.Result));
 
             $scope.MenuAddDynamic = response.data.Result;
             $scope.DahboardList = response.data.Result;

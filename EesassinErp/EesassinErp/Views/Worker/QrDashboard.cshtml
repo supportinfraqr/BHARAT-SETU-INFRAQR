@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Common/_QrLayout.cshtml";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "QR Workers";
     string loginType = ViewBag.LoginType ?? "1";
     string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
@@ -112,9 +112,7 @@
         <div class="d-flex align-items-center gap-2">
             <input type="text" id="searchInput" class="search-input" placeholder="Search by name, ID, mobile, designation..." />
             <button class="btn-action" onclick="loadWorkers()">Refresh</button>
-            <a href="/Worker/QrGateway" class="btn btn-outline-secondary btn-sm fw-semibold">
-                <i class="fa fa-arrow-left me-1"></i> Portal
-            </a>
+
         </div>
     </div>
 
@@ -191,7 +189,7 @@
             var employer = w.employer_name || (w.employer ? '#' + w.employer : 'Unbound');
             var contractor = w.contractor_name || (w.contractor ? '#' + w.contractor : 'Unbound');
 
-            html += '<div class="worker-card" onclick="location.href=\'/Worker/QrWorkerCard/' + w.id + '\'">' +
+            html += '<div class="worker-card" onclick="location.href=\'/qr/card/' + w.id + '\'">' +
                 '<div>' +
                     '<div class="worker-card-header">' +
                         '<div class="worker-avatar">' + letter + '</div>' +

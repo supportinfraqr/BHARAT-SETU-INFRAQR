@@ -388,11 +388,75 @@
                 </ul>
             </div>
 
-            <!-- QR System -->
+            <!-- QR System dropdown -->
             <div class="dropdown">
-                <a href="/Worker/QrGateway" class="dropbtn d-flex align-items-center" style="text-decoration: none;">
+                <button class="dropbtn d-flex align-items-center" type="button" data-bs-toggle="dropdown" style="background: transparent; border: none; font-size: 13px; font-weight: 500; text-transform: uppercase;">
                     QR System
-                </a>
+                </button>
+                <ul class="dropdown-menu">
+                    <!-- Dynamic client-side options based on user role -->
+                    <!-- Administrator (loginType 1) -->
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminusers" class="dropdown-item">All Users &amp; ID Cards</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminemployers" class="dropdown-item">Employer Approvals</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminscans" class="dropdown-item">Scan Logs</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminlookup" class="dropdown-item">Entity Lookup</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/worker" class="dropdown-item">Worker Directory</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/scan" class="dropdown-item">Scan / Bind QR</a>
+                    </li>
+
+                    <!-- Principal Employer (loginType 5) -->
+                    <li ng-if="loginType == 5">
+                        <a href="/qr/worker" class="dropdown-item">My Workers</a>
+                    </li>
+                    <li ng-if="loginType == 5">
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+
+                    <!-- Contractor (loginType 2 or 6) -->
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/worker" class="dropdown-item">My Workers</a>
+                    </li>
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/myemployers" class="dropdown-item">My Employers</a>
+                    </li>
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+
+                    <!-- Worker (loginType 7) -->
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/mycontractors" class="dropdown-item">My Contractors</a>
+                    </li>
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
+                    </li>
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/idcard" class="dropdown-item">My Identity Card</a>
+                    </li>
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+
+                    <!-- General options for all authenticated users -->
+                    <li class="dropdown-divider"></li>
+                    <li>
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My ID Card</a>
+                    </li>
+                    <li>
+                        <a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a>
+                    </li>
+                </ul>
             </div>
         </div>
 

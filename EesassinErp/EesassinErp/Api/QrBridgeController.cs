@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -30,18 +31,43 @@ namespace EesassinErp.Controllers
         [AllowAnonymous]
         public async Task<IHttpActionResult> Login()
         {
-            var body = await Request.Content.ReadAsStringAsync();
-            var result = await ForwardAsync("POST", "/api/auth/login/", body, null);
+            // Capture the session id BEFORE ANY await — Mono replaces HttpContext
+            // across continuations, losing cookies/session on the other side.
+            string sid = HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value;
 
-            // If login succeeded, extract token and save in session
+            var body = await Request.Content.ReadAsStringAsync();
+
+            // The QR backend only accepts JSON — normalize form-encoded bodies too
+            string payload = body;
+            if (string.IsNullOrWhiteSpace(body) || !body.TrimStart().StartsWith("{"))
+            {
+                var form = await Request.Content.ReadAsFormDataAsync();
+                var dict = new Dictionary<string, string>();
+                foreach (var key in form.AllKeys) dict[key] = form[key];
+                payload = Newtonsoft.Json.JsonConvert.SerializeObject(dict);
+            }
+
+            var result = await ForwardAsync("POST", "/api/auth/login/", payload, null);
+
+            // If login succeeded, extract token and store it against this session
             try
             {
-                dynamic json = Newtonsoft.Json.JsonConvert.DeserializeObject(result.Body);
-                string token = json?.access?.ToString();
+                var jo = Newtonsoft.Json.Linq.JObject.Parse(result.Body);
+                string token = (string)jo.SelectToken("Data.access") ?? (string)jo.SelectToken("access");
                 if (!string.IsNullOrEmpty(token))
-                    HttpContext.Current.Session["BssQrToken"] = token;
+                {
+                    StoreToken(token, sid);
+                    System.Web.HttpRuntime.Cache["BssQrLastLoginErr"] =
+                        "stored key=" + TokenCacheKey(sid) + " readback=" + (GetToken() != null);
+                }
+                else
+                    System.Web.HttpRuntime.Cache["BssQrLastLoginErr"] = "no access token in body: "
+                        + result.Body.Substring(0, Math.Min(120, result.Body.Length));
             }
-            catch { /* ignore parse errors */ }
+            catch (Exception ex)
+            {
+                System.Web.HttpRuntime.Cache["BssQrLastLoginErr"] = "parse error: " + ex.Message;
+            }
 
             return ResponseMessage(BuildResponse(result));
         }
@@ -51,6 +77,19 @@ namespace EesassinErp.Controllers
         [Route("auth/me/")]
         public async Task<IHttpActionResult> Me()
             => ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/auth/me/", null, GetToken())));
+
+        /// <summary>GET /Api/QrBridge/auth/dbg/ — session diagnostics (temporary)</summary>
+        [HttpGet]
+        [Route("auth/dbg/")]
+        [AllowAnonymous]
+        public IHttpActionResult Dbg()
+        {
+            var c = System.Web.HttpRuntime.Cache;
+            c["BssQrSelfTest"] = "x";
+            var err = c["BssQrLastLoginErr"] as string;
+            return Ok($"selftest={c["BssQrSelfTest"] as string ?? "NULL"} key={TokenCacheKey()} " +
+                      $"tokenPresent={GetToken() != null} lastErr={err ?? "none"}");
+        }
 
         // ─── Workers ───────────────────────────────────────────────────────────
 
@@ -75,7 +114,8 @@ namespace EesassinErp.Controllers
         public async Task<IHttpActionResult> WorkerCard(int workerId)
         {
             string fmt = HttpContext.Current.Request.QueryString["fmt"] ?? "png";
-            var result = await ForwardAsync("GET", $"/api/qr/workers/{workerId}/card/?fmt={fmt}", null, GetToken(), binary: true);
+            string side = HttpContext.Current.Request.QueryString["side"] ?? "front";
+            var result = await ForwardAsync("GET", $"/api/qr/workers/{workerId}/card/?fmt={fmt}&side={side}", null, GetToken(), binary: true);
             var resp = new HttpResponseMessage((HttpStatusCode)result.StatusCode);
             resp.Content = new ByteArrayContent(result.BinaryBody ?? new byte[0]);
             resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
@@ -88,8 +128,9 @@ namespace EesassinErp.Controllers
         [Route("qr/my-card/")]
         public async Task<IHttpActionResult> MyIdentityCard()
         {
-            string fmt = HttpContext.Current.Request.QueryString["fmt"] ?? "png";
-            var result = await ForwardAsync("GET", $"/api/qr/qr/my-card/?fmt={fmt}", null, GetToken(), binary: true);
+            string fmt  = HttpContext.Current.Request.QueryString["fmt"]  ?? "png";
+            string side = HttpContext.Current.Request.QueryString["side"] ?? "front";
+            var result = await ForwardAsync("GET", $"/api/qr/qr/my-card/?fmt={fmt}&side={side}", null, GetToken(), binary: true);
             var resp = new HttpResponseMessage((HttpStatusCode)result.StatusCode);
             resp.Content = new ByteArrayContent(result.BinaryBody ?? new byte[0]);
             resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
@@ -152,6 +193,103 @@ namespace EesassinErp.Controllers
             return ResponseMessage(BuildResponse(await ForwardAsync("POST", $"/api/qr/bindings/{bindingId}/approve/", body, GetToken())));
         }
 
+        /// <summary>POST /Api/QrBridge/qr/bindings/unbind/ — worker direct-assign unbind (body: {"worker": id})</summary>
+        [HttpPost]
+        [Route("qr/bindings/unbind/")]
+        public async Task<IHttpActionResult> WorkerUnbind()
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", "/api/qr/bindings/unbind/", body, GetToken())));
+        }
+
+        /// <summary>POST /Api/QrBridge/qr/bindings/{id}/unbind/ — request unbind (other party must approve)</summary>
+        [HttpPost]
+        [Route("qr/bindings/{bindingId}/unbind/")]
+        public async Task<IHttpActionResult> UnbindBinding(int bindingId)
+            => ResponseMessage(BuildResponse(await ForwardAsync("POST", $"/api/qr/bindings/{bindingId}/unbind/", "{}", GetToken())));
+
+        /// <summary>POST /Api/QrBridge/qr/bindings/{id}/unbind/consent/request/</summary>
+        [HttpPost]
+        [Route("qr/bindings/{bindingId}/unbind/consent/request/")]
+        public async Task<IHttpActionResult> UnbindConsentRequest(int bindingId)
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", $"/api/qr/bindings/{bindingId}/unbind/consent/request/", body, GetToken())));
+        }
+
+        /// <summary>POST /Api/QrBridge/qr/bindings/{id}/unbind/consent/resolve/</summary>
+        [HttpPost]
+        [Route("qr/bindings/{bindingId}/unbind/consent/resolve/")]
+        public async Task<IHttpActionResult> UnbindConsentResolve(int bindingId)
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", $"/api/qr/bindings/{bindingId}/unbind/consent/resolve/", body, GetToken())));
+        }
+
+        // ─── Admin: management ────────────────────────────────────────────────
+
+        /// <summary>GET /Api/QrBridge/qr/management/employers/?status=</summary>
+        [HttpGet]
+        [Route("qr/management/employers/")]
+        public async Task<IHttpActionResult> AdminEmployers()
+        {
+            var status = HttpContext.Current.Request.QueryString["status"];
+            var qs = string.IsNullOrWhiteSpace(status) ? "" : $"?status={Uri.EscapeDataString(status)}";
+            return ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/management/employers/" + qs, null, GetToken())));
+        }
+
+        /// <summary>POST /Api/QrBridge/qr/management/employers/{id}/approve/</summary>
+        [HttpPost]
+        [Route("qr/management/employers/{employerId}/approve/")]
+        public async Task<IHttpActionResult> AdminEmployerApprove(int employerId)
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", $"/api/qr/management/employers/{employerId}/approve/", body, GetToken())));
+        }
+
+        /// <summary>GET /Api/QrBridge/qr/management/plans/</summary>
+        [HttpGet]
+        [Route("qr/management/plans/")]
+        public async Task<IHttpActionResult> AdminPlans()
+            => ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/management/plans/", null, GetToken())));
+
+        /// <summary>POST /Api/QrBridge/qr/management/employer/plan/ — attach/change employer plan</summary>
+        [HttpPost]
+        [Route("qr/management/employer/plan/")]
+        public async Task<IHttpActionResult> AdminAttachPlan()
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", "/api/qr/management/employer/plan/", body, GetToken())));
+        }
+
+        /// <summary>GET /Api/QrBridge/qr/management/employers/{id}/tree/</summary>
+        [HttpGet]
+        [Route("qr/management/employers/{employerId}/tree/")]
+        public async Task<IHttpActionResult> AdminEmployerTree(int employerId)
+            => ResponseMessage(BuildResponse(await ForwardAsync("GET", $"/api/qr/management/employers/{employerId}/tree/", null, GetToken())));
+
+        /// <summary>GET /Api/QrBridge/qr/management/contractors/{id}/tree/</summary>
+        [HttpGet]
+        [Route("qr/management/contractors/{contractorId}/tree/")]
+        public async Task<IHttpActionResult> AdminContractorTree(int contractorId)
+            => ResponseMessage(BuildResponse(await ForwardAsync("GET", $"/api/qr/management/contractors/{contractorId}/tree/", null, GetToken())));
+
+        /// <summary>GET /Api/QrBridge/qr/management/workers/{id}/tree/</summary>
+        [HttpGet]
+        [Route("qr/management/workers/{workerId}/tree/")]
+        public async Task<IHttpActionResult> AdminWorkerTree(int workerId)
+            => ResponseMessage(BuildResponse(await ForwardAsync("GET", $"/api/qr/management/workers/{workerId}/tree/", null, GetToken())));
+
+        /// <summary>GET /Api/QrBridge/qr/scans/ — scan logs</summary>
+        [HttpGet]
+        [Route("qr/scans/")]
+        public async Task<IHttpActionResult> AdminScans()
+        {
+            var worker = HttpContext.Current.Request.QueryString["worker"];
+            var qs = string.IsNullOrWhiteSpace(worker) ? "" : $"?worker={Uri.EscapeDataString(worker)}";
+            return ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/scans/" + qs, null, GetToken())));
+        }
+
         // ─── Profile ───────────────────────────────────────────────────────────
 
         /// <summary>GET /Api/QrBridge/qr/profile/me/</summary>
@@ -190,8 +328,27 @@ namespace EesassinErp.Controllers
 
         // ─── Proxy Core ────────────────────────────────────────────────────────
 
+        /// <summary>Mono's Web API host provides no HttpSessionState to ApiControllers
+        /// (HttpContext.Current.Session == null), so the QR JWT is stored in the
+        /// process-wide cache keyed by the caller's ASP.NET_SessionId instead.</summary>
+        private const int TokenSlidingMinutes = 480;
+
+        private string TokenCacheKey()
+            => TokenCacheKey(HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value);
+
+        private string TokenCacheKey(string sessionId)
+            => "BssQrToken_" + (sessionId ?? "anon");
+
+        private void StoreToken(string token)
+            => StoreToken(token, HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value);
+
+        private void StoreToken(string token, string sessionId)
+            => System.Web.HttpRuntime.Cache.Insert(TokenCacheKey(sessionId), token, null,
+                System.Web.Caching.Cache.NoAbsoluteExpiration,
+                TimeSpan.FromMinutes(TokenSlidingMinutes));
+
         private string GetToken()
-            => HttpContext.Current?.Session?["BssQrToken"]?.ToString();
+            => System.Web.HttpRuntime.Cache[TokenCacheKey()] as string;
 
         private class ProxyResult
         {

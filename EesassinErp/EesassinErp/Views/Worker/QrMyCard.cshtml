@@ -1,210 +1,339 @@
 @{
-    Layout = "~/Views/Common/_QrLayout.cshtml";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "My Identity Card";
     string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <style>
-    body { background: #f0f4f8; font-family: 'Segoe UI', system-ui, sans-serif; }
-    
-    .card-portal-container { max-width: 900px; margin: 40px auto; padding: 0 16px; }
-    
-    /* Premium Header Controls */
-    .portal-header {
-        background: #fff;
-        border-radius: 14px;
-        padding: 20px 24px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+        background: linear-gradient(135deg, #0a1628 0%, #0d2247 50%, #0a1628 100%);
+        min-height: 100vh;
+        font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        color: #e2e8f0;
+    }
+
+    /* ─── Page wrapper ─────────────────────────────────── */
+    .page-wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 20px 60px;
+    }
+
+    /* ─── Top Header ───────────────────────────────────── */
+    .page-header {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 30px;
+        justify-content: space-between;
         flex-wrap: wrap;
         gap: 16px;
+        margin-bottom: 40px;
+        padding: 20px 28px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        backdrop-filter: blur(12px);
     }
-    .portal-title h2 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
-    .portal-title p { font-size: 13px; color: #64748b; margin: 4px 0 0 0; }
-    
-    .btn-action-group { display: flex; gap: 8px; }
-    .btn-portal {
-        padding: 9px 18px;
-        font-weight: 600;
+    .page-header-left h1 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+        letter-spacing: -0.3px;
+    }
+    .page-header-left p {
         font-size: 13px;
-        border-radius: 8px;
-        border: none;
+        color: #94a3b8;
+        margin: 4px 0 0 0;
+    }
+    .btn-group-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-act {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        transition: all 0.2s;
-    }
-    .btn-portal-primary { background: #2563eb; color: #fff; }
-    .btn-portal-primary:hover { background: #1d4ed8; color: #fff; }
-    .btn-portal-secondary { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
-    .btn-portal-secondary:hover { background: #e2e8f0; }
-
-    /* Dual Side-by-Side Layout & Flip System */
-    .id-card-display-area {
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-        flex-wrap: wrap;
-        margin-bottom: 40px;
-    }
-
-    .id-card-panel {
-        background: #fff;
-        border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 4px 20px rgba(15,23,42,0.08);
-        border: 1px solid #e2e8f0;
-        max-width: 420px;
-        width: 100%;
-        text-align: center;
-    }
-    .id-card-panel h3 { font-size: 15px; font-weight: 700; color: #475569; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .id-card-img {
-        width: 100%;
-        border-radius: 12px;
-        border: 1px solid #cbd5e1;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        transition: transform 0.3s;
-    }
-    .id-card-img:hover { transform: scale(1.01); }
-
-    /* Flip Specific Wrapper (for mobile toggle view if required) */
-    .card-flip-btn {
-        background: #0f172a;
-        color: #fff;
-        border: none;
+        gap: 7px;
         padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
         font-size: 13px;
-        display: none; /* Shown on small viewports */
+        font-weight: 600;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    .btn-act-primary { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+    .btn-act-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.45); color: #fff; }
+    .btn-act-success { background: linear-gradient(135deg, #059669, #047857); color: #fff; box-shadow: 0 4px 14px rgba(5,150,105,0.3); }
+    .btn-act-success:hover { transform: translateY(-1px); color: #fff; }
+    .btn-act-ghost {
+        background: rgba(255,255,255,0.07);
+        color: #cbd5e1;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .btn-act-ghost:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+    /* ─── Loading state ────────────────────────────────── */
+    #loadingBlock {
+        text-align: center;
+        padding: 80px 0;
+        color: #94a3b8;
+    }
+    .spinner-ring {
+        width: 52px; height: 52px;
+        border: 4px solid rgba(37,99,235,0.2);
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
         margin: 0 auto 20px;
     }
+    @@keyframes spin { to { transform: rotate(360deg); } }
 
-    #loadingBlock { padding: 80px 0; text-align: center; color: #64748b; }
+    /* ─── Card flip container ──────────────────────────── */
+    .cards-stage {
+        display: flex;
+        gap: 32px;
+        justify-content: center;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    /* each card wrapper */
+    .card-slot {
+        flex: 0 0 auto;
+        width: 380px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    /* label above card */
+    .card-side-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #64748b;
+    }
+    .card-side-label span {
+        display: inline-block;
+        width: 24px; height: 2px;
+        background: #334155;
+        border-radius: 2px;
+    }
+
+    /* the card image frame */
+    .card-frame {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.06),
+            0 20px 60px rgba(0,0,0,0.5),
+            0 4px 16px rgba(0,0,0,0.3);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: #0f172a;
+        cursor: default;
+        /* 870:1200 aspect ratio */
+        aspect-ratio: 870 / 1200;
+    }
+    .card-frame:hover {
+        transform: translateY(-4px) scale(1.005);
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,0.1),
+            0 28px 70px rgba(0,0,0,0.55),
+            0 6px 20px rgba(0,0,0,0.35);
+    }
+    .card-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    /* shimmer skeleton while loading */
+    .card-skeleton {
+        width: 100%;
+        height: 100%;
+        border-radius: 20px;
+        background: linear-gradient(
+            90deg,
+            rgba(255,255,255,0.03) 25%,
+            rgba(255,255,255,0.07) 50%,
+            rgba(255,255,255,0.03) 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    @@keyframes shimmer {
+        0%   { background-position: 200% center; }
+        100% { background-position: -200% center; }
+    }
+
+    /* ─── Error alert ──────────────────────────────────── */
+    .error-box {
+        background: rgba(239,68,68,0.1);
+        border: 1px solid rgba(239,68,68,0.3);
+        color: #fca5a5;
+        border-radius: 12px;
+        padding: 16px 20px;
+        font-size: 14px;
+        display: none;
+        margin-bottom: 24px;
+    }
+
+    /* ─── Bottom info strip ────────────────────────────── */
+    .card-info-strip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        flex-wrap: wrap;
+        margin-top: 40px;
+        padding: 20px 28px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.07);
+        border-radius: 14px;
+    }
+    .info-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #94a3b8;
+    }
+    .info-chip i { color: #2563eb; font-size: 15px; }
+
+    /* ─── Responsive ───────────────────────────────────── */
+    @@media (max-width: 860px) {
+        .card-slot { width: 320px; }
+        .cards-stage { gap: 24px; }
+    }
+    @@media (max-width: 680px) {
+        .card-slot { width: 90vw; max-width: 380px; }
+        .cards-stage { gap: 20px; }
+        .page-header { padding: 16px 18px; }
+    }
 </style>
 
-<div class="card-portal-container">
-    <div id="errorIndicator" class="alert alert-danger" style="display:none;"></div>
+<div class="page-wrap">
 
-    <!-- Header Panel -->
-    <div class="portal-header">
-        <div class="portal-title">
-            <h2><i class="fa fa-id-card me-2 text-primary"></i>My Identity Card</h2>
-            <p>Download and print your dynamic digital identity card.</p>
+    <!-- Error -->
+    <div id="errorBox" class="error-box">
+        <i class="fa fa-triangle-exclamation me-2"></i>
+        <span id="errorMsg">Failed to load identity card.</span>
+    </div>
+
+    <!-- Top header -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1><i class="fa fa-id-card me-2" style="color:#2563eb;"></i>My Employment Card</h1>
+            <p>Your verified digital identity — front &amp; back</p>
         </div>
-        <div class="btn-action-group">
-            <button class="btn-portal btn-portal-primary" onclick="printCard()">
-                <i class="fa fa-print"></i> Print ID Card
+        <div class="btn-group-actions">
+            <button class="btn-act btn-act-success" id="btnPdf" onclick="downloadPdf()" disabled>
+                <i class="fa fa-file-pdf"></i> Download PDF
             </button>
-            <button class="btn-portal btn-portal-secondary" onclick="downloadPdf()">
-                <i class="fa fa-file-pdf text-danger"></i> Download PDF
-            </button>
-            <a href="/Worker/QrGateway" class="btn-portal btn-portal-secondary text-decoration-none">
-                <i class="fa fa-arrow-left"></i> Back to Portal
-            </a>
         </div>
     </div>
 
-    <!-- Loading Indicators -->
+    <!-- Loading -->
     <div id="loadingBlock">
-        <div class="spinner-border text-primary mb-3" role="status"></div>
-        <div>Loading your identity card data...</div>
+        <div class="spinner-ring"></div>
+        <div style="font-size:15px;color:#64748b;">Loading your identity card…</div>
     </div>
 
-    <!-- Dual Panel Display -->
-    <div class="id-card-display-area" id="displayArea" style="display:none;">
-        <!-- Front side panel -->
-        <div class="id-card-panel">
-            <h3>Front Side</h3>
-            <img id="cardFront" class="id-card-img" alt="ID Card Front" />
+    <!-- Dual card display -->
+    <div id="displayArea" style="display:none;">
+        <div class="cards-stage">
+
+            <!-- Front -->
+            <div class="card-slot">
+                <div class="card-side-label">
+                    <span></span>
+                    Front Side
+                    <span></span>
+                </div>
+                <div class="card-frame" id="frameFront">
+                    <div class="card-skeleton" id="skelFront"></div>
+                    <img id="imgFront" alt="Employment Card — Front" style="display:none;" />
+                </div>
+            </div>
+
+            <!-- Back -->
+            <div class="card-slot">
+                <div class="card-side-label">
+                    <span></span>
+                    Back Side
+                    <span></span>
+                </div>
+                <div class="card-frame" id="frameBack">
+                    <div class="card-skeleton" id="skelBack"></div>
+                    <img id="imgBack" alt="Employment Card — Back" style="display:none;" />
+                </div>
+            </div>
+
         </div>
-        
-        <!-- Back side panel -->
-        <div class="id-card-panel">
-            <h3>Back Side</h3>
-            <img id="cardBack" class="id-card-img" alt="ID Card Back" />
+
+        <!-- Info strip -->
+        <div class="card-info-strip">
+            <div class="info-chip"><i class="fa fa-shield-halved"></i> Verified Identity</div>
+            <div class="info-chip"><i class="fa fa-briefcase"></i> Portable Across Jobs</div>
+            <div class="info-chip"><i class="fa fa-lock"></i> Secure &amp; Trusted</div>
+            <div class="info-chip"><i class="fa fa-qrcode"></i> Scan for Verification</div>
         </div>
     </div>
+
 </div>
 
 <script>
     var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+    var loadedCount = 0;
 
-    $(function() {
-        loadIdentityCard();
+    $(function () {
+        $('#displayArea').show();   // show shells immediately
+        loadCard('front');
+        loadCard('back');
     });
 
-    function loadIdentityCard() {
-        $('#loadingBlock').show();
-        $('#displayArea').hide();
-        $('#errorIndicator').hide();
+    function loadCard(side) {
+        var url = QR_BRIDGE + '/qr/my-card/?fmt=png&side=' + side + '&t=' + Date.now();
+        var img = new Image();
+        var imgEl  = side === 'front' ? $('#imgFront')  : $('#imgBack');
+        var skelEl = side === 'front' ? $('#skelFront') : $('#skelBack');
 
-        // The dynamic profile endpoint rendering images
-        var frontUrl = QR_BRIDGE + '/qr/my-card/?fmt=png&side=front&t=' + Date.now();
-        var backUrl = QR_BRIDGE + '/qr/my-card/?fmt=png&side=back&t=' + Date.now();
-
-        var frontImg = new Image();
-        var backImg = new Image();
-        var loadedCount = 0;
-
-        function checkLoad() {
+        img.onload = function () {
+            imgEl.attr('src', url).show();
+            skelEl.hide();
             loadedCount++;
-            if (loadedCount === 2) {
+            if (loadedCount >= 2) {
                 $('#loadingBlock').hide();
-                $('#cardFront').attr('src', frontUrl);
-                $('#cardBack').attr('src', backUrl);
-                $('#displayArea').show();
+                $('#btnPdf').prop('disabled', false);
             }
-        }
-
-        frontImg.onload = checkLoad;
-        backImg.onload = checkLoad;
-
-        frontImg.onerror = function() {
-            $('#loadingBlock').hide();
-            $('#errorIndicator').text('Failed to load front side profile. Ensure user mapping is active.').show();
-        };
-        backImg.onerror = function() {
-            $('#loadingBlock').hide();
-            $('#errorIndicator').text('Failed to load back side profile. Ensure user mapping is active.').show();
         };
 
-        frontImg.src = frontUrl;
-        backImg.src = backUrl;
-    }
+        img.onerror = function () {
+            skelEl.hide();
+            imgEl.parent().css({ background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' });
+            imgEl.parent().html('<div style="text-align:center;padding:20px;color:#f87171;font-size:13px;"><i class="fa fa-circle-xmark" style="font-size:32px;margin-bottom:10px;display:block;"></i>Could not load ' + side + ' side.<br>Ensure your account is fully set up.</div>');
+            $('#loadingBlock').hide();
+            $('#errorBox').show();
+            $('#errorMsg').text('One or more card sides failed to load. Please check your account setup or contact support.');
+        };
 
-    function printCard() {
-        var w = window.open('', '_blank', 'width=940,height=660');
-        if (!w) return;
-        w.document.write(
-            '<html><head><title>Print Identity Card</title>' +
-            '<style>' +
-            '  body { margin:0; padding:20px; display:flex; gap:20px; justify-content:center; align-items:center; background:#fff; font-family:sans-serif; }' +
-            '  .print-wrap { display:flex; gap:20px; flex-wrap:wrap; }' +
-            '  .print-img { width:440px; border-radius:12px; border:1px solid #ccc; }' +
-            '  @@media print { body { padding:0; } .print-wrap { gap:10px; } }' +
-            '</style></head><body>' +
-            '<div class="print-wrap">' +
-            '  <img src="' + $('#cardFront').attr('src') + '" class="print-img" />' +
-            '  <img src="' + $('#cardBack').attr('src') + '" class="print-img" />' +
-            '</div>' +
-            '<script>setTimeout(function(){ window.focus(); window.print(); }, 400);<\/script>' +
-            '</body></html>'
-        );
-        w.document.close();
+        img.src = url;
     }
 
     function downloadPdf() {
-        window.open(QR_BRIDGE + '/qr/my-card/?fmt=pdf', '_blank');
+        // side=both → landscape A4 with front on left, back on right
+        window.open(QR_BRIDGE + '/qr/my-card/?fmt=pdf&side=both', '_blank');
     }
 </script>

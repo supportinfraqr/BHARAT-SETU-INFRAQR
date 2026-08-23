@@ -1,0 +1,270 @@
+@{
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+    ViewBag.Title = "Binding Requests";
+    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
+    string loginType = ViewBag.LoginType ?? "1";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    body { background: #f3f4f6; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .mgmt-container { padding: 24px; max-width: 1300px; margin: 0 auto; }
+    .mgmt-header { margin-bottom: 24px; }
+    .mgmt-header h2 { font-size: 24px; font-weight: 700; color: #111827; }
+    .mgmt-header p { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+    .mgmt-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .mgmt-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-btn { border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600; transition: all .15s; }
+    .filter-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .filter-btn:hover:not(.active) { background: #f3f4f6; }
+
+    .btn-action { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 13px; transition: background 0.15s; }
+    .btn-action:hover { background: #1d4ed8; color: #fff; }
+    .btn-approve { background: #16a34a; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: 12px; margin-right: 6px; }
+    .btn-approve:hover { background: #15803d; color: #fff; }
+    .btn-reject { background: #dc2626; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-weight: 600; font-size: 12px; }
+    .btn-reject:hover { background: #b91c1c; color: #fff; }
+
+    .mgmt-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; }
+    .mgmt-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
+    .mgmt-table th { background: #f9fafb; padding: 12px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+    .mgmt-table td { padding: 14px 16px; font-size: 14px; color: #1f2937; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .mgmt-table tr:last-child td { border-bottom: none; }
+
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+    .badge-approved { background: #dcfce7; color: #166534; }
+    .badge-pending { background: #fef9c3; color: #854d0e; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .muted { color: #6b7280; }
+    .empty-row { text-align: center; color: #6b7280; padding: 32px !important; font-style: italic; }
+    .unbind-note { margin-top: 4px; color: #b45309; font-size: 12px; }
+</style>
+
+<div class="mgmt-container">
+    <div id="msgBox" class="alert" style="display:none;"></div>
+
+    <div class="mgmt-header">
+        <h2>Binding Requests</h2>
+        <p>Approve or reject binding requests. Request unbinds — the other party must consent.</p>
+    </div>
+
+    <div class="mgmt-toolbar">
+        <div class="mgmt-filters">
+            <button class="filter-btn active" data-f="ALL">All</button>
+            <button class="filter-btn" data-f="PENDING">Pending</button>
+            <button class="filter-btn" data-f="ACTIVE">Active</button>
+            <button class="filter-btn" data-f="REJECTED">Rejected</button>
+        </div>
+        <button class="btn-action" onclick="loadBindings()">Refresh</button>
+    </div>
+
+    <div class="mgmt-table-wrap">
+        <table class="mgmt-table">
+            <thead>
+                <tr>
+                    <th>Type</th><th>Contractor</th><th>Employer</th><th>Worker</th>
+                    <th>Status</th><th>Consent</th><th>Requested</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="bindingTableBody">
+                <tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+    var LOGIN_TYPE = '@loginType';
+
+    var bindings = [];
+    var filter = 'ALL';
+    var busy = false;
+
+    $(function () {
+        loadBindings();
+        $('.filter-btn').on('click', function () {
+            $('.filter-btn').removeClass('active');
+            $(this).addClass('active');
+            filter = $(this).data('f');
+            render();
+        });
+    });
+
+    function myParty(b) {
+        var lt = LOGIN_TYPE;
+        if (b.binding_type === 'EMPLOYER_CONTRACTOR') {
+            if (lt === '2' || lt === '6') return 'initiator';
+            if (lt === '5') return 'approver';
+        } else if (b.binding_type === 'WORKER_CONTRACTOR') {
+            if (lt === '7') return 'initiator';
+            if (lt === '2' || lt === '6') return 'approver';
+        }
+        return null;
+    }
+
+    function loadBindings() {
+        $.get(QR_BRIDGE + '/qr/bindings/list/')
+            .done(function (res) {
+                if (res && res.Result === 'Error') { showMsg(res.Message || 'Failed to load requests', true); bindings = []; render(); return; }
+                bindings = (res && res.Data) || [];
+                render();
+            })
+            .fail(function (xhr) {
+                var m = 'Failed to load requests.';
+                if (xhr.status === 401 || xhr.status === 403) m = 'Session expired. Please log out and log in again.';
+                showMsg(m, true);
+                $('#bindingTableBody').html('<tr><td colspan="8" class="empty-row">No binding requests.</td></tr>');
+            });
+    }
+
+    function postJson(url, payload, okMsg) {
+        if (busy) return;
+        busy = true;
+        $.ajax({
+            url: url, type: 'POST', data: JSON.stringify(payload || {}),
+            contentType: 'application/json; charset=utf-8', dataType: 'json'
+        })
+        .done(function (res) {
+            if (res && res.Result === 'Error') showMsg(res.Message || 'Action failed', true);
+            else showMsg(okMsg(res), false);
+            loadBindings();
+        })
+        .fail(function (xhr) {
+            var m = 'Action failed.';
+            try { m = (xhr.responseJSON && (xhr.responseJSON.Message || xhr.responseJSON.message)) || m; } catch (e) {}
+            if (xhr.status === 401 || xhr.status === 403) m = 'Session expired. Please log out and log in again.';
+            showMsg(m, true);
+        })
+        .always(function () { busy = false; });
+    }
+
+    function decide(id, decision) {
+        postJson(QR_BRIDGE + '/qr/bindings/' + id + '/approve/', { decision: decision },
+            function () { return decision === 'APPROVE' ? 'Binding approved.' : 'Binding rejected.'; });
+    }
+
+    function findBinding(id) {
+        for (var i = 0; i < bindings.length; i++) { if (String(bindings[i].id) === String(id)) return bindings[i]; }
+        return null;
+    }
+
+    function unbindClick(id) {
+        var b = findBinding(id);
+        if (!b) return;
+        var sid = String(b.id);
+        if (sid.indexOf('w') === 0) {
+            var workerId = parseInt(sid.slice(1), 10);
+            if (!window.confirm('Unbind this worker from the contractor?')) return;
+            postJson(QR_BRIDGE + '/qr/bindings/unbind/', { worker: workerId }, function () { return 'Worker unbound.'; });
+            return;
+        }
+        if (!window.confirm('Request to unbind this contract? The other party must approve.')) return;
+        postJson(QR_BRIDGE + '/qr/bindings/' + b.id + '/unbind/', {}, function () { return 'Unbind request created. Waiting for the other party to approve.'; });
+    }
+
+    function unbindResolveClick(id, approve) {
+        var b = findBinding(id);
+        if (!b) { showMsg('You cannot act on this binding.', true); return; }
+        var party = myParty(b);
+        if (!party) { showMsg('You cannot act on this binding.', true); return; }
+        postJson(QR_BRIDGE + '/qr/bindings/' + b.id + '/unbind/consent/resolve/',
+            { party: party, decision: approve },
+            function (res) {
+                var d = res && res.Data;
+                if (d && d.binding_complete) return 'Binding unbound.';
+                if (approve) return 'You approved the unbind. Waiting for the other party.';
+                return 'Unbind rejected.';
+            });
+    }
+
+    function badgeCls(s) {
+        if (s === 'ACTIVE' || s === 'APPROVED') return 'badge-approved';
+        if (s === 'REJECTED' || s === 'ENDED') return 'badge-rejected';
+        return 'badge-pending';
+    }
+
+    function escHtml(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtDate(s) {
+        if (!s) return '—';
+        try { var d = new Date(s); return isNaN(d.getTime()) ? '—' : d.toLocaleString(); } catch (e) { return '—'; }
+    }
+
+    function render() {
+        var tbody = $('#bindingTableBody');
+        var shown = bindings.filter(function (b) { return filter === 'ALL' || b.status === filter; });
+
+        if (shown.length === 0) {
+            tbody.html('<tr><td colspan="8" class="empty-row">No binding requests.</td></tr>');
+            return;
+        }
+
+        var html = '';
+        shown.forEach(function (b) {
+            var bothApproved = (b.initiator_consent === 'APPROVED' && b.approver_consent === 'APPROVED');
+            var consentTxt;
+            if (b.binding_type === 'EMPLOYER_CONTRACTOR')
+                consentTxt = 'C:' + escHtml(b.initiator_consent || '—') + ' / E:' + escHtml(b.approver_consent || '—');
+            else
+                consentTxt = 'W:' + escHtml(b.initiator_consent || '—') + ' / C:' + escHtml(b.approver_consent || '—');
+            if (bothApproved && b.status !== 'ACTIVE') consentTxt += ' (auto-activate)';
+            var unbindNote = '';
+            if (b.unbind_status === 'PENDING')
+                unbindNote = '<div class="unbind-note">Unbind pending (I:' + escHtml(b.initiator_unbind_consent || 'NONE') +
+                             ' / A:' + escHtml(b.approver_unbind_consent || 'NONE') + ')</div>';
+
+            var actions = '';
+            if (busy) {
+                // rendered below with disabled flags
+            }
+            if (b.status === 'PENDING') {
+                actions = '<button class="btn-approve" onclick="decide(' + b.id + ',\'APPROVE\')">Approve</button>' +
+                          '<button class="btn-reject" onclick="decide(' + b.id + ',\'REJECT\')">Reject</button>';
+            } else if (b.status === 'ACTIVE' && b.unbind_status !== 'PENDING') {
+                actions = '<button class="btn-reject" onclick=\'' + "unbindClick(" + JSON.stringify(b.id) + ")" + '\'>Unbind</button>';
+            } else if (b.status === 'ACTIVE' && b.unbind_status === 'PENDING') {
+                var myP = myParty(b);
+                var myConsent = myP === 'initiator' ? b.initiator_unbind_consent : (myP === 'approver' ? b.approver_unbind_consent : null);
+                if (myConsent === 'APPROVED') {
+                    actions = '<span class="muted" style="font-size:12px;">Waiting for other party</span>';
+                } else if (myP) {
+                    actions = '<button class="btn-approve" onclick="unbindResolveClick(' + b.id + ',true)">Approve Unbind</button>' +
+                              '<button class="btn-reject" onclick="unbindResolveClick(' + b.id + ',false)">Reject Unbind</button>';
+                } else {
+                    actions = '<span class="muted" style="font-size:12px;">—</span>';
+                }
+            } else {
+                actions = '<span class="muted">—</span>';
+            }
+
+            html += '<tr>' +
+                '<td>' + (b.binding_type === 'EMPLOYER_CONTRACTOR' ? 'Employer↔Contractor' : 'Worker↔Contractor') + '</td>' +
+                '<td><b>' + escHtml((b.contractor && b.contractor.name) || '—') + '</b></td>' +
+                '<td>' + escHtml((b.employer && b.employer.name) || '—') + '</td>' +
+                '<td>' + escHtml((b.worker && b.worker.name) || '—') + '</td>' +
+                '<td><span class="status-badge ' + badgeCls(b.status) + '">' + escHtml(b.status) + '</span></td>' +
+                '<td><span class="muted" style="font-size:12px;">' + consentTxt + unbindNote + '</span></td>' +
+                '<td style="font-size:12px;">' + fmtDate(b.created_at) + '</td>' +
+                '<td>' + actions + '</td>' +
+            '</tr>';
+        });
+        tbody.html(html);
+    }
+
+    function showMsg(text, isError) {
+        var $m = $('#msgBox');
+        $m.removeClass('alert-danger alert-success alert-info')
+          .addClass(isError ? 'alert-danger' : 'alert-success')
+          .text(text).show();
+        clearTimeout(showMsg._t);
+        showMsg._t = setTimeout(function () { $m.hide(); }, 8000);
+    }
+</script>

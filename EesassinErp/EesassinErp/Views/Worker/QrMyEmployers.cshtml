@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Common/_QrLayout.cshtml";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "My Employers";
     string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
     string loginId = ViewBag.LoginId ?? "0";
@@ -83,8 +83,8 @@
         $.get(QR_BRIDGE + '/qr/profile/me/')
             .done(function(meData) {
                 var profile = meData.Data?.profile || {};
-                var conId = profile.contractor || CONTRACTOR_ID;
-                var conName = profile.contractor_name || 'Contractor Profile';
+                var conId = profile.contractor || profile.id || CONTRACTOR_ID;
+                var conName = profile.contractor_name || profile.name || 'Contractor Profile';
                 $('#contractorName').text(conName);
 
                 $.get(QR_BRIDGE + '/qr/contractors/' + conId + '/employments/')

@@ -65,7 +65,12 @@
     <div class="app-shell">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
-            <a href="/Worker/QrGateway" class="sidebar-brand">
+            @{
+                string dashUrl = "/Dashboard/Dashboard";
+                if (loginType == "5") { dashUrl = "/Dashboard/principleEmployerDashboard"; }
+                else if (loginType == "2" || loginType == "6") { dashUrl = "/Dashboard/ContractorDashboard"; }
+            }
+            <a href="@dashUrl" class="sidebar-brand">
                 <img src="~/CommonDashboard/assets/icons/NewLogo.png" alt="Logo" class="sidebar-logo" style="background:#fff;padding:2px;" />
                 <span>BharatShramSetu</span>
             </a>
@@ -73,63 +78,63 @@
             <nav class="sidebar-nav">
                 <div class="nav-section-title">QR MANAGEMENT SYSTEM</div>
                 
-                <a href="/Worker/QrGateway" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrGateway" ? "active" : "")">
-                    <i class="fa fa-th-large"></i> Portal Home
+                <a href="@dashUrl" class="nav-submenu">
+                    <i class="fa fa-th-large"></i> Main Dashboard
                 </a>
                 
-                <a href="/Worker/QrScan" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrScan" ? "active" : "")">
+                <a href="/qr/scan" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrScan" ? "active" : "")">
                     <i class="fa fa-camera"></i> QR Scan / Bind
                 </a>
-
-                <a href="/Worker/QrMyCard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrMyCard" ? "active" : "")">
+                
+                <a href="/qr/idcard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrMyCard" ? "active" : "")">
                     <i class="fa fa-id-card"></i> My Identity Card
                 </a>
 
                 @if (isAdmin)
                 {
-                    <a href="/Worker/QrDashboard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
+                    <a href="/qr/worker" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
                         <i class="fa fa-users"></i> Workers
                     </a>
-                    <a href="/Worker/QrDashboard?view=contractors" class="nav-submenu">
+                    <a href="/qr/worker?view=contractors" class="nav-submenu">
                         <i class="fa fa-hard-hat"></i> Contractors
                     </a>
-                    <a href="/Worker/QrDashboard?view=employers" class="nav-submenu">
+                    <a href="/qr/worker?view=employers" class="nav-submenu">
                         <i class="fa fa-building"></i> Employers
                     </a>
                 }
                 else if (isEmployer)
                 {
-                    <a href="/Worker/QrScan?view=bindings" class="nav-submenu">
+                    <a href="/qr/scan?view=bindings" class="nav-submenu">
                         <i class="fa fa-user-check"></i> Binding Requests
                     </a>
-                    <a href="/Worker/QrDashboard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
+                    <a href="/qr/worker" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
                         <i class="fa fa-users"></i> My Workers
                     </a>
-                    <a href="/Worker/QrDashboard?view=contractors" class="nav-submenu">
+                    <a href="/qr/worker?view=contractors" class="nav-submenu">
                         <i class="fa fa-hard-hat"></i> My Contractors
                     </a>
                 }
                 else if (isContractor)
                 {
-                    <a href="/Worker/QrDashboard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
+                    <a href="/qr/worker" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
                         <i class="fa fa-users"></i> My Workers
                     </a>
-                    <a href="/Worker/QrScan?view=bindings" class="nav-submenu">
+                    <a href="/qr/scan?view=bindings" class="nav-submenu">
                         <i class="fa fa-user-check"></i> Binding Requests
                     </a>
-                    <a href="/Worker/QrDashboard?view=employers" class="nav-submenu">
+                    <a href="/qr/worker?view=employers" class="nav-submenu">
                         <i class="fa fa-building"></i> My Employers
                     </a>
                 }
                 else if (isWorker)
                 {
-                    <a href="/Worker/QrMyCard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrMyCard" ? "active" : "")">
+                    <a href="/qr/idcard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrMyCard" ? "active" : "")">
                         <i class="fa fa-id-card"></i> My Identity Card
                     </a>
-                    <a href="/Worker/QrScan?view=bindings" class="nav-submenu">
+                    <a href="/qr/scan?view=bindings" class="nav-submenu">
                         <i class="fa fa-user-check"></i> Binding Requests
                     </a>
-                    <a href="/Worker/QrDashboard?view=mycontractor" class="nav-submenu">
+                    <a href="/qr/worker?view=mycontractor" class="nav-submenu">
                         <i class="fa fa-hard-hat"></i> My Contractor
                     </a>
                 }
@@ -143,11 +148,7 @@
                 </div>
             }
 
-            <div class="sidebar-footer">
-                <a href="/DashBoard/DashBoard" class="back-btn">
-                    <i class="fa fa-arrow-left"></i> Back to ERP
-                </a>
-            </div>
+
         </aside>
 
         <!-- Main Content Area -->

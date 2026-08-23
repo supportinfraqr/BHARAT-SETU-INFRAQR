@@ -1,5 +1,5 @@
 @{
-    Layout = "~/Views/Common/_QrLayout.cshtml";
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "QR Scan";
     string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
 }
@@ -115,9 +115,6 @@
         <button class="tab-btn" id="tabManual" onclick="switchTab('manual')">
             <i class="fa fa-keyboard me-1"></i> Manual Entry
         </button>
-        <a href="/Worker/QrDashboard" class="btn btn-outline-secondary btn-sm float-end fw-semibold">
-            <i class="fa fa-arrow-left me-1"></i> Back to Dashboard
-        </a>
     </div>
 
     <!-- Camera Tab -->

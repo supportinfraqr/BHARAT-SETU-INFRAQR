@@ -23,14 +23,49 @@ namespace EesassinErp.Controllers
         private static readonly string QrBaseUrl =
             (WebConfigurationManager.AppSettings["BssQrBaseUrl"] ?? "https://bharat-shramsetu.infraqr.com").TrimEnd('/');
 
+        /// <summary>Resolve the ERP login type (1=admin, 2/6=contractor, 5=employer, 7=worker) from session or DB</summary>
+        private string ResolveLoginType()
+        {
+            var lt = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString();
+            if (!string.IsNullOrEmpty(lt)) return lt;
+            try
+            {
+                var loginId = Session["LoginId"];
+                if (loginId != null)
+                {
+                    var dt = SqlDBHelper.SqlHelper.ExecuteParamerizedSelectCommand(
+                        "SELECT LoginType FROM RTL.LoginTable WHERE LoginId = @LoginId",
+                        CommandType.Text,
+                        new[] { new System.Data.SqlClient.SqlParameter("@LoginId", Convert.ToInt32(loginId)) });
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        lt = Convert.ToString(dt.Rows[0]["LoginType"]);
+                        Session["loginType"] = lt;
+                    }
+                }
+            }
+            catch { }
+            return lt;
+        }
+
         // ─── QR Integration Views ─────────────────────────────────────────────
 
         /// <summary>QR Gateway — routes users to role-based actions</summary>
         public ActionResult QrGateway()
         {
-            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
-            ViewBag.QrBaseUrl = QrBaseUrl;
-            return View();
+            string loginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            if (loginType == "5")
+            {
+                return Redirect("/Dashboard/principleEmployerDashboard");
+            }
+            else if (loginType == "2" || loginType == "6")
+            {
+                return Redirect("/Dashboard/ContractorDashboard");
+            }
+            else
+            {
+                return Redirect("/Dashboard/Dashboard");
+            }
         }
 
         /// <summary>QR Dashboard — shows stats & worker list from Django QR backend</summary>
@@ -58,12 +93,76 @@ namespace EesassinErp.Controllers
         /// <summary>QR My Card — view/download identity card for the current logged-in user (Any Role)</summary>
         public ActionResult QrMyCard()
         {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "7";
             ViewBag.QrBaseUrl = QrBaseUrl;
             return View();
         }
 
         /// <summary>QR My Employers — list of employers associated with the contractor</summary>
         public ActionResult QrMyEmployers()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Binding Requests — approve/reject binding requests, request &amp; consent unbinds</summary>
+        public ActionResult QrBindingRequests()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — Employer approvals and plan management (admin only)</summary>
+        public ActionResult QrAdminEmployers()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — Scan logs</summary>
+        public ActionResult QrAdminScans()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — Entity lookup trees</summary>
+        public ActionResult QrAdminLookup()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — All users with ID card preview/download (Design A cards)</summary>
+        public ActionResult QrAdminUsers()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR My Contractors — contractors the logged-in worker is engaged with</summary>
+        public ActionResult QrMyContractors()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR My Employers (Worker) — establishments the worker serves via contractors</summary>
+        public ActionResult QrWorkerEmployers()
         {
             ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
             ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
