@@ -131,10 +131,16 @@ def finalize_binding(binding: Binding) -> None:
         contractor = Contractor.objects.filter(pk=binding.contractor_id).first()
         if contractor:
             # GOLDEN RULE: create a many-to-many employment record (C -> E at Site)
-            ContractorEmployment.objects.get_or_create(
+            empl, _ = ContractorEmployment.objects.get_or_create(
                 contractor=contractor, employer_id=binding.employer_id, site=binding.site,
                 defaults={"status": "ACTIVE", "started_at": timezone.now()},
             )
+            # If the employment already existed (e.g. ended earlier), reactivate it.
+            if empl.status != "ACTIVE":
+                empl.status = "ACTIVE"
+                empl.started_at = timezone.now()
+                empl.ended_at = None
+                empl.save(update_fields=["status", "started_at", "ended_at"])
             # Keep primary employer in sync
             Contractor.objects.filter(pk=binding.contractor_id).update(employer=binding.employer)
             if binding.site:

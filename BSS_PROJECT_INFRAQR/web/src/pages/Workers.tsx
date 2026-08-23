@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import ViewTreeModal from '../components/ViewTreeModal';
 import './Workers.css';
 import AppLayout from '../components/AppLayout';
 
@@ -10,10 +9,6 @@ export default function Workers() {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [treeView, setTreeView] = useState<{ id: number; name: string } | null>(null);
-
-  const user = JSON.parse(localStorage.getItem('bss_user') || localStorage.getItem('bss_legacy_user') || '{}');
-  const isAdmin = String(user.LoginType || user.role) === '1' || String(user.role) === 'SUPER_ADMIN';
 
   const load = useCallback(async () => {
     try {
@@ -65,20 +60,15 @@ export default function Workers() {
               </div>
             </div>
             <div className="worker-meta">
+              <p><b>Worker ID:</b> {w.worker_id || '—'}</p>
               <p><b>Mobile:</b> {w.mobile || '—'}</p>
               <p><b>Status:</b> <span className={w.is_active ? 'tag-active' : 'tag-inactive'}>{w.is_active ? 'Active' : 'Inactive'}</span></p>
-              <p><b>Employer:</b> {w.employer ? `#${w.employer}` : 'Unbound'}</p>
-              <p><b>Contractor:</b> {w.contractor ? `#${w.contractor}` : 'Unbound'}</p>
+              <p><b>Employer:</b> {w.employer_name || (w.employer ? `#${w.employer}` : 'Unbound')}</p>
+              <p><b>Contractor:</b> {w.contractor_name || (w.contractor ? `#${w.contractor}` : 'Unbound')}</p>
             </div>
             <div className="worker-card-footer">
               <span className="qr-mini-badge">▣ QR</span>
               <span className="worker-card-link" onClick={(e) => e.stopPropagation()}>
-                {isAdmin && (
-                  <button className="btn-primary" style={{ background: '#047857', padding: '4px 10px', fontSize: 12, marginRight: 6 }}
-                    onClick={() => setTreeView({ id: w.id, name: w.full_name })}>
-                    View Tree
-                  </button>
-                )}
                 <span onClick={() => openDetail(w)} style={{ cursor: 'pointer' }}>View ID Card →</span>
               </span>
             </div>
@@ -88,14 +78,6 @@ export default function Workers() {
       {!loading && workers.length === 0 && <div className="module-empty">No workers registered yet.</div>}
       {!loading && filtered.length === 0 && workers.length > 0 && <div className="module-empty">No workers match "{search}".</div>}
       </div>
-      {treeView && (
-        <ViewTreeModal
-          type="worker"
-          id={treeView.id}
-          name={treeView.name}
-          onClose={() => setTreeView(null)}
-        />
-      )}
     </AppLayout>
   );
 }

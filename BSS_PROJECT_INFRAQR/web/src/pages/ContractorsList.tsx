@@ -1,23 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import LocationModal from '../components/LocationModal';
-import ViewTreeModal from '../components/ViewTreeModal';
 import { qrApi, locationApi } from '../api/endpoints';
 import './QRManagement.css';
 
 export default function ContractorsList() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
   const [savedLocations, setSavedLocations] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [treeView, setTreeView] = useState<{ id: number; name: string } | null>(null);
   const [reassign, setReassign] = useState<{ from: number; to: string } | null>(null);
   const [reassignBusy, setReassignBusy] = useState(false);
   const [reassignMsg, setReassignMsg] = useState('');
 
   const user = JSON.parse(localStorage.getItem('bss_user') || localStorage.getItem('bss_legacy_user') || '{}');
   const isAdmin = String(user.LoginType || user.role) === '1' || String(user.role) === 'SUPER_ADMIN';
+  const loginType = String(user.LoginType || user.role || '');
+  const isWorker = loginType === '7' || loginType === 'WORKER';
+
+  useEffect(() => {
+    // Workers view their own contractor on /qr/my-contractor, not the admin list.
+    if (isWorker) navigate('/qr/my-contractor', { replace: true });
+  }, [isWorker, navigate]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,10 +101,6 @@ export default function ContractorsList() {
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {isAdmin && (
                         <>
-                          <button className="btn-primary" style={{ background: '#047857', padding: '6px 10px' }}
-                            onClick={() => setTreeView({ id: c.id, name: c.name })}>
-                            View Tree
-                          </button>
                           <button className="btn-primary" style={{ background: '#b45309', padding: '6px 10px' }}
                             onClick={() => { setReassign({ from: c.id, to: '' }); setReassignMsg(''); }}>
                             Reassign
@@ -124,14 +127,6 @@ export default function ContractorsList() {
           savedLocations={savedLocations}
           onClose={() => setSelected(null)}
           onSaved={() => { load(); }}
-        />
-      )}
-      {treeView && (
-        <ViewTreeModal
-          type="contractor"
-          id={treeView.id}
-          name={treeView.name}
-          onClose={() => setTreeView(null)}
         />
       )}
       {reassign && (

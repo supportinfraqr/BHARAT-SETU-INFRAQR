@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
-import ViewTreeModal from '../components/ViewTreeModal';
 import { qrMgmtApi } from '../api/endpoints';
 import './QRManagement.css';
 
@@ -10,7 +9,6 @@ export default function EmployerApprovals() {
   const [busyRow, setBusyRow] = useState<number | null>(null);
   const [expiryByEmp, setExpiryByEmp] = useState<Record<number, string>>({});
   const [rowMsg, setRowMsg] = useState<Record<number, { type: 'ok' | 'err'; text: string }>>({});
-  const [treeView, setTreeView] = useState<{ id: number; name: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -120,10 +118,6 @@ export default function EmployerApprovals() {
                     ) : '—'}
                   </td>
                   <td className="actions-cell">
-                    <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12, marginBottom: 4 }}
-                      onClick={() => setTreeView({ id: e.id, name: e.name })}>
-                      View Tree
-                    </button>
                     {e.approval_status === 'PENDING' && (
                       <>
                         <button className="btn-approve" disabled={busyRow !== null} onClick={() => decide(e.id, 'APPROVE')}>Approve</button>
@@ -179,14 +173,6 @@ export default function EmployerApprovals() {
           </table>
         </div>
       </div>
-      {treeView && (
-        <ViewTreeModal
-          type="employer"
-          id={treeView.id}
-          name={treeView.name}
-          onClose={() => setTreeView(null)}
-        />
-      )}
     </AppLayout>
   );
 }

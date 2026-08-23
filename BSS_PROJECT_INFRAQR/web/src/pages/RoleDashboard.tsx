@@ -185,22 +185,29 @@ function WorkerDashboard({ user, loginId, navigate }: any) {
       reader.onloadend = () => setQrDataUrl(reader.result as string);
       reader.readAsDataURL(r.data);
     }).catch(() => {});
-    api.post('/RetailSection/bindworkerdetail', { ActionType: 1, UserId: loginId }).then((r) => {
-      setDetail(r.data?.Result?.[0] || r.data?.[0] || {});
+    // Use the QR worker profile (authoritative) instead of legacy bindworkerdetail.
+    api.get('/qr/profile/me/').then((r) => {
+      const p = r.data?.Data?.profile || {};
+      setDetail(p);
     }).catch(() => {});
   }, [loginId]);
+
+  const contractor = detail.contractor_name || detail.contractor || '—';
+  const site = detail.site_name || detail.site || '—';
 
   return (
     <div className="worker-dashboard">
       <QuickLinks navigate={navigate} />
       <div className="panel worker-id-card">
         <div className="worker-id-left">
-          <div className="worker-avatar">{String(user?.Name || detail.Name || 'W')[0]?.toUpperCase() || 'W'}</div>
+          <div className="worker-avatar">{String(detail.full_name || user?.Name || 'W')[0]?.toUpperCase() || 'W'}</div>
           <div>
-            <h2>{detail.Name || user?.Name || 'Worker'}</h2>
-            <p>Employee Code: {detail.EmployeeCode || '—'}</p>
-            <p>Mobile: {detail.MobileNumber || '—'}</p>
-            <p>Designation: {detail.EmployeeDesignation || '—'}</p>
+            <h2>{detail.full_name || user?.Name || 'Worker'}</h2>
+            <p>Worker ID: {detail.worker_id || '—'}</p>
+            <p>Mobile: {detail.mobile || '—'}</p>
+            <p>Designation: {detail.designation || '—'}</p>
+            <p>Contractor: {contractor}</p>
+            <p>Site: {site}</p>
           </div>
         </div>
         <div className="worker-id-right">
@@ -211,11 +218,13 @@ function WorkerDashboard({ user, loginId, navigate }: any) {
       <div className="panel">
         <h2>My Details</h2>
         <div className="pe-meta">
-          <span>Name: {detail.Name || '—'}</span>
-          <span>Employee Code: {detail.EmployeeCode || '—'}</span>
-          <span>Mobile: {detail.MobileNumber || '—'}</span>
-          <span>Aadhaar: {detail.AdharCardNumber || '—'}</span>
-          <span>PAN: {detail.PANNumber || '—'}</span>
+          <span>Name: {detail.full_name || '—'}</span>
+          <span>Worker ID: {detail.worker_id || '—'}</span>
+          <span>Mobile: {detail.mobile || '—'}</span>
+          <span>Aadhaar: {detail.aadhaar_no || '—'}</span>
+          <span>PAN: {detail.pan_no || '—'}</span>
+          <span>Contractor: {contractor}</span>
+          <span>Site: {site}</span>
         </div>
       </div>
     </div>

@@ -175,6 +175,9 @@ export default function LoginPage() {
                     <div className="newLoginTagline">
                       <span></span><p>One Nation, One ID, One Platform</p><span></span>
                     </div>
+                    <div className="newLoginHindiTagline" style={{ fontSize: '13px', color: '#022b5e', fontWeight: 600, marginTop: '2px', textAlign: 'center', letterSpacing: '0.5px' }}>
+                      श्रमिक का सम्मान, देश का निर्माण
+                    </div>
                   </div>
                 </div>
               </div>
@@ -191,39 +194,39 @@ export default function LoginPage() {
                 <div className="newLoginFeatureBox"><img src="/legacy/NewLogin/images/icon-empowerment.svg" alt="" /><h4 style={{ color: '#1E3A8A' }}>Empowerment</h4><p>Growth &amp; Welfare</p></div>
               </div>
 
+            </div>
+
+            {/* STATS BANNER */}
+            <div className="newLoginHeroBottom">
+              <div className="newLoginStatsBanner">
+                <div className="newLoginStatsItem">
+                  <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-workers.svg" alt="" /></div>
+                  <div className="newLoginStatsContent"><h4>50+ Crore</h4><p>Workers</p></div>
+                </div>
+                <div className="newLoginStatsDivider"></div>
+                <div className="newLoginStatsItem">
+                  <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-establishments.svg" alt="" /></div>
+                  <div className="newLoginStatsContent"><h4>Millions</h4><p>Establishments</p></div>
+                </div>
+                <div className="newLoginStatsDivider"></div>
+                <div className="newLoginStatsItem">
+                  <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-platform.svg" alt="" /></div>
+                  <div className="newLoginStatsContent"><h4>One Trusted</h4><p>Platform</p></div>
+                </div>
+                <div className="newLoginStatsDivider"></div>
+                <div className="newLoginStatsItem">
+                  <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-vision.svg" alt="" /></div>
+                  <div className="newLoginStatsContent"><h4>One Nation</h4><p>One Vision</p></div>
+                </div>
               </div>
 
-              {/* STATS BANNER */}
-              <div className="newLoginHeroBottom">
-                <div className="newLoginStatsBanner">
-                  <div className="newLoginStatsItem">
-                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-workers.svg" alt="" /></div>
-                    <div className="newLoginStatsContent"><h4>50+ Crore</h4><p>Workers</p></div>
-                  </div>
-                  <div className="newLoginStatsDivider"></div>
-                  <div className="newLoginStatsItem">
-                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-establishments.svg" alt="" /></div>
-                    <div className="newLoginStatsContent"><h4>Millions</h4><p>Establishments</p></div>
-                  </div>
-                  <div className="newLoginStatsDivider"></div>
-                  <div className="newLoginStatsItem">
-                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-platform.svg" alt="" /></div>
-                    <div className="newLoginStatsContent"><h4>One Trusted</h4><p>Platform</p></div>
-                  </div>
-                  <div className="newLoginStatsDivider"></div>
-                  <div className="newLoginStatsItem">
-                    <div className="newLoginStatsIcon"><img src="/legacy/NewLogin/images/icon-vision.svg" alt="" /></div>
-                    <div className="newLoginStatsContent"><h4>One Nation</h4><p>One Vision</p></div>
-                  </div>
-                </div>
-
-                <div className="newLoginBottomMessage">
-                  <div className="newLoginTriLine"></div>
-                  <p>Building a Stronger, Safer and Empowered Bharat</p>
-                  <div className="newLoginTriLine"></div>
-                </div>
+              <div className="newLoginBottomMessage">
+                <div className="newLoginTriLine"></div>
+                <p>Building a Stronger, Safer and Empowered Bharat</p>
+                <div className="newLoginTriLine"></div>
               </div>
             </div>
+          </div>
 
           {/* RIGHT CARD */}
           <div className="newLoginCardWrap">
@@ -449,7 +452,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-        </div>
+      </div>
 
       {/* GOVERNMENT & WORKER INITIATIVES */}
       <section className="bss-initiatives">
@@ -460,24 +463,24 @@ export default function LoginPage() {
 
         <div className="bss-init-grid">
           <div className="bss-init-card">
-            <img src="/legacy/NewLogin/images/skill-india.png" alt="Skill India" className="bss-init-card-logo" />
-            <h4>Skill India</h4>
-            <p>Enabling skill development and a skilled workforce for a self-reliant nation.</p>
+            <img src="/legacy/NewLogin/images/skill-india.png" alt="Regulatory Transformation" className="bss-init-card-logo" />
+            <h4>Regulatory Transformation</h4>
+            <p>Consolidating 29 laws into four Labour Codes to protect workers, ease compliance, and translate rules into role-aware workflows.</p>
           </div>
           <div className="bss-init-card">
-            <img src="/legacy/NewLogin/images/make-in-india.png" alt="Make in India" className="bss-init-card-logo" />
-            <h4>Make in India</h4>
-            <p>Supporting every establishment and worker driving India's manufacturing growth.</p>
+            <img src="/legacy/NewLogin/images/digital-india.png" alt="Digital Transformation" className="bss-init-card-logo" />
+            <h4>Digital Transformation</h4>
+            <p>Identity, payments, and taxation have proven the power of digital rails. The next step is a secure, portable, and trusted work record.</p>
           </div>
           <div className="bss-init-card">
-            <img src="/legacy/NewLogin/images/digital-india.png" alt="Digital India" className="bss-init-card-logo" />
-            <h4>Digital India</h4>
-            <p>One Nation, One ID, One Platform — transparent digital governance for all.</p>
+            <img src="/legacy/NewLogin/images/make-in-india.png" alt="Sustainability Transformation" className="bss-init-card-logo" />
+            <h4>Sustainability Transformation</h4>
+            <p>Enterprise responsibility goes beyond the factory gate to integrate safety, migrant vulnerability, and contractor practices into ESG scrutiny.</p>
           </div>
           <div className="bss-init-card">
-            <img src="/legacy/NewLogin/images/govt-logo.png" alt="Govt of India" className="bss-init-card-logo" />
-            <h4>Worker Welfare</h4>
-            <p>Secure identity, fair wages and grievance redressal for every worker.</p>
+            <img src="/legacy/NewLogin/images/govt-logo.png" alt="Purpose Transformation" className="bss-init-card-logo" />
+            <h4>Purpose Transformation</h4>
+            <p>Business legitimacy depends on the value it restores to people and planet, ensuring workers are never invisible inputs in supply chains.</p>
           </div>
         </div>
 

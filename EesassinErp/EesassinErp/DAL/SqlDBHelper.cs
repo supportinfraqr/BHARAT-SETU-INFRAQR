@@ -12,7 +12,7 @@ namespace DAL
         public static readonly SqlDBHelper SqlHelper = new SqlDBHelper();
 
         public string msg;
-            public string CONNECTION_STRING = "Server=13.202.27.216;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=retail;Password=ezretail@123;Pooling=True;"; 
+            public string CONNECTION_STRING = "Server=localhost,1433;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=sa;Password=InfraQR2026!sql;Pooling=True;TrustServerCertificate=True;"; 
 
 
 

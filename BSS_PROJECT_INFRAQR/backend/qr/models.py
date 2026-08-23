@@ -445,6 +445,29 @@ class Binding(models.Model):
     consent_expires_at = models.DateTimeField(null=True, blank=True)
     initiator_consent_at = models.DateTimeField(null=True, blank=True)
     approver_consent_at = models.DateTimeField(null=True, blank=True)
+    # Unbind consent lifecycle (dual handshake: both sides must approve to unbind)
+    unbind_status = models.CharField(
+        max_length=16,
+        choices=[("NONE", "None"), ("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")],
+        default="NONE",
+    )
+    initiator_unbind_consent = models.CharField(
+        max_length=16,
+        choices=[("NONE", "None"), ("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected"), ("TIMEOUT", "Timed Out")],
+        default="NONE",
+    )
+    approver_unbind_consent = models.CharField(
+        max_length=16,
+        choices=[("NONE", "None"), ("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected"), ("TIMEOUT", "Timed Out")],
+        default="NONE",
+    )
+    unbind_channel = models.CharField(
+        max_length=16,
+        choices=[("APP", "App"), ("SMS_OTP", "SMS OTP"), ("IVR", "IVR"), ("VOICE", "Voice")],
+        default="APP",
+    )
+    unbind_expires_at = models.DateTimeField(null=True, blank=True)
+    unbind_requested_at = models.DateTimeField(null=True, blank=True)
     request_reference = models.CharField(max_length=64, blank=True)
     site_name = models.CharField(max_length=255, blank=True)
     approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)

@@ -1,0 +1,486 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BSS IT Architecture Discovery - Detailed Guide</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;line-height:1.58;color:#172033;margin:0;background:#f4f6f9}
+.container{max-width:1180px;margin:auto;background:#fff;padding:45px 55px}
+h1{font-size:32px;color:#102a43;margin-bottom:5px} h2{font-size:24px;color:#0b5cab;border-bottom:2px solid #dfe7ef;padding-bottom:8px;margin-top:42px}
+h3{color:#243b53}.subtitle{font-size:17px;color:#52606d;margin-bottom:25px}
+.context,.proposal{padding:18px 22px;margin:20px 0;border-radius:5px}
+.context{background:#eef6ff;border-left:5px solid #1976d2}.proposal{background:#effaf3;border-left:5px solid #2e8b57}
+.item{border:1px solid #e1e6ec;border-radius:7px;margin:16px 0;padding:18px;background:#fff}
+.q{font-size:16px;font-weight:700;color:#102a43;background:linear-gradient(135deg,#e8f0fe,#d2e3fc);padding:12px 16px;border-left:5px solid #1a73e8;border-radius:6px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}.why{margin-top:10px;color:#364152;padding:0 4px}.why strong{color:#0b5cab}
+.term{background:#f7f9fb;border-left:3px solid #9aa5b1;padding:10px 14px;margin-top:12px}
+table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #dfe4ea;padding:10px;vertical-align:top}th{background:#edf2f7;text-align:left}
+.arch{background:#111827;color:#fff;padding:20px;border-radius:8px;font-family:monospace;white-space:pre-wrap}
+.small{font-size:13px;color:#697586}.eg{display:block;font-size:13px;color:#5f6368;font-weight:400;margin-top:6px;padding:6px 10px;background:#f8f9fa;border-radius:4px;border:1px dashed #dadce0}.pagebreak{page-break-before:always}
+.tech-context{font-size:14px;color:#5f6368;font-style:italic;margin-bottom:12px;padding:6px 12px;border-left:3px solid #9aa5b1;background:#fafbfc}
+.tech-hint{display:block;font-size:13px;color:#1a73e8;font-weight:400;margin-top:5px;font-style:italic}
+</style></head><body><div class="container">
+<h1>Bharat Shram Setu (BSS)</h1>
+<div class="subtitle">Detailed IT Architecture Discovery — Technical Questions with Examples &amp; Scale-Up Proposal</div>
+<div class="context"><strong>Important context:</strong> AWS is already known to be the hosting environment, and the current BSS platform does not currently have a QR solution. The discovery should therefore focus on the existing frontend/backend, APIs, data model, deployment and operational controls, so that our QR + identity binding + geolocation + attendance solution can be integrated with the existing platform.<br><br><strong>Meeting objective:</strong> Understand the existing BSS architecture first, without assuming that any particular technology is required. Each question below is accompanied by a concrete <strong>e.g. example</strong> to clarify the expected answer. The answers should then be used to design a target architecture for higher availability, security, observability and scale, with a future path toward approximately <strong>1 crore (10 million) identities</strong> and high-volume QR/attendance transactions.</div>
+
+<h2>1. CI/CD &amp; Secure Software Delivery</h2>
+<div class="tech-context">Understanding the build-and-release pipeline, automation level, and rollback safety.</div>
+<div class="item">
+  <div class="q">What is your current CI/CD pipeline?</div>
+  <div class="tech-hint">e.g., GitHub Actions, GitLab CI/CD, Jenkins, Azure DevOps, Bitbucket Pipelines, ArgoCD</div>
+  <div class="why"><strong>What is it?</strong><br>CI (Continuous Integration) automatically builds and tests code changes as developers merge. CD (Continuous Delivery/Deployment) automates delivery to staging or production.</div>
+  <div class="why"><strong>Why we ask:</strong><br>A mature pipeline makes releases repeatable, auditable and less dependent on manual server operations.</div>
+</div>
+<div class="item">
+  <div class="q">Are builds, unit tests, and integration tests automated?</div>
+  <div class="tech-hint">e.g., Jest, Mocha, Cypress, Playwright, Selenium, JUnit, PyTest, SonarQube</div>
+  <div class="why"><strong>What is it?</strong><br>Automated tests validate code behavior consistently on every commit/PR without manual intervention.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Higher release frequency and larger systems require automated regression protection.</div>
+</div>
+<div class="item">
+  <div class="q">Do you perform security scanning — SAST, dependency, or container scanning?</div>
+  <div class="tech-hint">e.g., SonarQube, Snyk, Trivy, Checkmarx, GitHub CodeQL, Dependabot, AWS ECR scanning</div>
+  <div class="why"><strong>What is it?</strong><br>SAST analyzes source code for security flaws. Dependency scanning checks third-party libraries for known CVEs. Container scanning checks Docker images for vulnerabilities.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Detects security weaknesses early in the pipeline before they reach production.</div>
+</div>
+<div class="item">
+  <div class="q">What is your rollback strategy if a deployment fails?</div>
+  <div class="tech-hint">e.g., Redeploy previous Docker image tag, EC2 AMI snapshot restore, Git revert + rebuild, ECS task definition rollback, ALB target group switchback</div>
+  <div class="why"><strong>What is it?</strong><br>A rollback mechanism reverts the application to the last known-good version when a new deployment introduces issues.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Fast rollback minimizes downtime and prevents bad code from affecting users.</div>
+</div>
+<div class="item">
+  <div class="q">Can you deploy without downtime — zero-downtime or blue-green deployments?</div>
+  <div class="tech-hint">e.g., Blue-green via ALB, ECS rolling update, Kubernetes rolling update, canary deployments, feature flags (LaunchDarkly)</div>
+  <div class="why"><strong>What is it?</strong><br>Zero-downtime deployment replaces application instances without dropping active user connections. Blue-green runs two identical environments and switches traffic.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Critical for worker attendance systems that must remain available during updates.</div>
+</div>
+
+<h2>2. Technology Stack &amp; Application Architecture</h2>
+<div class="tech-context">Current infrastructure — compute, containers, frontend framework, and environment separation.</div>
+<div class="item">
+  <div class="q">What is your compute/containerization approach — VMs, Docker, Docker Compose, ECS, or Kubernetes?</div>
+  <div class="tech-hint">e.g., EC2 VMs, Docker Compose, AWS ECS Fargate, AWS EKS, self-managed Kubernetes, bare EC2 + PM2/systemd</div>
+  <div class="why"><strong>What is it?</strong><br>VMs are virtual servers. Docker packages applications into portable containers. Kubernetes orchestrates many containers across hosts with auto-scaling and self-healing.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Tells us how portable and independently scalable the current application is. Kubernetes is useful when operational complexity justifies it.</div>
+</div>
+<div class="item">
+  <div class="q">What technology/framework is the existing frontend built on?</div>
+  <div class="tech-hint">e.g., React 18 + TypeScript, Angular 16, Vue 3 + Vite, Flutter, React Native, native Kotlin (Android), Swift (iOS)</div>
+  <div class="why"><strong>What is it?</strong><br>Frontend frameworks determine the application&#x27;s UI architecture, state management, and build toolchain.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Determines how our QR, geolocation, and attendance capabilities can technically integrate with the existing application.</div>
+</div>
+<div class="item">
+  <div class="q">Is the application running on a single instance or multiple instances? Do you have auto-scaling?</div>
+  <div class="tech-hint">e.g., AWS Auto Scaling Group, ECS Service Auto Scaling, Kubernetes HPA, AWS Application Load Balancer, Nginx reverse proxy</div>
+  <div class="why"><strong>What is it?</strong><br>Multiple instances allow traffic distribution and failover. Auto-scaling adds/removes instances based on traffic or resource utilization.</div>
+  <div class="why"><strong>Why we ask:</strong><br>A single instance is a bottleneck and single point of failure. Horizontal scaling is needed for high-volume QR scans and attendance.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have separate Development, UAT/Staging, and Production environments?</div>
+  <div class="tech-hint">e.g., Separate AWS accounts per environment, VPC isolation, Terraform workspaces, environment-specific config via AWS Parameter Store / Secrets Manager</div>
+  <div class="why"><strong>What is it?</strong><br>Development is where engineers build. UAT (User Acceptance Testing) is for business validation. Production is the live system.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Separating environments prevents development changes from directly impacting real users and production data.</div>
+</div>
+
+<h2>3. API Architecture &amp; Security</h2>
+<div class="tech-context">How backend APIs are exposed, authenticated, versioned, and protected from abuse.</div>
+<div class="item">
+  <div class="q">How are BSS APIs currently exposed and secured?</div>
+  <div class="tech-hint">e.g., REST APIs, GraphQL, gRPC, WebSockets, HTTPS + TLS 1.2+, JWT Bearer tokens, API keys, OAuth 2.0</div>
+  <div class="why"><strong>What is it?</strong><br>APIs (Application Programming Interfaces) allow the frontend to communicate with backend services. They must be encrypted (HTTPS/TLS) and authenticated.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Identifies the integration mechanism our new QR, identity, and attendance services should use.</div>
+</div>
+<div class="item">
+  <div class="q">Do you use an API Gateway for routing, authentication, and rate limiting?</div>
+  <div class="tech-hint">e.g., AWS API Gateway, Kong, Nginx reverse proxy, Traefik, Envoy, Apigee, Tyk</div>
+  <div class="why"><strong>What is it?</strong><br>An API Gateway is a single entry point that handles routing, authentication, rate limiting, request/response transformation, and logging for all APIs.</div>
+  <div class="why"><strong>Why we ask:</strong><br>If one already exists, it becomes the natural integration boundary for our new services.</div>
+</div>
+<div class="item">
+  <div class="q">How are APIs authenticated?</div>
+  <div class="tech-hint">e.g., JWT (HS256/RS256), OAuth 2.0 + OIDC, AWS Cognito, Auth0, session cookies, API keys, mTLS</div>
+  <div class="why"><strong>What is it?</strong><br>JWT is a signed token for stateless API auth. OAuth 2.0 is an authorization framework for delegated access. OIDC adds identity on top of OAuth 2.0.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Our services must integrate securely with the existing authentication mechanism rather than creating conflicting sessions.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have rate limiting on sensitive endpoints like attendance and QR validation?</div>
+  <div class="tech-hint">e.g., API Gateway throttling, Nginx rate limiting (limit_req), Redis-based rate limiter, token bucket, leaky bucket algorithms</div>
+  <div class="why"><strong>What is it?</strong><br>Rate limiting restricts how many requests a client can make in a given time window, preventing abuse and protecting backend resources.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Without rate limiting, a spike in QR scans or attendance submissions could overwhelm the backend or database.</div>
+</div>
+<div class="item">
+  <div class="q">How do you handle API versioning and backward compatibility?</div>
+  <div class="tech-hint">e.g., URL-based: /api/v1/, /api/v2/; Header-based: Accept-Version; Query parameter; OpenAPI/Swagger spec</div>
+  <div class="why"><strong>What is it?</strong><br>API versioning allows multiple versions of an API to coexist so clients can upgrade on their own schedule without breaking.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Needed when introducing QR and attendance endpoints without breaking the existing frontend integration.</div>
+</div>
+
+<h2>4. Database Architecture &amp; Scale</h2>
+<div class="tech-context">Database engine, topology, sizing, middleware, indexing, and failure handling.</div>
+<div class="item">
+  <div class="q">What database technology and version are you using?</div>
+  <div class="tech-hint">e.g., PostgreSQL 15/16, MySQL 8.0, Amazon Aurora PostgreSQL, Amazon RDS, MongoDB 6.0, DynamoDB, TimescaleDB</div>
+  <div class="why"><strong>What is it?</strong><br>The database engine determines query capabilities, indexing options, geospatial support (PostGIS for PostgreSQL), and replication features.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Affects our geolocation queries (PostGIS), partitioning strategy for attendance data, and migration complexity.</div>
+</div>
+<div class="item">
+  <div class="q">Is the database single-instance, primary/replica, or Multi-AZ? What&#x27;s the current DB size and monthly growth?</div>
+  <div class="tech-hint">e.g., AWS RDS Multi-AZ, Aurora Global Database, read replicas, PostgreSQL streaming replication, Patroni HA cluster</div>
+  <div class="why"><strong>What is it?</strong><br>Multi-AZ provides automatic failover to a standby in another availability zone. Read replicas offload reporting/read queries from the primary.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Current size and growth rate determine when partitioning or sharding may become necessary for 10 million identities.</div>
+</div>
+<div class="item">
+  <div class="q">Do you use database middleware like PgBouncer, Pgpool-II, or ProxySQL?</div>
+  <div class="tech-hint">e.g., PgBouncer (connection pooling), Pgpool-II (connection pooling + read/write splitting + failover), ProxySQL, AWS RDS Proxy, HAProxy</div>
+  <div class="why"><strong>What is it?</strong><br>Database middleware sits between the application and the database to manage connection pooling, load balance reads across replicas, and provide failover.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Connection pooling is critical under high concurrency — without it each request would open/close a DB connection, wasting resources.</div>
+</div>
+<div class="item">
+  <div class="q">What is your indexing strategy for Worker, QR, Attendance, and location queries?</div>
+  <div class="tech-hint">e.g., B-tree index, GIN index, GIST index (PostGIS), partial index, composite index, BRIN index, covering index</div>
+  <div class="why"><strong>What is it?</strong><br>Indexes are database structures that speed up data retrieval. GIST indexes enable fast geospatial queries (e.g., &#x27;find workers within 200m of worksite&#x27;).</div>
+  <div class="why"><strong>Why we ask:</strong><br>Poor indexing is the most common cause of slow queries at scale. QR lookups and geofence queries need specific index types.</div>
+</div>
+<div class="item">
+  <div class="q">How do you handle database downtime or primary failure?</div>
+  <div class="tech-hint">e.g., RDS Multi-AZ auto-failover, Aurora fault-tolerant storage, Patroni + etcd, manual DNS/connection string swap, read replica promotion</div>
+  <div class="why"><strong>What is it?</strong><br>Failover is the process of switching to a standby database when the primary fails. Multi-AZ provides automatic detection and failover typically within 1-2 minutes.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Attendance transactions must not be lost during database outages. Understanding the current failover capability tells us what gaps exist.</div>
+</div>
+
+<h2>5. SSL / TLS &amp; Network Security</h2>
+<div class="tech-context">Certificate management, TLS termination, WAF/DDoS protection, and network segmentation.</div>
+<div class="item">
+  <div class="q">How are SSL/TLS certificates managed and where does TLS termination happen?</div>
+  <div class="tech-hint">e.g., AWS Certificate Manager (ACM), Let&#x27;s Encrypt + certbot, DigiCert, GlobalSign; TLS termination at ALB, Nginx, CloudFront, or EC2 instance</div>
+  <div class="why"><strong>What is it?</strong><br>TLS (Transport Layer Security) encrypts network traffic between clients and servers. Termination is the point where encrypted traffic is decrypted — typically at a load balancer or reverse proxy.</div>
+  <div class="why"><strong>Why we ask:</strong><br>TLS termination at the load balancer offloads crypto overhead from application servers. ACM auto-renews certificates to prevent expiry outages.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have a WAF (Web Application Firewall) in place?</div>
+  <div class="tech-hint">e.g., AWS WAF, Cloudflare WAF, ModSecurity, NAXSI, F5 BIG-IP ASM, Imperva</div>
+  <div class="why"><strong>What is it?</strong><br>A WAF filters malicious HTTP/HTTPS traffic by inspecting requests against rulesets (e.g., OWASP Top 10, SQL injection, XSS).</div>
+  <div class="why"><strong>Why we ask:</strong><br>Protects APIs from common web attacks that could compromise Worker data, QR tokens, or attendance records.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have DDoS protection?</div>
+  <div class="tech-hint">e.g., AWS Shield Standard / Advanced, CloudFront + Shield, Akamai, Cloudflare, Arbor Networks</div>
+  <div class="why"><strong>What is it?</strong><br>DDoS (Distributed Denial-of-Service) attacks flood a service with traffic to make it unavailable. DDoS protection detects and mitigates these attacks at the network edge.</div>
+  <div class="why"><strong>Why we ask:</strong><br>A DDoS attack during peak attendance hours could prevent workers from marking attendance. Shield Standard comes free with AWS.</div>
+</div>
+<div class="item">
+  <div class="q">How are internal services isolated from unauthorized network access?</div>
+  <div class="tech-hint">e.g., AWS Security Groups, NACLs, private subnets, VPC peering, Transit Gateway, Bastion hosts, AWS PrivateLink</div>
+  <div class="why"><strong>What is it?</strong><br>Network segmentation ensures that application servers, databases, and caches can only communicate with authorized services. Security groups act as stateful firewalls.</div>
+  <div class="why"><strong>Why we ask:</strong><br>If an application server is compromised, proper network isolation prevents lateral movement to the database or other services.</div>
+</div>
+
+<h2>6. Redis, Caching &amp; Session Management</h2>
+<div class="tech-context">Whether Redis or an equivalent is used for sessions, caching, and real-time state.</div>
+<div class="item">
+  <div class="q">Are you using Redis or another caching technology?</div>
+  <div class="tech-hint">e.g., AWS ElastiCache for Redis 7.0, self-managed Redis on EC2, Memcached, Hazelcast, Dragonfly, KeyDB</div>
+  <div class="why"><strong>What is it?</strong><br>Redis is an in-memory data store used for caching frequently accessed data, storing user sessions, rate limiting, and pub/sub messaging. It operates at microsecond latency.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Caching Worker profiles, Contractor lists, and worksite data in Redis avoids repeated database queries and reduces API latency.</div>
+</div>
+<div class="item">
+  <div class="q">Where are user sessions stored?</div>
+  <div class="tech-hint">e.g., Redis (ElastiCache), JWT (client-side, no server store), database-backed sessions (PostgreSQL), Memcached, in-memory (PM2/app server)</div>
+  <div class="why"><strong>What is it?</strong><br>Session storage determines where authenticated user state lives — server-side (Redis/DB) or client-side (JWT). Server-side sessions can be centrally invalidated.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Our new services must share or integrate with the existing session/auth mechanism to avoid conflicting login states.</div>
+</div>
+<div class="item">
+  <div class="q">Are frequently accessed records (Worker profiles, Contractor lists, Worksite data) cached?</div>
+  <div class="tech-hint">e.g., Redis with TTL, CDN caching (CloudFront), in-app memory cache (Node.js lru-cache), database query cache, ElastiCache cluster</div>
+  <div class="why"><strong>What is it?</strong><br>Caching stores copies of frequently read data in fast memory layers. TTL (Time-To-Live) controls how long data stays fresh before a refresh from the database.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Without caching, every QR scan or attendance marking could trigger 3-5 database queries, quickly overwhelming the DB at scale.</div>
+</div>
+<div class="item">
+  <div class="q">What happens if Redis/cache becomes unavailable?</div>
+  <div class="tech-hint">e.g., Fallback to database reads, ElastiCache Multi-AZ with auto-failover, Redis Sentinel, Redis Cluster, circuit breaker pattern</div>
+  <div class="why"><strong>What is it?</strong><br>Cache failure handling determines whether the application degrades gracefully (reads from DB with higher latency) or fails hard (cache is a hard dependency).</div>
+  <div class="why"><strong>Why we ask:</strong><br>We need to know whether cache availability is a requirement for attendance to function, especially during network partitions.</div>
+</div>
+
+<h2>7. Backup, High Availability &amp; Disaster Recovery</h2>
+<div class="tech-context">Backup frequency, restore testing, replication, multi-region, RPO and RTO targets.</div>
+<div class="item">
+  <div class="q">How frequently are database backups taken? Have you done a restore test?</div>
+  <div class="tech-hint">e.g., AWS RDS automated snapshots (5-min to hourly), pg_dump, pgBackRest, WAL-G, AWS Backup, S3 cross-region copy</div>
+  <div class="why"><strong>What is it?</strong><br>Regular backups create point-in-time copies of the database. A restore test validates that backups actually work — many teams discover corrupt backups only during a real incident.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Worker, QR identity, and attendance data must be recoverable. An untested backup is not a backup.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have database replication or a standby system for high availability?</div>
+  <div class="tech-hint">e.g., RDS Multi-AZ synchronous standby, Aurora replicas, PostgreSQL streaming replication (async/sync), Patroni + etcd, Bucardo</div>
+  <div class="why"><strong>What is it?</strong><br>Replication maintains one or more copies of the database in real time. Synchronous replication ensures zero data loss during failover. Asynchronous may lose a few seconds of data.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Multi-AZ alone may not protect against region-wide failures. Understanding the replication topology informs our DR strategy.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have a secondary AWS region or disaster recovery site?</div>
+  <div class="tech-hint">e.g., Multi-region architecture (ap-south-1 + ap-southeast-1), Aurora Global Database, S3 cross-region replication, Route 53 failover routing, CloudFront origin failover</div>
+  <div class="why"><strong>What is it?</strong><br>A secondary region provides geographic redundancy. If an entire AWS region goes down (rare but possible), traffic can be failed over to the secondary.</div>
+  <div class="why"><strong>Why we ask:</strong><br>For 1 crore workers, a region-wide outage in ap-south-1 could halt all attendance across India. A cross-region DR strategy may be warranted.</div>
+</div>
+<div class="item">
+  <div class="q">What are your current RPO and RTO targets?</div>
+  <div class="tech-hint">e.g., RPO = acceptable data loss window (e.g., 5 min, 1 hour). RTO = target recovery time (e.g., 15 min, 4 hours). Measured via DR drills.</div>
+  <div class="why"><strong>What is it?</strong><br>RPO (Recovery Point Objective) is the maximum acceptable data loss measured in time. RTO (Recovery Time Objective) is the target time to restore service after a failure.</div>
+  <div class="why"><strong>Why we ask:</strong><br>These numbers define the architecture requirements — lower RPO/RTO needs synchronous replication, automated failover, and warm/hot standby infrastructure.</div>
+</div>
+
+<h2>8. Existing Frontend Integration &amp; New QR Capability</h2>
+<div class="tech-context">How our QR + identity binding + geolocation + attendance solution can integrate with the existing platform.</div>
+<div class="item">
+  <div class="q">Can you walk through the existing user journeys — Worker, Contractor, Employer roles and their screens?</div>
+  <div class="tech-hint">e.g., Web dashboard, mobile app, PWA, role-based UI, multi-tenant views (Employer sees their contractors/workers only)</div>
+  <div class="why"><strong>What is it?</strong><br>We need to understand the existing user flows, screens, and workflows to identify where QR scanning, identity binding, and attendance marking fits naturally.</div>
+  <div class="why"><strong>Why we ask:</strong><br>The new QR and attendance capabilities should fit seamlessly into the existing BSS experience rather than being a disjointed add-on.</div>
+</div>
+<div class="item">
+  <div class="q">Where should Employer, Contractor, and Worker master data remain authoritative?</div>
+  <div class="tech-hint">e.g., BSS PostgreSQL as system of record, read-only API integration, event sourcing for sync, outbox pattern for data changes</div>
+  <div class="why"><strong>What is it?</strong><br>The authoritative source is the system that holds the official/canonical record for an entity. All other systems should reference or sync from it.</div>
+  <div class="why"><strong>Why we ask:</strong><br>We want to avoid two systems independently maintaining conflicting Worker/Contractor identities — duplicate data leads to reconciliation nightmares.</div>
+</div>
+<div class="item">
+  <div class="q">What unique ID should our QR identity map to for an existing Worker?</div>
+  <div class="tech-hint">e.g., worker_uuid (UUID v4), mobile_number, employee_code, Aadhaar-seeded ID, government-issued ID number, composite key</div>
+  <div class="why"><strong>What is it?</strong><br>Each Worker needs a unique, stable identifier that our QR solution can cryptographically bind to without exposing the raw ID in the QR payload.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Creates continuity between the existing platform and the new QR/attendance layer. The QR itself can contain a hashed/mapped token rather than the raw database ID.</div>
+</div>
+<div class="item">
+  <div class="q">What authentication mechanism does the existing frontend use when calling backend APIs?</div>
+  <div class="tech-hint">e.g., JWT access/refresh tokens, OAuth 2.0/OIDC (Cognito, Auth0, Keycloak), session cookies, API keys, HMAC signing, mTLS</div>
+  <div class="why"><strong>What is it?</strong><br>The auth mechanism determines how the frontend proves its identity to the backend for each API call. JWT tokens are self-contained; sessions require a server-side store.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Our new services must authenticate using the same mechanism — we cannot introduce a separate login system.</div>
+</div>
+<div class="item">
+  <div class="q">What are the existing frontend-to-backend integration points we can use for Worker validation?</div>
+  <div class="tech-hint">e.g., GET /api/workers/{id}, GET /api/contractors/{id}, POST /api/attendance, GraphQL queries, WebSocket endpoints, internal service-to-service API</div>
+  <div class="why"><strong>What is it?</strong><br>Integration points are the specific API endpoints or service interfaces through which the existing frontend reads and writes data.</div>
+  <div class="why"><strong>Why we ask:</strong><br>These interfaces are potential entry points for our QR, binding, geolocation, and attendance capabilities to interact with existing data.</div>
+</div>
+
+<h2>9. Authentication, IAM &amp; RBAC</h2>
+<div class="tech-context">Identity model, role-based access, MFA posture, and OAuth/OIDC adoption.</div>
+<div class="item">
+  <div class="q">What is the current IAM model and RBAC structure?</div>
+  <div class="tech-hint">e.g., Custom role table in PostgreSQL, AWS IAM, AWS Cognito groups, Keycloak realms, Auth0 RBAC, CASL, Casbin</div>
+  <div class="why"><strong>What is it?</strong><br>IAM (Identity and Access Management) is the framework for identities, authentication, and permissions. RBAC (Role-Based Access Control) assigns permissions to roles rather than to individual users.</div>
+  <div class="why"><strong>Why we ask:</strong><br>BSS has multiple user types (Super Admin, Employer, Primary Contractor, Secondary Contractor, Worker) with different data access scopes.</div>
+</div>
+<div class="item">
+  <div class="q">Is MFA (Multi-Factor Authentication) enabled for administrators and privileged users?</div>
+  <div class="tech-hint">e.g., SMS OTP, TOTP (Google Authenticator, Authy), hardware security keys (YubiKey, FIDO2), biometric (fingerprint/face), email OTP</div>
+  <div class="why"><strong>What is it?</strong><br>MFA requires two or more verification factors — something you know (password), something you have (phone/security key), or something you are (biometric).</div>
+  <div class="why"><strong>Why we ask:</strong><br>Privileged accounts (Super Admin, Employer) can access all Worker and attendance data. A compromised admin account without MFA is a major security risk.</div>
+</div>
+<div class="item">
+  <div class="q">Are you using OAuth 2.0 / OIDC for centralized authentication?</div>
+  <div class="tech-hint">e.g., AWS Cognito, Auth0, Okta, Keycloak, Azure AD, Google Identity Platform, FusionAuth</div>
+  <div class="why"><strong>What is it?</strong><br>OAuth 2.0 provides standardized authorization flows. OIDC (OpenID Connect) adds identity/authentication on top of OAuth 2.0 — it&#x27;s the modern standard for single sign-on.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Centralized identity via OIDC allows our new services to authenticate users without maintaining separate user stores.</div>
+</div>
+<div class="item">
+  <div class="q">How are permissions enforced between roles at the API and database level?</div>
+  <div class="tech-hint">e.g., Middleware-based RBAC, row-level security (PostgreSQL RLS), scoped API keys, attribute-based access control (ABAC), OPA (Open Policy Agent)</div>
+  <div class="why"><strong>What is it?</strong><br>Permission enforcement ensures that a Worker cannot view another Worker&#x27;s data, and a Contractor can only see their assigned workers — implemented either at the API layer or database layer.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Our QR and attendance services need to respect the same permission model. PostgreSQL RLS is particularly powerful for multi-tenant data isolation.</div>
+</div>
+
+<h2>10. Geolocation, Geofencing &amp; Anti-Spoofing</h2>
+<div class="tech-context">How location is captured, verified server-side, geofenced, and protected against GPS/VPN/device spoofing.</div>
+<div class="item">
+  <div class="q">How is geolocation captured and verified — on-device, server-side, or both?</div>
+  <div class="tech-hint">e.g., Browser Geolocation API, Google Play Location Services, GPS/GNSS, network-based location (Wi-Fi/cell towers), IP geolocation, PostGIS spatial queries</div>
+  <div class="why"><strong>What is it?</strong><br>Client-side capture uses the device&#x27;s GPS/network. Server-side verification cross-checks the coordinates against known worksite boundaries using geospatial functions.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Client-only verification is trivially spoofable. Server-side verification with PostGIS provides an authoritative check that cannot be bypassed by the user.</div>
+</div>
+<div class="item">
+  <div class="q">How is the worksite geofence defined and what radius is permitted?</div>
+  <div class="tech-hint">e.g., PostGIS ST_DWithin (radius), ST_Contains (polygon), GeoJSON polygon fencing, circular geofence (point + radius), multi-point worksite boundary</div>
+  <div class="why"><strong>What is it?</strong><br>A geofence is a virtual boundary around a physical worksite. Workers must be within this boundary when marking attendance. Can be a simple circle or a complex polygon.</div>
+  <div class="why"><strong>Why we ask:</strong><br>The geofence precision directly impacts attendance integrity. A 500m radius is easy to spoof from a nearby location; a tight polygon with 50m tolerance is harder.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have any anti-spoofing measures — mock location, rooted device, VPN/proxy detection?</div>
+  <div class="tech-hint">e.g., Android SafetyNet/Play Integrity, iOS DeviceCheck, mock location detection (isMockLocation flag), root/jailbreak detection, IP reputation databases (MaxMind, IP2Location)</div>
+  <div class="why"><strong>What is it?</strong><br>Mock location lets users fake GPS coordinates. Rooted/jailbroken devices can bypass app-level security. VPNs can mask true IP location. Anti-spoofing layers detect these signals.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Without these checks, a worker could mark attendance from home using a fake GPS app while appearing to be at the worksite.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have a location-attestation mechanism that proves the device was at the claimed location?</div>
+  <div class="tech-hint">e.g., Google Geospatial API, server-signed location tokens, timestamped + HMAC-signed coordinates, EXIF GPS metadata on a photo, Bluetooth beacon (BLE) proximity</div>
+  <div class="why"><strong>What is it?</strong><br>Location attestation provides cryptographic proof that a device was at specific coordinates at a specific time — harder to forge than raw GPS coordinates alone.</div>
+  <div class="why"><strong>Why we ask:</strong><br>For high-stakes attendance (e.g., government compliance), raw GPS is insufficient. Attestation adds a trust layer that auditors can verify.</div>
+</div>
+<div class="item">
+  <div class="q">Can attendance be recorded offline in weak-connectivity areas and synced later?</div>
+  <div class="tech-hint">e.g., IndexedDB, SQLite (offline), Service Worker background sync, Workbox, PouchDB + CouchDB sync, AWS AppSync offline, queue-on-device pattern</div>
+  <div class="why"><strong>What is it?</strong><br>Offline attendance allows workers to mark attendance without internet, queuing the event locally and syncing when connectivity returns (with the original timestamp preserved).</div>
+  <div class="why"><strong>Why we ask:</strong><br>Many construction/agricultural worksites have poor or no connectivity. Offline support is often a hard requirement for real-world adoption.</div>
+</div>
+
+<h2>11. Monitoring &amp; Observability</h2>
+<div class="tech-context">Logs, metrics, tracing, and alerting coverage across the stack.</div>
+<div class="item">
+  <div class="q">What is your current observability stack?</div>
+  <div class="tech-hint">e.g., AWS CloudWatch, Grafana + Prometheus, ELK (Elasticsearch, Logstash, Kibana), Datadog, New Relic, Sentry, OpenTelemetry</div>
+  <div class="why"><strong>What is it?</strong><br>Observability combines logs (what happened), metrics (how much/how fast), and traces (where time was spent across services). An observability stack is the set of tools that collect and visualize this data.</div>
+  <div class="why"><strong>Why we ask:</strong><br>QR scan failures, GPS errors, and attendance latency issues must be visible in real time rather than discovered through user complaints.</div>
+</div>
+<div class="item">
+  <div class="q">Do you monitor infrastructure metrics and database performance?</div>
+  <div class="tech-hint">e.g., CloudWatch metrics (CPU, memory, disk, network), RDS Performance Insights, pg_stat_statements, slow-query log, replication lag monitoring, disk IOPS</div>
+  <div class="why"><strong>What is it?</strong><br>Infrastructure metrics track resource utilization (CPU/RAM) while database performance monitoring tracks query execution time, connection counts, and replication health.</div>
+  <div class="why"><strong>Why we ask:</strong><br>The first sign of scaling trouble is usually visible in these metrics — e.g., CPU saturation or slow queries degrading attendance API response times.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have API latency (p50/p95/p99) and error-rate monitoring with alerting?</div>
+  <div class="tech-hint">e.g., ALB access logs, CloudWatch metrics on 5xx errors, p95/p99 latency alarms, Grafana SLO dashboards, custom middleware metrics, RED metrics (Rate/Errors/Duration)</div>
+  <div class="why"><strong>What is it?</strong><br>API latency percentiles show the worst-case response times — p99 at 2 seconds means 1% of users wait 2+ seconds. Error-rate monitoring catches spikes in failures.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Attendance APIs are time-sensitive. If p99 latency exceeds 3 seconds during peak hours, workers may leave before receiving confirmation.</div>
+</div>
+<div class="item">
+  <div class="q">Do you have QR scan and attendance success/failure metrics tracked as business KPIs?</div>
+  <div class="tech-hint">e.g., CloudWatch custom metrics, Grafana business dashboards, attendance events streamed to analytics, Prometheus counters, daily success-rate reports</div>
+  <div class="why"><strong>What is it?</strong><br>Business KPI monitoring tracks business-level outcomes — how many workers successfully marked attendance, QR scan failure reasons, geofence rejection rates — not just technical metrics.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Technical monitoring alone (CPU/RAM) won&#x27;t tell you that 15% of QR scans failed due to poor GPS. Business KPIs surface the actual user experience.</div>
+</div>
+
+<h2>12. Scale &amp; Performance Baseline</h2>
+<div class="tech-context">Current throughput, concurrency, and tested capacity — the numbers that drive scaling decisions.</div>
+<div class="item">
+  <div class="q">What is the current maximum number of registered workers and peak concurrent users?</div>
+  <div class="tech-hint">e.g., Measured via DB count queries, ALB active connection metrics, session count, ConcurrentUsers in CloudWatch, RDS DatabaseConnections</div>
+  <div class="why"><strong>What is it?</strong><br>Registered workers is the total count in the database. Concurrent users is the number actively using the system at the same time (typically during 8-10 AM attendance window).</div>
+  <div class="why"><strong>Why we ask:</strong><br>Scaling from current numbers to 1 crore (10M) workers requires understanding the baseline — a 10x or 100x increase drives different architecture decisions.</div>
+</div>
+<div class="item">
+  <div class="q">What is the current peak API RPS and attendance transactions per second?</div>
+  <div class="tech-hint">e.g., ALB RequestCount metric, CloudWatch API Gateway metrics, application-level counter, RDS DatabaseConnections, TPS from Performance Insights</div>
+  <div class="why"><strong>What is it?</strong><br>RPS (Requests Per Second) measures API throughput. TPS (Transactions Per Second) measures database write throughput during attendance marking.</div>
+  <div class="why"><strong>Why we ask:</strong><br>These numbers determine whether we need async processing queues or if synchronous processing is sufficient. Above ~500 RPS, queuing may become necessary.</div>
+</div>
+<div class="item">
+  <div class="q">Have you performed formal load testing? What was the maximum tested capacity?</div>
+  <div class="tech-hint">e.g., JMeter, k6, Locust, Artillery, Gatling, AWS Distributed Load Testing, vegeta, wrk2</div>
+  <div class="why"><strong>What is it?</strong><br>Load testing simulates realistic traffic against the system to find its breaking point, identify bottlenecks, and validate that the system meets its throughput targets.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Without load testing, the true capacity ceiling is unknown. A 1-crore worker target should be validated through testing before designing the architecture.</div>
+</div>
+<div class="item">
+  <div class="q">What was the first bottleneck encountered under load — database, application CPU, or network?</div>
+  <div class="tech-hint">e.g., Database connection pool exhaustion, CPU saturation, memory pressure (OOM), network bandwidth limits, connection limits (ulimit, nginx worker_connections), disk I/O throttle</div>
+  <div class="why"><strong>What is it?</strong><br>The first bottleneck is the resource that saturates first under load. Understanding it tells us the primary scaling constraint — is it CPU-bound, I/O-bound, or connection-bound?</div>
+  <div class="why"><strong>Why we ask:</strong><br>If the database is the bottleneck, our solution should focus on caching, read replicas, and connection pooling. If application CPU is the bottleneck, horizontal scaling is the answer.</div>
+</div>
+
+<h2>13. Event-Driven Architecture &amp; High-Volume Attendance</h2>
+<div class="tech-context">Whether attendance is synchronous or queued, how bursts are handled, and deduplication strategy.</div>
+<div class="item">
+  <div class="q">Are attendance events processed synchronously or asynchronously?</div>
+  <div class="tech-hint">e.g., Synchronous (blocking API → DB insert → response), async (API → queue → worker → DB → notification), webhook callback, long polling</div>
+  <div class="why"><strong>What is it?</strong><br>Synchronous processing sends the API response only after the database write completes. Async processing accepts the event immediately, queues it, and processes in the background.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Sync is simpler but blocks API threads. Async decouples ingestion from processing, allowing the system to absorb bursts without degrading response times.</div>
+</div>
+<div class="item">
+  <div class="q">Do you use a message queue or event-streaming platform?</div>
+  <div class="tech-hint">e.g., AWS SQS (Standard/FIFO), RabbitMQ, Apache Kafka, Redis Streams, AWS SNS + SQS, AWS EventBridge, NATS, ActiveMQ</div>
+  <div class="why"><strong>What is it?</strong><br>A message queue buffers events between producers (attendance API) and consumers (workers that write to the database). FIFO queues guarantee ordering. Standard queues maximize throughput.</div>
+  <div class="why"><strong>Why we ask:</strong><br>A queue absorbs bursts of QR scans at shift start/end times (e.g., 1,000 workers scanning within 5 minutes) and smoothes the load on the database.</div>
+</div>
+<div class="item">
+  <div class="q">How do you handle sudden bursts of QR scans — is there buffering or do requests fail?</div>
+  <div class="tech-hint">e.g., SQS buffering, Redis Streams backpressure, API Gateway throttling with retry, exponential backoff, bulk write optimization</div>
+  <div class="why"><strong>What is it?</strong><br>A burst is a sudden spike in traffic (e.g., all workers at a large construction site scanning at 9 AM). Buffering queues the excess and processes at a steady rate instead of overwhelming the system.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Without burst handling, peak-time scans will result in 5xx errors or timeouts, leading to missed attendance records and frustrated workers.</div>
+</div>
+<div class="item">
+  <div class="q">If the database is temporarily slow, can incoming attendance events be buffered and replayed?</div>
+  <div class="tech-hint">e.g., SQS dead-letter queue (DLQ), Redis Streams replay, Kafka consumer offset reset, outbox pattern, idempotent consumer, retry with exponential backoff</div>
+  <div class="why"><strong>What is it?</strong><br>Buffering decouples event acceptance from event processing. If the database slows down, events queue up instead of failing. When the database recovers, the queue drains.</div>
+  <div class="why"><strong>Why we ask:</strong><br>Database slowdowns happen during peak hours or maintenance. Without buffering, those attendance events are permanently lost.</div>
+</div>
+<div class="item">
+  <div class="q">How do you prevent duplicate attendance events?</div>
+  <div class="tech-hint">e.g., Idempotency key (worker_id + date), UNIQUE constraint, Redis SETNX, database UPSERT, event deduplication by message ID, FIFO SQS deduplication</div>
+  <div class="why"><strong>What is it?</strong><br>Idempotency ensures that processing the same event multiple times produces the same result as processing it once. This is critical when networks cause retries.</div>
+  <div class="why"><strong>Why we ask:</strong><br>A worker who scans twice due to a network retry should not be marked as attending twice. Database UNIQUE constraints are the simplest and most reliable safeguard.</div>
+</div>
+
+<h2>14. How the Findings Lead to Our Architecture Proposal</h2>
+
+
+<div class="context"><strong>Do not propose technology first.</strong> Use the answers to establish: <strong>current capacity → current bottleneck → future workload → required architecture.</strong> For example, if the existing application is single-server, the first issue may be high availability and horizontal scaling. If the database is the bottleneck, database optimization/replication/partitioning may come first. If location integrity is weak, the priority may be device and location attestation.</div>
+<div class="arch">Mobile / Web Applications
+          │
+          ▼
+     CDN / WAF / DDoS Protection
+          │
+          ▼
+     Load Balancer
+          │
+          ▼
+       API Gateway
+          │
+   ┌──────┼───────────┐
+   ▼      ▼           ▼
+Identity Worker   Attendance
+Service  Service   Service
+   │      │           │
+   └──────┼───────────┘
+          ▼
+   Event / Queue Layer
+          │
+   ┌──────┴───────────────┐
+   ▼                      ▼
+PostgreSQL + PostGIS     Redis
+Source of Truth          Cache
+   │
+   ├── Read Replicas / Partitioning
+   └── Backup / HA / DR
+
+      Observability Layer
+ Logs + Metrics + Traces + Alerts</div>
+
+<div class="proposal"><strong>Proposal principle:</strong> Retain what already works. Introduce new components only where the assessment demonstrates a requirement for horizontal scaling, high availability, stronger security, geospatial integrity, event processing, observability or disaster recovery. Kubernetes, Kafka, sharding and similar advanced technologies should be evaluated against measured workload and operational complexity rather than added automatically.</div>
+
+
+<h2>15. Technical Vocabulary — Quick Reference</h2>
+
+
+<table>
+<tr><th>Term</th><th>Full form / meaning</th><th>Simple explanation</th></tr>
+<tr><td>VM</td><td>Virtual Machine</td><td>A virtual computer/server running on physical infrastructure.</td></tr>
+<tr><td>Docker</td><td>Container platform</td><td>Packages an application and its dependencies into a portable container.</td></tr>
+<tr><td>Kubernetes / K8s</td><td>Kubernetes</td><td>Manages containers, deployments, scaling and recovery.</td></tr>
+<tr><td>LB</td><td>Load Balancer</td><td>Distributes traffic across application instances.</td></tr>
+<tr><td>TLS</td><td>Transport Layer Security</td><td>Encrypts network traffic, including HTTPS.</td></tr>
+<tr><td>WAF</td><td>Web Application Firewall</td><td>Filters malicious web/API traffic.</td></tr>
+<tr><td>DDoS</td><td>Distributed Denial-of-Service</td><td>Attack that overwhelms a service with traffic/requests.</td></tr>
+<tr><td>API</td><td>Application Programming Interface</td><td>Allows software systems to communicate.</td></tr>
+<tr><td>IAM</td><td>Identity and Access Management</td><td>Manages identities, authentication and access.</td></tr>
+<tr><td>RBAC</td><td>Role-Based Access Control</td><td>Assigns permissions based on roles.</td></tr>
+<tr><td>MFA</td><td>Multi-Factor Authentication</td><td>Uses multiple authentication factors.</td></tr>
+<tr><td>JWT</td><td>JSON Web Token</td><td>Signed token commonly used for API authentication.</td></tr>
+<tr><td>OAuth 2.0</td><td>Open Authorization 2.0</td><td>Authorization framework for delegated access.</td></tr>
+<tr><td>OIDC</td><td>OpenID Connect</td><td>Identity/authentication layer on OAuth 2.0.</td></tr>
+<tr><td>RPO</td><td>Recovery Point Objective</td><td>Maximum acceptable data-loss window.</td></tr>
+<tr><td>RTO</td><td>Recovery Time Objective</td><td>Target time to restore service.</td></tr>
+<tr><td>GPS</td><td>Global Positioning System</td><td>Satellite positioning system.</td></tr>
+<tr><td>GNSS</td><td>Global Navigation Satellite System</td><td>General term for satellite navigation systems.</td></tr>
+<tr><td>CI/CD</td><td>Continuous Integration / Continuous Delivery or Deployment</td><td>Automated build, test and release pipeline.</td></tr>
+<tr><td>SAST</td><td>Static Application Security Testing</td><td>Security analysis of source/compiled code.</td></tr>
+<tr><td>DAST</td><td>Dynamic Application Security Testing</td><td>Security testing of a running application.</td></tr>
+<tr><td>RPS</td><td>Requests Per Second</td><td>API request throughput.</td></tr>
+<tr><td>TPS</td><td>Transactions Per Second</td><td>Transaction throughput.</td></tr>
+<tr><td>HA</td><td>High Availability</td><td>Designing for continued service despite component failures.</td></tr>
+<tr><td>DR</td><td>Disaster Recovery</td><td>Recovery after major infrastructure/system failure.</td></tr>
+<tr><td>Redis</td><td>In-memory data store</td><td>Very fast store commonly used for caching, sessions and temporary state.</td></tr>
+<tr><td>PostGIS</td><td>PostgreSQL geospatial extension</td><td>Adds geographic data types and spatial queries to PostgreSQL.</td></tr>
+</table>
+
+
+<p class="small">Prepared as a technical discovery and architecture discussion guide. The explanations are general technology context; the existing BSS implementation should be treated as unknown until confirmed by its IT team.</p>
+
+</div></body></html>

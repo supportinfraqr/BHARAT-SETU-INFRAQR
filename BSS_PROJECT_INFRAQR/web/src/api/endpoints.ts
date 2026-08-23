@@ -23,6 +23,12 @@ export const qrApi = {
   unbind: (workerId: number) => api.post('/qr/bindings/unbind/', { worker: workerId }),
   approveBinding: (id: number, decision: 'APPROVE' | 'REJECT') =>
     api.post(`/qr/bindings/${id}/approve/`, { decision }),
+  unbindBinding: (id: number) =>
+    api.post(`/qr/bindings/${id}/unbind/`, {}),
+  unbindConsentRequest: (bindingId: number, party: 'initiator' | 'approver', channel: 'APP' | 'SMS_OTP' | 'IVR' | 'VOICE') =>
+    api.post(`/qr/bindings/${bindingId}/unbind/consent/request/`, { party, channel }),
+  unbindConsentResolve: (bindingId: number, party: 'initiator' | 'approver', decision: boolean, otp?: string) =>
+    api.post(`/qr/bindings/${bindingId}/unbind/consent/resolve/`, { party, decision, otp }),
   consentRequest: (bindingId: number, party: 'initiator' | 'approver', channel: 'APP' | 'SMS_OTP' | 'IVR' | 'VOICE') =>
     api.post(`/qr/bindings/${bindingId}/consent/request/`, { party, channel }),
   consentResolve: (bindingId: number, party: 'initiator' | 'approver', decision: boolean, otp?: string) =>
@@ -64,13 +70,6 @@ export const qrMgmtApi = {
   workerTree: (id: number) => api.get(`/qr/management/workers/${id}/tree/`),
   myProfile: () => api.get('/qr/profile/me/'),
   updateProfile: (payload: any) => api.put('/qr/profile/me/', payload),
-};
-
-export const siteApi = {
-  list: () => api.get('/qr/sites/'),
-  create: (payload: any) => api.post('/qr/sites/', payload),
-  update: (id: number, payload: any) => api.put(`/qr/sites/${id}/`, payload),
-  remove: (id: number) => api.delete(`/qr/sites/${id}/`),
 };
 
 export const legacyApi = {

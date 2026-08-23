@@ -581,11 +581,11 @@
 }
 .bss-worker-strip b { color: #F5C518; }
 
-/* Mobile: govt logos strip = 3 in a row, 1 below */
-@media (max-width: 767px) {
+/* Mobile/tablet: govt logos strip = 2x2 grid split for balanced layout */
+@media (max-width: 900px) {
   .bss-logo-strip {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 18px 12px;
     padding: 18px 12px;
   }
@@ -599,3 +599,91 @@
   .bss-logo-skill { height: 54px; }
   .bss-logo-divider { display: none; }
 }
+
+
+/* ===== Four Converging Transformations ===== */
+.bss-transformation-section {
+  max-width: 980px;
+  margin: 40px auto 48px;
+  text-align: left;
+  padding: 0 16px;
+}
+.bss-transformation-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 24px;
+  font-style: italic;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.5px;
+}
+.bss-trans-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+.bss-trans-card {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(2, 43, 94, 0.03);
+}
+.bss-trans-card-header-bar {
+  height: 8px;
+  width: 100%;
+}
+.bss-trans-card-content {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.bss-trans-card h4 {
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  font-style: italic;
+}
+.bss-trans-card p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  font-style: italic;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Card 1: Regulatory */
+.bss-trans-regulatory { background-color: #fdf8e2; }
+.bss-trans-regulatory h4 { color: #c2410c; }
+.bss-trans-regulatory .bss-trans-card-header-bar { background-color: #f97316; }
+
+/* Card 2: Digital */
+.bss-trans-digital { background-color: #e8f0fe; }
+.bss-trans-digital h4 { color: #1d4ed8; }
+.bss-trans-digital .bss-trans-card-header-bar { background-color: #2563eb; }
+
+/* Card 3: Sustainability */
+.bss-trans-sustainability { background-color: #e6f4ea; }
+.bss-trans-sustainability h4 { color: #15803d; }
+.bss-trans-sustainability .bss-trans-card-header-bar { background-color: #16a34a; }
+
+/* Card 4: Purpose */
+.bss-trans-purpose { background-color: #eedffc; }
+.bss-trans-purpose h4 { color: #6d28d9; }
+.bss-trans-purpose .bss-trans-card-header-bar { background-color: #7c3aed; }
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+  .bss-trans-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .bss-transformation-title {
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+}
+

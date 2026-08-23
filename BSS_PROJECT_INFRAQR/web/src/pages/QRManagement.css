@@ -92,3 +92,43 @@
   cursor: pointer;
   color: #6b7280;
 }
+
+/* ===== Mobile responsiveness (all mgmt pages: binding-requests, employers, etc.) ===== */
+@media (max-width: 768px) {
+  .qr-mgmt { padding: 0; }
+  .mgmt-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .mgmt-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .filter-btn { white-space: nowrap; flex: 0 0 auto; }
+  .mgmt-toolbar > .btn-primary,
+  .mgmt-toolbar > div:not(.mgmt-filters) { width: 100%; }
+
+  /* Keep tables readable: allow horizontal scroll instead of squishing */
+  .mgmt-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mgmt-table { min-width: 620px; }
+
+  .actions-cell .btn-approve,
+  .actions-cell .btn-reject,
+  .actions-cell .btn-primary,
+  .actions-cell .plan-select {
+    font-size: 12px;
+    padding: 6px 10px;
+    margin: 2px 0;
+  }
+  .my-plan-header { padding: 16px; }
+  .plan-grid, .plans-grid { grid-template-columns: 1fr; }
+  .qr-modal { width: 100%; max-width: 100%; padding: 20px 16px; }
+  .qr-modal-overlay { padding: 12px; }
+}
+@media (max-width: 480px) {
+  .status-badge { font-size: 11px; padding: 2px 8px; }
+  .mgmt-table { font-size: 12px; min-width: 560px; }
+}

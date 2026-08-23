@@ -3467,7 +3467,7 @@ namespace EesassinErp.Controllers
 
                     // DB Path
                     string dbFilePath = "/UploadedDocs/Diligence/" + newFileName;
-                    string CONNECTION_STRING = "Server=13.202.27.216;Initial Catalog=EZCMP_R;MultipleActiveResultSets=true;User ID=retail;Password=ezretail@123;Pooling=True;";
+                    string CONNECTION_STRING = "Server=localhost,1433;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=sa;Password=InfraQR2026!sql;Pooling=True;TrustServerCertificate=True;";
                     // ---- DB Save ----
                     using (SqlConnection con = new SqlConnection(CONNECTION_STRING))
                     {

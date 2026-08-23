@@ -59,6 +59,10 @@ class ContractorEmploymentSerializer(serializers.ModelSerializer):
 
 
 class WorkerSerializer(serializers.ModelSerializer):
+    contractor_name = serializers.SerializerMethodField()
+    site_name = serializers.SerializerMethodField()
+    employer_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Worker
         fields = [
@@ -101,7 +105,17 @@ class WorkerSerializer(serializers.ModelSerializer):
             "escalation1", "escalation2", "remark", "field_name", "is_deleted",
             "doj", "leaving_date", "employer", "contractor", "site", "ecsw_tuple",
             "photo", "is_active", "created_at",
+            "contractor_name", "site_name", "employer_name",
         ]
+
+    def get_contractor_name(self, obj):
+        return obj.contractor.name if obj.contractor else None
+
+    def get_site_name(self, obj):
+        return obj.site.name if obj.site else None
+
+    def get_employer_name(self, obj):
+        return obj.employer.name if obj.employer else None
 
 
 class QRCodeSerializer(serializers.ModelSerializer):

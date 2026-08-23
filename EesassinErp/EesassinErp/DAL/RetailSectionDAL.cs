@@ -3209,7 +3209,7 @@ namespace DAL
                 throw new Exception("Error converting Excel data to DataTable: " + ex.Message);
             }
 
-            string CONNECTION_STRING = "Server=13.202.27.216;Initial Catalog=EZCMP_R;MultipleActiveResultSets=true;User ID=retail;Password=ezretail@123;Pooling=True;";
+            string CONNECTION_STRING = "Server=localhost,1433;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=sa;Password=InfraQR2026!sql;Pooling=True;TrustServerCertificate=True;";
 
             using (SqlConnection con = new SqlConnection(CONNECTION_STRING))
             using (SqlCommand cmd = new SqlCommand("[RTL].[usp_PayRoll]", con))

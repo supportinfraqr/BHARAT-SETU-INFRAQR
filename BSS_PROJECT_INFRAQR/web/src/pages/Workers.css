@@ -27,3 +27,9 @@
 .panel-head-row h3 { margin: 0; color: #022B5E; }
 .worker-id-card-img { width: 100% !important; height: auto !important; max-width: 520px; border: 1px solid #e5e9f0; border-radius: 10px; display: block; }
 
+
+/* Mobile */
+@media (max-width: 480px) {
+  .workers-page { padding: 12px; }
+  .worker-grid { grid-template-columns: 1fr; gap: 14px; }
+}

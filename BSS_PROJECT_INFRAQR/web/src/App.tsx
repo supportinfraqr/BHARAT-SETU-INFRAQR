@@ -12,8 +12,8 @@ import ContractorsList from './pages/ContractorsList';
 import WorkerBinding from './pages/WorkerBinding';
 import BindingRequests from './pages/BindingRequests';
 import MyProfile from './pages/MyProfile';
-import Sites from './pages/Sites';
 import MyEmployers from './pages/MyEmployers';
+import MyContractor from './pages/MyContractor';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -63,11 +63,11 @@ export default function App() {
         <Route path="/qr/workers" element={<RequireAuth><Workers /></RequireAuth>} />
         <Route path="/qr/workers/:id" element={<RequireAuth><WorkerDetail /></RequireAuth>} />
         <Route path="/qr/contractors" element={<RequireAuth><ContractorsList /></RequireAuth>} />
-        <Route path="/qr/sites" element={<RequireAuth><Sites /></RequireAuth>} />
         <Route path="/qr/binding" element={<RequireAuth><WorkerBinding /></RequireAuth>} />
         <Route path="/qr/binding-requests" element={<RequireAuth><BindingRequests /></RequireAuth>} />
         <Route path="/qr/my-profile" element={<RequireAuth><MyProfile /></RequireAuth>} />
         <Route path="/qr/my-employers" element={<RequireAuth><MyEmployers /></RequireAuth>} />
+        <Route path="/qr/my-contractor" element={<RequireAuth><MyContractor /></RequireAuth>} />
         <Route path="/qr/management/employers" element={<RequireAuth><EmployerApprovals /></RequireAuth>} />
         <Route path="/module/:page" element={<RequireAuth><ModuleScreen /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />

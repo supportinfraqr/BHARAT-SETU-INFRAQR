@@ -72,9 +72,7 @@ const FIELDS: Record<string, FieldDef[]> = {
 export default function MyProfile() {
   const [entity, setEntity] = useState<string>('');
   const [form, setForm] = useState<Record<string, any>>({});
-  const [busy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -89,17 +87,6 @@ export default function MyProfile() {
 
   useEffect(() => { load(); }, [load]);
 
-  const save = async () => {
-    setSaving(true); setMsg('');
-    try {
-      const res = await qrMgmtApi.updateProfile(form);
-      setForm(res.data?.Data || form);
-      setMsg('Profile saved.');
-    } catch (e: any) {
-      setMsg(e?.response?.data?.Message || 'Failed to save');
-    } finally { setSaving(false); }
-  };
-
   const fields = FIELDS[entity] || [];
   const title = entity === 'employer' ? 'My Employer Profile' : entity === 'contractor' ? 'My Contractor Profile' : 'My Worker Profile';
 
@@ -109,7 +96,6 @@ export default function MyProfile() {
         {msg && <div className="mgmt-msg">{msg}</div>}
         <div className="mgmt-toolbar">
           <h3>{title}</h3>
-          <button className="btn-primary" onClick={save} disabled={saving || busy}>{saving ? 'Saving...' : 'Save'}</button>
         </div>
 
         <div className="profile-form">
@@ -119,14 +105,16 @@ export default function MyProfile() {
               {f.textarea ? (
                 <textarea
                   value={form[f.key] || ''}
-                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                  readOnly
                   rows={2}
+                  style={{ background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed' }}
                 />
               ) : (
                 <input
                   type={f.type || 'text'}
                   value={form[f.key] || ''}
-                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                  readOnly
+                  style={{ background: '#f3f4f6', color: '#6b7280', cursor: 'not-allowed' }}
                 />
               )}
             </div>

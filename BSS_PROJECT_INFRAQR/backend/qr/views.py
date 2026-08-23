@@ -2,13 +2,27 @@ from datetime import date, datetime
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from authx.authentication import LegacyHeaderAuthentication
+
+class QueryParamJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        header_auth = super().authenticate(request)
+        if header_auth is not None:
+            return header_auth
+        token = request.query_params.get("token")
+        if not token:
+            return None
+        validated_token = self.get_validated_token(token)
+        return self.get_user(validated_token), validated_token
+
 
 from .cards import card_response
 from .models import (
@@ -313,8 +327,14 @@ class WorkerListCreate(APIView):
         emp_id, con_id, role = resolve_scope(request.user)
         qs = Worker.objects.filter(is_active=True)
         if role == EMPLOYER and emp_id:
-            # Employer sees only workers in their own tree
-            qs = qs.filter(employer_id=emp_id)
+            # Employer sees workers in their tree via the chain:
+            # worker -> contractor -> employer (active employment) OR direct employer link.
+            employed_contractor_ids = ContractorEmployment.objects.filter(
+                employer_id=emp_id, status="ACTIVE"
+            ).values_list("contractor_id", flat=True).distinct()
+            qs = qs.filter(
+                Q(employer_id=emp_id) | Q(contractor_id__in=employed_contractor_ids)
+            ).distinct()
         elif role in (PRIMARY, SECONDARY) and con_id:
             qs = qs.filter(contractor_id=con_id)
         return Response(WorkerSerializer(qs, many=True).data)
@@ -353,7 +373,7 @@ class SiteListCreate(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER]):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY]):
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
         emp_id, con_id, role = resolve_scope(request.user)
         qs = Site.objects.filter(is_active=True).order_by("-created_at")
@@ -361,6 +381,12 @@ class SiteListCreate(APIView):
             qs = qs.filter(employer_id=emp_id)
         elif role == EMPLOYER and not emp_id:
             qs = qs.none()
+        elif role in (PRIMARY, SECONDARY) and con_id:
+            # Contractor sees only the sites they are employed at (via ContractorEmployment).
+            site_ids = ContractorEmployment.objects.filter(
+                contractor_id=con_id, status="ACTIVE"
+            ).exclude(site_id__isnull=True).values_list("site_id", flat=True).distinct()
+            qs = qs.filter(pk__in=site_ids)
         return Response({"Result": "Success", "Data": SiteSerializer(qs, many=True).data})
 
     def post(self, request):
@@ -491,6 +517,19 @@ class QRCodeView(APIView):
                                 binding_type="WORKER_CONTRACTOR", contractor=entity, worker=worker, status="PENDING"
                             ).first()
                             data["binding_status"] = "PENDING" if pending else "NOT_REQUESTED"
+                # If scanner is an employer, attach binding status (employer <-> contractor)
+                elif role == EMPLOYER:
+                    if entity.employer_id == emp_id or ContractorEmployment.objects.filter(
+                        contractor=entity, employer_id=emp_id, status="ACTIVE"
+                    ).exists():
+                        data["binding_status"] = "ALREADY_BOUND"
+                    elif entity.employer_id:
+                        data["binding_status"] = "BOUND_ELSEWHERE"
+                    else:
+                        pending = Binding.objects.filter(
+                            binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=entity, status="PENDING"
+                        ).first()
+                        data["binding_status"] = "PENDING" if pending else "NOT_REQUESTED"
             elif qr.entity_type == "WORKER" and entity:
                 full = (role in (SUPER, STAFF) or (role == EMPLOYER and entity.employer_id == emp_id)
                         or (role in (PRIMARY, SECONDARY) and entity.contractor_id == con_id)
@@ -507,6 +546,15 @@ class QRCodeView(APIView):
                     "full_name": entity.full_name,
                     "worker_id": entity.worker_id,
                 }
+                # Contractor scanning a worker: report binding status so the UI can
+                # offer "Bind Worker" or "Mark Attendance".
+                if role in (PRIMARY, SECONDARY):
+                    if entity.contractor_id == con_id:
+                        data["binding_status"] = "ALREADY_BOUND"
+                    elif entity.contractor_id:
+                        data["binding_status"] = "BOUND_ELSEWHERE"
+                    else:
+                        data["binding_status"] = "NOT_BOUND"
             return Response({"Result": "Success", "Data": data})
         if entity_type and entity_id:
             qr = QRCode.objects.filter(entity_type=entity_type.upper(), entity_id=entity_id).first()
@@ -582,17 +630,70 @@ class QRScanView(APIView):
                     },
                 })
 
-            # Contractor scans a worker QR -> full info if worker is under their contractor
+            # Contractor scans a worker QR
             if scanner_role in (PRIMARY, SECONDARY):
                 if con_id and worker.contractor_id and worker.contractor_id != con_id:
-                    log_scan(request, qr, worker=worker, scan_result="HIERARCHY_DENIED", lat=lat, lng=lng)
-                    return Response({"Result": "Error", "Message": "This worker is not under your contractor"}, status=403)
+                    # Worker already bound to another contractor
+                    log_scan(request, qr, worker=worker, scan_result="WORKER_BOUND_ELSEWHERE", lat=lat, lng=lng)
+                    return Response({
+                        "Result": "Success",
+                        "Data": {
+                            "entity_type": "WORKER",
+                            "action": "bound_elsewhere",
+                            "worker": {"id": worker.pk, "full_name": worker.full_name, "worker_id": worker.worker_id},
+                        },
+                    })
+                if worker.contractor_id == con_id:
+                    # Already bound to this contractor -> can mark attendance
+                    return Response({
+                        "Result": "Success",
+                        "Data": {
+                            "entity_type": "WORKER",
+                            "action": "already_bound",
+                            "worker": WorkerSerializer(worker).data,
+                        },
+                    })
+                # Unbound worker -> contractor can bind (create a WORKER_CONTRACTOR binding request)
+                existing = Binding.objects.filter(
+                    binding_type="WORKER_CONTRACTOR", contractor_id=con_id, worker=worker, status="PENDING"
+                ).first()
+                if existing:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {
+                            "entity_type": "WORKER",
+                            "action": "binding_pending",
+                            "binding_id": existing.pk,
+                            "worker": {"id": worker.pk, "full_name": worker.full_name, "worker_id": worker.worker_id},
+                        },
+                    })
+                binding = Binding.objects.create(
+                    binding_type="WORKER_CONTRACTOR", employer=worker.employer,
+                    contractor_id=con_id, worker=worker, status="PENDING",
+                    # The contractor initiated by scanning -> auto-approved as approver;
+                    # only the worker needs to approve.
+                    approver_consent="APPROVED",
+                    approver_consent_at=timezone.now(),
+                    consent_channel="APP",
+                )
+                log_scan(request, qr, worker=worker, scan_result="WORKER_BIND_REQUEST", lat=lat, lng=lng)
+                write_audit(request, "BINDING_REQUEST_WORKER_CONTRACTOR", "BINDING", binding.pk)
+                notify("WORKER", "WORKER_BINDING_REQUEST",
+                       f"Contractor requested to bind with you")
                 return Response({
                     "Result": "Success",
                     "Data": {
                         "entity_type": "WORKER",
-                        "action": "view_info",
-                        "worker": WorkerSerializer(worker).data,
+                        "action": "binding_requested",
+                        "binding_id": binding.pk,
+                        "worker": {
+                            "id": worker.pk,
+                            "full_name": worker.full_name,
+                            "worker_id": worker.worker_id,
+                            "mobile": worker.mobile,
+                            "designation": worker.designation,
+                        },
+                        "binding_status": "PENDING",
                     },
                 })
 
@@ -683,15 +784,45 @@ class QRScanView(APIView):
             contractor = entity
             log_scan(request, qr, scan_result="CONTRACTOR_SCAN", lat=lat, lng=lng)
             if scanner_role == EMPLOYER:
-                if emp_id and contractor.employer_id and contractor.employer_id != emp_id:
-                    return Response({"Result": "Error", "Message": "This contractor is not under your hierarchy"}, status=403)
+                basic = {
+                    "id": contractor.pk,
+                    "name": contractor.name,
+                    "contact_mobile": contractor.contact_mobile,
+                    "site_name": contractor.site_name,
+                    "is_primary": contractor.is_primary,
+                }
+                # Already bound to this employer
+                if contractor.employer_id == emp_id or ContractorEmployment.objects.filter(
+                    contractor=contractor, employer_id=emp_id, status="ACTIVE"
+                ).exists():
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "already_bound", "can_unbind": True},
+                    })
+                # Bound to another employer
+                if contractor.employer_id:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "bound_elsewhere", "can_request": True, "current_employer_id": contractor.employer_id},
+                    })
+                # Avoid duplicate pending requests
+                existing = Binding.objects.filter(
+                    binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=contractor, status="PENDING"
+                ).first()
+                if existing:
+                    return Response({
+                        "Result": "Success",
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "request_pending", "request_id": existing.pk},
+                    })
+                binding = Binding.objects.create(
+                    binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=contractor, status="PENDING",
+                )
+                write_audit(request, "BINDING_REQUEST_EMPLOYER_CONTRACTOR", "BINDING", binding.pk)
+                notify("PRIMARY_CONTRACTOR", "CONTRACTOR_BINDING_REQUEST",
+                       f"Employer requested to bind with {contractor.name}")
                 return Response({
                     "Result": "Success",
-                    "Data": {
-                        "entity_type": "CONTRACTOR",
-                        "action": "view_info",
-                        "contractor": ContractorSerializer(contractor).data,
-                    },
+                    "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "binding_requested"},
                 })
             if scanner_role in (PRIMARY, SECONDARY):
                 if con_id and contractor.pk != con_id:
@@ -999,7 +1130,44 @@ class BindingList(APIView):
                 "consent_expires_at": b.consent_expires_at,
                 "initiator_consent_at": b.initiator_consent_at,
                 "approver_consent_at": b.approver_consent_at,
+                "unbind_status": b.unbind_status,
+                "initiator_unbind_consent": b.initiator_unbind_consent,
+                "approver_unbind_consent": b.approver_unbind_consent,
+                "unbind_channel": b.unbind_channel,
+                "unbind_expires_at": b.unbind_expires_at,
             })
+        # For a contractor, also surface workers assigned directly to them
+        # (they may not have a formal WORKER_CONTRACTOR binding record yet).
+        if role in (PRIMARY, SECONDARY) and con_id:
+            con = Contractor.objects.filter(pk=con_id).first()
+            formal_ids = set(Binding.objects.filter(
+                binding_type="WORKER_CONTRACTOR", contractor_id=con_id
+            ).values_list("worker_id", flat=True))
+            assigned = Worker.objects.filter(contractor_id=con_id, is_active=True).exclude(pk__in=formal_ids)
+            for wk in assigned:
+                data.append({
+                    "id": f"w{wk.pk}",
+                    "binding_type": "WORKER_CONTRACTOR",
+                    "status": "ACTIVE",
+                    "employer": {"id": wk.employer_id, "name": wk.employer.name if wk.employer else None},
+                    "contractor": {"id": con_id, "name": con.name if con else None},
+                    "worker": {"id": wk.pk, "name": wk.full_name},
+                    "site_name": wk.site.name if wk.site else "",
+                    "created_at": wk.created_at,
+                    "started_at": None,
+                    "ended_at": None,
+                    "initiator_consent": "APPROVED",
+                    "approver_consent": "APPROVED",
+                    "consent_channel": "APP",
+                    "consent_expires_at": None,
+                    "initiator_consent_at": None,
+                    "approver_consent_at": None,
+                    "unbind_status": "NONE",
+                    "initiator_unbind_consent": "NONE",
+                    "approver_unbind_consent": "NONE",
+                    "unbind_channel": "APP",
+                    "unbind_expires_at": None,
+                })
         return Response({"Result": "Success", "Data": data})
 
 
@@ -1026,6 +1194,13 @@ class BindingApprove(APIView):
             can_approve = True
             if con_id and binding.contractor_id != con_id:
                 return Response({"Result": "Error", "Message": "Binding not for your contractor"}, status=403)
+        # Worker approves/rejects their own WORKER_CONTRACTOR binding request
+        if role == WORKER and binding.binding_type == "WORKER_CONTRACTOR":
+            worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+            if not worker:
+                worker = Worker.objects.filter(mobile=request.user.mobile).first()
+            if worker and binding.worker_id == worker.pk:
+                can_approve = True
         if not can_approve:
             return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
         if decision == "APPROVE":
@@ -1202,6 +1377,212 @@ class WorkerUnbind(APIView):
         return Response({"Result": "Success", "Message": f"Worker {worker.full_name} unbound"})
 
 
+def _unbind_scope_error(request, binding):
+    """Return an error string if the user can't act on this binding, else None."""
+    emp_id, con_id, role = resolve_scope(request.user)
+    if role == EMPLOYER and emp_id and binding.employer_id and binding.employer_id != emp_id:
+        return "Binding not in your hierarchy"
+    if role in (PRIMARY, SECONDARY) and con_id and binding.contractor_id and binding.contractor_id != con_id:
+        return "Binding not for your contractor"
+    if role == WORKER:
+        worker = Worker.objects.filter(legacy_employee_code=request.user.username).first()
+        if not worker:
+            worker = Worker.objects.filter(mobile=request.user.mobile).first()
+        if not worker or not binding.worker_id or binding.worker_id != worker.pk:
+            return "Binding not for your worker account"
+    return None
+
+
+def _worker_reassignment_error(binding):
+    """If an employer-contractor contractor still has workers, unbind must be blocked."""
+    if binding.binding_type == "EMPLOYER_CONTRACTOR" and binding.contractor_id:
+        worker_count = Worker.objects.filter(
+            contractor_id=binding.contractor_id, is_active=True
+        ).count()
+        if worker_count > 0:
+            return f"Contractor has {worker_count} worker(s) under them. Please assign them to another contractor before unbinding."
+    return None
+
+
+def _perform_unbind(binding, request):
+    """Actually end the binding (called after both sides approve the unbind)."""
+    with transaction.atomic():
+        binding.status = "ENDED"
+        binding.ended_at = timezone.now()
+        binding.unbind_status = "APPROVED"
+        binding.save(update_fields=["status", "ended_at", "unbind_status"])
+        if binding.binding_type == "EMPLOYER_CONTRACTOR" and binding.contractor_id:
+            ContractorEmployment.objects.filter(
+                contractor_id=binding.contractor_id,
+                employer_id=binding.employer_id,
+                site_id=binding.site_id,
+                status="ACTIVE",
+            ).update(status="ENDED", ended_at=timezone.now())
+            Contractor.objects.filter(pk=binding.contractor_id).update(employer=None, site=None, site_name="")
+        elif binding.binding_type == "WORKER_CONTRACTOR" and binding.worker_id:
+            worker = Worker.objects.filter(pk=binding.worker_id).first()
+            if worker:
+                worker.contractor = None
+                worker.employer = None
+                worker.site = None
+                worker.save(update_fields=["contractor", "employer", "site"])
+        write_audit(request, "BINDING_UNBOUND", "BINDING", binding.pk,
+                    previous="ACTIVE", new="ENDED")
+
+
+def _party_of_user(user, binding):
+    """Return 'initiator' or 'approver' for the logged-in user on this binding, else None."""
+    role = getattr(user, "role", "")
+    if binding.binding_type == "EMPLOYER_CONTRACTOR":
+        # initiator=Contractor, approver=Employer
+        if role in (PRIMARY, SECONDARY):
+            return "initiator"
+        if role == EMPLOYER:
+            return "approver"
+    elif binding.binding_type == "WORKER_CONTRACTOR":
+        # initiator=Worker, approver=Contractor
+        if role == WORKER:
+            return "initiator"
+        if role in (PRIMARY, SECONDARY):
+            return "approver"
+    return None
+
+
+class BindingUnbind(APIView):
+    """Initiate an unbind request. The initiator is auto-approved; the other
+    party must approve (Approve Unbind) for it to take effect."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, binding_id):
+        if not role_has_access(request.user, [SUPER, STAFF, EMPLOYER, PRIMARY, SECONDARY, WORKER]):
+            return Response({"Result": "Forbidden", "Message": "Permission denied"}, status=403)
+        binding = Binding.objects.filter(pk=binding_id).first()
+        if not binding:
+            return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
+        if binding.status != "ACTIVE":
+            return Response({"Result": "Error", "Message": "Only active bindings can be unbound"}, status=400)
+        err = _unbind_scope_error(request, binding)
+        if err:
+            return Response({"Result": "Error", "Message": err}, status=403)
+        err = _worker_reassignment_error(binding)
+        if err:
+            return Response({"Result": "Error", "Message": err}, status=409)
+
+        my_party = _party_of_user(request.user, binding)
+        binding.unbind_status = "PENDING"
+        binding.unbind_channel = "APP"
+        binding.unbind_expires_at = None
+        binding.unbind_requested_at = timezone.now()
+        if my_party == "initiator":
+            binding.initiator_unbind_consent = "APPROVED"  # initiator already agreed by requesting
+            binding.approver_unbind_consent = "NONE"
+        elif my_party == "approver":
+            binding.approver_unbind_consent = "APPROVED"
+            binding.initiator_unbind_consent = "NONE"
+        else:
+            # Admin/staff: neither specific party; mark pending both
+            binding.initiator_unbind_consent = "NONE"
+            binding.approver_unbind_consent = "NONE"
+        binding.save()
+        write_audit(request, "BINDING_UNBIND_REQUESTED", "BINDING", binding.pk)
+        notify("EMPLOYER", "BINDING_UNBIND_REQUEST", "An unbind request was initiated for your contract")
+        return Response({
+            "Result": "Success",
+            "Message": "Unbind request created. The other party must approve to complete.",
+            "Data": {
+                "binding_id": binding.pk,
+                "unbind_status": binding.unbind_status,
+                "initiator_unbind_consent": binding.initiator_unbind_consent,
+                "approver_unbind_consent": binding.approver_unbind_consent,
+            },
+        })
+
+
+class UnbindConsentRequest(APIView):
+    """Request unbind consent for one party (APP / SMS_OTP / IVR)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, binding_id):
+        binding = Binding.objects.filter(pk=binding_id).first()
+        if not binding:
+            return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
+        if binding.unbind_status != "PENDING":
+            return Response({"Result": "Error", "Message": "No pending unbind request"}, status=400)
+        party = (request.data.get("party") or "").lower()
+        if party not in ("initiator", "approver"):
+            return Response({"Result": "Error", "Message": "party must be 'initiator' or 'approver'"}, status=400)
+        channel = (request.data.get("channel") or "APP").upper()
+        if channel not in ("APP", "SMS_OTP", "IVR", "VOICE"):
+            return Response({"Result": "Error", "Message": "Invalid channel"}, status=400)
+        field = "initiator_unbind_consent" if party == "initiator" else "approver_unbind_consent"
+        setattr(binding, field, "PENDING")
+        binding.unbind_channel = channel
+        from .consent import CONSENT_TIMEOUT_SECONDS
+        binding.unbind_expires_at = timezone.now() + timezone.timedelta(seconds=CONSENT_TIMEOUT_SECONDS)
+        binding.save()
+        result = {"binding_id": binding.pk, "party": party, "status": "PENDING",
+                  "expires_at": binding.unbind_expires_at,
+                  "consent_timeout_seconds": CONSENT_TIMEOUT_SECONDS}
+        from .consent import _party_phone, _party_entities, send_sms_otp
+        scanner, target = _party_entities(binding)
+        phone = _party_phone(target)
+        if channel == "SMS_OTP" and phone:
+            result["otp_sent"] = True
+            result["otp"] = send_sms_otp(phone, binding.pk)
+        return Response({"Result": "Success", "Data": result})
+
+
+class UnbindConsentResolve(APIView):
+    """Resolve unbind consent; when both approve, perform the unbind."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, binding_id):
+        binding = Binding.objects.filter(pk=binding_id).first()
+        if not binding:
+            return Response({"Result": "Error", "Message": "Binding not found"}, status=404)
+        if binding.unbind_status != "PENDING":
+            return Response({"Result": "Error", "Message": "No pending unbind request"}, status=400)
+        party = (request.data.get("party") or "").lower()
+        if party not in ("initiator", "approver"):
+            return Response({"Result": "Error", "Message": "party must be 'initiator' or 'approver'"}, status=400)
+        decision = str(request.data.get("decision", "approve")).lower() in ("approve", "true", "1", "yes")
+        otp = request.data.get("otp", "")
+        now = timezone.now()
+        field = "initiator_unbind_consent" if party == "initiator" else "approver_unbind_consent"
+
+        if binding.unbind_expires_at and now > binding.unbind_expires_at:
+            setattr(binding, field, "TIMEOUT")
+            binding.save(update_fields=[field])
+            return Response({"Result": "Success", "Data": {"binding_id": binding.pk, "timed_out": True, "binding_complete": False}})
+
+        if binding.unbind_channel == "SMS_OTP":
+            from .consent import _party_entities, _party_phone, verify_sms_otp
+            scanner, target = _party_entities(binding)
+            if not verify_sms_otp(_party_phone(target), binding.pk, otp):
+                return Response({"Result": "Success", "Data": {"binding_id": binding.pk, "invalid_otp": True, "binding_complete": False}})
+
+        setattr(binding, field, "APPROVED" if decision else "REJECTED")
+        binding.save()
+
+        complete = (binding.initiator_unbind_consent == "APPROVED"
+                    and binding.approver_unbind_consent == "APPROVED")
+        if complete:
+            _perform_unbind(binding, request)
+            return Response({"Result": "Success", "Data": {
+                "binding_id": binding.pk, "binding_complete": True,
+                "binding_status": binding.status, "unbind_status": "APPROVED",
+            }})
+        return Response({"Result": "Success", "Data": {
+            "binding_id": binding.pk,
+            "initiator_unbind_consent": binding.initiator_unbind_consent,
+            "approver_unbind_consent": binding.approver_unbind_consent,
+            "binding_complete": False,
+        }})
+
+
 class ScanLogList(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1258,6 +1639,7 @@ class DashboardStats(APIView):
 class WorkerCardView(APIView):
     """Render a worker ID card (PNG/PDF) with the static QR. QR is just one feature of this module."""
 
+    authentication_classes = [QueryParamJWTAuthentication, LegacyHeaderAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, worker_id):
@@ -1270,7 +1652,10 @@ class WorkerCardView(APIView):
         fmt = request.query_params.get("fmt", "png").lower()
         if fmt not in ("png", "pdf"):
             fmt = "png"
-        return card_response(worker, qr.qr_reference, fmt)
+        side = request.query_params.get("side", "front").lower()
+        if side not in ("front", "back", "both"):
+            side = "front"
+        return card_response(worker, qr.qr_reference, fmt, side=side)
 
 
 class UserQRView(APIView):
@@ -1318,6 +1703,72 @@ class NotificationList(APIView):
     def get(self, request):
         qs = Notification.objects.filter(recipient_role=request.user.role).order_by("-created_at")[:50]
         return Response(NotificationSerializer(qs, many=True).data)
+
+
+class MyIdentityCardView(APIView):
+    """Render the logged-in user's identity card (worker/contractor/employer) as PNG/PDF.
+
+    Fields are dynamic per role. Query param: ?fmt=png|pdf
+    """
+
+    authentication_classes = [QueryParamJWTAuthentication, LegacyHeaderAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        from .cards import entity_card_response, entity_card_image, simple_identity_card
+        fmt = request.query_params.get("fmt", "png").lower()
+        if fmt not in ("png", "pdf"):
+            fmt = "png"
+        side = request.query_params.get("side", "front").lower()
+        if side not in ("front", "back", "both"):
+            side = "front"
+        entity_type, entity, qr_ref = self._resolve(request)
+        if entity is None or not qr_ref:
+            # Fallback for users with no QR entity (admin/staff): simple identity card.
+            from .cards import qr_png_bytes
+            identity = f"BSS-USER|{user.username}|{getattr(user, 'legacy_login_id', None) or user.pk}"
+            img = simple_identity_card(user.username, user.role, user.email or "", identity, str(user.pk))
+            if fmt == "pdf":
+                from .cards import _card_to_pdf
+                return HttpResponse(_card_to_pdf(img, identity), content_type="application/pdf")
+            import io
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            return HttpResponse(buf.getvalue(), content_type="image/png")
+        # Render the requested side
+        import io
+        if side == "both" and fmt == "pdf":
+            from .cards import entity_card_response
+            return entity_card_response(entity_type, entity, qr_ref, fmt=fmt, side=side)
+        img = entity_card_image(entity_type, entity, qr_ref, side=side)
+        if fmt == "pdf":
+            from .cards import _card_to_pdf
+            return HttpResponse(_card_to_pdf(img, qr_ref), content_type="application/pdf")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return HttpResponse(buf.getvalue(), content_type="image/png")
+
+    def _resolve(self, request):
+        user = request.user
+        emp_id, con_id, role = resolve_scope(request.user)
+        if role == EMPLOYER or getattr(user, "role", "") == EMPLOYER:
+            emp_id = user.employer_id or emp_id
+            emp = Employer.objects.filter(pk=emp_id).first()
+            qr = QRCode.objects.filter(entity_type="EMPLOYER", entity_id=emp.pk).first() if emp else None
+            return ("EMPLOYER", emp, qr.qr_reference if qr else None)
+        if role in (PRIMARY, SECONDARY) or getattr(user, "role", "") in (PRIMARY, SECONDARY):
+            con_id = user.contractor_id or con_id
+            con = Contractor.objects.filter(pk=con_id).first()
+            qr = QRCode.objects.filter(entity_type="CONTRACTOR", entity_id=con.pk).first() if con else None
+            return ("CONTRACTOR", con, qr.qr_reference if qr else None)
+        if getattr(user, "role", "") == WORKER or role == WORKER:
+            worker = Worker.objects.filter(legacy_employee_code=user.username).first()
+            if not worker:
+                worker = Worker.objects.filter(mobile=user.mobile).first()
+            qr = QRCode.objects.filter(entity_type="WORKER", entity_id=worker.pk).first() if worker else None
+            return ("WORKER", worker, qr.qr_reference if qr else None)
+        return (None, None, None)
 
 
 # ---------------------------------------------------------------------------
@@ -1727,8 +2178,12 @@ class SetContractorLocation(APIView):
         contractor = Contractor.objects.filter(pk=contractor_id).first()
         if not contractor:
             return Response({"Result": "Error", "Message": "Contractor not found"}, status=404)
-        if not is_admin and contractor.employer_id != emp_id:
-            return Response({"Result": "Error", "Message": "Contractor not in your hierarchy"}, status=403)
+        if not is_admin and role == EMPLOYER:
+            in_hierarchy = (contractor.employer_id == emp_id) or ContractorEmployment.objects.filter(
+                contractor=contractor, employer_id=emp_id, status="ACTIVE"
+            ).exists()
+            if not in_hierarchy:
+                return Response({"Result": "Error", "Message": "Contractor not in your hierarchy"}, status=403)
         address = request.data.get("address", "")
         if not address and lat is not None and lng is not None:
             try:
@@ -1739,19 +2194,20 @@ class SetContractorLocation(APIView):
                 address = ""
         # Assign a Site (GOLDEN RULE: site always belongs to the employer)
         site = None
+        site_owner_id = emp_id if (not is_admin and role == EMPLOYER) else contractor.employer_id
         site_id = request.data.get("site_id")
         if site_id:
-            site = Site.objects.filter(pk=site_id, employer_id=contractor.employer_id).first()
+            site = Site.objects.filter(pk=site_id, employer_id=site_owner_id).first()
         else:
-            # Find or create a site owned by the contractor's employer
+            # Find or create a site owned by the employer
             site = Site.objects.filter(
-                employer_id=contractor.employer_id,
+                employer_id=site_owner_id,
                 latitude=float(lat), longitude=float(lng),
             ).first()
-            if not site and contractor.employer_id:
+            if not site and site_owner_id:
                 site = Site.objects.create(
                     name=request.data.get("site_name", "Site") or "Site",
-                    employer_id=contractor.employer_id,
+                    employer_id=site_owner_id,
                     address=address,
                     latitude=float(lat),
                     longitude=float(lng),

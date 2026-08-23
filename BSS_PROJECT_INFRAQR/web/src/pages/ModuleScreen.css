@@ -55,3 +55,11 @@
 }
 .data-table tbody tr:hover { background: #f0f4fb; }
 .data-table tbody tr:nth-child(even) { background: #fafbfe; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .module-page { padding: 12px; }
+  .module-header { flex-wrap: wrap; gap: 10px; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-height: none; }
+  .data-table { min-width: 560px; }
+}

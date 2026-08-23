@@ -74,12 +74,16 @@ export default function WorkerDetail() {
             )}
             {visibility === 'FULL' && (
               <div className="worker-meta">
+                <p><b>Account:</b> {w.legacy_employee_code || w.email || '—'}</p>
+                <p><b>Worker ID:</b> {w.worker_id || '—'}</p>
+                <p><b>Name:</b> {w.full_name || '—'}</p>
                 <p><b>Mobile:</b> {w.mobile || '—'}</p>
                 <p><b>Aadhaar:</b> {w.aadhaar_no || '—'}</p>
                 <p><b>PAN:</b> {w.pan_no || '—'}</p>
                 <p><b>Status:</b> <span className={w.is_active ? 'tag-active' : 'tag-inactive'}>{w.is_active ? 'Active' : 'Inactive'}</span></p>
-                <p><b>Employer:</b> {w.employer ? `#${w.employer}` : 'Unbound'}</p>
-                <p><b>Contractor:</b> {w.contractor ? `#${w.contractor}` : 'Unbound'}</p>
+                <p><b>Employer:</b> {w.employer_name || (w.employer ? `#${w.employer}` : 'Unbound')}</p>
+                <p><b>Contractor:</b> {w.contractor_name || (w.contractor ? `#${w.contractor}` : 'Unbound')}</p>
+                <p><b>Site:</b> {w.site_name || '—'}</p>
                 <p><b>Created:</b> {w.created_at ? new Date(w.created_at).toLocaleDateString() : '—'}</p>
               </div>
             )}

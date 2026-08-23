@@ -36,3 +36,11 @@
   .worker-id-card { flex-direction: column; align-items: flex-start; }
   .worker-id-right { align-self: center; }
 }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .stat-cards { grid-template-columns: 1fr 1fr; gap: 12px; }
+}
+@media (max-width: 480px) {
+  .stat-cards { grid-template-columns: 1fr; }
+}

@@ -10,7 +10,7 @@ namespace EesassinErp.Controllers
         // GET: BackupService
         public void BackupDatabase()
         {
-            string connectionString = "Server=13.202.27.216;Initial Catalog=eesassinuat_uat1;MultipleActiveResultSets=true;User ID=retail;Password=ezretail@123;Pooling=True;";
+            string connectionString = "Server=localhost,1433;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=sa;Password=InfraQR2026!sql;Pooling=True;TrustServerCertificate=True;";
             string backupFolder = @"C:\Backup";
             string fileName = $"EzComplianceDB_{DateTime.Now:yyyyMMdd_HHmmss}.bak";
             string backupPath = Path.Combine(backupFolder, fileName);

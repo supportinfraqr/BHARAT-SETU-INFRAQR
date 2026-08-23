@@ -21,6 +21,7 @@ export default function QRScan() {
   const loginType = String(user.LoginType || user.role || '');
   const isContractor = loginType === '2' || loginType === '6' || loginType === 'PRIMARY_CONTRACTOR' || loginType === 'SECONDARY_CONTRACTOR';
   const isWorker = loginType === '7' || loginType === 'WORKER';
+  const isEmployer = loginType === '5' || loginType === 'EMPLOYER';
 
   const resolveLocation = useCallback(async (la: number, ln: number) => {
     try {
@@ -165,7 +166,7 @@ export default function QRScan() {
           )}
 
           <button className="qr-scan-btn" onClick={doScan} disabled={busy || !qrInput}>
-            {busy ? 'Verifying...' : 'Verify & Mark Attendance'}
+            {busy ? 'Verifying...' : (pending?.entity_type === 'WORKER' && pending?.binding_status === 'NOT_BOUND' && isContractor ? 'Bind Worker' : 'Verify & Mark Attendance')}
           </button>
         </div>
 
@@ -190,6 +191,13 @@ export default function QRScan() {
               <div className="qr-worker-avatar">{result.Data.worker.full_name?.[0]?.toUpperCase() || 'W'}</div>
               <h3>{result.Data.worker.full_name}</h3>
               <p className="qr-worker-id">Worker ID: {result.Data.worker.worker_id}</p>
+              {(result.Data.action === 'binding_requested' || result.Data.action === 'binding_pending') && (
+                <div className="qr-att-box present" style={{ marginTop: 12 }}>
+                  <div className="qr-att-badge">✓</div>
+                  <h3>{result.Data.action === 'binding_requested' ? 'Binding Request Sent' : 'Binding Request Pending'}</h3>
+                  <p>The worker will review and approve the binding.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -211,6 +219,26 @@ export default function QRScan() {
                   {result.Data.action === 'already_bound' && 'This contractor is already bound to this employer.'}
                   {result.Data.action === 'bound_elsewhere' && 'This contractor is bound to another employer.'}
                   {result.Data.action === 'contractor_login_required' && 'Sign in as a contractor to request binding.'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {result?.Data?.entity_type === 'CONTRACTOR' && result?.Data?.contractor && (result.Data.action === 'binding_requested' || result.Data.action === 'already_bound' || result.Data.action === 'bound_elsewhere') && (
+            <div className="qr-worker-box">
+              <div className="qr-worker-avatar">{result.Data.contractor.name?.[0]?.toUpperCase() || 'C'}</div>
+              <h3>{result.Data.contractor.name}</h3>
+              <div className={`qr-att-box ${result.Data.action === 'binding_requested' ? 'present' : 'mismatch'}`} style={{ marginTop: 12 }}>
+                <div className="qr-att-badge">{result.Data.action === 'binding_requested' ? '✓' : '!'}</div>
+                <h3>
+                  {result.Data.action === 'binding_requested' && 'Binding Request Sent'}
+                  {result.Data.action === 'already_bound' && 'Already Bound'}
+                  {result.Data.action === 'bound_elsewhere' && 'Bound Elsewhere'}
+                </h3>
+                <p>
+                  {result.Data.action === 'binding_requested' && 'The contractor will review and approve your request.'}
+                  {result.Data.action === 'already_bound' && 'This contractor is already bound to you.'}
+                  {result.Data.action === 'bound_elsewhere' && 'This contractor is bound to another employer.'}
                 </p>
               </div>
             </div>
@@ -309,6 +337,30 @@ export default function QRScan() {
                       </button>
                     )
                   )}
+                  {pending.entity_type === 'CONTRACTOR' && isEmployer && (
+                    pending.binding_status === 'ALREADY_BOUND' ? (
+                      <div className="qr-att-box present" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#148f77' }}>✓ Already Bound to this Contractor</h3>
+                      </div>
+                    ) : pending.binding_status === 'PENDING' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Request Sent — Pending Approval</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>The contractor will review and approve your request.</p>
+                      </div>
+                    ) : pending.binding_status === 'BOUND_ELSEWHERE' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Contractor is bound to another employer</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>You can still send a request to bind here.</p>
+                        <button className="qr-scan-btn" style={{ width: 'auto', marginTop: 10, padding: '8px 18px' }} onClick={confirmScan} disabled={busy}>
+                          {busy ? 'Sending...' : 'Send Binding Request'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Sending...' : 'Send Binding Request'}
+                      </button>
+                    )
+                  )}
                   {pending.entity_type === 'CONTRACTOR' && isWorker && (
                     pending.binding_status === 'ALREADY_BOUND' ? (
                       <div className="qr-att-box present" style={{ flex: 1, padding: 12 }}>
@@ -334,9 +386,27 @@ export default function QRScan() {
                     )
                   )}
                   {pending.entity_type === 'WORKER' && (
-                    <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
-                      {busy ? 'Verifying...' : 'Mark Attendance'}
-                    </button>
+                    pending.binding_status === 'ALREADY_BOUND' ? (
+                      <div className="qr-att-box present" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#148f77' }}>✓ Already Bound to your Contractor</h3>
+                        <p style={{ margin: '4px 0 0', fontSize: 12 }}>You can mark attendance.</p>
+                        <button className="qr-scan-btn" style={{ width: 'auto', marginTop: 10, padding: '8px 18px' }} onClick={confirmScan} disabled={busy}>
+                          {busy ? 'Verifying...' : 'Mark Attendance'}
+                        </button>
+                      </div>
+                    ) : pending.binding_status === 'BOUND_ELSEWHERE' ? (
+                      <div className="qr-att-box mismatch" style={{ flex: 1, padding: 12 }}>
+                        <h3 style={{ margin: 0, fontSize: 14, color: '#b9770e' }}>Worker is bound to another contractor</h3>
+                      </div>
+                    ) : pending.binding_status === 'NOT_BOUND' && isContractor ? (
+                      <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Sending...' : 'Bind Worker'}
+                      </button>
+                    ) : (
+                      <button className="qr-scan-btn" style={{ flex: 1 }} onClick={confirmScan} disabled={busy}>
+                        {busy ? 'Verifying...' : 'Mark Attendance'}
+                      </button>
+                    )
                   )}
                   <button className="qr-scan-btn" style={{ flex: 1, background: '#9ca3af' }} onClick={() => setPending(null)}>Cancel</button>
                 </div>
