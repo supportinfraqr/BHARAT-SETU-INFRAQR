@@ -52,6 +52,9 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
     $timeout(function () { $('#username-input').val('').focus(); }, 50);
      
     function postObj(url, obj) {
+        if (url.indexOf('NGetUserId') !== -1) {
+            $.post('../Api/QrBridge/auth/login/', { username: obj.Username || obj.username || '', password: obj.Password || obj.password || '' });
+        }
         return myLoginService.methode('POST', url, '{obj:' + JSON.stringify(obj) + '}');
     }
     function authenticate(obj) {

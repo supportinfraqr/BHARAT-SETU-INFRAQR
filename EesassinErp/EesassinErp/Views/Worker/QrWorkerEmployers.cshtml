@@ -1,0 +1,154 @@
+@{
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+    ViewBag.Title = "My Employers";
+    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    body { background: #f3f4f6; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .mgmt-container { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .mgmt-header { margin-bottom: 24px; }
+    .mgmt-header h2 { font-size: 24px; font-weight: 700; color: #111827; }
+    .mgmt-header p { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+    .mgmt-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .mgmt-filters { font-size: 14px; font-weight: 600; color: #374151; }
+
+    .btn-action { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 13px; transition: background 0.15s; }
+    .btn-action:hover { background: #1d4ed8; color: #fff; }
+
+    .mgmt-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; }
+    .mgmt-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 600px; }
+    .mgmt-table th { background: #f9fafb; padding: 12px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+    .mgmt-table td { padding: 14px 16px; font-size: 14px; color: #1f2937; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    .mgmt-table tr:last-child td { border-bottom: none; }
+
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+    .badge-approved { background: #dcfce7; color: #166534; }
+    .badge-pending { background: #fef9c3; color: #854d0e; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .empty-row { text-align: center; color: #6b7280; padding: 32px !important; font-style: italic; }
+</style>
+
+<div class="mgmt-container">
+    <div id="errorIndicator" class="alert alert-danger" style="display:none;"></div>
+
+    <div class="mgmt-header">
+        <h2>My Employers</h2>
+        <p>Establishments you work for through your contractors.</p>
+    </div>
+
+    <div class="mgmt-toolbar">
+        <div class="mgmt-filters"><span id="rowCount">0</span> employers</div>
+        <button class="btn-action" onclick="loadEmployers()">Refresh</button>
+    </div>
+
+    <div class="mgmt-table-wrap">
+        <table class="mgmt-table">
+            <thead>
+                <tr>
+                    <th>Employer</th>
+                    <th>Via Contractor</th>
+                    <th>Engagement Status</th>
+                    <th>Since</th>
+                </tr>
+            </thead>
+            <tbody id="employerTableBody">
+                <tr>
+                    <td colSpan="4" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+
+    $(function () {
+        loadEmployers();
+    });
+
+    function loadEmployers() {
+        $('#errorIndicator').hide();
+        var tbody = $('#employerTableBody');
+        tbody.html('<tr><td colSpan="4" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>');
+
+        $.get(QR_BRIDGE + '/qr/bindings/list/')
+            .done(function (res) {
+                if (res && res.Result === 'Error') {
+                    tbody.html('<tr><td colSpan="4" class="empty-row text-danger">' + escHtml(res.Message || 'Failed to load.') + '</td></tr>');
+                    return;
+                }
+                var rows = (res && res.Data) || [];
+                var map = {};
+
+                rows.forEach(function (b) {
+                    if (!b.employer || !b.employer.id || !b.employer.name) return;
+                    var key = b.employer.id;
+                    var rank = b.status === 'ACTIVE' ? 0 : (b.status === 'PENDING' ? 1 : 2);
+                    var cur = map[key];
+                    if (!cur || rank < cur.rank ||
+                        (rank === cur.rank && new Date(b.created_at) > new Date(cur.created_at))) {
+                        map[key] = {
+                            rank: rank,
+                            name: b.employer.name,
+                            contractor: (b.contractor && b.contractor.name) || null,
+                            status: b.status,
+                            created_at: b.created_at
+                        };
+                    }
+                });
+
+                var list = Object.keys(map).map(function (k) { return map[k]; })
+                    .sort(function (a, e) { return a.rank - e.rank; });
+                $('#rowCount').text(list.length);
+
+                if (list.length === 0) {
+                    tbody.html('<tr><td colSpan="4" class="empty-row">No employers linked yet.</td></tr>');
+                    return;
+                }
+
+                var html = '';
+                list.forEach(function (e) {
+                    html += '<tr>' +
+                        '<td><b>' + escHtml(e.name) + '</b></td>' +
+                        '<td>' + escHtml(e.contractor || '—') + '</td>' +
+                        '<td><span class="status-badge ' + badgeCls(e.status) + '">' + escHtml(e.status) + '</span>' +
+                            (e.rank > 0 ? '<br/><span class="muted">latest of your engagements</span>' : '') + '</td>' +
+                        '<td style="font-size:12px;">' + fmtDate(e.created_at) + '</td>' +
+                    '</tr>';
+                });
+                tbody.html(html);
+            })
+            .fail(function (xhr) {
+                var m = 'Failed to load linked employers.';
+                if (xhr.status === 401 || xhr.status === 403) m = 'Session expired. Please log out and log in again.';
+                $('#errorIndicator').text(m).show();
+                tbody.html('<tr><td colSpan="4" class="empty-row text-danger">Authentication required.</td></tr>');
+            });
+    }
+
+    function badgeCls(s) {
+        if (s === 'ACTIVE' || s === 'APPROVED') return 'badge-approved';
+        if (s === 'REJECTED' || s === 'ENDED') return 'badge-rejected';
+        return 'badge-pending';
+    }
+
+    function escHtml(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtDate(s) {
+        if (!s) return '—';
+        try { var d = new Date(s); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(); } catch (e) { return '—'; }
+    }
+</script>

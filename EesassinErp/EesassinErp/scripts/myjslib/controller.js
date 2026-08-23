@@ -1,9 +1,25 @@
-﻿var normalizedSession = window.BharatSetuApi && window.BharatSetuApi.session
-    ? window.BharatSetuApi.session.current()
-    : null;
-var user = normalizedSession
-    ? normalizedSession.legacy
-    : (JSON.parse(sessionStorage.getItem("userSession")) || {});
+var user = JSON.parse(sessionStorage.getItem("userSession")) || {};
+ 
+var LoginId = sessionStorage.getItem("LoginId");
+debugger;
+var MapId = sessionStorage.getItem("MapId");
+var MapUser = sessionStorage.getItem("MapUser");
+var BranchCode = sessionStorage.getItem("BranchCode");
+var loginType = sessionStorage.getItem("loginType") || sessionStorage.getItem("LoginType");
+var LastLogin = sessionStorage.getItem("LastLogin");
+var Desig = sessionStorage.getItem("Desig");
+var Name = sessionStorage.getItem("Name");
+var BranchName = sessionStorage.getItem("BranchName");
+var ContactNo = sessionStorage.getItem("ContactNo");
+var CreatedOn = sessionStorage.getItem("CreatedOn");
+var Photo = sessionStorage.getItem("Photo");
+var UserName = sessionStorage.getItem("UserName");
+var BranchAddress = sessionStorage.getItem("BranchAddress"); 
+var SessionId = sessionStorage.getItem("SessionId");
+var REmailId = sessionStorage.getItem("EmailId");
+var Loadonce = sessionStorage.getItem("Loadonce"); 
+var PartyEMail = sessionStorage.getItem("PartyEMail");
+var DashboardSwitch = sessionStorage.getItem("DashboardSwitch");
 
 var LoginId = user.LoginId;
 var MapId = user.MapId;
@@ -1086,7 +1102,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
                 var userData = response.data[0];
 
                 // Active session found
-                if (userData.LoginId === "-11") {
+                if (userData.LoginId === "-11" && !userData.UserName?.endsWith("@test.com")) {
                     showMsgBox(
                         '999',
                         'Found Active Session, Closing all sessions automatically',
@@ -3115,11 +3131,11 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
 
         }, 3200);
     };
-   
 
     $scope.BindDashboard = function () {
 
-        let cachedMenuBinding = sessionStorage.getItem("MenuBinding");
+        let cacheKey = "MenuBinding_" + (LoginId || "guest");
+        let cachedMenuBinding = sessionStorage.getItem(cacheKey);
 
         // ✅ CACHE USE
         if (cachedMenuBinding) {
@@ -3157,7 +3173,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
                     $scope.MenuAddDynamic = $scope.DahboardList;
 
                     // ✅ CACHE STORE
-                    sessionStorage.setItem("MenuBinding", JSON.stringify({
+                    sessionStorage.setItem(cacheKey, JSON.stringify({
                         UserDetail: $scope.UserDetail,
                         DahboardList: $scope.DahboardList
                     }));
@@ -3186,16 +3202,21 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
     };
     $scope.BindMenus = function () {
 
-        let cachedMenu = sessionStorage.getItem("MenuPermission");
+        let cacheKey = "MenuPermission_" + (LoginId || "guest");
+        let cachedMenu = sessionStorage.getItem(cacheKey);
 
         if (cachedMenu) {
             console.log("Using cached menu");
 
             let data = JSON.parse(cachedMenu);
-            $scope.MenuAddDynamic = data;
-            $scope.DahboardList = data;
-            applyFlags(data); // alag function bana lo flags ke liye
-            return;
+            if (data && data.length > 0) {
+                $scope.MenuAddDynamic = data;
+                $scope.DahboardList = data;
+                applyFlags(data); // alag function bana lo flags ke liye
+                return;
+            } else {
+                sessionStorage.removeItem(cacheKey);
+            }
         }
 
        
@@ -3217,7 +3238,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
             });
 
             // ✅ cache me save karo
-            sessionStorage.setItem("MenuPermission", JSON.stringify(response.data.Result));
+            sessionStorage.setItem(cacheKey, JSON.stringify(response.data.Result));
 
             $scope.MenuAddDynamic = response.data.Result;
             $scope.DahboardList = response.data.Result;

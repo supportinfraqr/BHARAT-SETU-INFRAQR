@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -12,7 +12,7 @@ namespace DAL
         public static readonly SqlDBHelper SqlHelper = new SqlDBHelper();
 
         public string msg;
-            public string CONNECTION_STRING = "Server=localhost,1433;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=sa;Password=InfraQR2026!sql;Pooling=True;TrustServerCertificate=True;"; 
+            public string CONNECTION_STRING = "Server=100.85.237.87;Initial Catalog=BharatSharamShetu;MultipleActiveResultSets=true;User ID=sa;Password=BssReplica!2026;TrustServerCertificate=True;Pooling=True;"; 
 
 
 

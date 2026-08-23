@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
 }
 <!DOCTYPE html>
@@ -119,8 +119,8 @@
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.9.5/tinymce.min.js"></script>
-    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/Rootfile/tinymce.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/Rootfile/tinymce.js")"></script>
     <script src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
     <script src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
 
@@ -171,7 +171,7 @@
     <!-- data-table js -->
     <script src="@Url.Content("~/Content/plugins/vendors/bower_components/datatables.net/js/jquery.dataTables.min.js")"></script>
 
-    <script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js")"></script>
+    <script src="@Url.Content("~/Scripts/dataTables.colReorder.min.js?Ver="+ViewBag.Version+"")"></script>
 
     <script src="@Url.Content("~/Content/colResizable-1.6.js")"></script>
 

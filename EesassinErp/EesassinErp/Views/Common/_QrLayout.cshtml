@@ -1,0 +1,171 @@
+@{
+    string loginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+    string name = Session["Name"]?.ToString() ?? "User";
+    bool isAdmin = loginType == "1";
+    bool isEmployer = loginType == "5";
+    bool isContractor = loginType == "2" || loginType == "6";
+    bool isWorker = loginType == "7";
+    string qrBase = WebConfigurationManager.AppSettings["BssQrBaseUrl"] ?? "https://bharat-shramsetu.infraqr.com";
+}
+@using System.Web.Configuration
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - QR Portal</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        body { margin: 0; padding: 0; background: #f3f4f6; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; min-height: 100vh; overflow-x: hidden; }
+        
+        /* App Layout Shell */
+        .app-shell { display: flex; width: 100%; min-height: 100vh; }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 260px; background: #0f172a; color: #94a3b8; display: flex; flex-direction: column; flex-shrink: 0; transition: all 0.3s; border-right: 1px solid #1e293b; }
+        .sidebar-brand { padding: 24px; display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; border-bottom: 1px solid #1e293b; font-size: 18px; text-decoration: none; }
+        .sidebar-logo { width: 32px; height: 32px; border-radius: 6px; }
+        
+        .sidebar-nav { padding: 20px 16px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .nav-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #475569; letter-spacing: 1px; padding: 8px 12px; margin-top: 16px; }
+        .nav-section-title:first-child { margin-top: 0; }
+        
+        .nav-submenu { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .nav-submenu:hover { background: #1e293b; color: #f8fafc; }
+        .nav-submenu.active { background: #3b82f6; color: #fff; }
+        .nav-submenu i { font-size: 16px; width: 20px; text-align: center; }
+
+        .sidebar-qr-block { background: #1e293b; border-radius: 12px; padding: 16px; margin: 16px; text-align: center; border: 1px solid #334155; }
+        .sidebar-qr-img { width: 100%; max-width: 140px; aspect-ratio: 1; border-radius: 8px; border: 2px solid #3b82f6; margin-top: 10px; }
+        
+        .sidebar-footer { padding: 20px; border-top: 1px solid #1e293b; display: flex; flex-direction: column; gap: 8px; }
+        .back-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; text-decoration: none; font-size: 13px; font-weight: 600; text-align: center; }
+        .back-btn:hover { background: #334155; }
+
+        /* Main View Panel */
+        .main-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar { height: 64px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; flex-shrink: 0; }
+        .topbar h1 { font-size: 20px; font-weight: 700; color: #111827; margin: 0; }
+        .user-badge { display: flex; align-items: center; gap: 10px; font-weight: 600; color: #374151; font-size: 14px; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: #2563eb; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+        .content-panel { flex: 1; padding: 32px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            @{
+                string dashUrl = "/Dashboard/Dashboard";
+                if (loginType == "5") { dashUrl = "/Dashboard/principleEmployerDashboard"; }
+                else if (loginType == "2" || loginType == "6") { dashUrl = "/Dashboard/ContractorDashboard"; }
+            }
+            <a href="@dashUrl" class="sidebar-brand">
+                <img src="~/CommonDashboard/assets/icons/NewLogo.png" alt="Logo" class="sidebar-logo" style="background:#fff;padding:2px;" />
+                <span>BharatShramSetu</span>
+            </a>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">QR MANAGEMENT SYSTEM</div>
+                
+                <a href="@dashUrl" class="nav-submenu">
+                    <i class="fa fa-th-large"></i> Main Dashboard
+                </a>
+                
+                <a href="/qr/scan" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrScan" ? "active" : "")">
+                    <i class="fa fa-camera"></i> QR Scan / Bind
+                </a>
+                
+                <a href="/qr/idcard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrMyCard" ? "active" : "")">
+                    <i class="fa fa-id-card"></i> My Identity Card
+                </a>
+
+                @if (isAdmin)
+                {
+                    <a href="/qr/worker" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
+                        <i class="fa fa-users"></i> Workers
+                    </a>
+                    <a href="/qr/worker?view=contractors" class="nav-submenu">
+                        <i class="fa fa-hard-hat"></i> Contractors
+                    </a>
+                    <a href="/qr/worker?view=employers" class="nav-submenu">
+                        <i class="fa fa-building"></i> Employers
+                    </a>
+                }
+                else if (isEmployer)
+                {
+                    <a href="/qr/scan?view=bindings" class="nav-submenu">
+                        <i class="fa fa-user-check"></i> Binding Requests
+                    </a>
+                    <a href="/qr/worker" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
+                        <i class="fa fa-users"></i> My Workers
+                    </a>
+                    <a href="/qr/worker?view=contractors" class="nav-submenu">
+                        <i class="fa fa-hard-hat"></i> My Contractors
+                    </a>
+                }
+                else if (isContractor)
+                {
+                    <a href="/qr/worker" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrDashboard" ? "active" : "")">
+                        <i class="fa fa-users"></i> My Workers
+                    </a>
+                    <a href="/qr/scan?view=bindings" class="nav-submenu">
+                        <i class="fa fa-user-check"></i> Binding Requests
+                    </a>
+                    <a href="/qr/worker?view=employers" class="nav-submenu">
+                        <i class="fa fa-building"></i> My Employers
+                    </a>
+                }
+                else if (isWorker)
+                {
+                    <a href="/qr/idcard" class="nav-submenu @(ViewContext.RouteData.Values["action"].ToString() == "QrMyCard" ? "active" : "")">
+                        <i class="fa fa-id-card"></i> My Identity Card
+                    </a>
+                    <a href="/qr/scan?view=bindings" class="nav-submenu">
+                        <i class="fa fa-user-check"></i> Binding Requests
+                    </a>
+                    <a href="/qr/worker?view=mycontractor" class="nav-submenu">
+                        <i class="fa fa-hard-hat"></i> My Contractor
+                    </a>
+                }
+            </nav>
+
+            @if (isWorker)
+            {
+                <div class="sidebar-qr-block">
+                    <div class="nav-section-title" style="color:#94a3b8;padding:0;margin:0 0 8px 0;">MY QR</div>
+                    <img id="sidebarQrImg" src="/Api/QrBridge/qr/my-card/?fmt=png" class="sidebar-qr-img" alt="My QR" onerror="this.style.display='none'" />
+                </div>
+            }
+
+
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-panel">
+            <header class="topbar">
+                <h1>@ViewBag.Title</h1>
+                <div class="user-badge">
+                    <span>@name</span>
+                    <div class="avatar">@name[0].ToString().ToUpper()</div>
+                </div>
+            </header>
+            
+            <main class="content-panel">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+</body>
+</html>

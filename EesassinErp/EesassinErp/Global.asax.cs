@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Web;
 using System.Web.Http;
@@ -20,6 +20,35 @@ namespace EesassinErp
             RouteConfig.RegisterRoutes(RouteTable.Routes);
 
         }
+        protected void Application_BeginRequest(object sender, EventArgs e)
+        {
+            string path = Request.Url.AbsolutePath;
+
+            if (path.StartsWith("/scripts/", StringComparison.OrdinalIgnoreCase))
+            {
+                string newPath = "/scripts/" + path.Substring(9);
+                if (path != newPath)
+                {
+                    Context.RewritePath(newPath);
+                }
+            }
+            else if (path.StartsWith("/content/", StringComparison.OrdinalIgnoreCase))
+            {
+                string newPath = "/Content/" + path.Substring(9);
+                if (path != newPath)
+                {
+                    Context.RewritePath(newPath);
+                }
+            }
+            else if (path.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+            {
+                string newPath = "/Uploads/" + path.Substring(9);
+                if (path != newPath)
+                {
+                    Context.RewritePath(newPath);
+                }
+            }
+        }
         //protected void Application_Error()
         //{
         //    Exception ex = Server.GetLastError();
@@ -31,16 +60,16 @@ namespace EesassinErp
         //    Server.ClearError();
         //    Response.Redirect("~/Error/Error");
         //}
-        protected void Application_Error()
-        {
-            Exception ex = Server.GetLastError();
-
-            Server.ClearError();
-
-            Response.ContentType = "text/plain";
-            Response.Write(ex.ToString());
-            Response.End();
-        }
+        //protected void Application_Error()
+        //{
+        //    Exception ex = Server.GetLastError();
+        //
+        //    Server.ClearError();
+        //
+        //    Response.ContentType = "text/plain";
+        //    Response.Write(ex.ToString());
+        //    Response.End();
+        //}
         protected void Application_PreSendRequestHeaders()
         {
             Response.Headers.Remove("X-AspNetMvc-Version");

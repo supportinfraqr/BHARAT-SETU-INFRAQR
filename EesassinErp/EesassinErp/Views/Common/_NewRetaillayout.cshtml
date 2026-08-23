@@ -1,8 +1,29 @@
-﻿ 
+ 
 
 <!DOCTYPE html>
 <html ng-app="myApp" ng-controller="myController" ng-cloak>
 <head>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            var errDiv = document.createElement('div');
+            errDiv.style.position = 'fixed';
+            errDiv.style.bottom = '10px';
+            errDiv.style.right = '10px';
+            errDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '15px';
+            errDiv.style.zIndex = '999999';
+            errDiv.style.maxHeight = '250px';
+            errDiv.style.width = '350px';
+            errDiv.style.overflow = 'auto';
+            errDiv.style.borderRadius = '5px';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.style.fontSize = '12px';
+            errDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            errDiv.innerText = "JS Error:\n" + message + "\n\nSource: " + source + "\nLine: " + lineno;
+            document.body.appendChild(errDiv);
+        };
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bharatshramsetu</title>
@@ -364,6 +385,77 @@
                         <a class="dropdown-item" ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)">{{ x.SectionName }}</a>
                     </li>
 
+                </ul>
+            </div>
+
+            <!-- QR System dropdown -->
+            <div class="dropdown">
+                <button class="dropbtn d-flex align-items-center" type="button" data-bs-toggle="dropdown" style="background: transparent; border: none; font-size: 13px; font-weight: 500; text-transform: uppercase;">
+                    QR System
+                </button>
+                <ul class="dropdown-menu">
+                    <!-- Dynamic client-side options based on user role -->
+                    <!-- Administrator (loginType 1) -->
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminusers" class="dropdown-item">All Users &amp; ID Cards</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminemployers" class="dropdown-item">Employer Approvals</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminscans" class="dropdown-item">Scan Logs</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/adminlookup" class="dropdown-item">Entity Lookup</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/worker" class="dropdown-item">Worker Directory</a>
+                    </li>
+                    <li ng-if="loginType == 1">
+                        <a href="/qr/scan" class="dropdown-item">Scan / Bind QR</a>
+                    </li>
+
+                    <!-- Principal Employer (loginType 5) -->
+                    <li ng-if="loginType == 5">
+                        <a href="/qr/worker" class="dropdown-item">My Workers</a>
+                    </li>
+                    <li ng-if="loginType == 5">
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+
+                    <!-- Contractor (loginType 2 or 6) -->
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/worker" class="dropdown-item">My Workers</a>
+                    </li>
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/myemployers" class="dropdown-item">My Employers</a>
+                    </li>
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+
+                    <!-- Worker (loginType 7) -->
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/mycontractors" class="dropdown-item">My Contractors</a>
+                    </li>
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
+                    </li>
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/idcard" class="dropdown-item">My Identity Card</a>
+                    </li>
+                    <li ng-if="loginType == 7">
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+
+                    <!-- General options for all authenticated users -->
+                    <li class="dropdown-divider"></li>
+                    <li>
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My ID Card</a>
+                    </li>
+                    <li>
+                        <a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a>
+                    </li>
                 </ul>
             </div>
         </div>

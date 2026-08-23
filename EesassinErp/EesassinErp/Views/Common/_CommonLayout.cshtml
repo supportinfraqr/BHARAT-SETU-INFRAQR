@@ -1,4 +1,4 @@
-﻿
+
 @{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     Layout = null;
@@ -8,6 +8,27 @@
 
 <html ng-app="myApp" ng-controller="myController">
 <head>
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            var errDiv = document.createElement('div');
+            errDiv.style.position = 'fixed';
+            errDiv.style.bottom = '10px';
+            errDiv.style.right = '10px';
+            errDiv.style.background = 'rgba(255, 0, 0, 0.9)';
+            errDiv.style.color = 'white';
+            errDiv.style.padding = '15px';
+            errDiv.style.zIndex = '999999';
+            errDiv.style.maxHeight = '250px';
+            errDiv.style.width = '350px';
+            errDiv.style.overflow = 'auto';
+            errDiv.style.borderRadius = '5px';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.style.fontSize = '12px';
+            errDiv.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
+            errDiv.innerText = "JS Error:\n" + message + "\n\nSource: " + source + "\nLine: " + lineno;
+            document.body.appendChild(errDiv);
+        };
+    </script>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
@@ -44,8 +65,8 @@
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-sanitize.min.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-filter.min.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/angular-ui.js")"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/4.9.5/tinymce.min.js"></script>
-    <script type="text/javascript" src='https://cdnjs.cloudflare.com/ajax/libs/angular-ui-tinymce/0.0.19/tinymce.js'></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/Rootfile/tinymce.min.js")"></script>
+    <script type="text/javascript" src="@Url.Content("~/scripts/Rootfile/tinymce.js")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
     <script type="text/javascript" src="@Url.Content("~/Scripts/myjslib/controller.js?Ver="+ViewBag.Version+"")"></script>
@@ -324,6 +345,27 @@
                         <div class="clearfix"></div>
                     </a>
                 </li>
+
+                @if ((Session["loginType"]?.ToString() ?? "") == "1")
+                {
+                    <li>
+                        <a href="javascript:void(0);" onclick="var m=document.getElementById('qrSystemGroup');m.style.display=(m.style.display==='none'||m.style.display==='')?'block':'none';">
+                            <div class="pull-left"><i class="fa fa-qrcode mr-12"></i><span class="right-nav-text">QR System</span></div>
+                            <div class="pull-right"><i class="mdi mdi-chevron-down"></i></div>
+                            <div class="clearfix"></div>
+                        </a>
+                        <ul id="qrSystemGroup" style="display:none;list-style:none;padding-left:18px;">
+                            <li><a href="@Url.Content("~/qr/adminusers")"><div class="pull-left"><i class="fa fa-id-card mr-12"></i><span class="right-nav-text">All Users & ID Cards</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/adminemployers")"><div class="pull-left"><i class="fa fa-check-circle-o mr-12"></i><span class="right-nav-text">Employer Approvals</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/adminscans")"><div class="pull-left"><i class="fa fa-list-alt mr-12"></i><span class="right-nav-text">Scan Logs</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/adminlookup")"><div class="pull-left"><i class="fa fa-search mr-12"></i><span class="right-nav-text">Entity Lookup</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/bindingrequests")"><div class="pull-left"><i class="fa fa-link mr-12"></i><span class="right-nav-text">Binding Requests</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/worker")"><div class="pull-left"><i class="fa fa-users mr-12"></i><span class="right-nav-text">Worker Directory</span></div><div class="clearfix"></div></a></li>
+                            <li><a href="@Url.Content("~/qr/scan")"><div class="pull-left"><i class="fa fa-camera mr-12"></i><span class="right-nav-text">Scan QR</span></div><div class="clearfix"></div></a></li>
+                        </ul>
+                    </li>
+                }
+
                 <li ng-repeat="submenu in menu.submenu" ng-model="SelectSubMenu" class="ng-pristine ng-untouched ng-valid ng-scope ng-empty">
                     <a class="selectifram" href="" data-path="/Dashboard/Unit" ng-click="SelectIfram(submenu.SubMenuUrl,submenu.SubMenuName);UrlAccessPermission(submenu.SubMenuId)" title="Unit">
                         <div class="pull-left">

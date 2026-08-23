@@ -1,12 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using System.Web.Configuration;
 using BAL;
 using DAL;
 using Newtonsoft.Json;
@@ -17,6 +20,196 @@ namespace EesassinErp.Controllers
     [ValidateSession]
     public class WorkerController : Controller
     {
+        private static readonly string QrBaseUrl =
+            (WebConfigurationManager.AppSettings["BssQrBaseUrl"] ?? "https://bharat-shramsetu.infraqr.com").TrimEnd('/');
+
+        /// <summary>Resolve the ERP login type (1=admin, 2/6=contractor, 5=employer, 7=worker) from session or DB</summary>
+        private string ResolveLoginType()
+        {
+            var lt = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString();
+            if (!string.IsNullOrEmpty(lt)) return lt;
+            try
+            {
+                var loginId = Session["LoginId"];
+                if (loginId != null)
+                {
+                    var dt = SqlDBHelper.SqlHelper.ExecuteParamerizedSelectCommand(
+                        "SELECT LoginType FROM RTL.LoginTable WHERE LoginId = @LoginId",
+                        CommandType.Text,
+                        new[] { new System.Data.SqlClient.SqlParameter("@LoginId", Convert.ToInt32(loginId)) });
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        lt = Convert.ToString(dt.Rows[0]["LoginType"]);
+                        Session["loginType"] = lt;
+                    }
+                }
+            }
+            catch { }
+            return lt;
+        }
+
+        // ─── QR Integration Views ─────────────────────────────────────────────
+
+        /// <summary>QR Gateway — routes users to role-based actions</summary>
+        public ActionResult QrGateway()
+        {
+            string loginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            if (loginType == "5")
+            {
+                return Redirect("/Dashboard/principleEmployerDashboard");
+            }
+            else if (loginType == "2" || loginType == "6")
+            {
+                return Redirect("/Dashboard/ContractorDashboard");
+            }
+            else
+            {
+                return Redirect("/Dashboard/Dashboard");
+            }
+        }
+
+        /// <summary>QR Dashboard — shows stats & worker list from Django QR backend</summary>
+        public ActionResult QrDashboard()
+        {
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Scan — camera scan page embedded in ERP</summary>
+        public ActionResult QrScan()
+        {
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Worker Card — view/download identity card for a worker</summary>
+        public ActionResult QrWorkerCard(int id)
+        {
+            ViewBag.WorkerId = id;
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR My Card — view/download identity card for the current logged-in user (Any Role)</summary>
+        public ActionResult QrMyCard()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "7";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR My Employers — list of employers associated with the contractor</summary>
+        public ActionResult QrMyEmployers()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Binding Requests — approve/reject binding requests, request &amp; consent unbinds</summary>
+        public ActionResult QrBindingRequests()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — Employer approvals and plan management (admin only)</summary>
+        public ActionResult QrAdminEmployers()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — Scan logs</summary>
+        public ActionResult QrAdminScans()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — Entity lookup trees</summary>
+        public ActionResult QrAdminLookup()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR Admin — All users with ID card preview/download (Design A cards)</summary>
+        public ActionResult QrAdminUsers()
+        {
+            if (ResolveLoginType() != "1")
+                return RedirectToAction("DashBoard", "DashBoard");
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR My Contractors — contractors the logged-in worker is engaged with</summary>
+        public ActionResult QrMyContractors()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>QR My Employers (Worker) — establishments the worker serves via contractors</summary>
+        public ActionResult QrWorkerEmployers()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "1";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
+        /// <summary>
+        /// POST /Worker/QrLogin — called by the ERP frontend to log into the Django QR backend
+        /// and store the JWT token in ASP.NET session so QrBridgeController can use it.
+        /// </summary>
+        [HttpPost]
+        public async Task<JsonResult> QrLogin(string username, string password)
+        {
+            try
+            {
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+                using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) })
+                {
+                    var payload = JsonConvert.SerializeObject(new { username, password });
+                    var resp = await client.PostAsync(
+                        QrBaseUrl + "/api/auth/login/",
+                        new StringContent(payload, Encoding.UTF8, "application/json"));
+
+                    var body = await resp.Content.ReadAsStringAsync();
+
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        dynamic json = JsonConvert.DeserializeObject(body);
+                        string token = json?.access?.ToString();
+                        if (!string.IsNullOrEmpty(token))
+                            Session["BssQrToken"] = token;
+
+                        return Json(new { ok = true, body });
+                    }
+
+                    return Json(new { ok = false, body });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { ok = false, error = ex.Message });
+            }
+        }
+
+        // ─── Existing Worker Actions ──────────────────────────────────────────
+
         // GET: Worker
         public ActionResult AutoFillDoc()
         {
