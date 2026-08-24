@@ -1,0 +1,390 @@
+@{
+    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+    ViewBag.Title = "My Sites";
+    string loginId = ViewBag.LoginId ?? "0";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    body { background: #f3f4f6; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .mgmt-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .mgmt-header { margin-bottom: 24px; }
+    .mgmt-header h2 { font-size: 24px; font-weight: 700; color: #111827; }
+    .mgmt-header p { font-size: 14px; color: #6b7280; margin-top: 4px; }
+
+    .mgmt-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .mgmt-filters { font-size: 14px; font-weight: 600; color: #374151; }
+
+    .btn-action { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 13px; transition: background 0.15s; }
+    .btn-action:hover { background: #1d4ed8; color: #fff; }
+    .btn-success { background: #16a34a !important; }
+
+    .mgmt-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; }
+    .mgmt-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
+    .mgmt-table th { background: #f9fafb; padding: 12px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+    .mgmt-table td { padding: 12px 16px; font-size: 13px; color: #1f2937; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    .mgmt-table tr:last-child td { border-bottom: none; }
+    .empty-row { text-align: center; color: #6b7280; padding: 32px !important; font-style: italic; }
+
+    .badge-active { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .badge-inactive { background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .row-actions .icon-btn { background: none; border: none; font-size: 15px; cursor: pointer; margin: 0 6px; color: #475569; }
+    .row-actions .icon-btn.edit:hover { color: #2563eb; }
+    .row-actions .icon-btn.del:hover { color: #dc2626; }
+
+    .modal-content { border-radius: 14px; }
+    .modal-header { border-bottom: 1px solid #e5e7eb; }
+    .form-label { font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: .3px; }
+    #siteMap { height: 300px; border-radius: 8px; border: 2px solid #d1d5db; z-index: 0; }
+    .coords-hint { font-size: 12px; color: #6b7280; margin-top: 6px; }
+</style>
+
+<div class="mgmt-container">
+    <div id="errorIndicator" class="alert alert-danger" style="display:none;"></div>
+
+    <div class="mgmt-header">
+        <h2>My Sites</h2>
+        <p>Work sites belonging to your establishment. A site always belongs to an employer.</p>
+    </div>
+
+    <div class="mgmt-toolbar">
+        <div class="mgmt-filters"><span id="rowCount">0</span> sites</div>
+        <div>
+            <button class="btn-action" onclick="loadSites()"><i class="fa fa-refresh"></i> Refresh</button>
+            <button class="btn-action btn-success" onclick="openModal()"><i class="fa fa-plus"></i> Add Site</button>
+        </div>
+    </div>
+
+    <div class="mgmt-table-wrap">
+        <table class="mgmt-table">
+            <thead>
+                <tr>
+                    <th>Site</th>
+                    <th>City / State</th>
+                    <th>Contact</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="siteTableBody">
+                <tr><td colSpan="6" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal fade" id="siteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="siteModalTitle">Add Site</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Site Name *</label>
+                        <input class="form-control" id="f_name" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Site Code</label>
+                        <input class="form-control" id="f_site_code" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Address</label>
+                        <textarea class="form-control" id="f_address" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Location (drag / click the map, or search)</label>
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <input class="form-control" id="f_map_search" placeholder="Search location (city, address, landmark...)" />
+                            <button type="button" class="btn btn-secondary" id="f_map_search_btn" style="white-space:nowrap;">Search</button>
+                        </div>
+                        <div id="siteMap"></div>
+                        <div class="coords-hint" id="f_coords"></div>
+                        <input type="hidden" id="f_lat" /><input type="hidden" id="f_lng" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Location Address (reverse-geocoded)</label>
+                        <input class="form-control" id="f_location_address" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">City</label>
+                        <input class="form-control" id="f_city" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">State</label>
+                        <input class="form-control" id="f_state" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Pincode</label>
+                        <input class="form-control" id="f_pincode" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Person</label>
+                        <input class="form-control" id="f_contact_person" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Mobile</label>
+                        <input class="form-control" id="f_contact_mobile" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input class="form-control" id="f_email" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Description</label>
+                        <input class="form-control" id="f_description" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">PAN No</label>
+                        <input class="form-control" id="f_pan_no" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">GSTIN</label>
+                        <input class="form-control" id="f_gstin" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">CLRA RC</label>
+                        <input class="form-control" id="f_clrarc" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">CLRA License</label>
+                        <input class="form-control" id="f_clrlic" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Manpower Type</label>
+                        <input class="form-control" id="f_manpower_type" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Manpower Count</label>
+                        <input class="form-control" id="f_manpower_count" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Valid From</label>
+                        <input class="form-control" id="f_valid_from" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Valid To</label>
+                        <input class="form-control" id="f_valid_to" />
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="f_is_active" checked />
+                            <label class="form-check-label" for="f_is_active">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveSiteBtn" onclick="saveSite()">Save Site</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+    var editingId = null;
+    var map = null, marker = null;
+
+    $(function() { loadSites(); });
+
+    function loadSites() {
+        $('#errorIndicator').hide();
+        var tbody = $('#siteTableBody');
+        $.get(QR_BRIDGE + '/qr/sites/')
+            .done(function(res) {
+                var data = (res && res.Data) ? res.Data : [];
+                $('#rowCount').text(data.length);
+                if (data.length === 0) {
+                    tbody.html('<tr><td colSpan="6" class="empty-row">No sites yet. Click "Add Site" to create one.</td></tr>');
+                    return;
+                }
+                var html = '';
+                data.forEach(function(s) {
+                    var loc = (s.location_address || (s.city ? s.city + ', ' : '') + (s.state ? s.state : '')) || '—';
+                    if (s.latitude && s.longitude) loc = '<span title="' + s.latitude + ', ' + s.longitude + '">' + esc(loc) + '</span>';
+                    else loc = esc(loc);
+                    var active = s.is_active ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>';
+                    html += '<tr>' +
+                        '<td><b>' + esc(s.name) + '</b>' + (s.site_code ? '<br/><small class="text-muted">' + esc(s.site_code) + '</small>' : '') + '</td>' +
+                        '<td>' + esc(s.city || '—') + (s.state ? '<br/><small class="text-muted">' + esc(s.state) + '</small>' : '') + '</td>' +
+                        '<td>' + esc(s.contact_person || '—') + (s.contact_mobile ? '<br/><small class="text-muted">' + esc(s.contact_mobile) + '</small>' : '') + '</td>' +
+                        '<td>' + loc + '</td>' +
+                        '<td>' + active + '</td>' +
+                        '<td class="row-actions">' +
+                            '<button class="icon-btn edit" title="Edit" onclick="openModal(' + (s.id||'') + ')"><i class="fa fa-pencil"></i></button>' +
+                            '<button class="icon-btn del" title="Delete" onclick="delSite(' + (s.id||'') + ')"><i class="fa fa-trash"></i></button>' +
+                        '</td>' +
+                    '</tr>';
+                });
+                tbody.html(html);
+            })
+            .fail(function(xhr) {
+                var msg = 'Failed to load sites.';
+                if (xhr.status === 401 || xhr.status === 403) msg = 'Session expired. Please re-authenticate.';
+                $('#errorIndicator').text(msg).show();
+                tbody.html('<tr><td colSpan="6" class="empty-row text-danger">Could not load sites.</td></tr>');
+            });
+    }
+
+    function openModal(id) {
+        editingId = id || null;
+        $('#f_name').val(''); $('#f_site_code').val(''); $('#f_address').val('');
+        $('#f_city').val(''); $('#f_state').val(''); $('#f_pincode').val('');
+        $('#f_contact_person').val(''); $('#f_contact_mobile').val(''); $('#f_email').val('');
+        $('#f_description').val(''); $('#f_pan_no').val(''); $('#f_gstin').val('');
+        $('#f_clrarc').val(''); $('#f_clrlic').val(''); $('#f_manpower_type').val(''); $('#f_manpower_count').val('');
+        $('#f_valid_from').val(''); $('#f_valid_to').val(''); $('#f_is_active').prop('checked', true);
+        $('#f_location_address').val(''); $('#f_lat').val(''); $('#f_lng').val(''); $('#f_coords').text('');
+        $('#siteModalTitle').text('Add Site');
+
+        if (id) {
+            $.get(QR_BRIDGE + '/qr/sites/').done(function(res) {
+                var data = (res && res.Data) || [];
+                var s = data.find(function(x) { return x.id === id; });
+                if (s) {
+                    $('#siteModalTitle').text('Edit Site');
+                    $('#f_name').val(s.name || ''); $('#f_site_code').val(s.site_code || '');
+                    $('#f_address').val(s.address || ''); $('#f_city').val(s.city || '');
+                    $('#f_state').val(s.state || ''); $('#f_pincode').val(s.pincode || '');
+                    $('#f_contact_person').val(s.contact_person || ''); $('#f_contact_mobile').val(s.contact_mobile || '');
+                    $('#f_email').val(s.email || ''); $('#f_description').val(s.description || '');
+                    $('#f_pan_no').val(s.pan_no || ''); $('#f_gstin').val(s.gstin || '');
+                    $('#f_clrarc').val(s.clrarc || ''); $('#f_clrlic').val(s.clrlic || '');
+                    $('#f_manpower_type').val(s.manpower_type || ''); $('#f_manpower_count').val(s.manpower_count || '');
+                    $('#f_valid_from').val(s.valid_from || ''); $('#f_valid_to').val(s.valid_to || '');
+                    $('#f_is_active').prop('checked', s.is_active !== false);
+                    $('#f_location_address').val(s.location_address || '');
+                    setMarker(s.latitude, s.longitude);
+                }
+            });
+        } else {
+            setMarker(null, null);
+        }
+
+        var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('siteModal'));
+        m.show();
+        setTimeout(function(){ if (map) map.invalidateSize(); }, 300);
+    }
+
+    function saveSite() {
+        var name = $('#f_name').val().trim();
+        if (!name) { Swal.fire('Required', 'Site name is required.', 'warning'); return; }
+        var payload = {
+            name: name,
+            site_code: $('#f_site_code').val(),
+            address: $('#f_address').val(),
+            latitude: $('#f_lat').val() ? parseFloat($('#f_lat').val()) : null,
+            longitude: $('#f_lng').val() ? parseFloat($('#f_lng').val()) : null,
+            location_address: $('#f_location_address').val(),
+            city: $('#f_city').val(),
+            state: $('#f_state').val(),
+            pincode: $('#f_pincode').val(),
+            contact_person: $('#f_contact_person').val(),
+            contact_mobile: $('#f_contact_mobile').val(),
+            email: $('#f_email').val(),
+            description: $('#f_description').val(),
+            pan_no: $('#f_pan_no').val(),
+            gstin: $('#f_gstin').val(),
+            clrarc: $('#f_clrarc').val(),
+            clrlic: $('#f_clrlic').val(),
+            manpower_type: $('#f_manpower_type').val(),
+            manpower_count: $('#f_manpower_count').val(),
+            valid_from: $('#f_valid_from').val(),
+            valid_to: $('#f_valid_to').val(),
+            is_active: $('#f_is_active').is(':checked')
+        };
+        $('#saveSiteBtn').prop('disabled', true);
+        var url = editingId ? (QR_BRIDGE + '/qr/sites/' + editingId + '/') : (QR_BRIDGE + '/qr/sites/');
+        var method = editingId ? 'PUT' : 'POST';
+        $.ajax({ url: url, method: method, contentType: 'application/json', data: JSON.stringify(payload) })
+            .done(function() {
+                Swal.fire('Saved', 'Site ' + (editingId ? 'updated' : 'created') + ' successfully.', 'success');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('siteModal')).hide();
+                loadSites();
+            })
+            .fail(function(xhr) {
+                var msg = 'Failed to save site.';
+                try { var j = JSON.parse(xhr.responseText); msg = j.Message || j.message || msg; } catch(e) {}
+                Swal.fire('Error', msg, 'error');
+            })
+            .always(function(){ $('#saveSiteBtn').prop('disabled', false); });
+    }
+
+    function delSite(id) {
+        Swal.fire({
+            title: 'Delete site?',
+            text: 'This will permanently remove the site.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Delete'
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
+            $.ajax({ url: QR_BRIDGE + '/qr/sites/' + id + '/', method: 'DELETE' })
+                .done(function() { Swal.fire('Deleted', 'Site removed.', 'success'); loadSites(); })
+                .fail(function() { Swal.fire('Error', 'Failed to delete site.', 'error'); });
+        });
+    }
+
+    // ─── Leaflet map picker ──────────────────────────────────────────────
+    function initMap() {
+        if (map) return;
+        map = L.map('siteMap').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+        }).addTo(map);
+        map.on('click', function(e) { setMarker(e.latlng.lat, e.latlng.lng, true); });
+        $('#f_map_search_btn').on('click', doMapSearch);
+        $('#f_map_search').on('keydown', function(e){ if (e.key === 'Enter') doMapSearch(); });
+    }
+    initMap();
+
+    function setMarker(lat, lng, geocode) {
+        if (!lat || !lng) return;
+        if (marker) marker.remove();
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        map.setView([lat, lng], 14);
+        $('#f_lat').val(lat.toFixed(6)); $('#f_lng').val(lng.toFixed(6));
+        $('#f_coords').text('Selected: ' + lat.toFixed(6) + ', ' + lng.toFixed(6));
+        marker.on('dragend', function(){ var p = marker.getLatLng(); setCoords(p.lat, p.lng, true); });
+        if (geocode) setCoords(lat, lng, true);
+    }
+
+    function setCoords(lat, lng, geocode) {
+        $('#f_lat').val(lat.toFixed(6)); $('#f_lng').val(lng.toFixed(6));
+        $('#f_coords').text('Selected: ' + lat.toFixed(6) + ', ' + lng.toFixed(6));
+        if (geocode) reverseGeocode(lat, lng);
+    }
+
+    function reverseGeocode(lat, lng) {
+        $.get(QR_BRIDGE + '/qr/qr/geocode/', { lat: lat, lng: lng })
+            .done(function(res) {
+                var addr = (res && (res.address || res.Data || res.display_name)) || '';
+                if (typeof addr === 'object' && addr.display_name) addr = addr.display_name;
+                if (addr) $('#f_location_address').val(String(addr));
+            });
+    }
+
+    function doMapSearch() {
+        var q = $('#f_map_search').val().trim();
+        if (!q) return;
+        $.get('https://nominatim.openstreetmap.org/search', { q: q, format: 'json', limit: 1 })
+            .done(function(r) { if (r && r[0]) setMarker(parseFloat(r[0].lat), parseFloat(r[0].lon)); })
+            .fail(function() { Swal.fire('Error', 'Location search failed.', 'error'); });
+    }
+
+    function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>

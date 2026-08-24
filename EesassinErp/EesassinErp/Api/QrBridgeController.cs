@@ -326,6 +326,48 @@ namespace EesassinErp.Controllers
         public async Task<IHttpActionResult> Scans()
             => ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/scans/", null, GetToken())));
 
+        // ─── Sites ────────────────────────────────────────────────────────────
+
+        /// <summary>GET /Api/QrBridge/qr/sites/ — list the employer's sites</summary>
+        [HttpGet]
+        [Route("qr/sites/")]
+        public async Task<IHttpActionResult> Sites()
+            => ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/sites/", null, GetToken())));
+
+        /// <summary>POST /Api/QrBridge/qr/sites/ — create a site (belongs to employer)</summary>
+        [HttpPost]
+        [Route("qr/sites/")]
+        public async Task<IHttpActionResult> CreateSite()
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", "/api/qr/sites/", body, GetToken())));
+        }
+
+        /// <summary>PUT /Api/QrBridge/qr/sites/{id}/ — update a site</summary>
+        [HttpPut]
+        [Route("qr/sites/{siteId}/")]
+        public async Task<IHttpActionResult> UpdateSite(int siteId)
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("PUT", $"/api/qr/sites/{siteId}/", body, GetToken())));
+        }
+
+        /// <summary>DELETE /Api/QrBridge/qr/sites/{id}/ — delete a site</summary>
+        [HttpDelete]
+        [Route("qr/sites/{siteId}/")]
+        public async Task<IHttpActionResult> DeleteSite(int siteId)
+            => ResponseMessage(BuildResponse(await ForwardAsync("DELETE", $"/api/qr/sites/{siteId}/", null, GetToken())));
+
+        /// <summary>GET /Api/QrBridge/qr/qr/geocode/?lat=..&amp;lng=.. — reverse geocode for the map picker</summary>
+        [HttpGet]
+        [Route("qr/qr/geocode/")]
+        public async Task<IHttpActionResult> Geocode()
+        {
+            string qs = HttpContext.Current.Request.QueryString.ToString();
+            string path = "/api/qr/qr/geocode/" + (string.IsNullOrEmpty(qs) ? "" : "?" + qs);
+            return ResponseMessage(BuildResponse(await ForwardAsync("GET", path, null, GetToken())));
+        }
+
         // ─── Proxy Core ────────────────────────────────────────────────────────
 
         /// <summary>Mono's Web API host provides no HttpSessionState to ApiControllers

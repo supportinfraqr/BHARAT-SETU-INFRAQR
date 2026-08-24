@@ -107,6 +107,15 @@ namespace EesassinErp.Controllers
             return View();
         }
 
+        /// <summary>QR My Sites — employer's sites management</summary>
+        public ActionResult QrMySites()
+        {
+            ViewBag.LoginType = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "5";
+            ViewBag.LoginId = Session["LoginId"]?.ToString() ?? "0";
+            ViewBag.QrBaseUrl = QrBaseUrl;
+            return View();
+        }
+
         /// <summary>QR Binding Requests — approve/reject binding requests, request &amp; consent unbinds</summary>
         public ActionResult QrBindingRequests()
         {

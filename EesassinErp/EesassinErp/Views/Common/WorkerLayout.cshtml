@@ -5,7 +5,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bharatshramsetu</title>
+    <title>BharatShramSetu</title>
+    <link rel="icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
+    <link rel="shortcut icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -446,7 +448,7 @@
     <nav class="navbar px-4" style="background: #F4F9FF;" ng-init="BindMenus()">
         <!-- Left logo -->
         <div class="nav-left">
-            <img src="~/CommonDashboard/assets/icons/BharatShramSetu (1).png" alt="Logo" class="logo" />
+            <img src="~/CommonDashboard/assets/icons/NewLogo.svg" alt="Logo" class="logo" />
         </div>
 
         <!-- Center nav items -->
@@ -466,6 +468,10 @@
 
             <a href="#"  class="nav-center-btn" style="text-decoration:none;">
                 Compliance
+            </a>
+
+            <a href="@Url.Content("~/qr/idcard")" class="nav-center-btn" style="text-decoration:none;">
+                QR System
             </a>
 
         </div>

@@ -57,6 +57,12 @@ namespace EesassinErp
             );
 
             routes.MapRoute(
+                name: "QrMySites",
+                url: "qr/mysites",
+                defaults: new { controller = "Worker", action = "QrMySites" }
+            );
+
+            routes.MapRoute(
                 name: "QrAdminEmployers",
                 url: "qr/adminemployers",
                 defaults: new { controller = "Worker", action = "QrAdminEmployers" }
