@@ -1,4 +1,4 @@
-﻿/* =======================================================
+/* =======================================================
    ROOT
 ======================================================= */
 
@@ -2347,3 +2347,228 @@ input {
             font-size: 22px;
         }
     }
+
+
+/* ===== Nation First, Worker First (premium) ===== */
+.bss-initiatives {
+  position: relative;
+  padding: 80px 24px 80px;
+  text-align: center;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+.bss-initiatives::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.bss-init-head {
+  position: relative;
+  margin-bottom: 50px;
+  z-index: 1;
+}
+.bss-init-eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #d35400;
+  margin-bottom: 12px;
+}
+.bss-init-head h2 {
+  font-size: 38px;
+  color: #0f172a;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.bss-init-head p {
+  color: #475569;
+  margin: 14px auto 0;
+  font-size: 16px;
+  max-width: 640px;
+  line-height: 1.6;
+}
+
+/* 2x2 Grid Layout */
+.bss-init-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 28px;
+  max-width: 1100px;
+  margin: 0 auto 60px;
+  text-align: left;
+}
+
+.bss-init-card {
+  position: relative;
+  border-radius: 12px;
+  padding: 36px 32px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.bss-init-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+/* Card Accent Borders & Backgrounds */
+.bss-init-card:nth-child(1) {
+  background: #fffcf9;
+  border-top: 5px solid #d35400;
+}
+.bss-init-card:nth-child(2) {
+  background: #f7faff;
+  border-top: 5px solid #1e3a8a;
+}
+.bss-init-card:nth-child(3) {
+  background: #f6fcf8;
+  border-top: 5px solid #009245;
+}
+.bss-init-card:nth-child(4) {
+  background: #faf7fc;
+  border-top: 5px solid #5e35b1;
+}
+
+.bss-init-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.bss-init-num {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.bss-init-card:nth-child(1) .bss-init-num,
+.bss-init-card:nth-child(1) h4 {
+  color: #d35400;
+}
+
+.bss-init-card:nth-child(2) .bss-init-num,
+.bss-init-card:nth-child(2) h4 {
+  color: #1e3a8a;
+}
+
+.bss-init-card:nth-child(3) .bss-init-num,
+.bss-init-card:nth-child(3) h4 {
+  color: #009245;
+}
+
+.bss-init-card:nth-child(4) .bss-init-num,
+.bss-init-card:nth-child(4) h4 {
+  color: #5e35b1;
+}
+
+.bss-init-card h4 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.bss-init-card p {
+  margin: 0;
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Worker Banner */
+.bss-worker-strip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, #0b1f4b 0%, #1e3a8a 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 28px 36px;
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.2);
+}
+
+.bss-worker-strip::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #F58220, #F5C518, #F58220);
+}
+
+.bss-worker-emblem {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, #F58220, #F5C518);
+  color: #0b1f4b;
+  font-size: 26px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(245, 130, 32, 0.3);
+}
+
+.bss-worker-inner {
+  text-align: left;
+}
+
+.bss-worker-jai {
+  margin: 0 0 4px;
+}
+
+.bss-worker-jai b {
+  color: #F5C518;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+
+.bss-worker-sub {
+  margin: 0;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .bss-initiatives {
+    padding: 60px 16px 60px;
+  }
+  .bss-init-head h2 {
+    font-size: 30px;
+  }
+  .bss-init-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .bss-worker-strip {
+    padding: 24px;
+    text-align: center;
+  }
+  .bss-worker-inner {
+    text-align: center;
+  }
+}
+
