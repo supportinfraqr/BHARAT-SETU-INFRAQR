@@ -400,7 +400,9 @@ class SiteListCreate(APIView):
             return Response({"Result": "Error", "Message": "employer is required (site belongs to employer)"}, status=400)
         if role == EMPLOYER and str(employer_id) != str(emp_id):
             return Response({"Result": "Error", "Message": "Cannot create site for another employer"}, status=403)
-        ser = SiteSerializer(data=request.data)
+        data = dict(request.data)
+        data.pop("employer", None)  # employer is always derived from the authenticated scope
+        ser = SiteSerializer(data=data)
         ser.is_valid(raise_exception=True)
         with transaction.atomic():
             obj = ser.save(employer_id=employer_id)

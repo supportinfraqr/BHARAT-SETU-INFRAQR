@@ -213,14 +213,15 @@
                 }
                 var html = '';
                 data.forEach(function(s) {
-                    var loc = (s.location_address || (s.city ? s.city + ', ' : '') + (s.state ? s.state : '')) || '—';
+                    var loc = (s.location_address || (s.city ? s.city + ', ' : '') + (s.state ? s.state : '')) || '-';
                     if (s.latitude && s.longitude) loc = '<span title="' + s.latitude + ', ' + s.longitude + '">' + esc(loc) + '</span>';
                     else loc = esc(loc);
                     var active = s.is_active ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>';
+                    var cityState = (s.city || s.state) ? (esc(s.city || '-') + (s.state ? '<br/><small class="text-muted">' + esc(s.state) + '</small>' : '')) : '<span class="text-muted">-</span>';
                     html += '<tr>' +
                         '<td><b>' + esc(s.name) + '</b>' + (s.site_code ? '<br/><small class="text-muted">' + esc(s.site_code) + '</small>' : '') + '</td>' +
-                        '<td>' + esc(s.city || '—') + (s.state ? '<br/><small class="text-muted">' + esc(s.state) + '</small>' : '') + '</td>' +
-                        '<td>' + esc(s.contact_person || '—') + (s.contact_mobile ? '<br/><small class="text-muted">' + esc(s.contact_mobile) + '</small>' : '') + '</td>' +
+                        '<td>' + cityState + '</td>' +
+                        '<td>' + esc(s.contact_person || '-') + (s.contact_mobile ? '<br/><small class="text-muted">' + esc(s.contact_mobile) + '</small>' : '') + '</td>' +
                         '<td>' + loc + '</td>' +
                         '<td>' + active + '</td>' +
                         '<td class="row-actions">' +
@@ -372,9 +373,20 @@
     function reverseGeocode(lat, lng) {
         $.get(QR_BRIDGE + '/qr/qr/geocode/', { lat: lat, lng: lng })
             .done(function(res) {
-                var addr = (res && (res.address || res.Data || res.display_name)) || '';
-                if (typeof addr === 'object' && addr.display_name) addr = addr.display_name;
-                if (addr) $('#f_location_address').val(String(addr));
+                var d = res && res.Data ? res.Data : res;
+                var addr = d && (d.address !== undefined ? d.address : d);
+                if (addr && typeof addr === 'object') {
+                    if (addr.display_name) $('#f_location_address').val(String(addr.display_name));
+                    var a = addr.address || addr;
+                    var city = a.city || a.town || a.village || a.municipality || a.county || '';
+                    var state = a.state || '';
+                    var pin = a.postcode || '';
+                    if (city) $('#f_city').val(city);
+                    if (state) $('#f_state').val(state);
+                    if (pin) $('#f_pincode').val(pin);
+                } else if (addr) {
+                    $('#f_location_address').val(String(addr));
+                }
             });
     }
 

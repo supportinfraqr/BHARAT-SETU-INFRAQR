@@ -121,7 +121,7 @@
                     html += '<tr>' +
                         '<td><b>' + escHtml(c.name) + '</b></td>' +
                         '<td><span class="status-badge ' + badgeCls(c.status) + '">' + escHtml(c.status) + '</span></td>' +
-                        '<td>' + escHtml(c.employer || '—') + '</td>' +
+                        '<td>' + escHtml(c.employer || '-') + '</td>' +
                         '<td style="font-size:12px;">' + fmtDate(c.created_at) + '</td>' +
                     '</tr>';
                 });
@@ -146,7 +146,7 @@
     }
 
     function fmtDate(s) {
-        if (!s) return '—';
-        try { var d = new Date(s); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(); } catch (e) { return '—'; }
+        if (!s) return '-';
+        try { var d = new Date(s); return isNaN(d.getTime()) ? '-' : d.toLocaleDateString(); } catch (e) { return '-'; }
     }
 </script>

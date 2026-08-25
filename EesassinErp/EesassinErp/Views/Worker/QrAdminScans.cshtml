@@ -88,15 +88,15 @@
     }
 
     function fmtDate(s) {
-        if (!s) return '—';
+        if (!s) return '-';
         try {
             var d = new Date(s);
-            if (isNaN(d.getTime())) return '—';
+            if (isNaN(d.getTime())) return '-';
             return d.toLocaleString();
-        } catch (e) { return '—'; }
+        } catch (e) { return '-'; }
     }
 
-    function val(v) { return (v === null || v === undefined || v === '') ? '<span class="muted">—</span>' : escHtml(v); }
+    function val(v) { return (v === null || v === undefined || v === '') ? '<span class="muted">-</span>' : escHtml(v); }
 
     function render(rows) {
         $('#countInfo').text(rows.length + ' record(s)');

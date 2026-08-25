@@ -102,10 +102,10 @@
                         rows.forEach(function(e) {
                             html += '<tr>' +
                                 '<td><b>' + escHtml(e.name) + '</b></td>' +
-                                '<td>' + escHtml(e.contact_person || '—') + '</td>' +
-                                '<td>' + escHtml(e.email || '—') + '</td>' +
-                                '<td>' + escHtml(e.city || '—') + '</td>' +
-                                '<td>' + escHtml(e.industry || '—') + '</td>' +
+                                '<td>' + escHtml(e.contact_person || '-') + '</td>' +
+                                '<td>' + escHtml(e.email || '-') + '</td>' +
+                                '<td>' + escHtml(e.city || '-') + '</td>' +
+                                '<td>' + escHtml(e.industry || '-') + '</td>' +
                             '</tr>';
                         });
                         tbody.html(html);

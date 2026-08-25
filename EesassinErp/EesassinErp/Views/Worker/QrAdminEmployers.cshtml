@@ -102,7 +102,7 @@
 
         $.get(QR_BRIDGE + '/qr/management/employers/' + (filter ? '?status=' + filter : ''))
             .done(function (res) {
-                if (res && res.Result === 'Error') { showMsg(res.Message || 'Failed to load employers.', true); tbody.html('<tr><td colspan="9" class="empty-row">—</td></tr>'); return; }
+                if (res && res.Result === 'Error') { showMsg(res.Message || 'Failed to load employers.', true); tbody.html('<tr><td colspan="9" class="empty-row">-</td></tr>'); return; }
                 employers = (res && res.Data) || [];
                 render();
             })
@@ -177,8 +177,8 @@
     }
 
     function fmtDate(s) {
-        if (!s) return '—';
-        try { var d = new Date(s); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(); } catch (e) { return '—'; }
+        if (!s) return '-';
+        try { var d = new Date(s); return isNaN(d.getTime()) ? '-' : d.toLocaleDateString(); } catch (e) { return '-'; }
     }
 
     function render() {
@@ -192,7 +192,7 @@
         employers.forEach(function (e) {
             html += '<tr>' +
                 '<td><b>' + escHtml(e.name) + '</b><br/><span class="muted">' + escHtml(e.email || '') + '</span></td>' +
-                '<td>' + escHtml(e.contact_person || '—') + '<br/><span class="muted">' + escHtml(e.contact_mobile || '') + '</span></td>' +
+                '<td>' + escHtml(e.contact_person || '-') + '<br/><span class="muted">' + escHtml(e.contact_mobile || '') + '</span></td>' +
                 '<td><span class="status-badge ' + badgeCls(e.approval_status) + '">' + escHtml(e.approval_status) + '</span></td>' +
                 '<td id="planCell_' + e.id + '">' + escHtml(e.plan_type || 'None') +
                     (e.plan_expiry ? '<br/><span class="muted">till ' + fmtDate(e.plan_expiry) + '</span>' : '') + '</td>' +
@@ -201,12 +201,12 @@
                 '<td><input type="date" class="expiry-input" id="exp_' + e.id + '" value="' + (e.plan_expiry ? String(e.plan_expiry).slice(0, 10) : '') + '" /><br/>' +
                      '<button class="btn-save mt-1" onclick="setPlan(' + e.id + ')">Save</button> ' +
                      '<button class="btn-save mt-1" onclick="extendYear(' + e.id + ')">+1 yr</button></td>' +
-                '<td><span class="qr-ref">' + escHtml(e.qr_reference || '—') + '</span></td>' +
+                '<td><span class="qr-ref">' + escHtml(e.qr_reference || '-') + '</span></td>' +
                 '<td>' +
                     (e.approval_status === 'PENDING'
                         ? '<button class="btn-approve" onclick="decide(' + e.id + ',\'APPROVE\')">Approve</button>' +
                           '<button class="btn-reject" onclick="decide(' + e.id + ',\'REJECT\')">Reject</button>'
-                        : '<span class="muted">—</span>') +
+                        : '<span class="muted">-</span>') +
                 '</td>' +
             '</tr>';
         });

@@ -95,7 +95,7 @@
     function escHtml(s) {
         return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
-    function val(v) { return (v === null || v === undefined || v === '') ? '<span class="muted">—</span>' : escHtml(v); }
+    function val(v) { return (v === null || v === undefined || v === '') ? '<span class="muted">-</span>' : escHtml(v); }
     function pill(text, cls) { return '<span class="pill ' + cls + '">' + escHtml(text) + '</span>'; }
 
     function render(type, d) {
@@ -134,7 +134,7 @@
         } else {
             head = '<div class="entity-head"><span class="entity-name">' + escHtml(d.full_name || d.name) + '</span>' + pill('WORKER', 'pill-plan') + '</div>' +
                    '<div class="leaf-sub">#' + val(d.id) + ' &nbsp;·&nbsp; ' + val(d.mobile) + ' &nbsp;·&nbsp; Contractor: ' +
-                        escHtml((d.contractor && d.contractor.name) || d.contractor_name || '—') + '</div>';
+                        escHtml((d.contractor && d.contractor.name) || d.contractor_name || '-') + '</div>';
             var es2 = d.employers || [];
             branches += branch('Employers (' + es2.length + ')', es2.map(function (e) {
                 return leaf(e.name || e.employer_name, '#' + (e.id || ''), 'Via: ' + val(e.via_contractor || e.site), []);
@@ -150,14 +150,14 @@
     }
 
     function leaf(name, meta, extra, children) {
-        var html = '<div class="leaf-row"><span class="leaf-name">' + escHtml(name || '—') + '</span>' +
+        var html = '<div class="leaf-row"><span class="leaf-name">' + escHtml(name || '-') + '</span>' +
                    '<span class="mono">' + meta + '</span>' + (extra ? '<span class="leaf-sub">' + extra + '</span>' : '') + '</div>';
         for (var i = 0; i < children.length; i++) html += children[i];
         return html;
     }
 
     function subLeaf(name, meta) {
-        return '<div class="leaf-row ms-4" style="background:#fafafa;"><span class="leaf-name" style="min-width:140px;">↳ ' + escHtml(name || '—') + '</span><span class="mono">' + meta + '</span></div>';
+        return '<div class="leaf-row ms-4" style="background:#fafafa;"><span class="leaf-name" style="min-width:140px;">↳ ' + escHtml(name || '-') + '</span><span class="mono">' + meta + '</span></div>';
     }
 
     function showMsg(text, isError) {

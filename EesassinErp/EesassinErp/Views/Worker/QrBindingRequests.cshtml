@@ -50,7 +50,7 @@
 
     <div class="mgmt-header">
         <h2>Binding Requests</h2>
-        <p>Approve or reject binding requests. Request unbinds — the other party must consent.</p>
+        <p>Approve or reject binding requests. Request unbinds - the other party must consent.</p>
     </div>
 
     <div class="mgmt-toolbar">
@@ -194,8 +194,8 @@
     }
 
     function fmtDate(s) {
-        if (!s) return '—';
-        try { var d = new Date(s); return isNaN(d.getTime()) ? '—' : d.toLocaleString(); } catch (e) { return '—'; }
+        if (!s) return '-';
+        try { var d = new Date(s); return isNaN(d.getTime()) ? '-' : d.toLocaleString(); } catch (e) { return '-'; }
     }
 
     function render() {
@@ -212,9 +212,9 @@
             var bothApproved = (b.initiator_consent === 'APPROVED' && b.approver_consent === 'APPROVED');
             var consentTxt;
             if (b.binding_type === 'EMPLOYER_CONTRACTOR')
-                consentTxt = 'C:' + escHtml(b.initiator_consent || '—') + ' / E:' + escHtml(b.approver_consent || '—');
+                consentTxt = 'C:' + escHtml(b.initiator_consent || '-') + ' / E:' + escHtml(b.approver_consent || '-');
             else
-                consentTxt = 'W:' + escHtml(b.initiator_consent || '—') + ' / C:' + escHtml(b.approver_consent || '—');
+                consentTxt = 'W:' + escHtml(b.initiator_consent || '-') + ' / C:' + escHtml(b.approver_consent || '-');
             if (bothApproved && b.status !== 'ACTIVE') consentTxt += ' (auto-activate)';
             var unbindNote = '';
             if (b.unbind_status === 'PENDING')
@@ -239,17 +239,17 @@
                     actions = '<button class="btn-approve" onclick="unbindResolveClick(' + b.id + ',true)">Approve Unbind</button>' +
                               '<button class="btn-reject" onclick="unbindResolveClick(' + b.id + ',false)">Reject Unbind</button>';
                 } else {
-                    actions = '<span class="muted" style="font-size:12px;">—</span>';
+                    actions = '<span class="muted" style="font-size:12px;">-</span>';
                 }
             } else {
-                actions = '<span class="muted">—</span>';
+                actions = '<span class="muted">-</span>';
             }
 
             html += '<tr>' +
                 '<td>' + (b.binding_type === 'EMPLOYER_CONTRACTOR' ? 'Employer↔Contractor' : 'Worker↔Contractor') + '</td>' +
-                '<td><b>' + escHtml((b.contractor && b.contractor.name) || '—') + '</b></td>' +
-                '<td>' + escHtml((b.employer && b.employer.name) || '—') + '</td>' +
-                '<td>' + escHtml((b.worker && b.worker.name) || '—') + '</td>' +
+                '<td><b>' + escHtml((b.contractor && b.contractor.name) || '-') + '</b></td>' +
+                '<td>' + escHtml((b.employer && b.employer.name) || '-') + '</td>' +
+                '<td>' + escHtml((b.worker && b.worker.name) || '-') + '</td>' +
                 '<td><span class="status-badge ' + badgeCls(b.status) + '">' + escHtml(b.status) + '</span></td>' +
                 '<td><span class="muted" style="font-size:12px;">' + consentTxt + unbindNote + '</span></td>' +
                 '<td style="font-size:12px;">' + fmtDate(b.created_at) + '</td>' +

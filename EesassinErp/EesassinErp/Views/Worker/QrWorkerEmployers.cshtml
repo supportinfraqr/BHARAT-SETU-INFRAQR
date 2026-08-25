@@ -121,7 +121,7 @@
                 list.forEach(function (e) {
                     html += '<tr>' +
                         '<td><b>' + escHtml(e.name) + '</b></td>' +
-                        '<td>' + escHtml(e.contractor || '—') + '</td>' +
+                        '<td>' + escHtml(e.contractor || '-') + '</td>' +
                         '<td><span class="status-badge ' + badgeCls(e.status) + '">' + escHtml(e.status) + '</span>' +
                             (e.rank > 0 ? '<br/><span class="muted">latest of your engagements</span>' : '') + '</td>' +
                         '<td style="font-size:12px;">' + fmtDate(e.created_at) + '</td>' +
@@ -148,7 +148,7 @@
     }
 
     function fmtDate(s) {
-        if (!s) return '—';
-        try { var d = new Date(s); return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(); } catch (e) { return '—'; }
+        if (!s) return '-';
+        try { var d = new Date(s); return isNaN(d.getTime()) ? '-' : d.toLocaleDateString(); } catch (e) { return '-'; }
     }
 </script>

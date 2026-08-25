@@ -152,8 +152,8 @@
 <div class="worker-detail-card" id="workerDetailCard">
     <div class="d-flex justify-content-between align-items-start">
         <div>
-            <div class="wname" id="wdName">—</div>
-            <div class="text-muted" style="font-size:13px;" id="wdRef">—</div>
+            <div class="wname" id="wdName">-</div>
+            <div class="text-muted" style="font-size:13px;" id="wdRef">-</div>
         </div>
         <div>
             <span id="wdBadge" class="badge" style="font-size:12px;padding:6px 14px;"></span>
@@ -163,27 +163,27 @@
     <div class="row g-3 mt-1">
         <div class="col-6 col-md-4">
             <div class="wfield">Mobile</div>
-            <div class="wval" id="wdMobile">—</div>
+            <div class="wval" id="wdMobile">-</div>
         </div>
         <div class="col-6 col-md-4">
             <div class="wfield">Aadhaar</div>
-            <div class="wval" id="wdAadhaar">—</div>
+            <div class="wval" id="wdAadhaar">-</div>
         </div>
         <div class="col-6 col-md-4">
             <div class="wfield">Employer</div>
-            <div class="wval" id="wdEmployer">—</div>
+            <div class="wval" id="wdEmployer">-</div>
         </div>
         <div class="col-6 col-md-4">
             <div class="wfield">Contractor</div>
-            <div class="wval" id="wdContractor">—</div>
+            <div class="wval" id="wdContractor">-</div>
         </div>
         <div class="col-6 col-md-4">
             <div class="wfield">Site</div>
-            <div class="wval" id="wdSite">—</div>
+            <div class="wval" id="wdSite">-</div>
         </div>
         <div class="col-6 col-md-4">
             <div class="wfield">Scan Time</div>
-            <div class="wval" id="wdScanTime">—</div>
+            <div class="wval" id="wdScanTime">-</div>
         </div>
     </div>
     <div class="text-center">
@@ -259,7 +259,7 @@
             },
             error: function (xhr) {
                 if (xhr.status === 401) {
-                    showResult(false, '⏳ Session expired — opening login…');
+                    showResult(false, '⏳ Session expired - opening login…');
                     setTimeout(function () { window.location = '/Login'; }, 1200);
                     return;
                 }
@@ -279,16 +279,16 @@
         currentWorkerId = data.worker_id || (data.worker && data.worker.id) || null;
         var w = data.worker || data;
 
-        $('#wdName').text(w.name || w.full_name || '—');
-        $('#wdRef').text('Ref: ' + (data.qr_reference || '—'));
-        $('#wdMobile').text(w.mobile || w.phone || '—');
+        $('#wdName').text(w.name || w.full_name || '-');
+        $('#wdRef').text('Ref: ' + (data.qr_reference || '-'));
+        $('#wdMobile').text(w.mobile || w.phone || '-');
 
         var aadh = w.aadhaar || '';
-        $('#wdAadhaar').text(aadh ? ('••••••••' + aadh.slice(-4)) : '—');
+        $('#wdAadhaar').text(aadh ? ('••••••••' + aadh.slice(-4)) : '-');
 
-        $('#wdEmployer').text((w.employer && (w.employer.name || w.employer)) || '—');
-        $('#wdContractor').text((w.contractor && (w.contractor.name || w.contractor)) || '—');
-        $('#wdSite').text((w.site && (w.site.name || w.site)) || '—');
+        $('#wdEmployer').text((w.employer && (w.employer.name || w.employer)) || '-');
+        $('#wdContractor').text((w.contractor && (w.contractor.name || w.contractor)) || '-');
+        $('#wdSite').text((w.site && (w.site.name || w.site)) || '-');
         $('#wdScanTime').text(new Date().toLocaleTimeString());
 
         var active = w.is_active !== false;
