@@ -1,4 +1,4 @@
-﻿ 
+ 
 
 <!DOCTYPE html>
 <html ng-app="myApp" ng-controller="myController" ng-cloak>
@@ -408,17 +408,17 @@
 
                 <div>
                     <b>1.</b> Securing and saving your data...
-                    <span ng-show="logoutStep >= 1" style="color:green;">✔</span>
+                    <span ng-show="logoutStep >= 1" style="color:green;">&#10004;</span>
                 </div>
 
                 <div>
                     <b>2.</b> Updating system preferences and settings...
-                    <span ng-show="logoutStep >= 2" style="color:green;">✔</span>
+                    <span ng-show="logoutStep >= 2" style="color:green;">&#10004;</span>
                 </div>
 
                 <div>
                     <b>3.</b> Recording activity logs for audit...
-                    <span ng-show="logoutStep >= 3" style="color:green;">✔</span>
+                    <span ng-show="logoutStep >= 3" style="color:green;">&#10004;</span>
                 </div>
 
                 <div ng-show="logoutStep >= 4" style="margin-top:10px; font-weight:bold; color:#d9534f;">
@@ -448,7 +448,7 @@
     <nav class="navbar px-4" style="background: #F4F9FF;" ng-init="BindMenus()">
         <!-- Left logo -->
         <div class="nav-left">
-            <img src="~/CommonDashboard/assets/icons/NewLogo.svg" alt="Logo" class="logo" />
+            <img src="~/Content/img/favicon.png" alt="Logo" class="logo" style="height:40px;width:auto;object-fit:contain;" />
         </div>
 
         <!-- Center nav items -->
@@ -484,7 +484,7 @@
             <!-- Language Selector -->
             <div class="dropdown language-dropdown">
                 <button class="language-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="~/CommonDashboard/assets/icons/language.svg" alt="Language" class="language-icon">
+                    <i class="fa fa-globe" style="font-size:18px; color:#022B5E;"></i>
 
                     <span class="language-text">English</span>
 
@@ -494,37 +494,37 @@
                 <ul class="dropdown-menu dropdown-menu-end language-menu">
                     <li>
                         <a class="dropdown-item active" href="javascript:void(0)">
-                            🇬🇧 English
+                            &#127468;&#127463; English
                         </a>
                     </li>
 
                     <li>
                         <a class="dropdown-item" href="javascript:void(0)">
-                            🇮🇳 हिन्दी
+                            &#127470;&#127475; &#x0939;&#x093F;&#x0928;&#x094D;&#x0926;&#x0940;
                         </a>
                     </li>
 
                     <li>
                         <a class="dropdown-item" href="javascript:void(0)">
-                            🇮🇳 বাংলা
+                            &#127470;&#127475; &#x09AC;&#x09BE;&#x0982;&#x09B2;&#x09BE;
                         </a>
                     </li>
 
                     <li>
                         <a class="dropdown-item" href="javascript:void(0)">
-                            🇮🇳 தமிழ்
+                            &#127470;&#127475; &#x0BA4;&#x0BAE;&#x0BBF;&#x0BB4;&#x0BCD;
                         </a>
                     </li>
 
                     <li>
                         <a class="dropdown-item" href="javascript:void(0)">
-                            🇮🇳 తెలుగు
+                            &#127470;&#127475; &#x0C24;&#x0C46;&#x0C32;&#x0C41;&#x0C17;&#x0C41;
                         </a>
                     </li>
 
                     <li>
                         <a class="dropdown-item" href="javascript:void(0)">
-                            🇮🇳 मराठी
+                            &#127470;&#127475; &#x092E;&#x0930;&#x093E;&#x0920;&#x0940;
                         </a>
                     </li>
                 </ul>
@@ -556,14 +556,14 @@
      ">
                     Notifications
                     <span onclick="toggleNotification()"
-                          style="cursor:pointer;font-size:18px;">✕</span>
+                          style="cursor:pointer;font-size:18px;">&#10005;</span>
                 </div>
 
                 <!-- Notification List -->
                 <div style="padding:10px;overflow-y:auto;height:calc(80vh - 50px);">
 
                     <div style="padding:10px;border-bottom:1px solid #f1f1f1;" ng-repeat="x in AllNotification" ng-model="Notification">
-                        🔔 {{x.Conversation}} {{x.CreatedOn}}
+                        &#128276; {{x.Conversation}} {{x.CreatedOn}}
                     </div>
 
 

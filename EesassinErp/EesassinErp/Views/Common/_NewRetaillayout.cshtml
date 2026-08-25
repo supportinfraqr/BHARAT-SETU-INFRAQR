@@ -268,6 +268,38 @@
             height: 18px;
         }
 
+        /*-- NavLinks inside Navbar --*/
+        .nav-center-btn {
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #022B5E;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: .25s ease;
+            text-decoration: none;
+        }
+        .nav-center-btn:hover {
+            background: #FFF;
+            color: #022B5E;
+        }
+        .nav-center-btn.active {
+            background: #fff;
+            color: #022B5E;
+            border: 1px solid #022B5E;
+        }
+        .nav-center-btn:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
 
 
     </style>
@@ -407,17 +439,17 @@
 
                 <div>
                     <b>1.</b> Securing and saving your data...
-                    <span ng-show="logoutStep >= 1" style="color:green;">✔</span>
+                    <span ng-show="logoutStep >= 1" style="color:green;">&#10004;</span>
                 </div>
 
                 <div>
                     <b>2.</b> Updating system preferences and settings...
-                    <span ng-show="logoutStep >= 2" style="color:green;">✔</span>
+                    <span ng-show="logoutStep >= 2" style="color:green;">&#10004;</span>
                 </div>
 
                 <div>
                     <b>3.</b> Recording activity logs for audit...
-                    <span ng-show="logoutStep >= 3" style="color:green;">✔</span>
+                    <span ng-show="logoutStep >= 3" style="color:green;">&#10004;</span>
                 </div>
 
                 <div ng-show="logoutStep >= 4" style="margin-top:10px; font-weight:bold; color:#d9534f;">
@@ -451,7 +483,7 @@
         </div>
       
         <!-- Center nav items -->
-        <div class="nav-center d-flex gap-3">
+        <div class="nav-center d-flex gap-3" ng-if="loginType != 7">
             <!-- Dashboard dropdown -->
           
             <div class="dropdown" >
@@ -565,7 +597,7 @@
                         <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
                     </li>
                     <li ng-if="loginType == 7">
-                        <a href="/qr/idcard" class="dropdown-item">My Identity Card</a>
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a>
                     </li>
                     <li ng-if="loginType == 7">
                         <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
@@ -574,10 +606,46 @@
                     <!-- General options for all authenticated users -->
                     <li class="dropdown-divider"></li>
                     <li>
-                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My ID Card</a>
+                        <a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Worker Center nav items (loginType == 7) -->
+        <div class="nav-center d-flex align-items-center gap-2" ng-if="loginType == 7">
+            <a href="../Dashboard/WorkerDashboard" class="nav-center-btn" style="text-decoration:none;">
+                Dashboard
+            </a>
+
+            <a href="../Rozgar/WorkerRozgar" class="nav-center-btn" style="text-decoration:none;">
+                Rozgar Setu
+            </a>
+
+            <a href="#" class="nav-center-btn" style="text-decoration:none;">
+                Skill
+            </a>
+
+            <a href="#" class="nav-center-btn" style="text-decoration:none;">
+                Compliance
+            </a>
+
+            <div class="dropdown">
+                <button class="nav-center-btn active dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border: 1px solid #022B5E; background: #fff; color: #022B5E;">
+                    QR System
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="/qr/mycontractors" class="dropdown-item">My Contractors</a>
                     </li>
                     <li>
-                        <a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a>
+                        <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
+                    </li>
+                    <li>
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a>
+                    </li>
+                    <li>
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
                     </li>
                 </ul>
             </div>
@@ -631,14 +699,14 @@
      ">
                     Notifications
                     <span onclick="toggleNotification()"
-                          style="cursor:pointer;font-size:18px;">✕</span>
+                          style="cursor:pointer;font-size:18px;">&#10005;</span>
                 </div>
 
                 <!-- Notification List -->
                 <div style="padding:10px;overflow-y:auto;height:calc(80vh - 50px);">
 
                     <div style="padding:10px;border-bottom:1px solid #f1f1f1;" ng-repeat="x in AllNotification" ng-model="Notification">
-                        🔔 {{x.Conversation}} {{x.CreatedOn}}
+                        &#128276; {{x.Conversation}} {{x.CreatedOn}}
                     </div>
 
 
