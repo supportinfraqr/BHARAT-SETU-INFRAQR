@@ -106,6 +106,7 @@ class WorkerSerializer(serializers.ModelSerializer):
             "doj", "leaving_date", "employer", "contractor", "site", "ecsw_tuple",
             "photo", "is_active", "created_at",
             "contractor_name", "site_name", "employer_name",
+            "binding_status", "unbind_status",
         ]
 
     def get_contractor_name(self, obj):
@@ -116,6 +117,16 @@ class WorkerSerializer(serializers.ModelSerializer):
 
     def get_employer_name(self, obj):
         return obj.employer.name if obj.employer else None
+
+    def get_binding_status(self, obj):
+        from .models import Binding
+        b = Binding.objects.filter(binding_type="WORKER_CONTRACTOR", worker_id=obj.id).order_by("-created_at").first()
+        return b.status if b else None
+
+    def get_unbind_status(self, obj):
+        from .models import Binding
+        b = Binding.objects.filter(binding_type="WORKER_CONTRACTOR", worker_id=obj.id).order_by("-created_at").first()
+        return b.unbind_status if b else None
 
 
 class QRCodeSerializer(serializers.ModelSerializer):
