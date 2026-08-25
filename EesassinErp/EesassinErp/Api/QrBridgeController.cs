@@ -385,12 +385,52 @@ namespace EesassinErp.Controllers
             => StoreToken(token, HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value);
 
         private void StoreToken(string token, string sessionId)
-            => System.Web.HttpRuntime.Cache.Insert(TokenCacheKey(sessionId), token, null,
+        {
+            System.Web.HttpRuntime.Cache.Insert(TokenCacheKey(sessionId), token, null,
                 System.Web.Caching.Cache.NoAbsoluteExpiration,
                 TimeSpan.FromMinutes(TokenSlidingMinutes));
+            // Persist across app-pool recycles: cache dies with the process,
+            // but the ASP.NET_SessionId cookie survives on the client.
+            try
+            {
+                var dir = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/BssJwt")
+                          ?? @"C:\BSS\BssJwt";
+                System.IO.Directory.CreateDirectory(dir);
+                var sb = new System.Text.StringBuilder();
+                foreach (char ch in (sessionId ?? "anon"))
+                    if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+                var safe = sb.Length == 0 ? "anon" : sb.ToString();
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir, safe + ".txt"), token);
+            }
+            catch { }
+        }
 
         private string GetToken()
-            => System.Web.HttpRuntime.Cache[TokenCacheKey()] as string;
+        {
+            var key = TokenCacheKey();
+            var tok = System.Web.HttpRuntime.Cache[key] as string;
+            if (!string.IsNullOrEmpty(tok)) return tok;
+            // Cache miss (recycle/idle): hydrate from disk
+            try
+            {
+                var dir = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/BssJwt")
+                          ?? @"C:\BSS\BssJwt";
+                var sb = new System.Text.StringBuilder();
+                foreach (char ch in (HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value ?? "anon"))
+                    if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+                var p = System.IO.Path.Combine(dir, (sb.Length == 0 ? "anon" : sb.ToString()) + ".txt");
+                if (System.IO.File.Exists(p))
+                {
+                    tok = System.IO.File.ReadAllText(p).Trim();
+                    if (!string.IsNullOrEmpty(tok))
+                        System.Web.HttpRuntime.Cache.Insert(key, tok, null,
+                            System.Web.Caching.Cache.NoAbsoluteExpiration,
+                            TimeSpan.FromMinutes(TokenSlidingMinutes));
+                }
+            }
+            catch { }
+            return tok;
+        }
 
         private class ProxyResult
         {
