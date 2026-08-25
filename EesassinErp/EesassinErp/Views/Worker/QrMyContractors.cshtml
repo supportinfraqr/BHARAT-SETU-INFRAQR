@@ -91,7 +91,7 @@
                 var map = {};
 
                 rows.forEach(function (b) {
-                    if (b.binding_type !== 'WORKER_CONTRACTOR' || !b.contractor || !b.contractor.id) return;
+                    if ((b.binding_type !== 'WORKER_CONTRACTOR' && b.binding_type !== 'EMPLOYER_CONTRACTOR') || !b.contractor || !b.contractor.id) return;
                     var key = b.contractor.id;
                     var rank = b.status === 'ACTIVE' ? 0 : (b.status === 'PENDING' ? 1 : 2);
                     var cur = map[key];
