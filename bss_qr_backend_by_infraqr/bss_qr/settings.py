@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "bss_qr",
+    "legacy",
     "authx",
+    "api",
     "qr",
 ]
 

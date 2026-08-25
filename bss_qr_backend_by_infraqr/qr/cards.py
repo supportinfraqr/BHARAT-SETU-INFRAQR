@@ -1,529 +1,754 @@
-"""Render worker ID cards with the static QR code as PNG or PDF."""
-import io
-import os
-
+"""
+BSS Employment Card renderer — pixel-accurate match to the reference design.
+Front: portrait card with logo header, verified banner, circular photo,
+       name/QR row, 2×2 detail grid, construction bg, icon footer.
+Back:  navy header, data rows with circle icons, disclaimer, signature, URL bar.
+"""
+import io, os, math
 import qrcode
-from django.conf import settings
 from django.http import HttpResponse
-from PIL import Image, ImageDraw, ImageFont
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "qr", "bharatshramsetu-logo.png")
+STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "qr")
+LOGO_PATH    = os.path.join(STATIC, "bharatshramsetu-logo.png")
+WORKER_PHOTO = os.path.join(STATIC, "default_worker.png")
 
+# ── Palette ──────────────────────────────────────────────────────────────────
+NAVY        = (2,   43,  94)
+NAVY_DARK   = (1,   26,  60)
+ORANGE      = (245, 130, 32)
+GREEN       = (8,   124, 56)
+TEAL        = (0,   138, 138)
+WHITE       = (255, 255, 255)
+OFF_WHITE   = (247, 250, 253)
+LIGHT_GRAY  = (240, 244, 248)
+TEXT_DARK   = (15,  23,  42)
+TEXT_MED    = (51,  65,  85)
+TEXT_MUTED  = (100, 116, 139)
+LINK_BLUE   = (33,  117, 216)
+DOT_COLOR   = (200, 215, 232)
+BORDER_CLR  = (203, 213, 225)
 
-def _card_font(size):
+# ── Card canvas ───────────────────────────────────────────────────────────────
+CW, CH = 900, 1240          # portrait card (px)
+
+# ── Fonts ─────────────────────────────────────────────────────────────────────
+def _font(size, bold=False):
     candidates = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
+        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold
+        else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
     ]
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            continue
+    for p in candidates:
+        try: return ImageFont.truetype(p, size)
+        except Exception: pass
     return ImageFont.load_default()
-def _deva_font(size):
-    candidates = [
-        "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSerifDevanagari-Regular.ttf",
-    ]
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, size)
-        except Exception:
-            continue
-    return _card_font(size)
 
+# ── Utils ─────────────────────────────────────────────────────────────────────
+def _trunc(text, font, max_w, draw):
+    s = str(text)
+    if draw.textlength(s, font=font) <= max_w: return s
+    for i in range(len(s), 0, -1):
+        t = s[:i] + "…"
+        if draw.textlength(t, font=font) <= max_w: return t
+    return "…"
 
-
-def _round_mask(size):
-    mask = Image.new("L", (size, size), 0)
-    d = ImageDraw.Draw(mask)
-    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=int(size * 0.22), fill=255)
-    return mask
-
-
-def _build_designed_qr(data, box=(240, 240), quiet=12):
-    """Build a polished QR: navy modules with rounded corners, brand ring logo, rounded frame."""
-    if isinstance(box, (tuple, list)):
-        box = box[0]
-    BRAND_NAVY = (2, 43, 94)      # #022B5E
-    BRAND_NAVY_DARK = (1, 26, 60)
-    BRAND_GREEN = (8, 124, 56)
-    BRAND_ORANGE = (245, 130, 32)
-    RING = (245, 130, 32)          # orange ring around logo
-
-    # 1. Render a reliable base QR with qrcode lib (preserves finder patterns)
-    qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=8, border=2)
-    qr.add_data(data)
-    qr.make(fit=True)
-    base = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
-    base_w, base_h = base.size
-
-    # 2. Recolor dark pixels to brand navy (keep geometry exactly so it still scans)
-    px = base.load()
-    for y in range(base_h):
-        for x in range(base_w):
-            r, g, b, a = px[x, y]
-            if r < 128 and g < 128 and b < 128:
-                px[x, y] = (BRAND_NAVY[0], BRAND_NAVY[1], BRAND_NAVY[2], 255)
-
-    # 3. Scale to target box (NEAREST preserves sharp module edges for reliable scanning)
-    new_w = box - 2 * quiet
-    new_h = box - 2 * quiet
-    scaled = base.resize((new_w, new_h), Image.NEAREST)
-
-    canvas_size = box
-    img = Image.new("RGBA", (canvas_size, canvas_size), (255, 255, 255, 255))
-    img.paste(scaled, (quiet, quiet))
-
-    # 4. Center logo badge with orange ring on white rounded card
-    try:
-        logo = Image.open(LOGO_PATH).convert("RGBA")
-    except Exception:
-        logo = None
-    if logo is not None:
-        logo_size = int(new_w * 0.20)
-        logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
-        pad = 10
-        badge = logo_size + 2 * pad
-        # Solid white rounded badge (fully covers QR area so nothing peeks through)
-        badge_img = Image.new("RGBA", (badge, badge), (255, 255, 255, 255))
-        bmask = Image.new("L", (badge, badge), 0)
-        ImageDraw.Draw(bmask).rounded_rectangle([0, 0, badge - 1, badge - 1], radius=int(badge * 0.24), fill=255)
-        badge_img.paste(logo, (pad, pad), logo)
-        # Orange ring drawn ON the solid badge (opaque), wider than badge so it sits on white edge
-        ring = Image.new("RGBA", (badge, badge), (0, 0, 0, 0))
-        ImageDraw.Draw(ring).rounded_rectangle(
-            [0, 0, badge - 1, badge - 1], radius=int(badge * 0.24), outline=RING, width=5
-        )
-        bx = (canvas_size - badge) // 2
-        by = (canvas_size - badge) // 2
-        img.paste(badge_img, (bx, by), bmask)
-        # draw ring on top of badge (opaque pixels only on the ring strokes)
-        img.paste(ring, (bx, by), ring)
-
-    # 5. Rounded white frame with navy border
-    frame_pad = 10
-    fsz = canvas_size + 2 * frame_pad
-    final = Image.new("RGBA", (fsz, fsz), (255, 255, 255, 255))
-    ImageDraw.Draw(final).rounded_rectangle(
-        [3, 3, fsz - 4, fsz - 4], radius=22, outline=BRAND_NAVY, width=3
-    )
-    final.paste(img, (frame_pad, frame_pad), img)
-    return final.convert("RGB")
-
-
-def _overlay_logo(qr_img):
-    """Place the BharatShramSetu logo in the center of the QR (with white border)."""
-    try:
-        logo = Image.open(LOGO_PATH).convert("RGBA")
-    except Exception:
-        return qr_img
-    w, h = qr_img.size
-    logo_size = int(w * 0.24)
-    logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
-
-    # White rounded background behind the logo for scan-ability
-    bg = Image.new("RGBA", (logo_size + 8, logo_size + 8), "white")
-    mask = _round_mask(logo_size + 8)
-    logo_rgba = Image.new("RGBA", (logo_size, logo_size), (0, 0, 0, 0))
-    logo_rgba.paste(logo, (0, 0), logo)
-    bg.paste(logo_rgba, (4, 4), logo_rgba)
-
-    bg = bg.convert("RGBA")
-    base = qr_img.convert("RGBA")
-    x = (w - bg.size[0]) // 2
-    y = (h - bg.size[1]) // 2
-    base.paste(bg, (x, y), mask)
-    return base.convert("RGB")
-
-
-def _qr_image(qr_reference, box=(220, 220), with_logo=True):
-    return _build_designed_qr(qr_reference, box)
-
-
-def qr_png_bytes(data: str, box=(240, 240)) -> bytes:
-    """Return PNG bytes of a QR encoding arbitrary data (designed with logo)."""
-    img = _build_designed_qr(data, box)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-def _worker_age(dob):
-    """Best-effort age from a DOB string (returns None if unparsable)."""
-    from datetime import date, datetime
-    if not dob:
-        return None
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d-%b-%Y"):
-        try:
-            d = datetime.strptime(str(dob).strip(), fmt).date()
-            today = date.today()
-            return today.year - d.year - ((today.month, today.day) < (d.month, d.day))
-        except ValueError:
-            continue
-    return None
-
-
-def _load_photo(photo):
-    """Load a worker photo (URL or local path) into a PIL image, or None."""
-    if not photo:
-        return None
-    try:
-        if str(photo).lower().startswith("http"):
-            import urllib.request
-            with urllib.request.urlopen(photo, timeout=5) as r:
-                return Image.open(io.BytesIO(r.read())).convert("RGB")
-        return Image.open(photo).convert("RGB")
-    except Exception:
-        return None
-
-
-def _wrap_text(text, font, max_width, draw):
-    """Wrap text to fit max_width using the given font."""
-    words = str(text).split()
-    lines = []
-    cur = ""
+def _wrap(text, font, max_w, draw):
+    words, lines, cur = str(text).split(), [], ""
     for w in words:
         test = (cur + " " + w).strip()
-        if draw.textlength(test, font=font) <= max_width:
-            cur = test
+        if draw.textlength(test, font=font) <= max_w: cur = test
         else:
-            if cur:
-                lines.append(cur)
+            if cur: lines.append(cur)
             cur = w
-    if cur:
-        lines.append(cur)
+    if cur: lines.append(cur)
     return lines
 
+def _circle_mask(size):
+    m = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(m).ellipse([0, 0, size-1, size-1], fill=255)
+    return m
 
-def _truncate_text(text, font, max_width, draw):
-    text_str = str(text)
-    if draw.textlength(text_str, font=font) <= max_width:
-        return text_str
-    for i in range(len(text_str), 0, -1):
-        test = text_str[:i] + "..."
-        if draw.textlength(test, font=font) <= max_width:
-            return test
-    return "..."
+def _round_mask(w, h, r):
+    m = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, w-1, h-1], radius=r, fill=255)
+    return m
 
+def _load_photo(photo_field):
+    if not photo_field: return None
+    try:
+        s = str(photo_field)
+        if s.lower().startswith("http"):
+            import urllib.request
+            with urllib.request.urlopen(s, timeout=5) as r:
+                return Image.open(io.BytesIO(r.read())).convert("RGB")
+        return Image.open(s).convert("RGB")
+    except Exception:
+        return None
 
+def _load_default_photo():
+    try: return Image.open(WORKER_PHOTO).convert("RGB")
+    except Exception: return None
 
+# ── QR builder ────────────────────────────────────────────────────────────────
+def _build_qr(data, size=220):
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=8, border=2)
+    qr.add_data(data); qr.make(fit=True)
+    base = qr.make_image(fill_color="black", back_color="white").convert("RGBA")
+    # Recolour modules to navy
+    px = base.load()
+    for y in range(base.size[1]):
+        for x in range(base.size[0]):
+            r,g,b,a = px[x,y]
+            if r < 128: px[x,y] = (*NAVY, 255)
+    inner = size - 20
+    scaled = base.resize((inner, inner), Image.NEAREST)
+    canvas = Image.new("RGBA", (size, size), (255,255,255,255))
+    canvas.paste(scaled, (10, 10))
+    # Logo badge
+    try:
+        logo = Image.open(LOGO_PATH).convert("RGBA")
+        lsz = int(inner * 0.22)
+        logo = logo.resize((lsz, lsz), Image.LANCZOS)
+        pad = 7; bsz = lsz + 2*pad
+        badge = Image.new("RGBA", (bsz, bsz), (255,255,255,255))
+        bmask = Image.new("L", (bsz, bsz), 0)
+        ImageDraw.Draw(bmask).rounded_rectangle([0,0,bsz-1,bsz-1], radius=bsz//4, fill=255)
+        badge.paste(logo, (pad, pad), logo)
+        ring = Image.new("RGBA", (bsz, bsz), (0,0,0,0))
+        ImageDraw.Draw(ring).rounded_rectangle([0,0,bsz-1,bsz-1], radius=bsz//4,
+                                               outline=ORANGE, width=4)
+        bx = (size - bsz)//2; by = (size - bsz)//2
+        canvas.paste(badge, (bx, by), bmask)
+        canvas.paste(ring,  (bx, by), ring)
+    except Exception: pass
+    # Border
+    fp = 8; fsz = size + 2*fp
+    final = Image.new("RGBA", (fsz, fsz), (255,255,255,255))
+    ImageDraw.Draw(final).rounded_rectangle([2,2,fsz-3,fsz-3], radius=14,
+                                             outline=NAVY, width=3)
+    final.paste(canvas, (fp, fp), canvas)
+    return final.convert("RGB")
 
-def _entity_details(entity_type, entity):
-    """Build type-specific (label, value) rows for the identity card."""
+def qr_png_bytes(data, box=(240,240)):
+    img = _build_qr(data, box[0] if isinstance(box,(tuple,list)) else box)
+    buf = io.BytesIO(); img.save(buf, "PNG"); return buf.getvalue()
+
+# ── Circle icon helper ────────────────────────────────────────────────────────
+def _draw_icon_circle(draw, cx, cy, radius, bg_color, border_color, symbol, symbol_font, symbol_color=WHITE):
+    """Draw a filled circle with a border and centred symbol."""
+    draw.ellipse([cx-radius, cy-radius, cx+radius, cy+radius],
+                 fill=bg_color, outline=border_color, width=2)
+    draw.text((cx, cy), symbol, font=symbol_font, fill=symbol_color, anchor="mm")
+
+# ── Entity detail extractors ──────────────────────────────────────────────────
+def _front_info(entity_type, entity):
     if entity_type == "WORKER":
-        age = _worker_age(entity.date_of_birth)
-        site = entity.site.name if entity.site else (entity.contractor.site_name if entity.contractor else "—")
+        site = entity.site.name if entity.site else "—"
+        loc2 = (entity.employer.name if entity.employer else "") 
+        location = site + (f"\n{loc2}" if loc2 else "")
+        return {
+            "name":       entity.full_name or "—",
+            "desig":      getattr(entity, "designation", None) or "Worker",
+            "contractor": entity.contractor.name if entity.contractor else "—",
+            "code":       entity.worker_id or f"W{entity.pk:07d}",
+            "dept":       getattr(entity, "department", None) or "—",
+            "mobile":     entity.mobile or "—",
+            "location":   location,
+        }
+    if entity_type == "CONTRACTOR":
+        return {
+            "name":       entity.name or "—",
+            "desig":      "Contractor",
+            "contractor": entity.employer.name if entity.employer else "—",
+            "code":       f"CON{entity.pk:06d}",
+            "dept":       "Contract Work",
+            "mobile":     entity.contact_mobile or "—",
+            "location":   entity.site_name or "—",
+        }
+    return {
+        "name": entity.name if hasattr(entity,'name') else "—",
+        "desig": "Employer", "contractor": "—",
+        "code": f"EMP{entity.pk:06d}", "dept": "Management",
+        "mobile": getattr(entity,'contact_mobile',"—") or "—",
+        "location": getattr(entity,'city',"—") or "—",
+    }
+
+def _back_rows(entity_type, entity):
+    if entity_type == "WORKER":
         return [
-            ("Worker Name", entity.full_name or "N/A"),
-            ("Worker ID", entity.worker_id or f"WRK{entity.pk:06d}"),
-            ("Father/Spouse Name", entity.father_name or entity.care_of or "—"),
-            ("Sex", entity.gender or "—"),
-            ("Date of Birth", entity.date_of_birth or "—"),
-            ("Age", str(age) if age is not None else "—"),
-            ("Blood Group", entity.blood_group or "—"),
-            ("Nature of Job", entity.designation or "—"),
-            ("Mobile", entity.mobile or "—"),
-            ("Aadhaar No", entity.aadhaar_no or "—"),
-            ("PAN No", entity.pan_no or "—"),
-            ("Issued Date", entity.issue_date or "—"),
-            ("Site", site),
-            ("Contractor", entity.contractor.name if entity.contractor else "—"),
-            ("Employer", entity.employer.name if entity.employer else "—"),
+            ("drop", "Blood Group",              entity.blood_group or "—",         False),
+            ("phone","Emergency Contact Number", getattr(entity, "emergency_contact", None) or "—",    True),
+            ("group","Relation",                 getattr(entity, "emergency_relation", None) or "—",   False),
+            ("camp", "Camp No.",                 getattr(entity,"camp_no",None) or "—", True),
+            ("key",  "UAN No.",                  getattr(entity, "uan_no", None) or "—",             False),
+            ("shield","ESIC No.",                getattr(entity, "esic_no", None) or "—",            False),
+            ("user", "Supervisor Name",          getattr(entity,"supervisor_name",None) or "—", False),
+            ("phone2","Supervisor No.",          getattr(entity,"supervisor_mobile",None) or "—", True),
+            ("bus",  "Route/Bus No.",            getattr(entity,"route_no",None) or "—", False),
         ]
     if entity_type == "CONTRACTOR":
         return [
-            ("Contractor Name", entity.name or "N/A"),
-            ("Contractor ID", f"CON{entity.pk:06d}"),
-            ("Contact Person", entity.contact_person or "—"),
-            ("Type", "Primary" if entity.is_primary else "Secondary"),
-            ("Mobile", entity.contact_mobile or "—"),
-            ("PAN No", entity.pan_no or "—"),
-            ("GSTIN", entity.gstin or "—"),
-            ("Industry", entity.industry or "—"),
-            ("Site", entity.site_name or (entity.site.name if entity.site else "—")),
-            ("City", entity.city or "—"),
-            ("State", entity.state or "—"),
-            ("Employer", entity.employer.name if entity.employer else "—"),
-        ]
-    if entity_type == "EMPLOYER":
-        return [
-            ("Employer Name", entity.name or "N/A"),
-            ("Employer ID", f"EMP{entity.pk:06d}"),
-            ("Contact Person", entity.contact_person or "—"),
-            ("Mobile", entity.contact_mobile or "—"),
-            ("PAN No", entity.pan_no or "—"),
-            ("GSTIN", entity.gstin or "—"),
-            ("CIN", entity.cin or "—"),
-            ("Industry", entity.industry or "—"),
-            ("City", entity.city or "—"),
-            ("State", entity.state or "—"),
-            ("Plan", entity.plan_type or "—"),
+            ("doc",  "PAN No.",        entity.pan_no or "—",        False),
+            ("tax",  "GSTIN",          entity.gstin or "—",          False),
+            ("id",   "Industry",       entity.industry or "—",       False),
+            ("state","State",          entity.state or "—",          False),
+            ("city", "City",           entity.city or "—",           False),
+            ("user", "Contact Person", entity.contact_person or "—", False),
+            ("mail", "Email",          entity.email or "—",          False),
         ]
     return []
 
+# ── FRONT card ────────────────────────────────────────────────────────────────
+def _draw_front(entity_type, entity, qr_ref):
+    img = Image.new("RGB", (CW, CH), WHITE)
+    d   = ImageDraw.Draw(img)
 
-def identity_card_image(entity_type, entity, qr_reference, role_label="", email=""):
-    """Render an HD (1560x1000) landscape identity card for worker/contractor/employer."""
-    W, H = 1560, 1000
-    img = Image.new("RGB", (W, H), "#ffffff")
-    d = ImageDraw.Draw(img)
+    # Outer rounded border
+    d.rounded_rectangle([2, 2, CW-3, CH-3], radius=22, outline=BORDER_CLR, width=3)
 
-    BRAND_NAVY = (2, 43, 94)
-    BRAND_ORANGE = (245, 130, 32)
-    BRAND_GREEN = (20, 148, 60)
-    TEXT_DARK = (15, 23, 42)
-    TEXT_MUTED = (71, 85, 105)
-    LINE_COLOR = (226, 232, 240)
-
-    f_title = _card_font(48)
-    f_sub = _card_font(24)
-    f_caption = _card_font(14)
-    f_lbl = _card_font(20)
-    f_val = _card_font(20)
-
-    d.rounded_rectangle([24, 24, W - 26, H - 26], radius=48, outline="#cbd5e1", width=4)
-
-    # Header logo
-    logo_sz = 104
-    logo_x, logo_y = 64, 48
+    # ── 1. HEADER (white, 115px) ──────────────────────────────────────────────
+    HH = 115
+    # Logo
+    lsz = 82
+    lx, ly = 18, 16
     try:
         logo = Image.open(LOGO_PATH).convert("RGBA")
-        logo = logo.resize((logo_sz, logo_sz), Image.LANCZOS)
-        img.paste(logo, (logo_x, logo_y), logo)
+        logo = logo.resize((lsz, lsz), Image.LANCZOS)
+        img.paste(logo, (lx, ly), logo)
     except Exception:
-        pass
-    d.text((logo_x + logo_sz // 2, logo_y + logo_sz + 10), "श्रमिक का सम्मान, देश का निर्माण",
-           font=_deva_font(14), fill=BRAND_NAVY, anchor="mt")
+        d.ellipse([lx, ly, lx+lsz, ly+lsz], fill=ORANGE)
 
-    # Header text
-    d.text((230, 52), "Bharat", font=f_title, fill=BRAND_NAVY)
-    bx = 230 + d.textlength("Bharat ", font=f_title)
-    d.text((bx, 52), "Shram", font=f_title, fill=BRAND_ORANGE)
-    bx += d.textlength("Shram ", font=f_title)
-    d.text((bx, 52), "Setu", font=f_title, fill=BRAND_GREEN)
-    role_cap = f"Digital {role_label} ID Card" if role_label else "Digital ID Card"
-    d.text((230, 116), role_cap, font=f_sub, fill=TEXT_MUTED)
-    d.line([(64, 190), (W - 64, 190)], fill=BRAND_NAVY, width=2)
+    # Brand text
+    tx = lx + lsz + 12
+    d.text((tx, 14), "BHARAT",     font=_font(28, True), fill=NAVY)
+    d.text((tx, 46), "SHRAM SETU", font=_font(28, True), fill=ORANGE)
+    d.text((tx, 80), "One Worker. One Identity. One Future.",
+           font=_font(13), fill=TEXT_MUTED)
 
-    # Photo (right)
-    px, py, pw, ph = 1120, 230, 272, 308
-    d.rounded_rectangle([px - 2, py - 2, px + pw + 2, py + ph + 2], radius=16, outline="#cbd5e1", width=2)
-    d.rounded_rectangle([px, py, px + pw - 1, py + ph - 1], radius=16, fill="#f8fafc")
-    
-    photo = _load_photo(getattr(entity, "photo", None))
-    if photo is not None:
-        photo = photo.resize((pw, ph), Image.LANCZOS)
-        pmask = Image.new("L", (pw, ph), 0)
-        ImageDraw.Draw(pmask).rounded_rectangle([0, 0, pw - 1, ph - 1], radius=16, fill=255)
-        img.paste(photo, (px, py), pmask)
+    # Green+Orange accent lines under tagline
+    acc_y = 97
+    d.rectangle([tx, acc_y,   tx+60, acc_y+3], fill=ORANGE)
+    d.rectangle([tx+64, acc_y, tx+124, acc_y+3], fill=GREEN)
+    d.rectangle([tx+128, acc_y, tx+188, acc_y+3], fill=NAVY)
+
+    # Vertical separator
+    sep_x = 430
+    d.line([(sep_x, 14), (sep_x, HH-8)], fill=BORDER_CLR, width=2)
+
+    # "EMPLOYMENT CARD"
+    ec_cx = sep_x + (CW - sep_x)//2
+    d.text((ec_cx, 22), "EMPLOYMENT", font=_font(26, True), fill=NAVY, anchor="mt")
+    d.text((ec_cx, 58), "CARD",       font=_font(26, True), fill=NAVY, anchor="mt")
+
+    # ── 2. VERIFIED BANNER (navy, 50px) ───────────────────────────────────────
+    BY = HH
+    BH = 50
+    d.rectangle([3, BY, CW-4, BY+BH], fill=NAVY)
+    # shield "🛡" approximation — draw a rounded pentagon
+    sx, sy = CW//2 - 120, BY + 13
+    d.rounded_rectangle([sx, sy, sx+26, sy+24], radius=4, fill=WHITE)
+    d.text((sx+13, sy+12), "☉", font=_font(14), fill=NAVY, anchor="mm")
+    info = _front_info(entity_type, entity)
+    role_txt = f"VERIFIED {entity_type.replace('_',' ')} ID"
+    d.text((CW//2, BY+25), role_txt, font=_font(22, True), fill=WHITE, anchor="mm")
+
+    # ── 3. PHOTO (circular, left) ─────────────────────────────────────────────
+    PY  = BY + BH + 18        # top of photo
+    PSZ = 195                  # diameter
+    PCX = 18 + PSZ//2         # circle centre x
+    PCY = PY + PSZ//2         # circle centre y
+
+    # Cyan/teal ring around photo
+    ring_pad = 4
+    d.ellipse([PCX - PSZ//2 - ring_pad, PCY - PSZ//2 - ring_pad,
+               PCX + PSZ//2 + ring_pad, PCY + PSZ//2 + ring_pad],
+              fill=TEAL)
+
+    photo = _load_photo(getattr(entity, "photo", None)) or _load_default_photo()
+    if photo:
+        photo = photo.resize((PSZ, PSZ), Image.LANCZOS)
+        mask  = _circle_mask(PSZ)
+        img.paste(photo, (PCX - PSZ//2, PCY - PSZ//2), mask)
     else:
-        # Load high quality random AI generated worker photo
-        try:
-            default_photo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "qr", "default_worker.png")
-            dphoto = Image.open(default_photo_path).convert("RGB")
-            dphoto = dphoto.resize((pw, ph), Image.LANCZOS)
-            pmask = Image.new("L", (pw, ph), 0)
-            ImageDraw.Draw(pmask).rounded_rectangle([0, 0, pw - 1, ph - 1], radius=16, fill=255)
-            img.paste(dphoto, (px, py), pmask)
-        except Exception:
-            d.ellipse([px + pw // 2 - 40, py + 70, px + pw // 2 + 40, py + 150], fill="#cbd5e1")
-            d.chord([px + 30, py + 160, px + pw - 30, py + ph - 30], start=180, end=360, fill="#cbd5e1")
+        d.ellipse([PCX-PSZ//2, PCY-PSZ//2, PCX+PSZ//2, PCY+PSZ//2], fill=LIGHT_GRAY)
 
-    badge_y = py + ph + 24
-    d.rounded_rectangle([px, badge_y, px + pw, badge_y + 44], radius=22, fill=BRAND_NAVY)
-    d.text((px + pw // 2, badge_y + 22), "✓ Verified Member", font=_card_font(20), fill="white", anchor="mm")
-    d.text((px + pw // 2, badge_y + 60), role_label or "Digital ID", font=_card_font(18), fill=BRAND_NAVY, anchor="mm")
+    # ── 4. NAME / DESIG / QR ─────────────────────────────────────────────────
+    NX = PCX + PSZ//2 + 20    # name text start x
+    NY = PY + 10
 
-    # Details (two columns, left)
-    details = _entity_details(entity_type, entity)
-    if email:
-        details.insert(1, ("Email", email))
-    if role_label:
-        details.insert(2, ("Role", role_label))
-    half = (len(details) + 1) // 2
-    colA = details[:half]
-    colB = details[half:]
+    d.text((NX, NY),    info["name"],  font=_font(40, True), fill=NAVY)
+    d.text((NX, NY+50), info["desig"], font=_font(22),       fill=TEXT_MED)
+    con_txt = f"Contractor : {info['contractor']}"
+    d.text((NX, NY+80), con_txt,       font=_font(19),       fill=TEXT_MED)
 
-    dy = 224
-    step = 52
+    # QR — top-right of this section
+    QSZ = 210
+    QX  = CW - QSZ - 18
+    QY  = PY + 5
+    qr_img = _build_qr(qr_ref, QSZ)
+    img.paste(qr_img, (QX, QY))
 
-    def draw_col(items, icon_x, lbl_x, val_x, line_end_x, dy):
-        max_w = line_end_x - val_x - 10
-        for label, val in items:
-            d.rectangle([icon_x, dy - 4, icon_x + 44, dy + 32], outline="#cbd5e1", width=2)
-            d.ellipse([icon_x + 16, dy + 8, icon_x + 28, dy + 20], fill=BRAND_NAVY)
-            d.text((lbl_x, dy), label, font=f_lbl, fill=TEXT_MUTED)
-            trunc_val = _truncate_text(val, f_val, max_w, d)
-            d.text((val_x, dy), trunc_val, font=f_val, fill=TEXT_DARK)
-            d.line([(icon_x, dy + 42), (line_end_x, dy + 42)], fill=LINE_COLOR, width=2)
-            dy += step
-        return dy
+    # ── 5. DETAIL GRID (2 × 2) ────────────────────────────────────────────────
+    GY = PY + PSZ + 28         # grid top
+    GH = 95                    # row height
+    CL = CW // 2               # column split
 
-    colA_end = draw_col(colA, icon_x=64, lbl_x=124, val_x=360, line_end_x=530, dy=dy)
-    draw_col(colB, icon_x=560, lbl_x=620, val_x=840, line_end_x=1080, dy=dy)
+    grid_items = [
+        # (icon_char, icon_bg, label, value, col, row)
+        ("⊞", (230,240,255), "Worker Code",   info["code"],     0, 0),
+        ("⊟", (230,255,240), "Department",    info["dept"],     1, 0),
+        ("☎", (230,240,255), "Mobile Number", info["mobile"],   0, 1),
+        ("⊕", (230,255,240), "Work Location", info["location"], 1, 1),
+    ]
 
-    # Address (full width)
-    addr_y = colA_end + 8
-    d.text((124, addr_y), "Address", font=f_lbl, fill=TEXT_MUTED)
-    d.text((360, addr_y), ":", font=f_lbl, fill=TEXT_MUTED)
-    addr = getattr(entity, "present_address", None) or getattr(entity, "address", None) or "—"
-    addr_lines = _wrap_text(addr, f_val, 700, d)
-    ay = addr_y
-    for ln in addr_lines[:2]:
-        d.text((400, ay), ln, font=f_val, fill=TEXT_DARK)
-        ay += 30
+    icon_fnt   = _font(20)
+    label_fnt  = _font(16)
+    value_fnt  = _font(22, True)
+    loc_fnt    = _font(19, True)
 
-    # Digitally signed (with timestamp from account creation)
-    created = getattr(entity, "created_at", None)
-    if created:
-        from django.utils import timezone as tz
-        created = tz.localtime(created)
-        sign_time = created.strftime("%d-%m-%Y %H:%M:%S")
-    else:
-        from django.utils import timezone as tz
-        sign_time = tz.localtime().strftime("%d-%m-%Y %H:%M:%S")
-    sig_y = addr_y + 84
-    d.line([(124, sig_y + 20), (1000, sig_y + 20)], fill="#94a3b8", width=2)
-    d.text((124, sig_y + 32), f"Digitally signed by BSS SYSTEM on {sign_time}",
-           font=_card_font(20), fill=BRAND_NAVY)
+    for (icon, icon_bg, lbl, val, col, row) in grid_items:
+        gx = 14 + col * CL
+        gy = GY + row * GH
 
-    # QR (bottom right)
-    qrx, qr_y, qr_sz = 1156, 644, 200
-    qr_img = _qr_image(qr_reference, (qr_sz, qr_sz))
-    # Paste the designed QR code directly (it already has a rounded outline frame)
-    img.paste(qr_img, (qrx - 10, qr_y - 10))
-    d.text((qrx + qr_sz // 2, qr_y + qr_sz + 32), "BSS Verification QR", font=_card_font(18), fill=BRAND_NAVY, anchor="mm")
+        # Thin column divider
+        if col == 1:
+            d.line([(CL, gy+8), (CL, gy+GH-8)], fill=BORDER_CLR, width=1)
 
-    # Footer
-    d.text((W // 2, H - 52), "One Nation. One Platform. One Worker.", font=_card_font(20), fill=BRAND_NAVY, anchor="mm")
-    d.line([(64, H - 52), (W // 2 - 220, H - 52)], fill=BRAND_NAVY, width=2)
-    d.line([(W // 2 + 220, H - 52), (W - 64, H - 52)], fill=BRAND_NAVY, width=2)
+        # Icon circle
+        icx = gx + 34
+        icy = gy + GH//2
+        d.ellipse([icx-26, icy-26, icx+26, icy+26],
+                  fill=icon_bg, outline=BORDER_CLR, width=2)
+        d.text((icx, icy), icon, font=icon_fnt, fill=NAVY, anchor="mm")
+
+        # Label & value
+        tx2 = icx + 38
+        d.text((tx2, gy+14), lbl, font=label_fnt, fill=TEXT_MUTED)
+        # Value (multi-line for location)
+        lines = val.split("\n")
+        d.text((tx2, gy+36), _trunc(lines[0], value_fnt, CL-tx2-8, d),
+               font=value_fnt, fill=TEXT_DARK)
+        if len(lines) > 1:
+            d.text((tx2, gy+62), _trunc(lines[1], loc_fnt, CL-tx2-8, d),
+                   font=loc_fnt, fill=TEXT_MUTED)
+
+        # Dotted horizontal separator
+        sep_y = gy + GH - 2
+        for dx in range(14 + col * CL, 14 + (col+1) * CL - 14, 8):
+            d.rectangle([dx, sep_y, dx+4, sep_y+1], fill=DOT_COLOR)
+
+    # ── 6. CONSTRUCTION SILHOUETTE BG ─────────────────────────────────────────
+    # Draw a subtle light-blue construction scene behind the lower half
+    bg_y = GY - 10
+    bg_h = CH - bg_y - 115
+    # sky gradient
+    for yi in range(bg_h):
+        alpha = int(12 * (1 - yi/bg_h))
+        clr   = (200, 220, 240)
+        d.rectangle([3, bg_y+yi, CW-4, bg_y+yi+1], fill=clr)
+
+    # Simple crane silhouette (left side)
+    crane_x, crane_y = 14, bg_y + 20
+    crane_clr = (170, 195, 220)
+    # Mast
+    d.rectangle([crane_x+10, crane_y, crane_x+18, crane_y+bg_h-30], fill=crane_clr)
+    # Jib (horizontal arm)
+    d.rectangle([crane_x+10, crane_y, crane_x+110, crane_y+8],      fill=crane_clr)
+    # Counter jib
+    d.rectangle([crane_x-30, crane_y, crane_x+10, crane_y+6],       fill=crane_clr)
+    # Hook line
+    d.rectangle([crane_x+80, crane_y+8, crane_x+82, crane_y+50],    fill=crane_clr)
+    # Building blocks
+    for bx, bh in [(crane_x+120, 60),(crane_x+160, 80),(crane_x+200, 50),
+                   (crane_x+250, 100),(crane_x+300, 70)]:
+        d.rectangle([bx, crane_y+bg_h-bh-28, bx+38, crane_y+bg_h-28], fill=crane_clr)
+    # Worker silhouettes (right)
+    for wx in [CW-180, CW-130, CW-80]:
+        d.ellipse([wx-10, crane_y+bg_h-70, wx+10, crane_y+bg_h-50], fill=crane_clr)
+        d.rectangle([wx-8, crane_y+bg_h-50, wx+8, crane_y+bg_h-24], fill=crane_clr)
+
+    # Redraw the grid items over the bg
+    for (icon, icon_bg, lbl, val, col, row) in grid_items:
+        gx = 14 + col * CL
+        gy = GY + row * GH
+        icx = gx + 34; icy = gy + GH//2
+        d.ellipse([icx-26, icy-26, icx+26, icy+26],
+                  fill=icon_bg, outline=BORDER_CLR, width=2)
+        d.text((icx, icy), icon, font=icon_fnt, fill=NAVY, anchor="mm")
+        tx2 = icx + 38
+        d.text((tx2, gy+14), lbl, font=label_fnt, fill=TEXT_MUTED)
+        lines = val.split("\n")
+        d.text((tx2, gy+36), _trunc(lines[0], value_fnt, CL-tx2-8, d),
+               font=value_fnt, fill=TEXT_DARK)
+        if len(lines) > 1:
+            d.text((tx2, gy+62), _trunc(lines[1], loc_fnt, CL-tx2-8, d),
+                   font=loc_fnt, fill=TEXT_MUTED)
+
+    # ── 7. ORANGE + GREEN ACCENT STRIPE ──────────────────────────────────────
+    stripe_y = CH - 112
+    d.rectangle([3, stripe_y, CW-4, stripe_y+6], fill=ORANGE)
+    d.rectangle([3, stripe_y+7, CW-4, stripe_y+10], fill=GREEN)
+
+    # ── 8. FOOTER ICONS ──────────────────────────────────────────────────────
+    footer_y = stripe_y + 14
+    footer_bg = NAVY
+    d.rounded_rectangle([3, stripe_y+12, CW-4, CH-3], radius=20, fill=footer_bg)
+
+    footer_items = [
+        ("🛡", "Verified\nIdentity"),
+        ("💼", "Portable\nAcross Jobs"),
+        ("🔒", "Secure &\nTrusted"),
+        ("📷", "Scan for\nVerification"),
+    ]
+    fw = CW // len(footer_items)
+    fi_fnt  = _font(26)
+    fl_fnt  = _font(14)
+
+    for i, (icon, label) in enumerate(footer_items):
+        fx = fw * i + fw // 2
+        fy = footer_y + 8
+        # Icon circle
+        d.ellipse([fx-22, fy, fx+22, fy+44], fill=(255,255,255,0))
+        d.rounded_rectangle([fx-22, fy, fx+22, fy+44], radius=10,
+                             outline=(255,255,255,80), width=2)
+        d.text((fx, fy+22), icon, font=fi_fnt, fill=WHITE, anchor="mm")
+        # Label
+        lines = label.split("\n")
+        for j, ln in enumerate(lines):
+            d.text((fx, fy+50 + j*17), ln, font=fl_fnt, fill=WHITE, anchor="mt")
 
     return img
 
 
-def worker_card_image(worker, qr_reference):
-    return identity_card_image("WORKER", worker, qr_reference,
-                               role_label="Worker", email=worker.email or "")
+# ── BACK card ────────────────────────────────────────────────────────────────
+def _draw_back(entity_type, entity, qr_ref):
+    img = Image.new("RGB", (CW, CH), WHITE)
+    d   = ImageDraw.Draw(img)
+
+    d.rounded_rectangle([2, 2, CW-3, CH-3], radius=22, outline=BORDER_CLR, width=3)
+
+    # ── 1. DARK NAVY HEADER ───────────────────────────────────────────────────
+    HH = 100
+    d.rounded_rectangle([3, 3, CW-4, HH], radius=20, fill=NAVY_DARK)
+
+    # Decorative lines + title
+    title = "Your Identity. Your Work. Your Security."
+    tf    = _font(20, True)
+    tw    = d.textlength(title, font=tf)
+    tx_c  = CW // 2
+    ty    = 18
+    # Side lines
+    line_w = (CW - tw - 80) // 2
+    d.line([(20, ty+14), (20+line_w, ty+14)], fill=(255,255,255,180), width=2)
+    d.line([(CW-20-line_w, ty+14), (CW-20, ty+14)], fill=(255,255,255,180), width=2)
+    d.text((tx_c, ty), title, font=tf, fill=WHITE, anchor="mt")
+
+    # Shield icon row
+    sh_y = ty + 36
+    d.text((tx_c, sh_y), "🛡", font=_font(28), fill=ORANGE, anchor="mt")
+
+    # ── 2. DATA ROWS ─────────────────────────────────────────────────────────
+    rows    = _back_rows(entity_type, entity)
+    ROW_H   = 57
+    START_Y = HH + 8
+
+    icon_map = {
+        "drop":   ("💧", (220,240,255)),
+        "phone":  ("📞", (220,255,220)),
+        "group":  ("👥", (255,240,220)),
+        "camp":   ("⛺", (240,220,255)),
+        "key":    ("🔑", (255,255,220)),
+        "shield": ("🏥", (220,240,255)),
+        "user":   ("👤", (240,255,240)),
+        "phone2": ("📱", (220,255,220)),
+        "bus":    ("🚌", (255,240,220)),
+        "doc":    ("📄", (220,240,255)),
+        "tax":    ("🏛", (240,255,240)),
+        "id":     ("🏭", (255,240,220)),
+        "state":  ("📍", (220,240,255)),
+        "city":   ("🏙", (240,255,240)),
+        "mail":   ("📧", (255,240,220)),
+    }
+
+    lbl_fnt = _font(18)
+    val_fnt = _font(19, True)
+    ico_fnt = _font(20)
+
+    for i, (icon_key, label, value, is_link) in enumerate(rows):
+        ry = START_Y + i * ROW_H
+        # Alternating row bg
+        row_bg = OFF_WHITE if i % 2 == 0 else WHITE
+        d.rectangle([4, ry, CW-5, ry+ROW_H-1], fill=row_bg)
+
+        icon_char, icon_bg = icon_map.get(icon_key, ("•", LIGHT_GRAY))
+        # Icon circle
+        icx = 36; icy = ry + ROW_H//2
+        d.ellipse([icx-22, icy-22, icx+22, icy+22],
+                  fill=icon_bg, outline=BORDER_CLR, width=2)
+        d.text((icx, icy), icon_char, font=ico_fnt, fill=NAVY, anchor="mm")
+
+        # Label
+        lbl_x = 70
+        d.text((lbl_x, ry+12), label, font=lbl_fnt, fill=TEXT_MED)
+        # Colon
+        colon_x = lbl_x + 220
+        d.text((colon_x, ry+12), ":", font=lbl_fnt, fill=TEXT_MED)
+        # Value
+        val_x = colon_x + 20
+        val_color = LINK_BLUE if is_link else TEXT_DARK
+        d.text((val_x, ry+10), _trunc(value, val_fnt, CW-val_x-12, d),
+               font=val_fnt, fill=val_color)
+
+        # Dotted separator
+        dot_y = ry + ROW_H - 2
+        for dx in range(4, CW-5, 9):
+            d.rectangle([dx, dot_y, dx+5, dot_y+1], fill=DOT_COLOR)
+
+    # ── 3. DISCLAIMER BOX ────────────────────────────────────────────────────
+    disc_y = START_Y + len(rows) * ROW_H + 10
+    disc_h = 80
+    d.rounded_rectangle([14, disc_y, CW-15, disc_y+disc_h], radius=8,
+                         fill=(240, 245, 255), outline=BORDER_CLR, width=1)
+
+    bullets = [
+        "This identity card must always be carried & displayed for security & identification.",
+        "Loss or theft of this card should be reported to shipra@talentcompliance.in.",
+        "This card is not transferable & must be returned immediately on cessation of employment.",
+    ]
+    bf = _font(13)
+    by = disc_y + 8
+    for bul in bullets:
+        d.text((28, by), "•", font=bf, fill=NAVY)
+        for j, ln in enumerate(_wrap(bul, bf, CW-60, d)):
+            d.text((44, by + j*18), ln, font=bf, fill=TEXT_MED)
+        by += len(_wrap(bul, bf, CW-60, d)) * 18 + 4
+
+    # ── 4. ISSUE / VALID UPTO ────────────────────────────────────────────────
+    import datetime
+    now       = datetime.date.today()
+    issue_str = now.strftime("%d/%m/%Y")
+    valid_str = (now + datetime.timedelta(days=365)).strftime("%d/%m/%Y")
+    iv_y      = disc_y + disc_h + 14
+    date_fnt  = _font(17)
+    d.text((22,  iv_y), "📅", font=date_fnt, fill=NAVY)
+    d.text((50,  iv_y), f"Issue Date  :  {issue_str}", font=date_fnt, fill=NAVY)
+    d.text((CW-22, iv_y), f"Valid Upto  :  {valid_str}",
+           font=date_fnt, fill=LINK_BLUE, anchor="ra")
+    d.line([(22, iv_y+26), (CW-22, iv_y+26)], fill=BORDER_CLR, width=1)
+
+    # ── 5. SIGNATURE ────────────────────────────────────────────────────────
+    sig_y   = iv_y + 36
+    info    = _front_info(entity_type, entity)
+    sig_fnt = _font(24, True)   # simulate cursive with bold
+    name_fnt= _font(16, True)
+    role_fnt= _font(15)
+
+    d.text((32, sig_y), info["name"], font=sig_fnt, fill=NAVY)
+    d.line([(32, sig_y+34), (260, sig_y+34)], fill=TEXT_MED, width=2)
+    d.text((32, sig_y+40), info["name"],  font=name_fnt, fill=TEXT_DARK)
+    d.text((32, sig_y+60), info["desig"], font=role_fnt,  fill=TEXT_MUTED)
+
+    if entity_type == "WORKER":
+        d.text((CW-22, sig_y+48), f"Contractor : {info['contractor']}",
+               font=role_fnt, fill=TEXT_MED, anchor="ra")
+
+    # ── 6. GREEN FOOTER URL BAR ──────────────────────────────────────────────
+    foot_y = CH - 54
+    d.rounded_rectangle([3, foot_y, CW-4, CH-3], radius=18, fill=GREEN)
+    url_fnt = _font(16)
+    d.text((22, foot_y+16), "🌐", font=url_fnt, fill=WHITE)
+    d.text((50, foot_y+16),
+           "https://login.bharatshramsetu.com/RetailSection/ContractorWorker",
+           font=url_fnt, fill=WHITE)
+
+    return img
 
 
-def contractor_card_image(contractor, qr_reference):
-    return identity_card_image("CONTRACTOR", contractor, qr_reference,
-                               role_label="Contractor", email=contractor.email or "")
+# ── Public API ────────────────────────────────────────────────────────────────
+def identity_card_image(entity_type, entity, qr_reference, side="front", **_):
+    if side == "back":
+        return _draw_back(entity_type, entity, qr_reference)
+    return _draw_front(entity_type, entity, qr_reference)
 
+def worker_card_image(worker, qr_reference, side="front"):
+    return identity_card_image("WORKER", worker, qr_reference, side=side)
 
-def employer_card_image(employer, qr_reference):
-    return identity_card_image("EMPLOYER", employer, qr_reference,
-                               role_label="Employer", email=employer.email or "")
+def contractor_card_image(contractor, qr_reference, side="front"):
+    return identity_card_image("CONTRACTOR", contractor, qr_reference, side=side)
 
+def employer_card_image(employer, qr_reference, side="front"):
+    return identity_card_image("EMPLOYER", employer, qr_reference, side=side)
 
-def entity_card_image(entity_type, entity, qr_reference):
-    if entity_type == "CONTRACTOR":
-        return contractor_card_image(entity, qr_reference)
-    if entity_type == "EMPLOYER":
-        return employer_card_image(entity, qr_reference)
-    return worker_card_image(entity, qr_reference)
-
+def entity_card_image(entity_type, entity, qr_reference, side="front"):
+    if entity_type == "CONTRACTOR": return contractor_card_image(entity, qr_reference, side)
+    if entity_type == "EMPLOYER":   return employer_card_image(entity, qr_reference, side)
+    return worker_card_image(entity, qr_reference, side)
 
 def simple_identity_card(name, role, email, qr_reference, user_id=""):
-    """Simple HD identity card for users with no QR entity (e.g. admin/staff)."""
-    W, H = 1560, 1000
-    img = Image.new("RGB", (W, H), "#ffffff")
-    d = ImageDraw.Draw(img)
-    BRAND_NAVY = (2, 43, 94)
-    BRAND_ORANGE = (245, 130, 32)
-    BRAND_GREEN = (20, 148, 60)
-    TEXT_MUTED = (71, 85, 105)
-    TEXT_DARK = (15, 23, 42)
-
-    d.rounded_rectangle([24, 24, W - 26, H - 26], radius=48, outline="#cbd5e1", width=4)
-    logo_sz = 104
-    logo_x, logo_y = 64, 48
+    img = Image.new("RGB", (CW, CH), WHITE)
+    d   = ImageDraw.Draw(img)
+    d.rounded_rectangle([2, 2, CW-3, CH-3], radius=22, outline=BORDER_CLR, width=3)
     try:
-        logo = Image.open(LOGO_PATH).convert("RGBA")
-        logo = logo.resize((logo_sz, logo_sz), Image.LANCZOS)
-        img.paste(logo, (logo_x, logo_y), logo)
-    except Exception:
-        pass
-
-    d.text((230, 52), "Bharat", font=_card_font(48), fill=BRAND_NAVY)
-    bx = 230 + d.textlength("Bharat ", font=_card_font(48))
-    d.text((bx, 52), "Shram", font=_card_font(48), fill=BRAND_ORANGE)
-    bx += d.textlength("Shram ", font=_card_font(48))
-    d.text((bx, 52), "Setu", font=_card_font(48), fill=BRAND_GREEN)
-    d.text((230, 116), "Digital Identity Card", font=_card_font(24), fill=TEXT_MUTED)
-    d.line([(64, 190), (W - 64, 190)], fill=BRAND_NAVY, width=2)
-
-    # Badge
-    d.rounded_rectangle([900, 230, 1100, 274], radius=22, fill=BRAND_NAVY)
-    d.text((1000, 252), "✓ Verified Member", font=_card_font(20), fill="white", anchor="mm")
-
-    # Details
-    details = [
-        ("Name", name or "—"),
-        ("Role", role or "—"),
-        ("Email", email or "—"),
-        ("User ID", user_id or "—"),
-    ]
-    y = 330
-    for label, val in details:
-        d.text((144, y), f"{label}:", font=_card_font(20), fill=TEXT_MUTED)
-        d.text((380, y), str(val)[:40], font=_card_font(20), fill=TEXT_DARK)
-        d.line([(64, y + 42), (1100, y + 42)], fill=(226, 232, 240), width=2)
-        y += 64
-
-    # QR
-    qrx, qr_y, qr_sz = 1156, 330, 200
-    d.rectangle([qrx - 2, qr_y - 2, qrx + qr_sz + 2, qr_y + qr_sz + 2], outline="#cbd5e1", width=2)
-    img.paste(_qr_image(qr_reference, (qr_sz, qr_sz)), (qrx, qr_y))
-    d.text((qrx + qr_sz // 2, qr_y + qr_sz + 20), "BSS Verification QR", font=_card_font(18), fill=BRAND_NAVY, anchor="mm")
-
-    d.text((W // 2, H - 52), "One Nation. One Platform. One Worker.", font=_card_font(20), fill=BRAND_NAVY, anchor="mm")
+        logo = Image.open(LOGO_PATH).convert("RGBA").resize((80, 80), Image.LANCZOS)
+        img.paste(logo, (18, 16), logo)
+    except Exception: pass
+    d.text((110, 18), "BHARAT SHRAM SETU", font=_font(28, True), fill=NAVY)
+    d.text((110, 54), "Digital Identity Card", font=_font(20), fill=TEXT_MUTED)
+    d.line([(14, 106), (CW-14, 106)], fill=NAVY, width=2)
+    y = 130
+    for lbl, val in [("Name", name), ("Role", role), ("Email", email), ("User ID", user_id)]:
+        d.text((30, y), f"{lbl}:", font=_font(18), fill=TEXT_MUTED)
+        d.text((240, y), str(val)[:44], font=_font(19, True), fill=TEXT_DARK)
+        d.line([(14, y+42), (CW-14, y+42)], fill=BORDER_CLR, width=1)
+        y += 60
+    qsz = 220
+    qx  = (CW - qsz) // 2
+    img.paste(_build_qr(qr_reference, qsz), (qx, CH-qsz-80))
+    d.text((CW//2, CH-44), "One Nation. One Platform. One Worker.",
+           font=_font(17), fill=NAVY, anchor="mm")
     return img
 
 
-def _card_to_pdf(img, qr_reference):
+# ── PDF helpers ───────────────────────────────────────────────────────────────
+def _card_to_pdf_single(img, qr_reference):
+    """Single-side portrait PDF."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas as rl_canvas
     buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
+    c   = rl_canvas.Canvas(buf, pagesize=A4)
     a4w, a4h = A4
-    img.save("/tmp/_card_tmp.png", format="PNG")
-    card_w = 520
-    card_h = int(card_w * img.size[1] / img.size[0])
-    x_pos = (a4w - card_w) / 2
-    y_pos = a4h - card_h - 80
-    c.drawImage("/tmp/_card_tmp.png", x_pos, y_pos, width=card_w, height=card_h)
+    tmp = "/tmp/_bss_card_tmp.png"
+    img.save(tmp, "PNG")
+    cw = 380; ch = int(cw * img.size[1] / img.size[0])
+    c.drawImage(tmp, (a4w-cw)/2, a4h-ch-80, width=cw, height=ch)
     c.setFont("Helvetica", 9)
-    c.drawString(x_pos, y_pos - 24, f"QR Reference: {qr_reference}")
-    c.showPage()
-    c.save()
+    c.drawString((a4w-cw)/2, a4h-ch-100, f"QR Reference: {qr_reference}")
+    c.showPage(); c.save()
     return buf.getvalue()
 
-
-def worker_card_pdf(worker, qr_reference):
-    return _card_to_pdf(worker_card_image(worker, qr_reference), qr_reference)
-
-
-def card_response(worker, qr_reference, fmt="png"):
-    if fmt == "pdf":
-        return HttpResponse(_card_to_pdf(worker_card_image(worker, qr_reference), qr_reference),
-                            content_type="application/pdf")
-    img = worker_card_image(worker, qr_reference)
+def _card_to_pdf_both(front_img, back_img, qr_reference):
+    """Both sides side-by-side on one landscape A4 PDF page."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.pdfgen import canvas as rl_canvas
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
+    page_w, page_h = landscape(A4)   # ~841 × 595 pt
+    c = rl_canvas.Canvas(buf, pagesize=landscape(A4))
+
+    # Save both sides as temp PNGs
+    tmp_f = "/tmp/_bss_front_tmp.png"
+    tmp_b = "/tmp/_bss_back_tmp.png"
+    front_img.save(tmp_f, "PNG")
+    back_img.save(tmp_b,  "PNG")
+
+    # Each card gets half the page width with margins
+    margin = 24
+    gap    = 16
+    card_w = (page_w - margin*2 - gap) / 2
+    card_h = int(card_w * front_img.size[1] / front_img.size[0])
+    card_y = (page_h - card_h) / 2   # vertically centred
+
+    # Front (left)
+    c.drawImage(tmp_f, margin, card_y, width=card_w, height=card_h)
+    # Back (right)
+    c.drawImage(tmp_b, margin + card_w + gap, card_y, width=card_w, height=card_h)
+
+    # Labels
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColorRGB(0.1, 0.17, 0.37)
+    c.drawCentredString(margin + card_w/2,           card_y - 16, "FRONT SIDE")
+    c.drawCentredString(margin + card_w + gap + card_w/2, card_y - 16, "BACK SIDE")
+
+    # Footer
+    c.setFont("Helvetica", 8)
+    c.setFillColorRGB(0.4, 0.45, 0.55)
+    c.drawCentredString(page_w/2, 16,
+        f"Bharat Shram Setu Employment Card  |  QR Ref: {qr_reference}")
+
+    c.showPage(); c.save()
+    return buf.getvalue()
+
+# Keep old name as alias for backward compat
+def _card_to_pdf(img, qr_reference):
+    return _card_to_pdf_single(img, qr_reference)
+
+# ── Public API ────────────────────────────────────────────────────────────────
+def identity_card_image(entity_type, entity, qr_reference, side="front", **_):
+    if side == "back":
+        return _draw_back(entity_type, entity, qr_reference)
+    if side == "both":
+        # Return a tuple (front, back) — callers must handle this
+        return (_draw_front(entity_type, entity, qr_reference),
+                _draw_back(entity_type, entity, qr_reference))
+    return _draw_front(entity_type, entity, qr_reference)
+
+def worker_card_image(worker, qr_reference, side="front"):
+    return identity_card_image("WORKER", worker, qr_reference, side=side)
+
+def contractor_card_image(contractor, qr_reference, side="front"):
+    return identity_card_image("CONTRACTOR", contractor, qr_reference, side=side)
+
+def employer_card_image(employer, qr_reference, side="front"):
+    return identity_card_image("EMPLOYER", employer, qr_reference, side=side)
+
+def entity_card_image(entity_type, entity, qr_reference, side="front"):
+    if entity_type == "CONTRACTOR": return contractor_card_image(entity, qr_reference, side)
+    if entity_type == "EMPLOYER":   return employer_card_image(entity, qr_reference, side)
+    return worker_card_image(entity, qr_reference, side)
+
+def simple_identity_card(name, role, email, qr_reference, user_id=""):
+    img = Image.new("RGB", (CW, CH), WHITE)
+    d   = ImageDraw.Draw(img)
+    d.rounded_rectangle([2, 2, CW-3, CH-3], radius=22, outline=BORDER_CLR, width=3)
+    try:
+        logo = Image.open(LOGO_PATH).convert("RGBA").resize((80, 80), Image.LANCZOS)
+        img.paste(logo, (18, 16), logo)
+    except Exception: pass
+    d.text((110, 18), "BHARAT SHRAM SETU", font=_font(28, True), fill=NAVY)
+    d.text((110, 54), "Digital Identity Card", font=_font(20), fill=TEXT_MUTED)
+    d.line([(14, 106), (CW-14, 106)], fill=NAVY, width=2)
+    y = 130
+    for lbl, val in [("Name", name), ("Role", role), ("Email", email), ("User ID", user_id)]:
+        d.text((30, y), f"{lbl}:", font=_font(18), fill=TEXT_MUTED)
+        d.text((240, y), str(val)[:44], font=_font(19, True), fill=TEXT_DARK)
+        d.line([(14, y+42), (CW-14, y+42)], fill=BORDER_CLR, width=1)
+        y += 60
+    qsz = 220
+    qx  = (CW - qsz) // 2
+    img.paste(_build_qr(qr_reference, qsz), (qx, CH-qsz-80))
+    d.text((CW//2, CH-44), "One Nation. One Platform. One Worker.",
+           font=_font(17), fill=NAVY, anchor="mm")
+    return img
+
+# ── Django HTTP helpers ───────────────────────────────────────────────────────
+def card_response(worker, qr_reference, fmt="png", side="front"):
+    if side == "both" and fmt == "pdf":
+        front = worker_card_image(worker, qr_reference, side="front")
+        back  = worker_card_image(worker, qr_reference, side="back")
+        return HttpResponse(
+            _card_to_pdf_both(front, back, qr_reference),
+            content_type="application/pdf",
+        )
+    img = worker_card_image(worker, qr_reference, side=side)
+    if fmt == "pdf":
+        return HttpResponse(_card_to_pdf_single(img, qr_reference), content_type="application/pdf")
+    buf = io.BytesIO(); img.save(buf, "PNG")
     return HttpResponse(buf.getvalue(), content_type="image/png")
 
-
-def entity_card_response(entity_type, entity, qr_reference, fmt="png"):
+def entity_card_response(entity_type, entity, qr_reference, fmt="png", side="front"):
+    """Render entity card.  side='both'+fmt='pdf' → dual-side landscape PDF."""
+    if side == "both" and fmt == "pdf":
+        front = entity_card_image(entity_type, entity, qr_reference, side="front")
+        back  = entity_card_image(entity_type, entity, qr_reference, side="back")
+        return HttpResponse(
+            _card_to_pdf_both(front, back, qr_reference),
+            content_type="application/pdf",
+        )
+    img = entity_card_image(entity_type, entity, qr_reference, side=side)
     if fmt == "pdf":
-        return HttpResponse(_card_to_pdf(entity_card_image(entity_type, entity, qr_reference), qr_reference),
-                            content_type="application/pdf")
-    img = entity_card_image(entity_type, entity, qr_reference)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
+        return HttpResponse(_card_to_pdf_single(img, qr_reference), content_type="application/pdf")
+    buf = io.BytesIO(); img.save(buf, "PNG")
     return HttpResponse(buf.getvalue(), content_type="image/png")
 

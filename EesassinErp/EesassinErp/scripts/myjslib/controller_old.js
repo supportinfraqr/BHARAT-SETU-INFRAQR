@@ -2011,7 +2011,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
 
         /*Bind Page Iframe*/
 
-        var iframe = '<iframe id="' + FinalID + '" class="iframedesign " src=\'..' + src + '\' rameborder="0" marginheight="1" role="tabpanel" marginwidth="1" seamless="seamless"  allowtransparency="true"  oncontextmenu="return false;" ></iframe>';
+        var iframe = '<iframe id="' + FinalID + '" class="iframedesign " src=\'..' + src + '\' rameborder="0" marginheight="1" role="tabpanel" marginwidth="1" seamless="seamless"  allowtransparency="true"   ></iframe>';
 
         //var iframe = '<div  id="data' + FinalID + '" class="iframe-box-w-reload-box"><div id="btn' + FinalID + '" class="reload-box"><button  onclick="ReloadBox(\'#' + FinalID + '\');" class="btn btn-primary btn-anim"><i class="mdi mdi-account-off"></i><span class="btn-text">Reload Page</span></button></div><div class="iframe-in-loadpage-box "><iframe id="' + FinalID + '" class="iframedesign " src="' + src + '" rameborder="0" marginheight="1" role="tabpanel" marginwidth="1" seamless="seamless" scrolling="no" allowtransparency="true"></iframe></div></div>';
         //$('.iframe-wrapper', window.parent.document).prepend(iframe);

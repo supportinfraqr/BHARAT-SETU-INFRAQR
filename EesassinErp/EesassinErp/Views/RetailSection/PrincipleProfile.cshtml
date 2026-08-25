@@ -1232,18 +1232,16 @@
         bootstrap.Modal.getInstance(document.getElementById("declModal")).hide();
     });
 
-    document.getElementById("declNext").addEventListener("click", function () {
+    var declNextEl = document.getElementById("declNext");
+    if (declNextEl) {
+        declNextEl.addEventListener("click", function () {
 
-        const total = document.querySelectorAll(".decl-item").length;
+            const total = document.querySelectorAll(".decl-item").length;
 
-        //if (completedDecl.size !== total) {
-        //    alert("Please complete all declarations");
-        //    return;
-        //}
-
-        currentStep++;
-        showStep(currentStep);
-    });
+            currentStep++;
+            showStep(currentStep);
+        });
+    }
 
 
 </script>
@@ -1253,32 +1251,34 @@
         var input = document.getElementById("ServicesOffered");
         var dropdown = document.getElementById("serviceDropdown");
 
-        // open dropdown
-        input.addEventListener("click", function (e) {
-            e.stopPropagation();
-            dropdown.style.display = "block";
-        });
-
-        // checkbox change
-        dropdown.addEventListener("change", function () {
-            var selected = [];
-            var checkboxes = dropdown.querySelectorAll("input[type='checkbox']");
-
-            checkboxes.forEach(function (cb) {
-                if (cb.checked) {
-                    selected.push(cb.value);
-                }
+        if (input && dropdown) {
+            // open dropdown
+            input.addEventListener("click", function (e) {
+                e.stopPropagation();
+                dropdown.style.display = "block";
             });
 
-            input.value = selected.join(", ");
-        });
+            // checkbox change
+            dropdown.addEventListener("change", function () {
+                var selected = [];
+                var checkboxes = dropdown.querySelectorAll("input[type='checkbox']");
 
-        // close on outside click
-        document.addEventListener("click", function (e) {
-            if (!dropdown.contains(e.target) && e.target !== input) {
-                dropdown.style.display = "none";
-            }
-        });
+                checkboxes.forEach(function (cb) {
+                    if (cb.checked) {
+                        selected.push(cb.value);
+                    }
+                });
+
+                input.value = selected.join(", ");
+            });
+
+            // close on outside click
+            document.addEventListener("click", function (e) {
+                if (!dropdown.contains(e.target) && e.target !== input) {
+                    dropdown.style.display = "none";
+                }
+            });
+        }
 
     };
 </script>

@@ -8,3 +8,6 @@ obj/
 [Oo]bj/
 *.user
 *.suo
+venv/
+__pycache__/
+*.pyc

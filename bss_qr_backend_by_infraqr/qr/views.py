@@ -1652,7 +1652,10 @@ class WorkerCardView(APIView):
         fmt = request.query_params.get("fmt", "png").lower()
         if fmt not in ("png", "pdf"):
             fmt = "png"
-        return card_response(worker, qr.qr_reference, fmt)
+        side = request.query_params.get("side", "front").lower()
+        if side not in ("front", "back", "both"):
+            side = "front"
+        return card_response(worker, qr.qr_reference, fmt, side=side)
 
 
 class UserQRView(APIView):
@@ -1713,10 +1716,13 @@ class MyIdentityCardView(APIView):
 
     def get(self, request):
         user = request.user
-        from .cards import entity_card_response, simple_identity_card
+        from .cards import entity_card_response, entity_card_image, simple_identity_card
         fmt = request.query_params.get("fmt", "png").lower()
         if fmt not in ("png", "pdf"):
             fmt = "png"
+        side = request.query_params.get("side", "front").lower()
+        if side not in ("front", "back", "both"):
+            side = "front"
         entity_type, entity, qr_ref = self._resolve(request)
         if entity is None or not qr_ref:
             # Fallback for users with no QR entity (admin/staff): simple identity card.
@@ -1730,7 +1736,18 @@ class MyIdentityCardView(APIView):
             buf = io.BytesIO()
             img.save(buf, format="PNG")
             return HttpResponse(buf.getvalue(), content_type="image/png")
-        return entity_card_response(entity_type, entity, qr_ref, fmt)
+        # Render the requested side
+        import io
+        if side == "both" and fmt == "pdf":
+            from .cards import entity_card_response
+            return entity_card_response(entity_type, entity, qr_ref, fmt=fmt, side=side)
+        img = entity_card_image(entity_type, entity, qr_ref, side=side)
+        if fmt == "pdf":
+            from .cards import _card_to_pdf
+            return HttpResponse(_card_to_pdf(img, qr_ref), content_type="application/pdf")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return HttpResponse(buf.getvalue(), content_type="image/png")
 
     def _resolve(self, request):
         user = request.user

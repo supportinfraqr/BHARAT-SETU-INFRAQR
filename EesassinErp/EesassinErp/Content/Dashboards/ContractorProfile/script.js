@@ -20,49 +20,8 @@
 
 
 //This is script for edit profile modal(copy from vendor registration)
-
-    let currentStep = 1;
-    const totalSteps = 7;
-
-    /* STEP SWITCH */
-    const stepIndicators = document.querySelectorAll(".step-item");
-
-    function showStep(step) {
-
-        document.querySelectorAll(".form-step").forEach(s => s.style.display = "none");
-    document.querySelector(`[data-step="${step}"]`).style.display = "block";
-
-        stepIndicators.forEach((el, index) => {
-        el.classList.remove("active", "completed");
-
-    if (index + 1 < step) {
-        el.classList.add("completed");
-            }
-    else if (index + 1 === step) {
-        el.classList.add("active");
-            }
-        });
-
-    document.querySelector(".prev-btn").classList.toggle("d-none", step === 1);
-    }
-
-    document.addEventListener("click", function (e) {
-
-        if (e.target.classList.contains("next-btn")) {
-            if (currentStep < totalSteps) {
-        currentStep++;
-    showStep(currentStep);
-            }
-        }
-
-    if (e.target.classList.contains("prev-btn")) {
-            if (currentStep > 1) {
-        currentStep--;
-    showStep(currentStep);
-            }
-        }
-
-    });
+// NOTE: step-wizard (currentStep/showStep) is handled inline in contractorProfile.cshtml
+//       so it is NOT duplicated here to avoid 'currentStep already declared'.
 
     /* MULTI SELECT */
     const display = document.getElementById("multiDisplay");
@@ -91,8 +50,6 @@
         dropdown.style.display = "none";
         }
     });
-
-    showStep(currentStep);
 
 
     window.onload = function () {
