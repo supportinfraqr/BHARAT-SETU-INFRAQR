@@ -34,7 +34,13 @@ CW, CH = 900, 1240          # portrait card (px)
 
 # ── Fonts ─────────────────────────────────────────────────────────────────────
 def _font(size, bold=False):
+    # Windows (deployment target: IIS box with waitress) first, then Linux paths.
     candidates = [
+        # Windows
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf" if bold else "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/timesbd.ttf" if bold else "C:/Windows/Fonts/times.ttf",
+        # Linux
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
         else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf" if bold
@@ -42,9 +48,16 @@ def _font(size, bold=False):
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     ]
     for p in candidates:
-        try: return ImageFont.truetype(p, size)
-        except Exception: pass
-    return ImageFont.load_default()
+        try:
+            return ImageFont.truetype(p, size)
+        except Exception:
+            pass
+    # Last resort: Pillow's bundled scalable font (supports latin + common
+    # punctuation) instead of the tiny 10px bitmap default.
+    try:
+        return ImageFont.load_default(size=size)
+    except Exception:
+        return ImageFont.load_default()
 
 # ── Utils ─────────────────────────────────────────────────────────────────────
 def _trunc(text, font, max_w, draw):
