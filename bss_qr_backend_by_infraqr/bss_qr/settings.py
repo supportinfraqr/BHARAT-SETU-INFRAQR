@@ -167,6 +167,15 @@ if not DEBUG:
 QR_ENCRYPTION_KEY = os.environ.get("BSS_QR_KEY", "bss-qr-secret-change-me")
 QR_REFERENCE_PREFIX = "BSS"
 
+# ---------- Consent channel providers (qr/channels.py) ----------
+# "stub" returns OTP/prompt to the caller (dev). "console" logs it. "msg91"
+# is a real SMS gateway and requires BSS_SMS_API_KEY.
+BSS_SMS_PROVIDER = os.environ.get("BSS_SMS_PROVIDER", "stub")
+BSS_IVR_PROVIDER = os.environ.get("BSS_IVR_PROVIDER", "stub")
+BSS_VOICE_PROVIDER = os.environ.get("BSS_VOICE_PROVIDER", "stub")
+BSS_SMS_API_KEY = os.environ.get("BSS_SMS_API_KEY", "")
+BSS_SMS_SENDER = os.environ.get("BSS_SMS_SENDER", "BSSIND")
+
 AUTH_USER_MODEL = "authx.User"
 
 # ---------- DigiLocker OAuth (Aadhaar-based signup/login) ----------

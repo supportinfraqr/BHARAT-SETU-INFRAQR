@@ -16,6 +16,9 @@ SEQUENCE_SQL = [
 
 
 def sync_sequences(apps, schema_editor):
+    vendor = schema_editor.connection.vendor
+    if vendor != "postgresql":
+        return
     table_names = schema_editor.connection.introspection.table_names()
     with schema_editor.connection.cursor() as cursor:
         for seq in SEQUENCE_SQL:

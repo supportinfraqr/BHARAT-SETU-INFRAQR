@@ -212,10 +212,10 @@
         }
 
         html {
-            -webkit-user-select: none; /* Prevent text selection */
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+            -webkit-user-select: text; /* Allow text selection and copy */
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
 
         body {
@@ -403,7 +403,7 @@
         }
     </script>
 </head>
-<body class="dashbg" oncontextmenu="return false;" onload="loadPage('Report/ReportLicenseMaster')">
+<body class="dashbg" oncontextmenu="return true;" onload="loadPage('Report/ReportLicenseMaster')">
     <div id="cover-spin">
 
     </div>
@@ -600,8 +600,8 @@
         </script>
 
 
-        <div class="iframe-wrapper tab-content" oncontextmenu="return false;">
-            <iframe id="menuhomedashboard" class="iframedesign " oncontextmenu="return false;" ng-src="{{url}}" src='../Report/NoticeInspection' rameborder="0" marginheight="1" role="tabpanel" marginwidth="1" seamless="seamless" allowtransparency="true"></iframe>
+        <div class="iframe-wrapper tab-content" oncontextmenu="return true;">
+            <iframe id="menuhomedashboard" class="iframedesign " oncontextmenu="return true;" ng-src="{{url}}" src='../Report/NoticeInspection' rameborder="0" marginheight="1" role="tabpanel" marginwidth="1" seamless="seamless" allowtransparency="true"></iframe>
         </div>
     </div>
     <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">

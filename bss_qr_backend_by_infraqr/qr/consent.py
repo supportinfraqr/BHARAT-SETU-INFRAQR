@@ -19,6 +19,41 @@ GENERAL_PROFILE_FIELDS = {
 }
 
 
+def _party_entity(binding: Binding, party: str):
+    """The entity whose consent is being requested ('initiator' or 'approver')."""
+    scanner, target = _party_entities(binding)
+    return scanner if party == "initiator" else target
+
+
+def consent_sequence(binding: Binding, party: str = "approver"):
+    """Escalation ladder for a consenting party.
+
+    Case I  (worker consents, physical card / keypad phone): APP -> IVR.
+    Case II (employer/contractor consents, app-to-app):      APP -> SMS_OTP -> VOICE.
+    """
+    entity = _party_entity(binding, party)
+    if isinstance(entity, Worker):
+        return ["APP", "IVR"]
+    return ["APP", "SMS_OTP", "VOICE"]
+
+
+def next_consent_channel(binding: Binding, party: str = "approver"):
+    """Next channel after the current one on the escalation ladder (None if exhausted)."""
+    seq = consent_sequence(binding, party)
+    cur = binding.consent_channel
+    state_field = "initiator_consent" if party == "initiator" else "approver_consent"
+    if getattr(binding, state_field) != "TIMEOUT":
+        # Fresh or in-flight attempt -> start at APP (or keep current channel)
+        return cur or seq[0]
+    if not cur:
+        return seq[0]
+    if cur in seq:
+        idx = seq.index(cur)
+        if idx + 1 < len(seq):
+            return seq[idx + 1]
+    return None
+
+
 def _otp_store():
     """Simple in-memory OTP store (replace with Redis in production)."""
     from django.core.cache import cache
@@ -53,7 +88,14 @@ def _party_name(entity) -> str:
 
 
 def request_consent(binding: Binding, party: str, channel: str = "APP") -> dict:
-    """Begin a consent request for the given party ('initiator' or 'approver')."""
+    """Begin a consent request for the given party ('initiator' or 'approver').
+
+    channel may be 'APP' / 'SMS_OTP' / 'IVR' / 'VOICE', or 'AUTO' to advance
+    automatically along the escalation ladder (APP -> SMS_OTP -> VOICE for
+    employer/contractor targets; APP -> IVR for worker targets).
+    """
+    if channel == "AUTO":
+        channel = next_consent_channel(binding, party) or "APP"
     now = timezone.now()
     if party == "initiator":
         binding.initiator_consent = "PENDING"
@@ -65,8 +107,9 @@ def request_consent(binding: Binding, party: str, channel: str = "APP") -> dict:
     binding.consent_expires_at = now + timezone.timedelta(seconds=CONSENT_TIMEOUT_SECONDS)
     binding.save()
 
-    scanner, target = _party_entities(binding)
-    phone = _party_phone(target)
+    # The OTP/IVR goes to the party whose consent is being requested.
+    party_entity = _party_entity(binding, party)
+    phone = _party_phone(party_entity)
     result = {
         "binding_id": binding.pk,
         "party": party,
@@ -96,12 +139,27 @@ def resolve_consent(binding: Binding, party: str, decision: bool, otp: str = "")
         field = "initiator_consent" if party == "initiator" else "approver_consent"
         setattr(binding, field, "TIMEOUT")
         binding.save()
-        return {"binding_id": binding.pk, "party": party, "decision": False, "timed_out": True, "binding_complete": False}
+        result = {"binding_id": binding.pk, "party": party, "decision": False, "timed_out": True, "binding_complete": False}
+        # Automatic fallback orchestration: escalate to the next channel in the ladder.
+        nxt = next_consent_channel(binding, party)
+        if nxt:
+            escalated = request_consent(binding, party, nxt)
+            result["escalated_to"] = nxt
+            result["escalated"] = True
+            result["status"] = "PENDING"
+            result["expires_at"] = escalated.get("expires_at")
+            if nxt == "SMS_OTP" and escalated.get("otp"):
+                result["otp"] = escalated["otp"]
+                result["otp_sent"] = True
+            if nxt in ("IVR", "VOICE"):
+                result["ivr_sent"] = escalated.get("ivr_sent", True)
+                result["prompt"] = escalated.get("ivr_prompt") or escalated.get("prompt")
+        return result
 
     # If channel was SMS_OTP, validate the OTP first
     if binding.consent_channel == "SMS_OTP":
-        scanner, target = _party_entities(binding)
-        phone = _party_phone(target)
+        party_entity = _party_entity(binding, party)
+        phone = _party_phone(party_entity)
         valid = verify_sms_otp(phone, binding.pk, otp)
         if not valid:
             return {"binding_id": binding.pk, "party": party, "decision": False, "invalid_otp": True, "binding_complete": False}
@@ -169,11 +227,13 @@ def finalize_binding(binding: Binding) -> None:
 
 
 def send_sms_otp(phone: str, binding_id: int) -> str:
-    """Send an SMS OTP (stub). Replace with a real SMS gateway in production."""
+    """Send an SMS OTP via the configured channel provider."""
+    from .channels import send_sms
+
     otp = f"{secrets.randbelow(10000):04d}"
     store = _otp_store()
     store.set(f"consent_otp:{binding_id}:{phone}", otp, timeout=300)
-    # TODO: integrate with SMS gateway
+    send_sms(phone, f"Your BSS binding consent OTP is {otp}. Valid for 5 minutes.")
     return otp
 
 
@@ -186,13 +246,17 @@ def verify_sms_otp(phone: str, binding_id: int, otp: str) -> bool:
 
 
 def initiate_ivr(phone: str) -> dict:
-    """Initiate an IVR 'Press 1 / Press 0' call (stub). Replace with telephony gateway."""
-    return {"ivr_sent": True, "phone": phone, "prompt": "Press 1 to accept, Press 0 to decline"}
+    """Initiate an IVR 'Press 1 / Press 0' call (Case I fallback)."""
+    from .channels import place_ivr
+
+    return place_ivr(phone, "Press 1 to accept binding, Press 0 to decline")
 
 
 def initiate_voice(phone: str) -> dict:
-    """Initiate a voice prompt call as the final fallback (stub)."""
-    return {"voice_sent": True, "phone": phone, "prompt": "Press 1 to confirm app binding"}
+    """Initiate a voice prompt call as the final fallback (Case II)."""
+    from .channels import place_voice
+
+    return place_voice(phone, "Press 1 to confirm app binding")
 
 
 def fetch_profile_data(viewer, target, bound: bool) -> dict:
@@ -279,6 +343,9 @@ def is_bound(viewer, target) -> bool:
     if viewer is None or target is None:
         return False
     v_role = getattr(viewer, "role", "")
+    # Admin/staff have full visibility (resolve_scope: no scope restrictions)
+    if v_role in ("SUPER_ADMIN", "BSS_STAFF"):
+        return True
     # Resolve the viewer's own entity
     viewer_entity = None
     if v_role == "EMPLOYER":

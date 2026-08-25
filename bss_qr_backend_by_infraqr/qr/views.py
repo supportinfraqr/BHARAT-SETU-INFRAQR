@@ -616,6 +616,19 @@ class QRScanView(APIView):
                 log_scan(request, qr, worker=worker, scan_result="INACTIVE_WORKER", lat=lat, lng=lng)
                 return Response({"Result": "Error", "Message": "Worker is not active"}, status=400)
 
+            # Admin/staff scan a worker QR -> full profile (spec: no scope restrictions)
+            if scanner_role in (SUPER, STAFF):
+                log_scan(request, qr, worker=worker, scan_result="ADMIN_VIEW", lat=lat, lng=lng)
+                return Response({
+                    "Result": "Success",
+                    "Data": {
+                        "entity_type": "WORKER",
+                        "action": "view_info",
+                        "visibility": "FULL",
+                        "worker": WorkerSerializer(worker).data,
+                    },
+                })
+
             # Employer scans a worker QR -> hierarchy-scoped info (no attendance)
             if scanner_role == EMPLOYER:
                 if emp_id and worker.employer_id and worker.employer_id != emp_id:
@@ -644,13 +657,62 @@ class QRScanView(APIView):
                         },
                     })
                 if worker.contractor_id == con_id:
-                    # Already bound to this contractor -> can mark attendance
+                    # Already bound to this contractor -> mark attendance (Case I: C scans W card)
+                    contractor = worker.contractor
+                    match = None
+                    location_status = "NA"
+                    if contractor and contractor.location_lat and lat is not None and lng is not None:
+                        match = geo_within(float(lat), float(lng), contractor.location_lat, contractor.location_lng)
+                        location_status = "MATCH" if match else "MISMATCH"
+                    elif contractor and contractor.location_lat:
+                        location_status = "LOCATION_UNAVAILABLE"
+                    elif contractor is None:
+                        location_status = "NO_CONTRACTOR_BOUND"
+                    att_status = "PRESENT" if match else (
+                        "LOCATION_MISMATCH" if location_status == "MISMATCH"
+                        else "VERIFICATION_FAILED" if location_status in ("LOCATION_UNAVAILABLE", "NA", "NO_CONTRACTOR_BOUND")
+                        else "PRESENT"
+                    )
+                    if worker.employer_id:
+                        from .plan import is_plan_active
+                        if not is_plan_active(worker.employer):
+                            log_scan(request, qr, worker=worker, scan_result="PLAN_INACTIVE", lat=lat, lng=lng)
+                            return Response({
+                                "Result": "Error",
+                                "Message": "Employer plan is inactive or expired. Contact admin to renew.",
+                            }, status=403)
+                    with transaction.atomic():
+                        att, _ = Attendance.objects.update_or_create(
+                            worker=worker,
+                            date=timezone.localdate(),
+                            defaults={
+                                "employer": worker.employer,
+                                "contractor": worker.contractor,
+                                "scan_user": request.user,
+                                "qr": qr,
+                                "time": timezone.localtime().time(),
+                                "latitude": lat,
+                                "longitude": lng,
+                                "location_status": location_status,
+                                "attendance_status": att_status,
+                                "location_mismatch": location_status == "MISMATCH",
+                            },
+                        )
+                        log_scan(request, qr, worker=worker, employer=worker.employer,
+                                 contractor=worker.contractor, location_status=location_status,
+                                 scan_result=att_status, lat=lat, lng=lng)
+                    if location_status == "MISMATCH":
+                        notify("EMPLOYER", "LOCATION_MISMATCH",
+                               f"Worker {worker.full_name} scanned outside permitted location")
+                        write_audit(request, "SCAN_LOCATION_MISMATCH", "WORKER", worker.pk, previous=qr_reference)
                     return Response({
                         "Result": "Success",
                         "Data": {
                             "entity_type": "WORKER",
                             "action": "already_bound",
                             "worker": WorkerSerializer(worker).data,
+                            "attendance": AttendanceSerializer(att).data,
+                            "location_status": location_status,
                         },
                     })
                 # Unbound worker -> contractor can bind (create a WORKER_CONTRACTOR binding request)
@@ -697,14 +759,19 @@ class QRScanView(APIView):
                     },
                 })
 
-            # Worker scans a worker QR -> basic info (same level), no attendance
+            # Worker scans a worker QR -> Rule 5/6 visibility-gated profile (no attendance)
             if scanner_role == WORKER:
+                from .consent import fetch_profile_data, is_bound
+                bound = is_bound(request.user, worker)
+                profile = fetch_profile_data(request.user, worker, bound)
                 return Response({
                     "Result": "Success",
                     "Data": {
                         "entity_type": "WORKER",
                         "action": "view_info",
-                        "worker": WorkerSerializer(worker).data,
+                        "bound": bound,
+                        "visibility": "FULL" if bound else "GENERAL",
+                        "worker": WorkerSerializer(worker).data if bound else profile,
                     },
                 })
 

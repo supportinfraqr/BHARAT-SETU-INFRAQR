@@ -6,6 +6,8 @@ from django.db import migrations, models
 def _sync_new_sequences(apps, schema_editor):
     """Sync Id sequences for the newly-portable write tables (bulk-migrated
     data loaded explicit Ids, so ORM creates would otherwise reuse Ids)."""
+    if schema_editor.connection.vendor != "postgresql":
+        return
     table_names = schema_editor.connection.introspection.table_names()
     mapping = {
         "bss_legacy_rtl_chatbot": "Id",

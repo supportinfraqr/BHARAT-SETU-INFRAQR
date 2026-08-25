@@ -10,3 +10,4 @@ redis==8.1.0
 python-dotenv==1.2.2
 qrcode==8.2
 pycryptodome==3.23.0
+Pillow==12.3.0
