@@ -156,6 +156,111 @@ def _draw_icon_circle(draw, cx, cy, radius, bg_color, border_color, symbol, symb
                  fill=bg_color, outline=border_color, width=2)
     draw.text((cx, cy), symbol, font=symbol_font, fill=symbol_color, anchor="mm")
 
+
+# ── Vector icons (no emoji: emoji glyphs are missing from Arial/DejaVu and
+#    render as boxes — these are drawn with primitives, always crisp) ──────────
+def _vicon(d, kind, cx, cy, s, color, w=3):
+    """Draw a simple vector icon centred at (cx,cy), half-size s, stroke w."""
+    if kind == "shield":
+        d.polygon([(cx-s, cy-s*0.55), (cx, cy-s*1.1), (cx+s, cy-s*0.55),
+                   (cx+s*0.82, cy+s*0.45), (cx, cy+s*0.95), (cx-s*0.82, cy+s*0.45)],
+                  outline=color, width=w)
+    elif kind == "idcard":
+        d.rounded_rectangle([cx-s, cy-s*0.9, cx+s, cy+s*0.9], radius=4, outline=color, width=w)
+        d.line([(cx-s*0.45, cy-s*0.4), (cx+s*0.45, cy-s*0.4)], fill=color, width=w)
+        d.line([(cx-s*0.45, cy), (cx+s*0.45, cy)], fill=color, width=w)
+        d.line([(cx-s*0.45, cy+s*0.4), (cx+s*0.45, cy+s*0.4)], fill=color, width=w)
+    elif kind == "briefcase":
+        d.rounded_rectangle([cx-s, cy-s*0.35, cx+s, cy+s*0.95], radius=4, outline=color, width=w)
+        d.arc([cx-s*0.38, cy-s*1.0, cx+s*0.38, cy-s*0.1], 180, 360, fill=color, width=w)
+    elif kind == "lock":
+        d.arc([cx-s*0.55, cy-s*1.05, cx+s*0.55, cy-s*0.05], 180, 360, fill=color, width=w)
+        d.rounded_rectangle([cx-s*0.7, cy-s*0.1, cx+s*0.7, cy+s*0.95], radius=3, outline=color, width=w)
+        d.ellipse([cx-s*0.22, cy+s*0.25, cx+s*0.22, cy+s*0.68], outline=color, width=w)
+    elif kind == "camera":
+        d.rounded_rectangle([cx-s, cy-s*0.7, cx+s, cy+s*0.7], radius=4, outline=color, width=w)
+        d.rectangle([cx-s*0.6, cy-s*0.7, cx-s*0.25, cy-s*0.38], fill=color)
+        d.ellipse([cx-s*0.35, cy-s*0.35, cx+s*0.35, cy+s*0.35], outline=color, width=w)
+    elif kind == "drop":
+        d.polygon([(cx, cy-s*0.95), (cx+s*0.72, cy+s*0.05), (cx+s*0.72, cy+s*0.45),
+                   (cx-s*0.72, cy+s*0.45), (cx-s*0.72, cy+s*0.05)], outline=color, width=w)
+        d.line([(cx, cy-s*0.95), (cx, cy+s*0.45)], fill=color, width=w)
+    elif kind == "phone":
+        d.rounded_rectangle([cx-s*0.35, cy-s, cx+s*0.35, cy+s], radius=5, outline=color, width=w)
+        d.line([(cx-s*0.12, cy+s*0.55), (cx+s*0.12, cy+s*0.55)], fill=color, width=w)
+    elif kind == "mobile":
+        d.rounded_rectangle([cx-s*0.42, cy-s, cx+s*0.42, cy+s], radius=4, outline=color, width=w)
+        d.line([(cx-s*0.15, cy+s*0.7), (cx+s*0.15, cy+s*0.7)], fill=color, width=w)
+    elif kind == "users":
+        d.ellipse([cx-s*0.65, cy-s*0.75, cx-s*0.1, cy-s*0.15], outline=color, width=w)
+        d.ellipse([cx+s*0.1, cy-s*0.75, cx+s*0.65, cy-s*0.15], outline=color, width=w)
+        d.arc([cx-s*0.95, cy-s*0.1, cx-s*0.1, cy+s*0.95], 200, 340, fill=color, width=w)
+        d.arc([cx+s*0.1, cy-s*0.1, cx+s*0.95, cy+s*0.95], 200, 340, fill=color, width=w)
+    elif kind == "user":
+        d.ellipse([cx-s*0.4, cy-s*0.85, cx+s*0.4, cy-s*0.05], outline=color, width=w)
+        d.arc([cx-s*0.75, cy, cx+s*0.75, cy+s*1.4], 190, 350, fill=color, width=w)
+    elif kind == "tent":
+        d.polygon([(cx-s, cy+s*0.85), (cx-s*0.4, cy-s*0.85), (cx+s*0.4, cy-s*0.85), (cx+s, cy+s*0.85)],
+                  outline=color, width=w)
+        d.line([(cx, cy-s*0.85), (cx, cy+s*0.85)], fill=color, width=w)
+    elif kind == "key":
+        d.ellipse([cx-s*0.75, cy-s*0.45, cx+s*0.15, cy+s*0.45], outline=color, width=w)
+        d.line([(cx-s*0.1, cy), (cx+s*0.5, cy)], fill=color, width=w)
+        d.line([(cx+s*0.35, cy-s*0.25), (cx+s*0.7, cy-s*0.25)], fill=color, width=w)
+        d.line([(cx+s*0.5, cy+s*0.25), (cx+s*0.8, cy+s*0.25)], fill=color, width=w)
+    elif kind == "cross":
+        d.rectangle([cx-s*0.35, cy-s*0.95, cx+s*0.35, cy+s*0.95], outline=color, width=w)
+        d.rectangle([cx-s*0.95, cy-s*0.35, cx+s*0.95, cy+s*0.35], outline=color, width=w)
+    elif kind == "bus":
+        d.rounded_rectangle([cx-s, cy-s*0.7, cx+s, cy+s*0.7], radius=5, outline=color, width=w)
+        d.ellipse([cx-s*0.55, cy+s*0.25, cx-s*0.25, cy+s*0.55], outline=color, width=w)
+        d.ellipse([cx+s*0.25, cy+s*0.25, cx+s*0.55, cy+s*0.55], outline=color, width=w)
+        d.rectangle([cx-s*0.75, cy-s*0.35, cx+s*0.75, cy-s*0.05], outline=color, width=w)
+    elif kind == "doc":
+        d.polygon([(cx-s*0.7, cy-s), (cx+s*0.35, cy-s), (cx+s*0.7, cy-s*0.6), (cx+s*0.7, cy+s)],
+                  outline=color, width=w)
+        d.line([(cx-s*0.7, cy+s), (cx+s*0.7, cy+s)], fill=color, width=w)
+        d.polygon([(cx+s*0.35, cy-s), (cx+s*0.35, cy-s*0.6), (cx+s*0.7, cy-s*0.6)], fill=color)
+        d.line([(cx-s*0.4, cy-s*0.4), (cx+s*0.4, cy-s*0.4)], fill=color, width=w)
+        d.line([(cx-s*0.4, cy), (cx+s*0.4, cy)], fill=color, width=w)
+        d.line([(cx-s*0.4, cy+s*0.4), (cx+s*0.4, cy+s*0.4)], fill=color, width=w)
+    elif kind == "rupee":
+        d.text((cx, cy), "₹", font=_font(int(s*1.7), True), fill=color, anchor="mm")
+    elif kind == "factory":
+        d.polygon([(cx-s, cy+s*0.9), (cx-s*0.6, cy-s*0.6), (cx-s*0.15, cy-s*0.6),
+                   (cx-s*0.15, cy+s*0.9)], outline=color, width=w)
+        d.polygon([(cx-s*0.15, cy+s*0.9), (cx+s*0.25, cy-s*0.6), (cx+s*0.7, cy-s*0.6),
+                   (cx+s*0.7, cy+s*0.9)], outline=color, width=w)
+        d.rectangle([cx-s*1.0, cy+s*0.5, cx+s*1.0, cy+s*0.9], outline=color, width=w)
+    elif kind == "pin":
+        d.ellipse([cx-s*0.55, cy-s*0.95, cx+s*0.55, cy-s*0.05], outline=color, width=w)
+        d.polygon([(cx-s*0.55, cy-s*0.1), (cx+s*0.55, cy-s*0.1), (cx, cy+s*0.95)], outline=color, width=w)
+    elif kind == "building":
+        d.rectangle([cx-s*0.7, cy-s*0.9, cx+s*0.7, cy+s*0.9], outline=color, width=w)
+        d.rectangle([cx-s*0.35, cy-s*0.55, cx-s*0.05, cy-s*0.25], fill=color)
+        d.rectangle([cx+s*0.05, cy-s*0.55, cx+s*0.35, cy-s*0.25], fill=color)
+        d.rectangle([cx-s*0.35, cy+s*0.05, cx-s*0.05, cy+s*0.35], fill=color)
+        d.rectangle([cx+s*0.05, cy+s*0.05, cx+s*0.35, cy+s*0.35], fill=color)
+    elif kind == "mail":
+        d.rounded_rectangle([cx-s, cy-s*0.7, cx+s, cy+s*0.7], radius=3, outline=color, width=w)
+        d.line([(cx-s, cy-s*0.5), (cx, cy+s*0.15), (cx+s, cy-s*0.5)], fill=color, width=w)
+    elif kind == "calendar":
+        d.rounded_rectangle([cx-s, cy-s*0.7, cx+s, cy+s*0.7], radius=3, outline=color, width=w)
+        d.line([(cx-s, cy-s*0.25), (cx+s, cy-s*0.25)], fill=color, width=w)
+        d.line([(cx-s*0.35, cy-s*0.9), (cx-s*0.35, cy-s*0.55)], fill=color, width=w)
+        d.line([(cx+s*0.35, cy-s*0.9), (cx+s*0.35, cy-s*0.55)], fill=color, width=w)
+        d.ellipse([cx-s*0.5, cy+s*0.1, cx-s*0.2, cy+s*0.4], fill=color)
+        d.ellipse([cx-s*0.1, cy+s*0.1, cx+s*0.2, cy+s*0.4], fill=color)
+        d.ellipse([cx+s*0.3, cy+s*0.1, cx+s*0.6, cy+s*0.4], fill=color)
+    elif kind == "globe":
+        d.ellipse([cx-s, cy-s*0.85, cx+s, cy+s*0.85], outline=color, width=w)
+        d.ellipse([cx-s*0.45, cy-s, cx+s*0.45, cy+s], outline=color, width=w)
+        d.line([(cx-s, cy-s*0.35), (cx+s, cy-s*0.35)], fill=color, width=w)
+        d.line([(cx-s, cy+s*0.35), (cx+s, cy+s*0.35)], fill=color, width=w)
+    elif kind == "check":
+        d.line([(cx-s*0.8, cy-s*0.05), (cx-s*0.15, cy+s*0.55), (cx+s*0.8, cy-s*0.65)],
+               fill=color, width=w)
+
 # ── Entity detail extractors ──────────────────────────────────────────────────
 def _front_info(entity_type, entity):
     if entity_type == "WORKER":
@@ -237,12 +342,12 @@ def _draw_front(entity_type, entity, qr_ref):
     # Brand text
     tx = lx + lsz + 12
     d.text((tx, 14), "BHARAT",     font=_font(28, True), fill=NAVY)
-    d.text((tx, 46), "SHRAM SETU", font=_font(28, True), fill=ORANGE)
-    d.text((tx, 80), "One Worker. One Identity. One Future.",
+    d.text((tx, 47), "SHRAM SETU", font=_font(28, True), fill=ORANGE)
+    d.text((tx, 82), "One Worker. One Identity. One Future.",
            font=_font(13), fill=TEXT_MUTED)
 
     # Green+Orange accent lines under tagline
-    acc_y = 97
+    acc_y = 98
     d.rectangle([tx, acc_y,   tx+60, acc_y+3], fill=ORANGE)
     d.rectangle([tx+64, acc_y, tx+124, acc_y+3], fill=GREEN)
     d.rectangle([tx+128, acc_y, tx+188, acc_y+3], fill=NAVY)
@@ -253,20 +358,19 @@ def _draw_front(entity_type, entity, qr_ref):
 
     # "EMPLOYMENT CARD"
     ec_cx = sep_x + (CW - sep_x)//2
-    d.text((ec_cx, 22), "EMPLOYMENT", font=_font(26, True), fill=NAVY, anchor="mt")
-    d.text((ec_cx, 58), "CARD",       font=_font(26, True), fill=NAVY, anchor="mt")
+    d.text((ec_cx, 20), "EMPLOYMENT", font=_font(27, True), fill=NAVY, anchor="mt")
+    d.text((ec_cx, 56), "CARD",       font=_font(27, True), fill=NAVY, anchor="mt")
 
-    # ── 2. VERIFIED BANNER (navy, 50px) ───────────────────────────────────────
+    # ── 2. VERIFIED BANNER (navy, 52px) ───────────────────────────────────────
     BY = HH
-    BH = 50
+    BH = 52
     d.rectangle([3, BY, CW-4, BY+BH], fill=NAVY)
-    # shield "🛡" approximation — draw a rounded pentagon
-    sx, sy = CW//2 - 120, BY + 13
-    d.rounded_rectangle([sx, sy, sx+26, sy+24], radius=4, fill=WHITE)
-    d.text((sx+13, sy+12), "☉", font=_font(14), fill=NAVY, anchor="mm")
+    # shield icon
+    shx, shy = CW//2 - 128, BY + 26
+    _vicon(d, "shield", shx, shy, 13, WHITE, w=3)
     info = _front_info(entity_type, entity)
     role_txt = f"VERIFIED {entity_type.replace('_',' ')} ID"
-    d.text((CW//2, BY+25), role_txt, font=_font(22, True), fill=WHITE, anchor="mm")
+    d.text((CW//2, BY+26), role_txt, font=_font(23, True), fill=WHITE, anchor="mm")
 
     # ── 3. PHOTO (circular, left) ─────────────────────────────────────────────
     PY  = BY + BH + 18        # top of photo
@@ -289,18 +393,20 @@ def _draw_front(entity_type, entity, qr_ref):
         d.ellipse([PCX-PSZ//2, PCY-PSZ//2, PCX+PSZ//2, PCY+PSZ//2], fill=LIGHT_GRAY)
 
     # ── 4. NAME / DESIG / QR ─────────────────────────────────────────────────
-    NX = PCX + PSZ//2 + 20    # name text start x
-    NY = PY + 10
-
-    d.text((NX, NY),    info["name"],  font=_font(40, True), fill=NAVY)
-    d.text((NX, NY+50), info["desig"], font=_font(22),       fill=TEXT_MED)
-    con_txt = f"Contractor : {info['contractor']}"
-    d.text((NX, NY+80), con_txt,       font=_font(19),       fill=TEXT_MED)
-
-    # QR — top-right of this section
     QSZ = 210
     QX  = CW - QSZ - 18
     QY  = PY + 5
+    NX = PCX + PSZ//2 + 20    # name text start x
+    NY = PY + 6
+    name_max = QX - NX - 8
+
+    d.text((NX, NY),    _trunc(info["name"], _font(42, True), name_max, d),
+           font=_font(42, True), fill=NAVY)
+    d.text((NX, NY+52), info["desig"], font=_font(23),       fill=TEXT_MED)
+    con_txt = f"Contractor : {info['contractor']}"
+    d.text((NX, NY+84), con_txt,       font=_font(19),       fill=TEXT_MED)
+
+    # QR — top-right of this section
     qr_img = _build_qr(qr_ref, QSZ)
     img.paste(qr_img, (QX, QY))
 
@@ -310,16 +416,15 @@ def _draw_front(entity_type, entity, qr_ref):
     CL = CW // 2               # column split
 
     grid_items = [
-        # (icon_char, icon_bg, label, value, col, row)
-        ("⊞", (230,240,255), "Worker Code",   info["code"],     0, 0),
-        ("⊟", (230,255,240), "Department",    info["dept"],     1, 0),
-        ("☎", (230,240,255), "Mobile Number", info["mobile"],   0, 1),
-        ("⊕", (230,255,240), "Work Location", info["location"], 1, 1),
+        # (icon_kind, icon_bg, label, value, col, row)
+        ("idcard",    (230,240,255), "Worker Code",   info["code"],     0, 0),
+        ("briefcase", (230,255,240), "Department",    info["dept"],     1, 0),
+        ("phone",     (230,240,255), "Mobile Number", info["mobile"],   0, 1),
+        ("pin",       (230,255,240), "Work Location", info["location"], 1, 1),
     ]
 
-    icon_fnt   = _font(20)
     label_fnt  = _font(16)
-    value_fnt  = _font(22, True)
+    value_fnt  = _font(23, True)
     loc_fnt    = _font(19, True)
 
     for (icon, icon_bg, lbl, val, col, row) in grid_items:
@@ -335,17 +440,17 @@ def _draw_front(entity_type, entity, qr_ref):
         icy = gy + GH//2
         d.ellipse([icx-26, icy-26, icx+26, icy+26],
                   fill=icon_bg, outline=BORDER_CLR, width=2)
-        d.text((icx, icy), icon, font=icon_fnt, fill=NAVY, anchor="mm")
+        _vicon(d, icon, icx, icy, 12, NAVY, w=3)
 
         # Label & value
         tx2 = icx + 38
         d.text((tx2, gy+14), lbl, font=label_fnt, fill=TEXT_MUTED)
         # Value (multi-line for location)
         lines = val.split("\n")
-        d.text((tx2, gy+36), _trunc(lines[0], value_fnt, CL-tx2-8, d),
+        d.text((tx2, gy+38), _trunc(lines[0], value_fnt, CL-tx2-8, d),
                font=value_fnt, fill=TEXT_DARK)
         if len(lines) > 1:
-            d.text((tx2, gy+62), _trunc(lines[1], loc_fnt, CL-tx2-8, d),
+            d.text((tx2, gy+66), _trunc(lines[1], loc_fnt, CL-tx2-8, d),
                    font=loc_fnt, fill=TEXT_MUTED)
 
         # Dotted horizontal separator
@@ -390,14 +495,14 @@ def _draw_front(entity_type, entity, qr_ref):
         icx = gx + 34; icy = gy + GH//2
         d.ellipse([icx-26, icy-26, icx+26, icy+26],
                   fill=icon_bg, outline=BORDER_CLR, width=2)
-        d.text((icx, icy), icon, font=icon_fnt, fill=NAVY, anchor="mm")
+        _vicon(d, icon, icx, icy, 12, NAVY, w=3)
         tx2 = icx + 38
         d.text((tx2, gy+14), lbl, font=label_fnt, fill=TEXT_MUTED)
         lines = val.split("\n")
-        d.text((tx2, gy+36), _trunc(lines[0], value_fnt, CL-tx2-8, d),
+        d.text((tx2, gy+38), _trunc(lines[0], value_fnt, CL-tx2-8, d),
                font=value_fnt, fill=TEXT_DARK)
         if len(lines) > 1:
-            d.text((tx2, gy+62), _trunc(lines[1], loc_fnt, CL-tx2-8, d),
+            d.text((tx2, gy+66), _trunc(lines[1], loc_fnt, CL-tx2-8, d),
                    font=loc_fnt, fill=TEXT_MUTED)
 
     # ── 7. ORANGE + GREEN ACCENT STRIPE ──────────────────────────────────────
@@ -411,27 +516,25 @@ def _draw_front(entity_type, entity, qr_ref):
     d.rounded_rectangle([3, stripe_y+12, CW-4, CH-3], radius=20, fill=footer_bg)
 
     footer_items = [
-        ("🛡", "Verified\nIdentity"),
-        ("💼", "Portable\nAcross Jobs"),
-        ("🔒", "Secure &\nTrusted"),
-        ("📷", "Scan for\nVerification"),
+        ("shield",    "Verified\nIdentity"),
+        ("briefcase", "Portable\nAcross Jobs"),
+        ("lock",      "Secure &\nTrusted"),
+        ("camera",    "Scan for\nVerification"),
     ]
     fw = CW // len(footer_items)
-    fi_fnt  = _font(26)
-    fl_fnt  = _font(14)
+    fl_fnt  = _font(15)
 
-    for i, (icon, label) in enumerate(footer_items):
+    for i, (icon_kind, label) in enumerate(footer_items):
         fx = fw * i + fw // 2
         fy = footer_y + 8
         # Icon circle
-        d.ellipse([fx-22, fy, fx+22, fy+44], fill=(255,255,255,0))
         d.rounded_rectangle([fx-22, fy, fx+22, fy+44], radius=10,
                              outline=(255,255,255,80), width=2)
-        d.text((fx, fy+22), icon, font=fi_fnt, fill=WHITE, anchor="mm")
+        _vicon(d, icon_kind, fx, fy+22, 11, WHITE, w=3)
         # Label
         lines = label.split("\n")
         for j, ln in enumerate(lines):
-            d.text((fx, fy+50 + j*17), ln, font=fl_fnt, fill=WHITE, anchor="mt")
+            d.text((fx, fy+50 + j*18), ln, font=fl_fnt, fill=WHITE, anchor="mt")
 
     return img
 
@@ -459,35 +562,35 @@ def _draw_back(entity_type, entity, qr_ref):
     d.line([(CW-20-line_w, ty+14), (CW-20, ty+14)], fill=(255,255,255,180), width=2)
     d.text((tx_c, ty), title, font=tf, fill=WHITE, anchor="mt")
 
-    # Shield icon row
-    sh_y = ty + 36
-    d.text((tx_c, sh_y), "🛡", font=_font(28), fill=ORANGE, anchor="mt")
+    # Shield icon (vector, no emoji)
+    sh_y = ty + 38
+    _vicon(d, "shield", tx_c, sh_y, 14, ORANGE, w=3)
 
     # ── 2. DATA ROWS ─────────────────────────────────────────────────────────
     rows    = _back_rows(entity_type, entity)
-    ROW_H   = 57
+    ROW_H   = 60
     START_Y = HH + 8
 
     icon_map = {
-        "drop":   ("💧", (220,240,255)),
-        "phone":  ("📞", (220,255,220)),
-        "group":  ("👥", (255,240,220)),
-        "camp":   ("⛺", (240,220,255)),
-        "key":    ("🔑", (255,255,220)),
-        "shield": ("🏥", (220,240,255)),
-        "user":   ("👤", (240,255,240)),
-        "phone2": ("📱", (220,255,220)),
-        "bus":    ("🚌", (255,240,220)),
-        "doc":    ("📄", (220,240,255)),
-        "tax":    ("🏛", (240,255,240)),
-        "id":     ("🏭", (255,240,220)),
-        "state":  ("📍", (220,240,255)),
-        "city":   ("🏙", (240,255,240)),
-        "mail":   ("📧", (255,240,220)),
+        "drop":   ("drop",    (220,240,255)),
+        "phone":  ("phone",   (220,255,220)),
+        "group":  ("users",   (255,240,220)),
+        "camp":   ("tent",    (240,220,255)),
+        "key":    ("key",     (255,255,220)),
+        "shield": ("cross",   (220,240,255)),
+        "user":   ("user",    (240,255,240)),
+        "phone2": ("mobile",  (220,255,220)),
+        "bus":    ("bus",     (255,240,220)),
+        "doc":    ("doc",     (220,240,255)),
+        "tax":    ("rupee",   (240,255,240)),
+        "id":     ("factory", (255,240,220)),
+        "state":  ("pin",     (220,240,255)),
+        "city":   ("building",(240,255,240)),
+        "mail":   ("mail",    (255,240,220)),
     }
 
     lbl_fnt = _font(18)
-    val_fnt = _font(19, True)
+    val_fnt = _font(20, True)
     ico_fnt = _font(20)
 
     for i, (icon_key, label, value, is_link) in enumerate(rows):
@@ -496,23 +599,23 @@ def _draw_back(entity_type, entity, qr_ref):
         row_bg = OFF_WHITE if i % 2 == 0 else WHITE
         d.rectangle([4, ry, CW-5, ry+ROW_H-1], fill=row_bg)
 
-        icon_char, icon_bg = icon_map.get(icon_key, ("•", LIGHT_GRAY))
+        icon_kind, icon_bg = icon_map.get(icon_key, ("pin", LIGHT_GRAY))
         # Icon circle
         icx = 36; icy = ry + ROW_H//2
         d.ellipse([icx-22, icy-22, icx+22, icy+22],
                   fill=icon_bg, outline=BORDER_CLR, width=2)
-        d.text((icx, icy), icon_char, font=ico_fnt, fill=NAVY, anchor="mm")
+        _vicon(d, icon_kind, icx, icy, 10, NAVY, w=3)
 
         # Label
         lbl_x = 70
-        d.text((lbl_x, ry+12), label, font=lbl_fnt, fill=TEXT_MED)
+        d.text((lbl_x, ry+13), label, font=lbl_fnt, fill=TEXT_MED)
         # Colon
         colon_x = lbl_x + 220
-        d.text((colon_x, ry+12), ":", font=lbl_fnt, fill=TEXT_MED)
+        d.text((colon_x, ry+13), ":", font=lbl_fnt, fill=TEXT_MED)
         # Value
         val_x = colon_x + 20
         val_color = LINK_BLUE if is_link else TEXT_DARK
-        d.text((val_x, ry+10), _trunc(value, val_fnt, CW-val_x-12, d),
+        d.text((val_x, ry+11), _trunc(value, val_fnt, CW-val_x-12, d),
                font=val_fnt, fill=val_color)
 
         # Dotted separator
@@ -546,7 +649,7 @@ def _draw_back(entity_type, entity, qr_ref):
     valid_str = (now + datetime.timedelta(days=365)).strftime("%d/%m/%Y")
     iv_y      = disc_y + disc_h + 14
     date_fnt  = _font(17)
-    d.text((22,  iv_y), "📅", font=date_fnt, fill=NAVY)
+    _vicon(d, "calendar", 34, iv_y+10, 9, NAVY, w=2)
     d.text((50,  iv_y), f"Issue Date  :  {issue_str}", font=date_fnt, fill=NAVY)
     d.text((CW-22, iv_y), f"Valid Upto  :  {valid_str}",
            font=date_fnt, fill=LINK_BLUE, anchor="ra")
@@ -572,7 +675,7 @@ def _draw_back(entity_type, entity, qr_ref):
     foot_y = CH - 54
     d.rounded_rectangle([3, foot_y, CW-4, CH-3], radius=18, fill=GREEN)
     url_fnt = _font(16)
-    d.text((22, foot_y+16), "🌐", font=url_fnt, fill=WHITE)
+    _vicon(d, "globe", 36, foot_y+22, 10, WHITE, w=2)
     d.text((50, foot_y+16),
            "https://login.bharatshramsetu.com/RetailSection/ContractorWorker",
            font=url_fnt, fill=WHITE)
