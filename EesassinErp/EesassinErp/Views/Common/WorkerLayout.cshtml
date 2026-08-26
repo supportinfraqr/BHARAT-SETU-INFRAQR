@@ -457,12 +457,10 @@
                     Master
                 </button>
                 <ul class="dropdown-menu">
-                    <li ng-if="isDashboardLoading">
-                        <i class="fa fa-spinner fa-spin"></i> Loading...
-                    </li>
-                    <li ng-if="!isDashboardLoading" ng-repeat="x in DahboardList | filter: { PageName : 'Master' }">
-                        <a class="dropdown-item" ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)">{{ x.SectionName }}</a>
-                    </li>
+                    <li><a href="../dashboard/PrincipleEmployerGatePass" class="dropdown-item">Worker GatePass</a></li>
+                    <li><a href="../RetailSection/ContractorCompliance" class="dropdown-item">Contractor Compliance</a></li>
+                    <li><a href="../RetailSection/ContractorWorker" class="dropdown-item">Worker Master</a></li>
+                    <li><a href="../Dashboard/CommunicationClient" class="dropdown-item">Compliance Submission</a></li>
                 </ul>
             </div>
 
