@@ -799,6 +799,14 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
         if (lt === '7') return '../Dashboard/WorkerDashboard';
         return '../Dashboard/PrincipleEmployerDashboard'; // 5 and default
     })();
+
+    $scope.myDashboardLabel = (function () {
+        var lt = String($scope.loginType || loginType || '');
+        if (lt === '1') return 'Dashboard';
+        if (lt === '2' || lt === '6') return 'Contractor Dashboard';
+        if (lt === '7') return 'Worker Dashboard';
+        return 'Dashboard'; // 5 and default
+    })();
     
      
     $scope.cancelRedirect = function () {
