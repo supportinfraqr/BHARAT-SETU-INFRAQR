@@ -165,6 +165,24 @@
     }
 
     /* Active Sites — compact cards in a responsive flex/grid */
+    .principleEmpDashboard .peTopSection {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .principleEmpDashboard .peTopSection .peTopLeft {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .principleEmpDashboard .peTopSection .contractorWorkerHighlightsCard {
+        flex: 0 0 320px;
+        width: 320px;
+        max-width: 340px;
+    }
+
     .principleEmpDashboard .peTopSiteGrid {
         display: flex;
         flex-wrap: wrap;
@@ -694,4 +712,16 @@
 #workerDistributionChart {
     height: 300px;
     width: 100%;
+}
+/* Responsive: stack Contractor Highlights below on small screens */
+@media (max-width: 1100px) {
+    .principleEmpDashboard .peTopSection {
+        flex-direction: column;
+    }
+
+    .principleEmpDashboard .peTopSection .contractorWorkerHighlightsCard {
+        flex: 1 1 auto;
+        width: 100%;
+        max-width: 100%;
+    }
 }
