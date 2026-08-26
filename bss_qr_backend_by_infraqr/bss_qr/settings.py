@@ -19,6 +19,17 @@ SECRET_KEY = os.environ.get("BSS_SECRET_KEY", "django-insecure-change-me-in-prod
 DEBUG = os.environ.get("BSS_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get("BSS_ALLOWED_HOSTS", "*").split(",")
 
+# Fast password hashing for the demo (PBKDF2 at 10k iterations ~ 20-40ms
+# instead of Django's default 1M iterations ~ 1.4s per login).
+# NOTE: demo-only — raise iterations for production security.
+PASSWORD_HASHERS = [
+    "bss_qr.hashers.FastPBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+]
+
 # Origins allowed to POST with session/CSRF (Cloudflare-tunnel frontend domains + localhost dev)
 CSRF_TRUSTED_ORIGINS = [
     "https://bharat-shramsetu.infraqr.com",
@@ -99,20 +110,16 @@ DATABASE_ROUTERS = ["bss_qr.db_router.BSSRouter"]
 # ---------- Redis (sessions + cache) ----------
 REDIS_URL = os.environ.get("BSS_REDIS_URL", "redis://127.0.0.1:6380/0")
 
-# Sessions stored in Redis (via django-redis cache backend)
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+# Sessions stored in DB (PostgreSQL) — fast, no external dependency.
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_CACHE_ALIAS = "default"
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_AGE = int(os.environ.get("BSS_SESSION_AGE", "28800"))  # 8h
 
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "IGNORE_EXCEPTIONS": True,
-        },
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "bss-qr-demo",
     }
 }
 
