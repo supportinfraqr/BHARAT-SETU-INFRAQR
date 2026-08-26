@@ -789,6 +789,16 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
     $scope.loadPage = function (url) {  
         window.top.location.href = url; 
     }
+
+    // Role-aware "Dashboard" dropdown target.
+    // loginType: 1=Admin, 5=Employer, 2/6=Contractor, 7=Worker
+    $scope.myDashboardUrl = (function () {
+        var lt = String($scope.loginType || loginType || '');
+        if (lt === '1') return '../Dashboard/Dashboard';
+        if (lt === '2' || lt === '6') return '../Dashboard/ContractorDashboard';
+        if (lt === '7') return '../Dashboard/WorkerDashboard';
+        return '../Dashboard/PrincipleEmployerDashboard'; // 5 and default
+    })();
     
      
     $scope.cancelRedirect = function () {
