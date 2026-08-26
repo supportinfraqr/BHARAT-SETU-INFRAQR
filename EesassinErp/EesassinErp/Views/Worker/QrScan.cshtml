@@ -152,6 +152,7 @@
     }
 
     function startScan() {
+        if (html5QrCode) return; // already running
         $('#btnStartScan').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-2"></i>Starting...');
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
@@ -267,6 +268,7 @@
                 else if (entityType === 'CONTRACTOR') renderContractor(d);
                 else if (entityType === 'SITE') renderSite(d);
                 else renderGeneric(d);
+                processQrDone();
             })
             .fail(function(xhr) {
                 if (xhr.status === 401) {
@@ -537,5 +539,20 @@
         currentScanData = null;
         currentBindingId = null;
         switchTab('camera');
+        restartCamera();
+    }
+
+    function restartCamera() {
+        if ($('#cameraPanel').is(':visible')) {
+            startScan();
+        }
+    }
+
+    function processQrDone() {
+        if (!$('#entityDetailCard').is(':visible')) return;
+        var $actions = $('#eActions');
+        if ($actions.find('.btn-scan-next').length === 0) {
+            $actions.prepend('<button class="btn btn-qr-action btn-scan-next" onclick="resetScan()"><i class="fa fa-camera me-1"></i> Scan Next</button>');
+        }
     }
 </script>
