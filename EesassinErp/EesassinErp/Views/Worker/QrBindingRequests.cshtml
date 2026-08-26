@@ -68,12 +68,12 @@
         <table class="mgmt-table">
             <thead>
                 <tr>
-                    <th>Type</th><th>Contractor</th><th>Employer</th><th>Worker</th>
+                    <th>Type</th><th>Contractor</th><th>Employer</th><th>Worker</th><th>Site</th>
                     <th>Status</th><th>Consent</th><th>Requested</th><th>Actions</th>
                 </tr>
             </thead>
             <tbody id="bindingTableBody">
-                <tr><td colspan="8" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>
+                <tr><td colspan="9" class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></td></tr>
             </tbody>
         </table>
     </div>
@@ -120,7 +120,7 @@
                 var m = 'Failed to load requests.';
                 if (xhr.status === 401 || xhr.status === 403) m = 'Session expired. Please log out and log in again.';
                 showMsg(m, true);
-                $('#bindingTableBody').html('<tr><td colspan="8" class="empty-row">No binding requests.</td></tr>');
+                $('#bindingTableBody').html('<tr><td colspan="9" class="empty-row">No binding requests.</td></tr>');
             });
     }
 
@@ -204,7 +204,7 @@
         var shown = bindings.filter(function (b) { return filter === 'ALL' || b.status === filter; });
 
         if (shown.length === 0) {
-            tbody.html('<tr><td colspan="8" class="empty-row">No binding requests.</td></tr>');
+            tbody.html('<tr><td colspan="9" class="empty-row">No binding requests.</td></tr>');
             return;
         }
 
@@ -247,10 +247,11 @@
             }
 
             html += '<tr>' +
-                '<td>' + (b.binding_type === 'EMPLOYER_CONTRACTOR' ? 'Employer↔Contractor' : 'Worker↔Contractor') + '</td>' +
+                '<td>' + (b.binding_type === 'EMPLOYER_CONTRACTOR' ? 'Employer - Contractor' : 'Worker - Contractor') + '</td>' +
                 '<td><b>' + escHtml((b.contractor && b.contractor.name) || '-') + '</b></td>' +
                 '<td>' + escHtml((b.employer && b.employer.name) || '-') + '</td>' +
                 '<td>' + escHtml((b.worker && b.worker.name) || '-') + '</td>' +
+                '<td>' + escHtml(b.site_name || '-') + '</td>' +
                 '<td><span class="status-badge ' + badgeCls(b.status) + '">' + escHtml(b.status) + '</span></td>' +
                 '<td><span class="muted" style="font-size:12px;">' + consentTxt + unbindNote + '</span></td>' +
                 '<td style="font-size:12px;">' + fmtDate(b.created_at) + '</td>' +

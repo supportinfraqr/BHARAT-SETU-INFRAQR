@@ -125,7 +125,7 @@ export default function BindingRequests() {
                 const bothApproved = consents.every((c) => c.value === 'APPROVED');
                 return (
                   <tr key={b.id}>
-                    <td>{b.binding_type === 'EMPLOYER_CONTRACTOR' ? 'Employer↔Contractor' : 'Worker↔Contractor'}</td>
+                    <td>{b.binding_type === 'EMPLOYER_CONTRACTOR' ? 'Employer - Contractor' : 'Worker - Contractor'}</td>
                     <td><b>{b.contractor?.name || '—'}</b></td>
                     <td>{b.employer?.name || '—'}</td>
                     <td>{b.worker?.name || '—'}</td>

@@ -485,12 +485,69 @@
                 method: 'POST',
                 contentType: 'application/json; charset=utf-8',
                 data: '{obj:' + JSON.stringify({ ActionType: 1, UserId: userId }) + '}',
-                success: function (res) { loadCard(res); },
-                error: function () {
-                    document.getElementById('cardLoader').innerHTML =
-                        '<div style="color:#e53935;font-size:16px"><i class="bi bi-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px"></i>Failed to load worker data. Please try again.</div>';
-                }
+                success: function (res) {
+                    if (res && res.Result && res.Result.length) {
+                        loadCard(res);
+                    } else {
+                        loadEntityCard();
+                    }
+                },
+                error: function () { loadEntityCard(); }
             });
+        }
+
+        function loadEntityCard() {
+            $.get(QrBase + '/qr/profile/me/')
+                .done(function (res) {
+                    if (res && res.Result === 'Success' && res.Data && res.Data.profile) {
+                        renderEntityCard(res.Data);
+                    } else {
+                        document.getElementById('cardLoader').innerHTML =
+                            '<div style="color:#e53935;font-size:16px"><i class="bi bi-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px"></i>Identity data not found.</div>';
+                    }
+                })
+                .fail(function () {
+                    document.getElementById('cardLoader').innerHTML =
+                        '<div style="color:#e53935;font-size:16px"><i class="bi bi-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px"></i>Failed to load identity data. Please try again.</div>';
+                });
+        }
+
+        function renderEntityCard(data) {
+            var p = data.profile || {};
+            var entity = data.entity || '';
+            var role = data.role || '';
+            var name = p.name || p.full_name || p.contact_person || '-';
+            var desig = entity === 'employer' ? 'Employer' : (entity === 'contractor' ? 'Contractor' : 'Worker');
+            setTxt('cName', name);
+            setTxt('cDesignation', desig);
+            setTxt('cCode', p.legacy_employee_code || p.worker_id || p.id || '-');
+            setTxt('cDept', p.department || p.industry || '-');
+            setTxt('cMobile', mask(p.mobile || p.contact_mobile));
+            setTxt('cSite', p.site_name || p.site || '-');
+            setTxt('cEmployer', p.employer_name || '-');
+            setTxt('cContractor', p.contractor_name || '-');
+            setTxt('cBlood', p.blood_group || '-');
+            setTxt('cAltMobile', mask(p.alternative_mobile));
+            setTxt('cCamp', p.camp_number || '-');
+            setTxt('cUAN', mask(p.previous_uan));
+            setTxt('cESIC', mask(p.previous_esi));
+            setTxt('cBus', p.transport || p.route_id || '- -');
+            setTxt('cIssue', formatDate(p.issue_date || p.created_at));
+            setTxt('cValid', formatDate(p.valid_till));
+            setTxt('cSigName', name);
+            setTxt('cSigName2', name);
+            setTxt('cSigDesig', desig);
+            setTxt('cSigCon', p.contractor_name || '-');
+
+            var photoWrap = document.getElementById('cardPhoto');
+            document.getElementById('cardPhotoImg').style.display = 'none';
+            photoWrap.classList.add('no-photo');
+
+            var qrImg = document.getElementById('cQr');
+            qrImg.src = QrBase + '/qr/my-card/?fmt=qr&t=' + Date.now();
+
+            document.getElementById('cardLoader').style.display = 'none';
+            document.getElementById('cardPage').style.display = 'block';
         }
 
         var wid = getWorkerId();

@@ -8,8 +8,27 @@
         getData.then(function (response) {
             $scope.DashboardDetail = response.data.Result[0];
             $scope.getprincipledetail();
+            $scope.overrideDashboardFromBss();
         });
         $scope.SiteDetails();
+    }
+    $scope.overrideDashboardFromBss = function () {
+        try {
+            $.get('../Api/QrBridge/qr/dashboard/').done(function (res) {
+                if (res && res.Result === 'Success' && res.Data) {
+                    var d = res.Data;
+                    if (d.total_workers !== undefined) $scope.DashboardDetail.WorkerCount = d.total_workers;
+                    if (d.total_sites !== undefined) $scope.DashboardDetail.SiteCount = d.total_sites;
+                    if (d.total_contractors !== undefined) $scope.DashboardDetail.VendorCount = d.total_contractors;
+                    if (d.interstate_workers !== undefined) $scope.DashboardDetail.EmployeeOtherCity = d.interstate_workers;
+                    if (!$scope.$$phase) $scope.$apply();
+                }
+            }).fail(function () {
+                console.log('BSS dashboard override failed');
+            });
+        } catch (e) {
+            console.log('BSS dashboard override error', e);
+        }
     }
     $scope.SiteDetails = function () {
         var collectionobj = {};

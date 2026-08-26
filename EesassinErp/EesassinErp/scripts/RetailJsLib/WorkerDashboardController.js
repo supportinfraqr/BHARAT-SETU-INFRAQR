@@ -72,11 +72,14 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                         }
                     }
                     if (wcBinding) {
+                        var con = wcBinding.contractor || {};
                         $scope.QrContractor = {
-                            name: wcBinding.contractor_name || wcBinding.contractor || '-',
-                            code: wcBinding.contractor_code || '-',
-                            contact: wcBinding.contractor_contact || '-',
-                            email: wcBinding.contractor_email || '-',
+                            name: con.name || wcBinding.contractor_name || '-',
+                            code: con.code || wcBinding.contractor_code || '-',
+                            contact: con.contact_mobile || wcBinding.contractor_contact || '-',
+                            email: con.email || wcBinding.contractor_email || '-',
+                            site: wcBinding.site_name || wcBinding.site || '-',
+                            binding_id: wcBinding.id,
                             status: wcBinding.status
                         };
                     }
@@ -91,11 +94,14 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                         }
                     }
                     if (ecBinding) {
+                        var emp = ecBinding.employer || {};
                         $scope.QrEmployer = {
-                            name: ecBinding.employer_name || ecBinding.employer || '-',
-                            code: ecBinding.employer_code || '-',
-                            industry: ecBinding.employer_industry || '-',
-                            email: ecBinding.employer_email || '-',
+                            name: emp.name || ecBinding.employer_name || '-',
+                            code: emp.code || ecBinding.employer_code || '-',
+                            industry: emp.industry || ecBinding.employer_industry || '-',
+                            email: emp.email || ecBinding.employer_email || '-',
+                            site: ecBinding.site_name || '-',
+                            binding_id: ecBinding.id,
                             status: ecBinding.status
                         };
                     }

@@ -62,6 +62,10 @@ class WorkerSerializer(serializers.ModelSerializer):
     contractor_name = serializers.SerializerMethodField()
     site_name = serializers.SerializerMethodField()
     employer_name = serializers.SerializerMethodField()
+    binding_status = serializers.SerializerMethodField()
+    unbind_status = serializers.SerializerMethodField()
+    binding_status = serializers.SerializerMethodField()
+    unbind_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Worker
