@@ -1094,6 +1094,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
     $scope.Logout = function () {
         sessionStorage.removeItem("MenuPermission");
         sessionStorage.clear();
+        localStorage.removeItem("LastUserName");
         $scope.logoutWithProcess();  
         var collectionobj = {
             Action: 17,

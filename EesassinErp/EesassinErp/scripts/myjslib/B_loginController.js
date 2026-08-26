@@ -19,9 +19,9 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
      $scope.Reglogin = 'Log into your BharatShramSetu account';
     $scope.ldynamicback = 'Welcome Back!';
     sessionStorage.clear();
-    $scope.MPINMobileNo = localStorage.getItem("LastUserName") || "";
+    $scope.MPINMobileNo = "";
 
-    $scope.IsMobileDisabled = $scope.MPINMobileNo != "";
+    $scope.IsMobileDisabled = false;
     $scope.Username = $scope.Password = $scope.Captcha = $scope.MobileNo = $scope.NewPassword = '';
     $scope.Step1 = true; $scope.Step2 = $scope.Step3 = false;
     $scope.IshideOtp = false; $scope.hidemobile = true; $scope.IshideSubmit = false;
