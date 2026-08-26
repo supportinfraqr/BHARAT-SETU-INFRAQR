@@ -27,6 +27,9 @@
     .result-card { background: #e8f5e9; border-left: 4px solid #43a047; border-radius: 10px; padding: 18px 20px; margin-top: 20px; display: none; }
     .result-card.error { background: #fce4ec; border-color: #e53935; }
     .entity-detail-card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 14px rgba(0,0,0,.08); margin-top: 20px; display: none; }
+    .brand-strip { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #f4f9ff, #eef4fb); border: 1px solid #dde7f2; border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
+    .brand-strip-logo { width: 38px; height: 30px; object-fit: contain; }
+    .brand-strip-title { font-size: 15px; font-weight: 900; color: #022B5E; letter-spacing: .3px; }
     .entity-detail-card .ename { font-size: 20px; font-weight: 700; color: #1a237e; }
     .entity-detail-card .efield { font-size: 13px; color: #7b8fa1; margin-bottom: 4px; }
     .entity-detail-card .eval { font-size: 14px; font-weight: 600; color: #333; }
@@ -47,11 +50,16 @@
 
 <!-- Header -->
 <div class="scan-header">
-    <div style="font-size:20px;font-weight:700;">
-        <i class="fa fa-camera me-2"></i> QR Code Scanner
-    </div>
-    <div style="font-size:13px;opacity:.8;margin-top:3px;">
-        Scan a QR code to view details and manage bindings
+    <div style="display:flex;align-items:center;gap:14px;">
+        <img src="~/Content/NewLogin/images/bharatshramsetu-logo.png" alt="Bharat Shram Setu" style="width:52px;height:42px;object-fit:contain;background:#fff;border-radius:8px;padding:3px;" />
+        <div>
+            <div style="font-size:20px;font-weight:700;">
+                <i class="fa fa-camera me-2"></i> QR Code Scanner
+            </div>
+            <div style="font-size:13px;opacity:.8;margin-top:3px;">
+                Scan a QR code to view details and manage bindings
+            </div>
+        </div>
     </div>
 </div>
 
@@ -108,6 +116,10 @@
 
 <!-- Entity Detail Card -->
 <div class="entity-detail-card" id="entityDetailCard">
+    <div class="brand-strip">
+        <img src="~/Content/NewLogin/images/bharatshramsetu-logo.png" alt="BSS" class="brand-strip-logo" />
+        <div class="brand-strip-title">BHARAT <span style="color:#E45D24;">SHRAM</span> <span style="color:#14843C;">SETU</span></div>
+    </div>
     <div class="d-flex justify-content-between align-items-start">
         <div>
             <div class="ename" id="eName">-</div>
