@@ -1139,18 +1139,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
         sessionStorage.removeItem("MenuPermission");
         sessionStorage.clear();
         localStorage.removeItem("LastUserName");
-        $scope.logoutWithProcess();  
-        var collectionobj = {
-            Action: 17,
-            LoginId: $scope.LoginId
-        }; 
-        myService.methode(
-            'POST',
-            "../Login/GetModulePermission",
-            JSON.stringify(collectionobj)
-        ).finally(function () { 
-          /*  window.top.location.href = '../Login/Login';*/
-        });
+        $scope.logoutWithProcess();
     };
 
 
@@ -3103,45 +3092,41 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
         $scope.showLogoutProcess = true;
         $scope.logoutStep = 0;
 
-        // Step 1 - Save Data
-        setTimeout(function () {
-            $scope.$apply(function () {
-                $scope.logoutStep = 1;
-            });
-        }, 800);
-
-        // Step 2 - Maintain Settings
-        setTimeout(function () {
-            $scope.$apply(function () {
-                $scope.logoutStep = 2;
-            });
-        }, 1600);
-
-        // Step 3 - Maintain Logs
-        setTimeout(function () {
-            $scope.$apply(function () {
-                $scope.logoutStep = 3;
-            });
-        }, 2400);
-
-        // Final Logout
-        setTimeout(function () {
-            $scope.$apply(function () {
-                $scope.logoutStep = 4;
-            });
-
-            // 🔴 ACTUAL LOGOUT CALL HERE
-            // Example:
-            // myService.methode('POST', '../Account/Logout')
-
-            setTimeout(function () {
-                if (window.top !== window.self) {
+        var goToLogin = function () {
+            try {
+                if (window.top && window.top !== window.self) {
                     window.top.location.href = '../Login/Login';
                 } else {
                     window.location.href = '../Login/Login';
                 }
-            }, 1000);
+            } catch (e) {
+                window.location.href = '../Login/Login';
+            }
+        };
 
+        // Hard fail-safe: no matter what, redirect after 6s so the user is
+        // never stuck on the overlay (even if Angular/JS errors occur).
+        setTimeout(goToLogin, 6000);
+
+        // Step 1 - Save Data
+        $timeout(function () {
+            $scope.logoutStep = 1;
+        }, 800);
+
+        // Step 2 - Maintain Settings
+        $timeout(function () {
+            $scope.logoutStep = 2;
+        }, 1600);
+
+        // Step 3 - Maintain Logs
+        $timeout(function () {
+            $scope.logoutStep = 3;
+        }, 2400);
+
+        // Final Logout — guaranteed redirect even if steps fail
+        $timeout(function () {
+            $scope.logoutStep = 4;
+            goToLogin();
         }, 3200);
     };
 
