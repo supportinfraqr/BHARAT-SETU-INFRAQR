@@ -74,15 +74,16 @@
         content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
         background:linear-gradient(90deg,var(--orange),#fff 32%,#fff 67%,var(--green))
     }
-    .brand{display:flex;align-items:center;gap:8px}
+    .brand{display:flex;align-items:center;gap:8px;min-width:0}
+    .brand-logo{width:44px;height:36px;object-fit:contain;flex-shrink:0}
     .brand-mark{width:48px;height:38px;position:relative}
     .person{position:absolute;width:10px;height:15px;border-radius:8px 8px 4px 4px;bottom:4px}
     .person:before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;top:-8px;left:.5px;background:inherit}
     .p1{left:3px;background:#169447}.p2{left:17px;background:#f58220}.p3{left:30px;background:#169447}
     .arc{position:absolute;left:0;bottom:0;width:43px;height:20px;border:4px solid var(--blue);border-top:0;border-radius:0 0 50px 50px;transform:rotate(-8deg)}
-    .brand-name{line-height:1;font-weight:900;font-size:15px;color:var(--blue)}
-    .brand-name span{color:var(--orange)}
-    .tagline{margin-top:4px;font-size:7px;color:#555;letter-spacing:.2px}
+    .brand-name{line-height:1;font-weight:900;font-size:15px;color:var(--blue);white-space:nowrap}
+    .brand-name span{color:var(--green)}
+    .tagline{margin-top:4px;font-size:7px;color:#555;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
     .employment{text-align:right;font-size:14px;line-height:1.1;font-weight:900;color:#082b66}
 
     .verified-bar{
@@ -189,6 +190,7 @@
     @@media(max-width:960px){
         .cards{gap:12px}
         .card{width:390px;height:247px}
+        .brand-logo{width:38px;height:31px}
         .brand-name{font-size:12px}.employment{font-size:11px}
         .photo{width:64px;height:64px}.qr{width:62px;height:62px}
         .name{font-size:13px}.role,.contractor{font-size:9.5px}
@@ -206,6 +208,7 @@
         .card-page{padding:14px 8px 28px}
         .card-stage{padding:8px}
         .card{width:340px;height:215px}
+        .brand-logo{width:32px;height:26px}
         .brand-name{font-size:11px}.tagline{font-size:5.5px}.employment{font-size:10px}
         .photo{width:56px;height:56px}.qr{width:54px;height:54px}
         .name{font-size:12px}.role,.contractor{font-size:8.5px}
@@ -285,12 +288,7 @@
             <section class="card front">
                 <div class="front-top">
                     <div class="brand">
-                        <div class="brand-mark">
-                            <div class="person p1"></div>
-                            <div class="person p2"></div>
-                            <div class="person p3"></div>
-                            <div class="arc"></div>
-                        </div>
+                        <img src="~/Content/NewLogin/images/bharatshramsetu-logo.png" alt="Bharat Shram Setu" class="brand-logo" />
                         <div>
                             <div class="brand-name">BHARAT <span>SHRAM SETU</span></div>
                             <div class="tagline">One Worker. One Identity. One Future.</div>
