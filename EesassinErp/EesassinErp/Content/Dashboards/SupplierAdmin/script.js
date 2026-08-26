@@ -1,4 +1,4 @@
-﻿/* ================= Supplier Admin Script ================= */
+/* ================= Supplier Admin Script ================= */
 
 let userActivityChartInstance = null;
 let userStatusChartInstance = null;
@@ -140,39 +140,41 @@ document.addEventListener("DOMContentLoaded", function () {
 document.addEventListener("DOMContentLoaded", function () {
 
     const wrapper = document.querySelector(".vendor-search-wrapper");
-    const input = wrapper.querySelector(".vendor-search-input");
-    const menu = wrapper.querySelector(".vendor-search-menu");
-    const items = menu.querySelectorAll(".dropdown-item");
+    if (wrapper) {
+        const input = wrapper.querySelector(".vendor-search-input");
+        const menu = wrapper.querySelector(".vendor-search-menu");
+        const items = menu.querySelectorAll(".dropdown-item");
 
-    input.addEventListener("input", function () {
-        const value = this.value.toLowerCase();
-        let hasMatch = false;
+        input.addEventListener("input", function () {
+            const value = this.value.toLowerCase();
+            let hasMatch = false;
+
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(value) && value !== "") {
+                    item.style.display = "block";
+                    hasMatch = true;
+                } else {
+                    item.style.display = "none";
+                }
+            });
+
+            menu.classList.toggle("show", hasMatch);
+        });
 
         items.forEach(item => {
-            const text = item.textContent.toLowerCase();
-            if (text.includes(value) && value !== "") {
-                item.style.display = "block";
-                hasMatch = true;
-            } else {
-                item.style.display = "none";
+            item.addEventListener("click", function () {
+                input.value = this.textContent;
+                menu.classList.remove("show");
+            });
+        });
+
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".vendor-search-wrapper")) {
+                menu.classList.remove("show");
             }
         });
-
-        menu.classList.toggle("show", hasMatch);
-    });
-
-    items.forEach(item => {
-        item.addEventListener("click", function () {
-            input.value = this.textContent;
-            menu.classList.remove("show");
-        });
-    });
-
-    document.addEventListener("click", function (e) {
-        if (!e.target.closest(".vendor-search-wrapper")) {
-            menu.classList.remove("show");
-        }
-    });
+    }
 
 });
 

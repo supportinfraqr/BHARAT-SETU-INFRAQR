@@ -170,7 +170,6 @@ app.directive('fileModel', ['$parse', function ($parse) {
 }]);
 
 var sessionPopupShown = false;
-var sessionPopupShown = false;
 
 app.factory('sessionInterceptor', function ($q) {
 
@@ -178,49 +177,19 @@ app.factory('sessionInterceptor', function ($q) {
 
         response: function (response) {
 
-            // agar server ne login page HTML bhej diya (session expire)
-            if (!sessionPopupShown &&
-                typeof response.data === "string" &&
-                response.data.indexOf("<!DOCTYPE html>") !== -1 &&
-                response.data.indexOf("Sign in to access") !== -1) {
-
-                sessionPopupShown = true;
-
-                Swal.fire({
-                    title: "Session Expired",
-                    text: "Your session expired or multiple login detected.",
-                    icon: "warning",
-                    confirmButtonText: "Login Again",
-                    allowOutsideClick: false,
-                    allowEscapeKey: false
-                }).then(function () {
-                    window.top.location.href = '../Login/Login';
-                });
-
-                return $q.reject(response);
-            }
-
+            // If a backend call returns the login page HTML while the user
+            // is actively working, do NOT force a logout — reject only so
+            // the individual call can show its own error. The user stays
+            // logged in until they click Logout manually.
             return response;
         },
 
         responseError: function (rejection) {
 
-            if (rejection.status === 401 && !sessionPopupShown) {
-
-                sessionPopupShown = true;
-
-                Swal.fire({
-                    title: "Session Expired",
-                    text: "Your session expired or multiple login detected.",
-                    icon: "warning",
-                    confirmButtonText: "Login Again",
-                    allowOutsideClick: false,
-                    allowEscapeKey: false
-                }).then(function () {
-                    window.top.location.href = '../Login/Login';
-                });
-            }
-
+            // Do NOT auto-redirect/logout on 401/403 from a single request.
+            // A lone expired call (e.g. QR bridge token not yet warm on
+            // refresh) should not kick the whole session. Individual views
+            // handle their own errors.
             return $q.reject(rejection);
         }
 
