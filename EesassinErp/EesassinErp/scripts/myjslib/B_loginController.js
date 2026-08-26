@@ -73,11 +73,20 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
      
     $timeout(function () { $('#username-input').val('').focus(); }, 50);
      
+    var _bridgeAuthPending = null;
     function postObj(url, obj) {
         if (url.indexOf('NGetUserId') !== -1) {
-            $.post('../Api/QrBridge/auth/login/', { username: obj.Username || obj.username || '', password: obj.Password || obj.password || '' });
+            _bridgeAuthPending = $.post('../Api/QrBridge/auth/login/', { username: obj.Username || obj.username || '', password: obj.Password || obj.password || '' });
         }
         return myLoginService.methode('POST', url, '{obj:' + JSON.stringify(obj) + '}');
+    }
+    function _goAfterBridge(path) {
+        if (_bridgeAuthPending) {
+            var p = _bridgeAuthPending; _bridgeAuthPending = null;
+            p.always(function () { window.location.href = path; });
+        } else {
+            window.location.href = path;
+        }
     }
     function getPlain(url) {
         return myLoginService.methode('GET', url, '{}');
@@ -191,7 +200,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
                 var d = data[0];
                 storeSession(d);
                 setBtn('#btnSecureLogin', 'Secure Login', false);
-                window.location.href = d.RPath;
+                _goAfterBridge(d.RPath);
             }
             else {
                 setBtn('#btnSecureLogin', 'Secure Login', false);
@@ -223,7 +232,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
                 var d = data[0];
                 storeSession(d);
                 setBtn('#btnSecureLoginMPin', 'Secure Login', false);
-                window.location.href = d.RPath;
+                _goAfterBridge(d.RPath);
             }
             else {
                 setBtn('#btnSecureLoginMPin', 'Secure Login', false);
@@ -256,7 +265,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
                 var data = res.data;
                 var d = data[0];
                 storeSession(d);
-                window.location.href = d.RPath;
+                _goAfterBridge(d.RPath);
             }
             else {
                 showMsgBox('999', 'Alert', 'Invalid credentials!', 'warning', 'btn-warning'); return;
@@ -330,7 +339,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
                 var d = data[0];
                 storeSession(d);
                 setBtn('#btnSecureLoginMPin', 'Secure Login', false);
-                window.location.href = d.RPath;
+                _goAfterBridge(d.RPath);
             }
             else {
                 setBtn('#btnSecureLoginMPin', 'Secure Login', false);
@@ -438,7 +447,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
             }
             else {
                 storeSession(data);
-                window.location.href = data.RPath;
+                _goAfterBridge(data.RPath);
             }
 
 
@@ -618,10 +627,10 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
                 var d = data[0];
                 storeSession(d);
                 setBtn('#forgotPasswordContinue', 'Continue', false);
-                window.location.href = d.RPath;
+                _goAfterBridge(d.RPath);
             }
             else {
-                setBtn('#forgotPasswordContinue', 'Continue', false);
+                setBtn('#btnSecureLoginMPin', 'Secure Login', false);
                 showMsgBox('999', 'Alert', 'Invalid credentials!', 'warning', 'btn-warning'); return;
             }
 
@@ -960,7 +969,7 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
                 }
                 else {
             
-                    window.location.href = data.RPath;
+                    _goAfterBridge(data.RPath);
                 }
 
                

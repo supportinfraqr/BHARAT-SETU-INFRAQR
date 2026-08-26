@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     ViewBag.Title = "Worker Dashboard";
     Layout = "~/Views/Common/WorkerLayout.cshtml";
@@ -17,9 +17,6 @@
         padding: 12px;
         min-width: 0;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-        max-height: 260px; /* apni requirement ke hisab se */
-        overflow-y: auto;
-        overflow-x: hidden;
     }
     button.swal2-confirm.swal2-styled {
         background-color: #163b8d !important;
@@ -290,7 +287,8 @@
                 </div>
 
                 <div class="workerQrBox">
-                    <img ng-src="{{getQrUrl(DashboardDetail.EmployeeCode)}}" style="width:64px;">
+                    <img id="dashQrImg" src="@Url.Content("~/Api/QrBridge/qr/me/")" style="width:64px;height:64px;object-fit:contain;" alt="QR Code"
+                         onerror="var r=(this.getAttribute('data-retries')||0);this.setAttribute('data-retries',r+1);if(r<3){var self=this;setTimeout(function(){self.src='@Url.Content("~/Api/QrBridge/qr/me/")'+'?t='+Date.now()},1200);}">
                 </div>
 
             </div>
@@ -588,36 +586,44 @@
         <!-- CONTRACTOR DETAILS -->
         <div class="workerCard">
 
-            <div class="workerCardHeader">
+            <div class="workerCardHeader" style="display:flex;justify-content:space-between;align-items:center;">
                 <h3>Contractor Details</h3>
+                <span ng-if="QrContractor" class="statusBadge" ng-class="QrContractor.status === 'ACTIVE' || QrContractor.status === 'ACCEPTED' ? 'success' : 'pending'" style="font-size:11px;">
+                    <i class="fa fa-link me-1"></i>{{QrContractor.status}}
+                </span>
             </div>
 
             <div class="workerInfoRows">
 
                 <div class="workerInfoRow">
                     <span>Contractor Name</span>
-                    <strong>{{DashboardDetail.PartyName || '-'}}</strong>
+                    <strong>{{QrContractor ? QrContractor.name : '-'}}</strong>
                 </div>
 
                 <div class="workerInfoRow">
                     <span>Contractor Code</span>
-                    <strong>{{DashboardDetail.PartyCode || '-'}}</strong>
+                    <strong>{{QrContractor ? QrContractor.code : '-'}}</strong>
                 </div>
 
                 <div class="workerInfoRow">
                     <span>Contact Number</span>
-                    <strong>{{DashboardDetail.ContactNo || '-'}}</strong>
+                    <strong>{{QrContractor ? QrContractor.contact : '-'}}</strong>
                 </div>
                 <div class="workerInfoRow">
                     <span>Email ID</span>
-                    <strong>{{DashboardDetail.ConEmail || '-'}}</strong>
+                    <strong>{{QrContractor ? QrContractor.email : '-'}}</strong>
                 </div>
 
                 <div class="workerInfoRow">
                     <span>LIN No.</span>
                     <strong>
-                        {{DashboardDetail.LIN || '-'}}
+                        {{QrContractor ? DashboardDetail.LIN : '-'}}
                     </strong>
+                </div>
+
+                <!-- No binding found -->
+                <div class="workerInfoRow" ng-if="!QrContractor" style="grid-column:1/-1;">
+                    <span style="color:#f59e0b;font-size:12px;"><i class="fa fa-triangle-exclamation me-1"></i>No active contractor binding found in QR system</span>
                 </div>
 
             </div>
@@ -628,33 +634,40 @@
         <!-- PRINCIPAL EMPLOYER -->
         <div class="workerCard">
 
-            <div class="workerCardHeader">
-                <h3>Principle Employer</h3>
+            <div class="workerCardHeader" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3>Principal Employer</h3>
+                <span ng-if="QrEmployer" class="statusBadge" ng-class="QrEmployer.status === 'ACTIVE' || QrEmployer.status === 'ACCEPTED' ? 'success' : 'pending'" style="font-size:11px;">
+                    <i class="fa fa-link me-1"></i>{{QrEmployer.status}}
+                </span>
             </div>
 
             <div class="workerInfoRows">
 
                 <div class="workerInfoRow">
-                    <span>Principle Employer</span>
-                    <strong>{{client.Contractorname || '-'}}</strong>
+                    <span>Principal Employer</span>
+                    <strong>{{QrEmployer ? QrEmployer.name : (client.Contractorname || '-')}}</strong>
                 </div>
                 <div class="workerInfoRow">
                     <span>Employer Code</span>
-                    <strong>{{client.EmployerCode || '-'}}</strong>
+                    <strong>{{QrEmployer ? QrEmployer.code : (client.EmployerCode || '-')}}</strong>
                 </div>
                 <div class="workerInfoRow">
                     <span>Industry</span>
-                    <strong>{{client.Industry || '-'}}</strong>
+                    <strong>{{QrEmployer ? QrEmployer.industry : (client.Industry || '-')}}</strong>
                 </div>
                 <div class="workerInfoRow">
                     <span>Email ID</span>
-                    <strong>{{client.EmailId || '-'}}</strong>
+                    <strong>{{QrEmployer ? QrEmployer.email : (client.EmailId || '-')}}</strong>
                 </div>
                 <div class="workerInfoRow">
                     <span>LIN No</span>
                     <strong>{{client.LIN || '-'}}</strong>
                 </div>
 
+                <!-- No binding found -->
+                <div class="workerInfoRow" ng-if="!QrEmployer" style="grid-column:1/-1;">
+                    <span style="color:#f59e0b;font-size:12px;"><i class="fa fa-triangle-exclamation me-1"></i>No active employer binding found in QR system</span>
+                </div>
 
             </div>
 

@@ -445,9 +445,19 @@
                 Compliance
             </a>
 
-            <a href="@Url.Content("~/qr/idcard")" class="nav-center-btn" style="text-decoration:none;">
-                QR System
-            </a>
+            <div class="dropdown">
+                <button class="nav-center-btn active dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border: 1px solid #022B5E; background: #fff; color: #022B5E;">
+                    QR System
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="/qr/mycontractors" class="dropdown-item">My Contractors</a></li>
+                    <li><a href="/qr/workemployers" class="dropdown-item">My Employers</a></li>
+                    <li><a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a></li>
+                    <li><a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a></li>
+                    <li class="dropdown-divider"></li>
+                    <li><a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a></li>
+                </ul>
+            </div>
 
         </div>
 

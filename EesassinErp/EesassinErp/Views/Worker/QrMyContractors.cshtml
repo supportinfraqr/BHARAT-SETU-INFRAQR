@@ -1,5 +1,6 @@
 @{
-    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+    string lt = ViewBag.LoginType?.ToString() ?? Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "";
+    Layout = lt == "7" ? "~/Views/Common/WorkerLayout.cshtml" : "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "My Contractors";
     string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
 }

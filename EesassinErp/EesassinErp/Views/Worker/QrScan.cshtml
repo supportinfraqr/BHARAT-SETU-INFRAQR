@@ -1,5 +1,6 @@
 @{
-    Layout = "~/Views/Common/_NewRetailLayout.cshtml";
+    string lt = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "";
+    Layout = lt == "7" ? "~/Views/Common/WorkerLayout.cshtml" : "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "QR Scan";
     string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
 }
@@ -32,10 +33,71 @@
         margin-bottom: 20px;
     }
 
-    #reader {
+    .qr-scanner-wrapper {
+        position: relative;
         border-radius: 12px;
         overflow: hidden;
         border: 3px solid #3949ab;
+        background: #0a1930;
+    }
+
+    #reader {
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    #reader video {
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 12px;
+        display: block;
+    }
+
+    .qr-scanner-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .qr-frame {
+        position: relative;
+        width: 220px;
+        height: 220px;
+        border-radius: 8px;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
+
+    .qr-corner {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border: 4px solid #4fd1c5;
+    }
+
+    .qr-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .qr-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+    .qr-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+    .qr-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    .qr-scanner-line {
+        position: absolute;
+        left: 5%;
+        right: 5%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #4fd1c5, transparent);
+        box-shadow: 0 0 8px #4fd1c5;
+        animation: qrscan 2s ease-in-out infinite;
+    }
+
+    @keyframes qrscan {
+        0%, 100% { top: 8%; }
+        50% { top: 92%; }
     }
 
     .result-card {
@@ -120,7 +182,18 @@
     <!-- Camera Tab -->
     <div id="cameraPanel">
         <p class="text-muted" style="font-size:13px;">Allow camera access and point at a QR code.</p>
-        <div id="reader" style="width:100%;max-width:500px;margin:0 auto;"></div>
+        <div class="qr-scanner-wrapper" style="position: relative; max-width: 500px; margin: 0 auto;">
+            <div id="reader" style="width:100%;"></div>
+            <div id="scannerOverlay" class="qr-scanner-overlay" style="display:none;">
+                <div class="qr-frame">
+                    <div class="qr-corner tl"></div>
+                    <div class="qr-corner tr"></div>
+                    <div class="qr-corner bl"></div>
+                    <div class="qr-corner br"></div>
+                    <div class="qr-scanner-line"></div>
+                </div>
+            </div>
+        </div>
         <div class="text-center mt-3">
             <button class="btn btn-qr-action" id="btnStartScan" onclick="startScan()">
                 <i class="fa fa-play me-2"></i> Start Camera
@@ -201,7 +274,7 @@
 
 <script>
     var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
-    var scanner = null;
+    var html5QrCode = null;
     var currentWorkerId = null;
 
     function switchTab(tab) {
@@ -209,27 +282,86 @@
         $('#tabManual').toggleClass('active', tab === 'manual');
         $('#cameraPanel').toggle(tab === 'camera');
         $('#manualPanel').toggle(tab === 'manual');
-        if (tab !== 'camera' && scanner) stopScan();
+        if (tab !== 'camera' && html5QrCode) stopScan();
     }
 
     function startScan() {
-        scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 260 }, false);
-        scanner.render(onScanSuccess, onScanError);
-        $('#btnStartScan').hide();
-        $('#btnStopScan').show();
+        $('#btnStartScan').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-2"></i>Starting...');
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            {
+                fps: 10,
+                qrbox: { width: 220, height: 220 }
+            },
+            onScanSuccess,
+            onScanError
+        )
+        .then(function() {
+            $('#btnStartScan').hide().prop('disabled', false).html('<i class="fa fa-play me-2"></i> Start Camera');
+            $('#btnStopScan').show();
+            $('#scannerOverlay').show();
+        })
+        .catch(function(err) {
+            console.error("Camera start failed: ", err);
+            // Fallback to front camera
+            html5QrCode.start(
+                { facingMode: "user" },
+                {
+                    fps: 10,
+                    qrbox: { width: 220, height: 220 }
+                },
+                onScanSuccess,
+                onScanError
+            )
+            .then(function() {
+                $('#btnStartScan').hide().prop('disabled', false).html('<i class="fa fa-play me-2"></i> Start Camera');
+                $('#btnStopScan').show();
+                $('#scannerOverlay').show();
+            })
+            .catch(function(e) {
+                $('#btnStartScan').prop('disabled', false).html('<i class="fa fa-play me-2"></i> Start Camera');
+                Swal.fire('Camera Error', 'Could not access camera: ' + e, 'error');
+            });
+        });
     }
 
     function stopScan() {
-        if (scanner) { scanner.clear(); scanner = null; }
-        $('#btnStartScan').show();
-        $('#btnStopScan').hide();
+        if (html5QrCode) {
+            html5QrCode.stop().then(function() {
+                html5QrCode = null;
+                $('#btnStartScan').show();
+                $('#btnStopScan').hide();
+                $('#scannerOverlay').hide();
+            }).catch(function(err) {
+                console.error("Stop failed: ", err);
+            });
+        }
+    }
+
+    function beep() {
+        try {
+            var Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            var ctx = new Ctx();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            setTimeout(function() { osc.stop(); ctx.close(); }, 180);
+        } catch(e) {}
     }
 
     function onScanSuccess(text) {
+        beep();
         stopScan();
         processQr(text);
     }
-    function onScanError() {}
+    function onScanError(err) {}
 
     function submitManual() {
         var ref = $('#manualQrRef').val().trim();
@@ -259,7 +391,7 @@
             },
             error: function (xhr) {
                 if (xhr.status === 401) {
-                    showResult(false, '⏳ Session expired - opening login…');
+                    showResult(false, '⏳ Session expired - opening login...');
                     setTimeout(function () { window.location = '/Login'; }, 1200);
                     return;
                 }
