@@ -1,7 +1,6 @@
 ﻿var interval;
 $(document).on('mousemove', function () {
-    document.addEventListener('contextmenu',
-              event => event.preventDefault());
+    
     clearInterval(interval);
     var coutdown = 600 , $timer = $('.timer');  
     $timer.text(coutdown);
@@ -36,8 +35,7 @@ function logout() {
 
 var interval;
 $(document).on('keydown', function () {
-    document.addEventListener('contextmenu',
-              event => event.preventDefault());
+    
     clearInterval(interval);
     var coutdown = 600, $timer = $('.timer');
     $timer.text(coutdown);
@@ -67,8 +65,7 @@ $(document).on('keydown', function () {
 
 
 $(document).on('keypress', function () {
-    document.addEventListener('contextmenu',
-              event => event.preventDefault());
+    
     clearInterval(interval);
     var coutdown = 600, $timer = $('.timer');
     $timer.text(coutdown);
@@ -98,8 +95,7 @@ $(document).on('keypress', function () {
 
 
 $(document).on('keyup', function () {
-    document.addEventListener('contextmenu',
-              event => event.preventDefault());
+    
     clearInterval(interval);
     var coutdown = 600, $timer = $('.timer');
     $timer.text(coutdown);

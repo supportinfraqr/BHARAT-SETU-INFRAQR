@@ -54,8 +54,8 @@ $(document).on('mousemove keydown keypress keyup click mouseenter mouseover', fu
 // Start initially
 startCountdown();
 
-// Prevent right-click
-document.addEventListener('contextmenu', event => event.preventDefault());
+// Allow right-click copy/context menu (removed blocker)
+// document.addEventListener('contextmenu', event => event.preventDefault());
 
 
 function logout() {

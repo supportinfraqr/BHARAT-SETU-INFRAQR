@@ -96,6 +96,13 @@
 
 
     <style>
+        /* Allow text selection & copy everywhere */
+        body, body * {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+        }
         button.swal2-confirm.swal2-styled {
             background-color: #fd670b !important;
         }
