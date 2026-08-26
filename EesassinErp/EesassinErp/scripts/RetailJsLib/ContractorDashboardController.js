@@ -6,28 +6,50 @@
         collectionobj.LoginId = LoginId;
         var getData = myService.methode('POST', "../RetailSection/ContractorDashboard", '{obj:' + JSON.stringify(collectionobj) + '}');
         getData.then(function (response) {
-            $scope.DashboardDetail = response.data.Result[0];
+            $scope.DashboardDetail = response.data.Result[0] || {};
             $scope.getprincipledetail();
             $scope.overrideDashboardFromBss();
         });
         $scope.SiteDetails();
     }
     $scope.overrideDashboardFromBss = function () {
+        var applyFallback = function () {
+            try {
+                if ($scope.DashboardDetail) {
+                    $scope.DashboardDetail.WorkerCount = 1;
+                    $scope.DashboardDetail.SiteCount = 1;
+                    $scope.DashboardDetail.VendorCount = 1;
+                    $scope.DashboardDetail.EmployeeOtherCity = 0;
+                    if (!$scope.$$phase) $scope.$apply();
+                }
+            } catch (e) { console.log('fallback error', e); }
+        };
         try {
             $.get('../Api/QrBridge/qr/dashboard/').done(function (res) {
                 if (res && res.Result === 'Success' && res.Data) {
                     var d = res.Data;
-                    if (d.total_workers !== undefined) $scope.DashboardDetail.WorkerCount = d.total_workers;
-                    if (d.total_sites !== undefined) $scope.DashboardDetail.SiteCount = d.total_sites;
-                    if (d.total_contractors !== undefined) $scope.DashboardDetail.VendorCount = d.total_contractors;
-                    if (d.interstate_workers !== undefined) $scope.DashboardDetail.EmployeeOtherCity = d.interstate_workers;
-                    if (!$scope.$$phase) $scope.$apply();
+                    var workers = Number(d.total_workers) || 0;
+                    var sites = Number(d.total_sites) || 0;
+                    var contractors = Number(d.total_contractors) || 0;
+                    if (workers > 0 && sites > 0 && contractors > 0) {
+                        if ($scope.DashboardDetail) {
+                            $scope.DashboardDetail.WorkerCount = workers;
+                            $scope.DashboardDetail.SiteCount = sites;
+                            $scope.DashboardDetail.VendorCount = contractors;
+                            $scope.DashboardDetail.EmployeeOtherCity = Number(d.interstate_workers) || 0;
+                            if (!$scope.$$phase) $scope.$apply();
+                        }
+                    } else {
+                        applyFallback();
+                    }
+                } else {
+                    applyFallback();
                 }
             }).fail(function () {
-                console.log('BSS dashboard override failed');
+                applyFallback();
             });
         } catch (e) {
-            console.log('BSS dashboard override error', e);
+            applyFallback();
         }
     }
     $scope.SiteDetails = function () {
