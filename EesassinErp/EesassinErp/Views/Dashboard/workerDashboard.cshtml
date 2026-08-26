@@ -691,11 +691,11 @@
 
                 <div class="workerInfoRow">
                     <span>Site Name</span>
-                    <strong>{{DashboardDetail.sname || '-'}}</strong>
+                    <strong>{{DashboardDetail.sname || QrContractor.site || '-'}}</strong>
                 </div>
                 <div class="workerInfoRow">
                     <span>Site Code</span>
-                    <strong>{{DashboardDetail.code || '-'}}</strong>
+                    <strong>{{DashboardDetail.code || (QrEmployer ? QrEmployer.code : '-')}}</strong>
                 </div>
 
                 <div class="workerInfoRow">

@@ -1165,7 +1165,7 @@ class BindingList(APIView):
                 "employer": {
                     "id": b.employer_id,
                     "name": emp.name if emp else None,
-                    "code": emp.name[:6] if emp else None,
+                    "code": f"EMP-{emp.pk}" if emp else None,
                     "industry": emp.industry if emp else None,
                     "email": emp.email if emp else None,
                     "contact_person": emp.contact_person if emp else None,
@@ -1174,7 +1174,7 @@ class BindingList(APIView):
                 "contractor": {
                     "id": b.contractor_id,
                     "name": con.name if con else None,
-                    "code": con.name[:6] if con else None,
+                    "code": f"CON-{con.pk}" if con else None,
                     "email": con.email if con else None,
                     "contact_person": con.contact_person if con else None,
                     "contact_mobile": con.contact_mobile if con else None,

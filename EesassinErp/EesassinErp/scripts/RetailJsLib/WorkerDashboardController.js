@@ -43,7 +43,13 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                     DOJ: '15/01/2025',
                     LIN: 'LIN-UP-2025-001',
                     ClientName: 'Principal Infra Solutions Pvt Ltd',
-                    SiteName: 'Noida Metro Phase 2'
+                    SiteName: 'Noida Metro Phase 2',
+                    sname: 'Noida Metro Phase 2',
+                    SiteLocation: 'Plot 78, Knowledge Park, Greater Noida',
+                    code: 'EMP-23',
+                    medicalofname: 'Dr. A. Nair',
+                    SupervisorName: 'Manish Sharma',
+                    Contractorname: 'Sharma Constructions'
                 };
                 $scope.status = 'Active';
                 $scope.loadQrBindings();
@@ -127,6 +133,20 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                             site: ecBinding.site_name || '-',
                             binding_id: ecBinding.id,
                             status: ecBinding.status
+                        };
+                    } else if (wcBinding && wcBinding.employer) {
+                        // Worker has no EMPLOYER_CONTRACTOR binding of their own —
+                        // derive the employer from the worker-contractor binding payload.
+                        var emp2 = wcBinding.employer || {};
+                        $scope.QrEmployer = {
+                            name: emp2.name || '-',
+                            code: emp2.code || '-',
+                            industry: emp2.industry || '-',
+                            email: emp2.email || '-',
+                            contact: emp2.contact_mobile || emp2.contact_person || '-',
+                            site: wcBinding.site_name || '-',
+                            binding_id: wcBinding.id,
+                            status: wcBinding.status
                         };
                     }
                     $scope.$applyAsync();
