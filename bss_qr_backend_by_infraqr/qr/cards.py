@@ -14,10 +14,10 @@ LOGO_PATH    = os.path.join(STATIC, "bharatshramsetu-logo.png")
 WORKER_PHOTO = os.path.join(STATIC, "default_worker.png")
 
 # ── Palette ──────────────────────────────────────────────────────────────────
-NAVY        = (2,   43,  94)
+NAVY        = (2,   43,  94)      # Bharat #022B5E
 NAVY_DARK   = (1,   26,  60)
-ORANGE      = (245, 130, 32)
-GREEN       = (8,   124, 56)
+ORANGE      = (228, 93,  36)      # Shram  #E45D24
+GREEN       = (20,  132, 60)      # Setu   #14843C
 TEAL        = (0,   138, 138)
 WHITE       = (255, 255, 255)
 OFF_WHITE   = (247, 250, 253)
