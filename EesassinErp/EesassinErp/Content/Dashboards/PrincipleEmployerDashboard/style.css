@@ -167,7 +167,7 @@
     /* Active Sites — compact cards in a responsive flex/grid */
     .principleEmpDashboard .peTopSection {
         display: flex;
-        align-items: flex-start;
+        align-items: stretch;
         gap: 16px;
         margin-bottom: 12px;
     }
@@ -181,6 +181,13 @@
         flex: 0 0 320px;
         width: 320px;
         max-width: 340px;
+        height: auto;
+        align-self: stretch;
+    }
+
+    .principleEmpDashboard .peTopSection .contractorWorkerHighlightsCard .contractorHighlightsGrid {
+        overflow-y: auto;
+        flex: 1 1 auto;
     }
 
     .principleEmpDashboard .peTopSiteGrid {

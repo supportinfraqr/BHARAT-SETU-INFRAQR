@@ -2184,30 +2184,32 @@
     const multiDisplayInput = document.getElementById("multiDisplay");
     const dropdown = document.getElementById("multiDropdown");
 
-    if (multiDisplayInput) {
+    if (multiDisplayInput && dropdown) {
         multiDisplayInput.addEventListener("click", () => {
             dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
         });
     }
 
-    dropdown.addEventListener("change", () => {
-        const checks = dropdown.querySelectorAll("input[type=checkbox]");
-        const selected = [];
+    if (dropdown) {
+        dropdown.addEventListener("change", () => {
+            const checks = dropdown.querySelectorAll("input[type=checkbox]");
+            const selected = [];
 
-        checks.forEach(c => {
-            if (c.checked && c.value !== "all") {
-                selected.push(c.value);
+            checks.forEach(c => {
+                if (c.checked && c.value !== "all") {
+                    selected.push(c.value);
+                }
+            });
+
+            if (multiDisplayInput) {
+                multiDisplayInput.value = selected.join(", ");
             }
         });
-
-        if (multiDisplayInput) {
-            multiDisplayInput.value = selected.join(", ");
-        }
-    });
+    }
 
     /* CLOSE ON OUTSIDE CLICK */
     document.addEventListener("click", function (e) {
-        if (!e.target.closest(".multi-select")) {
+        if (dropdown && !e.target.closest(".multi-select")) {
             dropdown.style.display = "none";
         }
     });
@@ -2217,63 +2219,71 @@
 <script>
 
     /* PAN VALIDATION */
-    document.getElementById("pan").addEventListener("input", function () {
-        const val = this.value.toUpperCase();
-        this.value = val;
+    const panInput = document.getElementById("pan");
+    if (panInput) {
+        panInput.addEventListener("input", function () {
+            const val = this.value.toUpperCase();
+            this.value = val;
 
-        const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+            const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+            const msg = document.getElementById("panMsg");
 
-        const msg = document.getElementById("panMsg");
+            if (val.length === 10) {
+                msg.innerText = regex.test(val) ? "Valid PAN " : "Invalid PAN ";
+                msg.style.color = regex.test(val) ? "green" : "red";
+            } else {
+                msg.innerText = "";
+            }
+        });
+    }
 
-        if (val.length === 10) {
-            msg.innerText = regex.test(val) ? "Valid PAN " : "Invalid PAN ";
-            msg.style.color = regex.test(val) ? "green" : "red";
-        } else {
-            msg.innerText = "";
-        }
-    });
-    document.getElementById("gst").addEventListener("input", function () {
-        const val = this.value.toUpperCase();
-        this.value = val;
+    const gstInput = document.getElementById("gst");
+    if (gstInput) {
+        gstInput.addEventListener("input", function () {
+            const val = this.value.toUpperCase();
+            this.value = val;
 
-        const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
-        const msg = document.getElementById("gstMsg");
+            const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/;
+            const msg = document.getElementById("gstMsg");
 
-        if (val.length === 15) {
-            msg.innerText = regex.test(val) ? "Valid GSTIN " : "Invalid GSTIN ";
-            msg.style.color = regex.test(val) ? "green" : "red";
-        } else {
-            msg.innerText = "";
-        }
-    });
+            if (val.length === 15) {
+                msg.innerText = regex.test(val) ? "Valid GSTIN " : "Invalid GSTIN ";
+                msg.style.color = regex.test(val) ? "green" : "red";
+            } else {
+                msg.innerText = "";
+            }
+        });
+    }
 
     /* CIN / LLPIN AUTO DETECT */
-    document.getElementById("cin").addEventListener("input", function () {
-        const val = this.value.toUpperCase();
-        this.value = val;
+    const cinInput = document.getElementById("cin");
+    if (cinInput) {
+        cinInput.addEventListener("input", function () {
+            const val = this.value.toUpperCase();
+            this.value = val;
 
-        const msg = document.getElementById("cinMsg");
+            const msg = document.getElementById("cinMsg");
+            const cinRegex = /^[A-Z0-9]{21}$/;   // CIN
+            const llpRegex = /^[A-Z]{3}-[0-9]{4}$/; // LLPIN
 
-        const cinRegex = /^[A-Z0-9]{21}$/;   // CIN
-        const llpRegex = /^[A-Z]{3}-[0-9]{4}$/; // LLPIN
-
-        if (val.length > 0) {
-            if (cinRegex.test(val)) {
-                msg.innerText = "Detected: CIN (Company) ";
-                msg.style.color = "green";
+            if (val.length > 0) {
+                if (cinRegex.test(val)) {
+                    msg.innerText = "Detected: CIN (Company) ";
+                    msg.style.color = "green";
+                }
+                else if (llpRegex.test(val)) {
+                    msg.innerText = "Detected: LLPIN (LLP) ";
+                    msg.style.color = "green";
+                }
+                else {
+                    msg.innerText = "Invalid format ";
+                    msg.style.color = "red";
+                }
+            } else {
+                msg.innerText = "";
             }
-            else if (llpRegex.test(val)) {
-                msg.innerText = "Detected: LLPIN (LLP) ";
-                msg.style.color = "green";
-            }
-            else {
-                msg.innerText = "Invalid format ";
-                msg.style.color = "red";
-            }
-        } else {
-            msg.innerText = "";
-        }
-    });
+        });
+    }
 
 </script>
 <script>
