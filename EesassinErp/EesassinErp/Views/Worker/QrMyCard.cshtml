@@ -41,81 +41,102 @@
     .btn-card:disabled{background:#ccc;color:#888;cursor:not-allowed;border-color:#ccc}
 
     .card-stage{
-        width:100%;background:#fff;padding:10px;border-radius:2px;
+        width:100%;background:#fff;padding:14px;border-radius:12px;
         box-shadow:0 4px 24px rgba(0,0,0,.12)
     }
-    .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-    .card{
-        position:relative;aspect-ratio:1.72/1;overflow:hidden;border-radius:16px;
-        background:#fff;border:1px solid #d5dce4;box-shadow:0 3px 12px rgba(0,0,0,.15)
+    /* Side-by-side with equal fixed size */
+    .cards{
+        display:flex;
+        flex-wrap:wrap;
+        gap:16px;
+        justify-content:center;
     }
 
-    /* FRONT */
+    .card{
+        /* Fixed physical size — matches a real ID card proportion */
+        position:relative;
+        width:440px;
+        height:280px;
+        overflow:hidden;border-radius:14px;
+        background:#fff;border:1px solid #d5dce4;
+        box-shadow:0 4px 18px rgba(0,0,0,.18);
+        flex-shrink:0;
+    }
+
+    /* ── FRONT ── */
     .front-top{
-        height:22%;padding:12px 18px 7px;display:flex;align-items:center;
+        height:22%;padding:8px 14px 5px;display:flex;align-items:center;
         justify-content:space-between;
         background:radial-gradient(circle at 82% 20%,rgba(18,151,76,.10),transparent 28%),#fff;
         border-top:4px solid var(--orange);position:relative
     }
     .front-top:after{
-        content:"";position:absolute;left:0;right:0;bottom:0;height:4px;
+        content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
         background:linear-gradient(90deg,var(--orange),#fff 32%,#fff 67%,var(--green))
     }
-    .brand{display:flex;align-items:center;gap:10px}
-    .brand-mark{width:58px;height:45px;position:relative}
-    .person{position:absolute;width:12px;height:18px;border-radius:8px 8px 4px 4px;bottom:5px}
-    .person:before{content:"";position:absolute;width:10px;height:10px;border-radius:50%;top:-9px;left:1px;background:inherit}
-    .p1{left:4px;background:#169447}.p2{left:20px;background:#f58220}.p3{left:35px;background:#169447}
-    .arc{position:absolute;left:0;bottom:0;width:51px;height:24px;border:5px solid var(--blue);border-top:0;border-radius:0 0 50px 50px;transform:rotate(-8deg)}
-    .brand-name{line-height:1;font-weight:900;font-size:19px;color:var(--blue)}
+    .brand{display:flex;align-items:center;gap:8px}
+    .brand-mark{width:48px;height:38px;position:relative}
+    .person{position:absolute;width:10px;height:15px;border-radius:8px 8px 4px 4px;bottom:4px}
+    .person:before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;top:-8px;left:.5px;background:inherit}
+    .p1{left:3px;background:#169447}.p2{left:17px;background:#f58220}.p3{left:30px;background:#169447}
+    .arc{position:absolute;left:0;bottom:0;width:43px;height:20px;border:4px solid var(--blue);border-top:0;border-radius:0 0 50px 50px;transform:rotate(-8deg)}
+    .brand-name{line-height:1;font-weight:900;font-size:15px;color:var(--blue)}
     .brand-name span{color:var(--orange)}
-    .tagline{margin-top:5px;font-size:7px;color:#444}
-    .employment{text-align:right;font-size:18px;line-height:1.05;font-weight:900;color:#082b66}
+    .tagline{margin-top:4px;font-size:7px;color:#555;letter-spacing:.2px}
+    .employment{text-align:right;font-size:14px;line-height:1.1;font-weight:900;color:#082b66}
 
     .verified-bar{
-        height:7%;background:linear-gradient(90deg,#082b66 0 49%,#0b4b96 50% 84%,#118948 85%);
+        height:8%;background:linear-gradient(90deg,#082b66 0 49%,#0b4b96 50% 84%,#118948 85%);
         color:#fff;display:flex;align-items:center;justify-content:center;
-        font-size:12px;font-weight:800;gap:8px
+        font-size:11px;font-weight:800;gap:7px;letter-spacing:.5px
     }
-    .shield{width:17px;height:17px;border:1.7px solid currentColor;border-radius:50% 50% 45% 45%;position:relative}
-    .shield:after{content:"\2713";position:absolute;left:3px;top:-2px;font-size:12px}
+    .shield{width:15px;height:15px;border:1.5px solid currentColor;border-radius:50% 50% 45% 45%;position:relative}
+    .shield:after{content:"\2713";position:absolute;left:2px;top:-2px;font-size:11px}
 
-    .front-main{height:53%;padding:10px 18px 4px}
-    .identity{display:grid;grid-template-columns:116px 1fr 100px;gap:14px;align-items:center;height:54%}
+    .front-main{height:50%;padding:7px 12px 3px;overflow:hidden}
+    .identity{display:grid;grid-template-columns:90px 1fr 84px;gap:10px;align-items:start;height:56%}
 
     .photo{
-        width:108px;height:108px;border-radius:50%;
+        width:82px;height:82px;border-radius:50%;
         background:linear-gradient(145deg,#11a8e8,#0876c8);
-        border:1px solid #0b4c98;overflow:hidden;display:flex;align-items:flex-end;justify-content:center
+        border:2px solid #0b4c98;overflow:hidden;display:flex;align-items:flex-end;justify-content:center
     }
     .photo img{width:100%;height:100%;object-fit:cover}
     .photo .avatar-fallback{display:none}
     .photo.no-photo .avatar-fallback{display:block}
     .photo.no-photo img{display:none}
-    .avatar-fallback{position:relative;width:68px;height:80px}
-    .avatar-fallback:before{content:"";position:absolute;width:42px;height:42px;left:13px;top:2px;border-radius:50%;background:#d6a47b}
-    .avatar-fallback:after{content:"";position:absolute;width:68px;height:52px;left:0;bottom:0;border-radius:38px 38px 0 0;background:#263b55}
-    .avatar-hair{position:absolute;width:43px;height:22px;left:12px;top:0;z-index:2;border-radius:50% 50% 35% 35%;background:#1d2835}
+    .avatar-fallback{position:relative;width:55px;height:65px}
+    .avatar-fallback:before{content:"";position:absolute;width:34px;height:34px;left:11px;top:2px;border-radius:50%;background:#d6a47b}
+    .avatar-fallback:after{content:"";position:absolute;width:55px;height:42px;left:0;bottom:0;border-radius:30px 30px 0 0;background:#263b55}
+    .avatar-hair{position:absolute;width:35px;height:18px;left:10px;top:0;z-index:2;border-radius:50% 50% 35% 35%;background:#1d2835}
 
-    .name{font-size:24px;font-weight:800;color:#082b66;line-height:1}
-    .role{margin-top:7px;font-size:14px}
-    .contractor{margin-top:7px;font-size:13px}
+    .name{font-size:15px;font-weight:900;color:#082b66;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+    .role{margin-top:3px;font-size:11.5px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .contractor{margin-top:3px;font-size:10.5px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
-    .qr{width:92px;height:92px;border:5px solid #fff;outline:1px solid #7b8793;overflow:hidden}
+    .qr{width:78px;height:78px;border:4px solid #fff;outline:1px solid #7b8793;overflow:hidden}
     .qr img{width:100%;height:100%;object-fit:contain}
 
-    .front-grid{border-top:1px solid #aeb9c5;display:grid;grid-template-columns:1fr 1fr;height:46%;padding-top:9px}
-    .info-cell{display:grid;grid-template-columns:38px 1fr;gap:8px;align-items:center;padding:2px 12px 5px 4px;border-right:1px solid #aeb9c5}
+    .front-grid{
+        border-top:1px solid #aeb9c5;
+        display:grid;grid-template-columns:1fr 1fr;
+        height:44%;padding-top:5px
+    }
+    .info-cell{
+        display:grid;grid-template-columns:32px 1fr;gap:6px;
+        align-items:center;padding:2px 10px 4px 4px;
+        border-right:1px solid #aeb9c5
+    }
     .info-cell:nth-child(even){border-right:0}
     .info-cell:nth-child(n+3){border-top:1px solid #aeb9c5}
-    .info-icon{width:34px;height:34px;border:2px solid var(--blue);border-radius:50%;display:grid;place-items:center;color:var(--blue);font-size:14px;font-weight:800}
-    .label{font-size:10px;color:#333}
-    .value{font-size:14px;font-weight:800;margin-top:3px}
-    .city{line-height:1.15}.city small{font-size:11px;font-weight:700}
+    .info-icon{width:28px;height:28px;border:2px solid var(--blue);border-radius:50%;display:grid;place-items:center;color:var(--blue);font-size:12px;font-weight:800}
+    .label{font-size:9.5px;color:#444;line-height:1}
+    .value{font-size:12px;font-weight:800;margin-top:2px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .city{line-height:1.2;overflow:hidden}
+    .city small{font-size:9px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#555;margin-top:1px}
 
     .cityscape{
-        position:absolute;left:0;right:0;bottom:11%;height:17%;opacity:.22;
+        position:absolute;left:0;right:0;bottom:12%;height:15%;opacity:.2;
         background:linear-gradient(180deg,transparent 0 36%,#76a9d7 36% 100%);
         clip-path:polygon(0 100%,0 75%,5% 72%,5% 60%,8% 60%,8% 74%,13% 68%,13% 48%,16% 48%,16% 74%,21% 61%,21% 40%,24% 40%,24% 70%,29% 58%,29% 28%,33% 28%,33% 70%,38% 55%,38% 45%,41% 45%,41% 73%,46% 62%,46% 35%,50% 35%,50% 73%,55% 52%,55% 25%,59% 25%,59% 72%,65% 58%,65% 42%,68% 42%,68% 72%,73% 55%,73% 31%,77% 31%,77% 70%,83% 62%,83% 45%,87% 45%,87% 73%,92% 60%,92% 37%,96% 37%,96% 72%,100% 70%,100% 100%)
     }
@@ -124,28 +145,36 @@
         position:absolute;left:0;right:0;bottom:0;height:12%;background:#082b66;color:#fff;
         display:grid;grid-template-columns:repeat(4,1fr)
     }
-    .footer-item{display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:11px;line-height:1.2;text-align:center;border-right:1px solid rgba(255,255,255,.5);gap:2px}
+    .footer-item{display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:10px;line-height:1.2;text-align:center;border-right:1px solid rgba(255,255,255,.4);gap:1px}
     .footer-item:last-child{border-right:0}
-    .footer-icon{font-size:22px}
+    .footer-icon{font-size:18px}
 
-    /* BACK */
+    /* ── BACK ── */
     .back-header{
-        height:15%;background:linear-gradient(135deg,#062765,#063c89);color:#fff;
-        display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;position:relative
+        height:14%;background:linear-gradient(135deg,#062765,#063c89);color:#fff;
+        display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;position:relative;
+        letter-spacing:.3px
     }
-    .back-header:before,.back-header:after{content:"";width:28px;height:1px;background:#fff;opacity:.75;margin:0 9px}
-    .back-list{height:65%;padding:8px 18px 0}
-    .back-row{display:grid;grid-template-columns:28px 1fr 14px 1.05fr;min-height:13%;align-items:center;border-bottom:1px dotted #aeb6bf;font-size:11px}
-    .back-row .bi{width:22px;height:22px;border:2px solid #1b54a0;border-radius:50%;display:grid;place-items:center;color:#1b54a0;font-size:11px}
-    .back-label{font-weight:500}.colon{text-align:center;font-weight:700}.back-value{font-weight:700}
-    .notice{margin-top:5px;background:#eef0f2;border-radius:8px;padding:5px 9px;font-size:7.5px;line-height:1.4}
-    .notice div:before{content:"\2022";margin-right:5px}
-    .dates{height:11%;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:0 18px;font-size:10px;font-weight:700}
-    .dates div:first-child{border-right:1px solid #9da8b4}
+    .back-header:before,.back-header:after{content:"";width:24px;height:1px;background:#fff;opacity:.75;margin:0 8px}
+    .back-list{height:64%;padding:6px 14px 0}
+    .back-row{
+        display:grid;grid-template-columns:26px 1fr 12px 1.05fr;
+        min-height:12.4%;align-items:center;
+        border-bottom:1px dotted #aeb6bf;font-size:11px
+    }
+    .back-row .bi{width:20px;height:20px;border:1.5px solid #1b54a0;border-radius:50%;display:grid;place-items:center;color:#1b54a0;font-size:10px}
+    .back-label{font-weight:500;font-size:11px}
+    .colon{text-align:center;font-weight:700}
+    .back-value{font-weight:700;font-size:11px}
+    .notice{margin-top:4px;background:#eef0f2;border-radius:6px;padding:4px 8px;font-size:7.5px;line-height:1.5}
+    .notice div:before{content:"\2022";margin-right:4px}
+    .dates{height:11%;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:0 14px;font-size:10px;font-weight:700}
+    .dates div:first-child{border-right:1px solid #9da8b4;padding-right:8px}
+    .dates div:last-child{padding-left:10px}
     .dates strong{color:#083f91}
-    .signature-row{height:9%;display:grid;grid-template-columns:1fr 1fr;padding:0 18px;font-size:8px}
-    .signature{font-size:13px;font-family:cursive;border-bottom:1px solid #333;width:80px;margin-bottom:1px}
-    .back-footer{position:absolute;left:0;right:0;bottom:0;height:7%;background:#138a49;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+    .signature-row{height:9%;display:grid;grid-template-columns:1fr 1fr;padding:0 14px;font-size:8px;align-items:center}
+    .signature{font-size:12px;font-family:cursive;border-bottom:1px solid #333;width:70px;margin-bottom:1px}
+    .back-footer{position:absolute;left:0;right:0;bottom:0;height:7%;background:#138a49;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;gap:6px}
 
     .loading-overlay{
         position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:9999;
@@ -155,33 +184,44 @@
     .loading-overlay .spinner{width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#082b66;border-radius:50%;animation:spin .7s linear infinite}
     @@keyframes spin{to{transform:rotate(360deg)}}
 
-    @@media(max-width:900px){.cards{grid-template-columns:1fr}}
-    @@media(max-width:600px){
-        .card-page{padding:15px 8px 30px}
-        .card-stage{padding:4px}
-        .cards{gap:7px}
-        .front-top{padding:7px 9px 4px}
-        .brand-mark{transform:scale(.8);transform-origin:left center}
-        .brand-name{font-size:13px}.tagline{font-size:5px}.employment{font-size:12px}
-        .verified-bar{font-size:8px}.front-main{padding:6px 9px}
-        .identity{grid-template-columns:78px 1fr 64px;gap:7px}
-        .photo{width:72px;height:72px}.qr{width:61px;height:61px}
-        .name{font-size:17px}.role,.contractor{font-size:9px;margin-top:3px}
-        .info-cell{grid-template-columns:24px 1fr;gap:4px;padding:2px 5px}
-        .info-icon{width:23px;height:23px;font-size:10px}
-        .label{font-size:7px}.value{font-size:9px}.city small{font-size:7px}
-        .footer-item{font-size:6px}.footer-icon{font-size:11px}
-        .back-header{font-size:9px}.back-list{padding:4px 8px 0}
-        .back-row{grid-template-columns:19px 1fr 8px 1.05fr;font-size:7px}
-        .back-row .bi{width:16px;height:16px;font-size:7px}
-        .notice{font-size:5px}.dates{padding:0 8px;font-size:7px}
-        .signature-row{padding:0 8px;font-size:6px}.back-footer{font-size:6px}
+    /* On small screens — scale the physical card down */
+    @@media(max-width:960px){
+        .cards{gap:12px}
+        .card{width:390px;height:247px}
+        .brand-name{font-size:13px}.employment{font-size:12px}
+        .photo{width:72px;height:72px}.qr{width:68px;height:68px}
+        .name{font-size:14px}.role,.contractor{font-size:10px}
+        .identity{grid-template-columns:78px 1fr 74px;gap:8px}
+        .info-icon{width:24px;height:24px;font-size:10px}
+        .label{font-size:8.5px}.value{font-size:11px}
+        .back-row{font-size:10px}.back-label,.back-value{font-size:10px}
+        .back-header{font-size:12px}
+    }
+    @@media(max-width:680px){
+        .card-page{padding:14px 8px 28px}
+        .card-stage{padding:8px}
+        .card{width:340px;height:215px}
+        .brand-name{font-size:11px}.tagline{font-size:6px}.employment{font-size:10px}
+        .photo{width:60px;height:60px}.qr{width:58px;height:58px}
+        .name{font-size:12px}.role,.contractor{font-size:9px}
+        .identity{grid-template-columns:66px 1fr 64px;gap:6px}
+        .info-icon{width:20px;height:20px;font-size:9px}
+        .label{font-size:7.5px}.value{font-size:9.5px}
+        .footer-item{font-size:8px}.footer-icon{font-size:14px}
+        .back-header{font-size:10px}
+        .back-row{font-size:9px}.back-label,.back-value{font-size:9px}
+        .back-list{padding:4px 8px 0}
+        .dates{padding:0 8px;font-size:8.5px}
+        .signature-row{padding:0 8px}
+        .back-footer{font-size:7.5px}
     }
     @@media print{
         body{background:#fff!important;padding:0!important}
         .card-page{padding:0!important}
         .card-toolbar,.loading-overlay{display:none!important}
-        .card-stage{width:100%;box-shadow:none}
+        .card-stage{box-shadow:none;padding:8px}
+        .cards{justify-content:flex-start;gap:12px}
+        .card{page-break-inside:avoid}
     }
 </style>
 
@@ -313,7 +353,7 @@
                     <div class="back-row">
                         <div class="bi"><i class="bi bi-person"></i></div>
                         <div class="back-label">Relation</div><div class="colon">:</div>
-                        <div class="back-value" id="cRelation">Father</div>
+                        <div class="back-value" id="cRelation">-</div>
                     </div>
                     <div class="back-row">
                         <div class="bi"><i class="bi bi-hash"></i></div>
@@ -333,17 +373,17 @@
                     <div class="back-row">
                         <div class="bi"><i class="bi bi-person-badge"></i></div>
                         <div class="back-label">Supervisor Name</div><div class="colon">:</div>
-                        <div class="back-value" id="cSupervisor">Pawan Kumar</div>
+                        <div class="back-value" id="cSupervisor">-</div>
                     </div>
                     <div class="back-row">
                         <div class="bi"><i class="bi bi-telephone"></i></div>
                         <div class="back-label">Supervisor No.</div><div class="colon">:</div>
-                        <div class="back-value" style="color:#124fba" id="cSupervisorNo">9898989898</div>
+                        <div class="back-value" style="color:#124fba" id="cSupervisorNo">-</div>
                     </div>
                     <div class="back-row">
                         <div class="bi"><i class="bi bi-bus-front"></i></div>
                         <div class="back-label">Route/Bus No.</div><div class="colon">:</div>
-                        <div class="back-value" id="cBus">- -</div>
+                        <div class="back-value" id="cBus">-</div>
                     </div>
                     <div class="notice">
                         <div>This identity card must always be carried &amp; displayed for security &amp; identification.</div>
@@ -413,21 +453,30 @@
             var w = data.Result[0];
 
             setTxt('cName', w.EmployeeName);
-            setTxt('cDesignation', w.EmployeeDesignation);
-            setTxt('cContractor', w.VendorName || w.ContractName || '-');
+            setTxt('cDesignation', w.EmployeeDesignation || w.Supervisor || '-');
+            setTxt('cContractor', w.PartyName || w.VendorName || w.ContractName || '-');
             setTxt('cCode', w.EmployeeCode);
             setTxt('cDept', w.EmployeeDepartment);
             setTxt('cMobile', mask(w.MobileNumber));
             setTxt('cSite', w.SiteName || w.Site || '-');
-            setTxt('cEmployer', w.ClientName || w.EmployerName || '-');
-            setTxt('cBlood', w.BloodGroup);
-            setTxt('cAltMobile', mask(w.AlternativeMobileNumber));
-            setTxt('cCamp', w.CampNumber);
+            setTxt('cEmployer', w.PartyName || w.ClientName || w.EmployerName || '-');
+            setTxt('cBlood', w.BloodGroup || '-');
+            setTxt('cAltMobile', mask(w.AlternativeMobileNumber || w.NomineeName));
+            setTxt('cRelation', w.NomineeRelation || w.Relation || '-');
+            setTxt('cCamp', w.CampNumber || w.StoreCode || '-');
             setTxt('cUAN', mask(w.PreviousUAN));
             setTxt('cESIC', mask(w.PreviousESI));
-            setTxt('cBus', w.BusNo || w.RouteName || '- -');
-            setTxt('cIssue', formatDate(w.CreatedOn));
-            setTxt('cValid', formatDate(w.ValidTill));
+            // Supervisor: TrannerName is stored as supervisor name in DB
+            var supName = w.TrannerName || w.Supervisor || w.reportingmang || '-';
+            var supNo   = w.managemercontact || w.SuperVisior1 || '-';
+            // If SuperVisior1 is '0' or 0, treat as empty
+            if (!supName || supName === '0') supName = '-';
+            if (!supNo   || supNo   === '0') supNo   = '-';
+            setTxt('cSupervisor', supName);
+            setTxt('cSupervisorNo', supNo);
+            setTxt('cBus', w.BusNo || w.RouteName || '-');
+            setTxt('cIssue', formatDate(w.CreatedOn || w.DOJ));
+            setTxt('cValid', formatDate(w.ValidTill || w.LeavingDate));
             setTxt('cSigName', w.EmployeeName || '-');
             setTxt('cSigName2', w.EmployeeName || '-');
             setTxt('cSigDesig', w.EmployeeDesignation || '-');
@@ -461,25 +510,43 @@
             document.getElementById('cardPage').style.display = 'block';
         }
 
+        // Stores Action=1 supplementary data (site, party, supervisor) to enrich Action=4 result
+        var _action1Cache = null;
+
         function loadCardById(workerId) {
             $.ajax({
                 url: API,
                 method: 'POST',
                 contentType: 'application/json; charset=utf-8',
-                data: '{obj:' + JSON.stringify({ ActionType: 1, UserId: workerId }) + '}',
+                data: '{obj:' + JSON.stringify({ ActionType: 4, Id: workerId }) + '}',
                 success: function (res) {
                     if (res && res.Result && res.Result.length) {
+                        // Merge supplementary Action=1 fields if available
+                        if (_action1Cache) {
+                            var a1 = _action1Cache;
+                            var w  = res.Result[0];
+                            w.SiteName         = w.SiteName     || a1.SiteName     || a1.SiteCode;
+                            w.PartyName        = w.PartyName    || a1.PartyName    || a1.PartyCode;
+                            w.Supervisor       = w.Supervisor   || a1.Supervisor;
+                            w.reportingmang    = w.reportingmang|| a1.reportingmang;
+                            w.managemercontact = w.managemercontact || a1.managemercontact;
+                            w.EmployeePhotos   = w.EmployeePhotos  || a1.EmployeePhotos;
+                        }
                         loadCard(res);
                     } else {
-                        loadByLogin();
+                        loadEntityCard();
                     }
                 },
-                error: function () { loadByLogin(); }
+                error: function () { loadEntityCard(); }
             });
         }
 
         function loadByLogin() {
             var userId = sessionStorage.getItem('LoginId') || '@(Session["LoginId"]?.ToString() ?? Session["loginId"]?.ToString() ?? "")';
+            if (!userId) {
+                loadEntityCard();
+                return;
+            }
             $.ajax({
                 url: API,
                 method: 'POST',
@@ -487,7 +554,14 @@
                 data: '{obj:' + JSON.stringify({ ActionType: 1, UserId: userId }) + '}',
                 success: function (res) {
                     if (res && res.Result && res.Result.length) {
-                        loadCard(res);
+                        _action1Cache = res.Result[0]; // Cache supplementary data
+                        var empCode = res.Result[0].EmployeeCode;
+                        if (empCode) {
+                            loadCardById(empCode);
+                        } else {
+                            // Action=1 data might be enough for basic card
+                            loadCard(res);
+                        }
                     } else {
                         loadEntityCard();
                     }
@@ -519,24 +593,27 @@
             var name = p.name || p.full_name || p.contact_person || '-';
             var desig = entity === 'employer' ? 'Employer' : (entity === 'contractor' ? 'Contractor' : 'Worker');
             setTxt('cName', name);
-            setTxt('cDesignation', desig);
-            setTxt('cCode', p.legacy_employee_code || p.worker_id || p.id || '-');
+            setTxt('cDesignation', p.designation || desig);
+            setTxt('cCode', p.legacy_employee_code || p.worker_id || (entity === 'employer' ? 'EMP-' + p.id : entity === 'contractor' ? 'CON-' + p.id : p.id) || '-');
             setTxt('cDept', p.department || p.industry || '-');
             setTxt('cMobile', mask(p.mobile || p.contact_mobile));
             setTxt('cSite', p.site_name || p.site || '-');
             setTxt('cEmployer', p.employer_name || '-');
-            setTxt('cContractor', p.contractor_name || '-');
+            setTxt('cContractor', p.contractor_name || p.name || '-');
             setTxt('cBlood', p.blood_group || '-');
             setTxt('cAltMobile', mask(p.alternative_mobile));
+            setTxt('cRelation', p.nominee_relation || '-');
             setTxt('cCamp', p.camp_number || '-');
             setTxt('cUAN', mask(p.previous_uan));
             setTxt('cESIC', mask(p.previous_esi));
+            setTxt('cSupervisor', p.supervisor1 || '-');
+            setTxt('cSupervisorNo', '-');
             setTxt('cBus', p.transport || p.route_id || '- -');
             setTxt('cIssue', formatDate(p.issue_date || p.created_at));
-            setTxt('cValid', formatDate(p.valid_till));
+            setTxt('cValid', formatDate(p.valid_till || '31/12/2026'));
             setTxt('cSigName', name);
             setTxt('cSigName2', name);
-            setTxt('cSigDesig', desig);
+            setTxt('cSigDesig', p.designation || desig);
             setTxt('cSigCon', p.contractor_name || '-');
 
             var photoWrap = document.getElementById('cardPhoto');

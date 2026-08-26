@@ -267,6 +267,7 @@ def main():
         full_name="Rajesh Kumar",
         worker_id="WK-001",
         mobile="9876543410",
+        alternative_mobile="9876543411",
         designation="Mason",
         department="Civil Works",
         gender="Male",
@@ -282,6 +283,18 @@ def main():
         doj="15/01/2025",
         father_name="Ram Kumar",
         legacy_employee_code="worker@test.com",
+        previous_uan="100234567890",
+        previous_esi="2004567890123",
+        camp_number="CAMP-A1-01",
+        transport="BSS Bus 12",
+        route_id="RTE-A1-01",
+        supervisor1="Manish Sharma",
+        issue_date="15/01/2025",
+        valid_till="31/12/2026",
+        bank_account="50100234567891",
+        bank_ifsc="HDFC0001234",
+        bank_name="HDFC Bank",
+        account_holder_name="Rajesh Kumar",
     )
     print(f"  Worker 1: {w1.full_name} (id={w1.id}) -> {con1.name} @ {site_a1.name}")
 
@@ -289,6 +302,7 @@ def main():
         full_name="Amit Sharma",
         worker_id="WK-002",
         mobile="9876543420",
+        alternative_mobile="9876543421",
         designation="Electrician",
         department="Electrical",
         gender="Male",
@@ -303,6 +317,18 @@ def main():
         is_active=True,
         doj="01/03/2025",
         father_name="Dinesh Sharma",
+        previous_uan="100345678901",
+        previous_esi="2005678901234",
+        camp_number="CAMP-A2-02",
+        transport="BSS Bus 07",
+        route_id="RTE-A2-02",
+        supervisor1="Deepak Verma",
+        issue_date="01/03/2025",
+        valid_till="31/12/2026",
+        bank_account="50101234567890",
+        bank_ifsc="ICICI0005678",
+        bank_name="ICICI Bank",
+        account_holder_name="Amit Sharma",
     )
     print(f"  Worker 2: {w2.full_name} (id={w2.id}) -> {con2.name} @ {site_a2.name}")
 
@@ -310,6 +336,7 @@ def main():
         full_name="Suresh Patel",
         worker_id="WK-003",
         mobile="9876543430",
+        alternative_mobile="9876543431",
         designation="Plumber",
         department="Plumbing",
         gender="Male",
@@ -324,6 +351,18 @@ def main():
         is_active=True,
         doj="10/06/2025",
         father_name="Gopal Patel",
+        previous_uan="100456789012",
+        previous_esi="2006789012345",
+        camp_number="CAMP-B1-03",
+        transport="BSS Bus 03",
+        route_id="RTE-B1-03",
+        supervisor1="Ravi Tiwari",
+        issue_date="10/06/2025",
+        valid_till="31/12/2026",
+        bank_account="50102345678901",
+        bank_ifsc="SBI0001234",
+        bank_name="State Bank of India",
+        account_holder_name="Suresh Patel",
     )
     print(f"  Worker 3: {w3.full_name} (id={w3.id}) -> {con3.name} @ {site_b1.name}")
 
@@ -331,6 +370,7 @@ def main():
         full_name="Vikram Singh",
         worker_id="WK-004",
         mobile="9876543440",
+        alternative_mobile="9876543441",
         designation="Carpenter",
         department="Wood Works",
         gender="Male",
@@ -345,6 +385,18 @@ def main():
         is_active=True,
         doj="01/08/2025",
         father_name="Mahender Singh",
+        previous_uan="100567890123",
+        previous_esi="2007890123456",
+        camp_number="CAMP-B2-04",
+        transport="BSS Bus 09",
+        route_id="RTE-B2-04",
+        supervisor1="Sanjay Verma",
+        issue_date="01/08/2025",
+        valid_till="31/12/2026",
+        bank_account="50103456789012",
+        bank_ifsc="AXIS0005678",
+        bank_name="Axis Bank",
+        account_holder_name="Vikram Singh",
     )
     print(f"  Worker 4: {w4.full_name} (id={w4.id}) -> {con4.name} @ {site_b2.name}")
 
@@ -433,6 +485,44 @@ def main():
         u_wkr.mobile = w1.mobile
         u_wkr.save(update_fields=["employer_id", "contractor_id", "mobile"])
         print(f"  worker@test.com -> employer_id={emp_a.id}, contractor_id={con1.id}, mobile={w1.mobile}")
+
+    # ================================================================
+    # LOGIN ACCOUNTS for every entity (password = username)
+    # ================================================================
+    print("\n" + "=" * 60)
+    print("LOGIN ACCOUNTS")
+    print("=" * 60)
+
+    def ensure_user(username, role, employer=None, contractor=None, worker=None):
+        u = User.objects.filter(username=username).first()
+        if not u:
+            u = User(username=username, role=role, email=username)
+        else:
+            u.role = role
+        if employer is not None:
+            u.employer_id = employer.pk if hasattr(employer, 'pk') else employer
+        if contractor is not None:
+            u.contractor_id = contractor.pk if hasattr(contractor, 'pk') else contractor
+        if worker is not None:
+            w = worker
+            w.legacy_employee_code = username
+            w.mobile = w.mobile or username
+            w.save(update_fields=["legacy_employee_code"])
+            u.employer_id = w.employer_id
+            u.contractor_id = w.contractor_id
+            u.mobile = w.mobile
+        u.set_password(username)
+        u.save()
+        print(f"  {username} ({role}) emp={u.employer_id} con={u.contractor_id}")
+
+    ensure_user("metro@test.com", "EMPLOYER", employer=emp_b)
+    ensure_user("apex@test.com", "PRIMARY_CONTRACTOR", contractor=con2)
+    ensure_user("himalayan@test.com", "PRIMARY_CONTRACTOR", contractor=con3)
+    ensure_user("doon@test.com", "PRIMARY_CONTRACTOR", contractor=con4)
+    ensure_user("amit@test.com", "WORKER", worker=w2)
+    ensure_user("suresh@test.com", "WORKER", worker=w3)
+    ensure_user("vikram@test.com", "WORKER", worker=w4)
+    print("  (existing accounts employer/contractor/worker@test.com preserved)")
 
     # ================================================================
     # SUMMARY
