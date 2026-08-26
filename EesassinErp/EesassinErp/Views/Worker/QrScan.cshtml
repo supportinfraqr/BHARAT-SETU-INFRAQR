@@ -152,45 +152,80 @@
     }
 
     function startScan() {
-        if (html5QrCode) return; // already running
-        $('#btnStartScan').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-2"></i>Starting...');
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 220, height: 220 } },
-            onScanSuccess, onScanError
-        )
-        .then(function() {
-            $('#btnStartScan').hide().prop('disabled', false);
-            $('#btnStopScan').show();
-            $('#scannerOverlay').show();
-        })
-        .catch(function(err) {
+        if (html5QrCode && html5QrCode.isScanning) return; // already running
+        if (html5QrCode) { html5QrCode = null; } // stale instance — clean it
+        $('#btnStartScan').prop('disabled', true);
+        var started = false;
+        var timeoutId = setTimeout(function() {
+            if (!started) {
+                $('#btnStartScan').prop('disabled', false);
+                Swal.fire('Camera Timeout', 'Camera could not be started. Please try again.', 'error');
+            }
+        }, 20000);
+        try {
+            html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start(
-                { facingMode: "user" },
+                { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 220, height: 220 } },
                 onScanSuccess, onScanError
             )
             .then(function() {
+                started = true;
+                clearTimeout(timeoutId);
                 $('#btnStartScan').hide().prop('disabled', false);
                 $('#btnStopScan').show();
                 $('#scannerOverlay').show();
             })
-            .catch(function(e) {
-                $('#btnStartScan').prop('disabled', false).html('<i class="fa fa-play me-2"></i> Start Camera');
-                Swal.fire('Camera Error', 'Could not access camera: ' + e, 'error');
+            .catch(function(err) {
+                // environment camera failed — try the front camera on a fresh instance
+                if (html5QrCode) { try { html5QrCode.stop(); } catch(e){} html5QrCode = null; }
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start(
+                    { facingMode: "user" },
+                    { fps: 10, qrbox: { width: 220, height: 220 } },
+                    onScanSuccess, onScanError
+                )
+                .then(function() {
+                    started = true;
+                    clearTimeout(timeoutId);
+                    $('#btnStartScan').hide().prop('disabled', false);
+                    $('#btnStopScan').show();
+                    $('#scannerOverlay').show();
+                })
+                .catch(function(e) {
+                    started = true;
+                    clearTimeout(timeoutId);
+                    html5QrCode = null;
+                    $('#btnStartScan').prop('disabled', false);
+                    Swal.fire('Camera Error', 'Could not access camera: ' + e, 'error');
+                });
             });
-        });
+        } catch (e) {
+            started = true;
+            clearTimeout(timeoutId);
+            html5QrCode = null;
+            $('#btnStartScan').prop('disabled', false);
+            Swal.fire('Camera Error', 'Could not access camera: ' + e, 'error');
+        }
     }
 
     function stopScan() {
         if (html5QrCode) {
-            html5QrCode.stop().then(function() {
-                html5QrCode = null;
-                $('#btnStartScan').show();
+            var inst = html5QrCode;
+            html5QrCode = null;
+            inst.stop().then(function() {
+                $('#btnStartScan').show().html('<i class="fa fa-camera me-2"></i> Scan another');
                 $('#btnStopScan').hide();
                 $('#scannerOverlay').hide();
-            }).catch(function() {});
+            }).catch(function() {
+                $('#btnStartScan').show().html('<i class="fa fa-camera me-2"></i> Scan another');
+                $('#btnStopScan').hide();
+                $('#scannerOverlay').hide();
+            });
+        } else {
+            $('#btnStartScan').show().html('<i class="fa fa-camera me-2"></i> Scan another');
+            $('#btnStopScan').hide();
+            $('#scannerOverlay').hide();
         }
     }
 
