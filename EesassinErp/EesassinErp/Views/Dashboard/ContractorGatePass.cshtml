@@ -12,6 +12,8 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
+    try {
+
     /*=========================================
         Permanent / Temporary Tabs
     =========================================*/
@@ -42,16 +44,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const rowCheckboxes = table.querySelectorAll("tbody .form-check-input");
 
-        headerCheckbox.addEventListener("change", function () {
+        if (headerCheckbox) {
+            headerCheckbox.addEventListener("change", function () {
 
-            rowCheckboxes.forEach(cb => {
+                rowCheckboxes.forEach(cb => {
 
-                cb.checked = this.checked;
+                    cb.checked = this.checked;
+
+                });
 
             });
+        }
 
-        });
+    }
 
+    } catch (e) {
+        console.error('ContractorGatePass init error (non-fatal):', e);
     }
 
 });
