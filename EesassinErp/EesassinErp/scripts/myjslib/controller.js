@@ -817,7 +817,7 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
             { label: 'Contractor Rozgar', url: '../Rozgar/ContractorRozgar' },
             { label: 'Contractor Compliance', url: '../RetailSection/ContractorCompliance' },
             { label: 'Worker Master', url: '../RetailSection/ContractorWorker' },
-            { label: 'Compliance Submission', url: '../Dashboard/CommunicationClient' }
+            { label: 'Compliance Submission', url: '../Dashboard/CommunicationVendor' }
         ];
         var employerItems = [
             { label: 'Worker GatePass', url: '../dashboard/PrincipleEmployerGatePass' },
