@@ -296,6 +296,11 @@
     box-shadow:none;
 }
 
+/* Fallback: open dropdowns on hover as well as click */
+.dropdown { position: relative; }
+.dropdown:hover > .dropdown-menu,
+.dropdown:focus-within > .dropdown-menu { display: block; }
+
 @@media (max-width:768px){
 
     .nav-center{
@@ -428,6 +433,48 @@
 
         <!-- Center nav items -->
         <div class="nav-center d-flex align-items-center gap-2">
+
+            <div class="dropdown">
+                <button class="nav-center-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border: 1px solid #022B5E; background: #fff; color: #022B5E;">
+                    Dashboard
+                </button>
+                <ul class="dropdown-menu">
+                    <li ng-if="isDashboardLoading">
+                        <i class="fa fa-spinner fa-spin"></i> Loading...
+                    </li>
+                    <li ng-if="!isDashboardLoading" ng-repeat="x in DahboardList | filter: { PageName : 'Dashboard' }">
+                        <a ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)" class="dropdown-item">{{ x.SectionName }}</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <button class="nav-center-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border: 1px solid #022B5E; background: #fff; color: #022B5E;">
+                    Master
+                </button>
+                <ul class="dropdown-menu">
+                    <li ng-if="isDashboardLoading">
+                        <i class="fa fa-spinner fa-spin"></i> Loading...
+                    </li>
+                    <li ng-if="!isDashboardLoading" ng-repeat="x in DahboardList | filter: { PageName : 'Master' }">
+                        <a class="dropdown-item" ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)">{{ x.SectionName }}</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="dropdown">
+                <button class="nav-center-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border: 1px solid #022B5E; background: #fff; color: #022B5E;">
+                    Report
+                </button>
+                <ul class="dropdown-menu">
+                    <li ng-if="isDashboardLoading">
+                        <i class="fa fa-spinner fa-spin"></i> Loading...
+                    </li>
+                    <li ng-if="!isDashboardLoading" ng-repeat="x in DahboardList | filter: { PageName : 'Report' }">
+                        <a class="dropdown-item" ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)">{{ x.SectionName }}</a>
+                    </li>
+                </ul>
+            </div>
 
             <a href="../Dashboard/WorkerDashboard" class="nav-center-btn active" style="text-decoration:none;">
                 Dashboard
