@@ -189,7 +189,8 @@
                 <div class="workerProfileLeft">
 
                     <div class="workerProfileImage">
-                        <img ng-src="{{DashboardDetail.EmployeePhotos}}" alt="">
+                        <img ng-src="{{DashboardDetail.EmployeePhotos}}" alt=""
+                             onerror="this.onerror=null;this.src='@Url.Content("~/Content/Photos/default-user.png")';">
                     </div>
 
                     <div class="workerProfileInfo">
