@@ -2,160 +2,47 @@
     string lt = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "";
     Layout = lt == "7" ? "~/Views/Common/WorkerLayout.cshtml" : "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "QR Scan";
-    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-
-
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- QR Scanner library -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
     body { background: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
-
-    .scan-header {
-        background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
-        color: #fff;
-        padding: 20px 26px;
-        border-radius: 14px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 18px rgba(26,35,126,.25);
-    }
-
-    .scan-card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 2px 14px rgba(0,0,0,.07);
-        margin-bottom: 20px;
-    }
-
-    .qr-scanner-wrapper {
-        position: relative;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 3px solid #3949ab;
-        background: #0a1930;
-    }
-
-    #reader {
-        width: 100%;
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    #reader video {
-        width: 100% !important;
-        height: auto !important;
-        border-radius: 12px;
-        display: block;
-    }
-
-    .qr-scanner-overlay {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 0, 0, 0.4);
-        pointer-events: none;
-        z-index: 10;
-    }
-
-    .qr-frame {
-        position: relative;
-        width: 220px;
-        height: 220px;
-        border-radius: 8px;
-        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-    }
-
-    .qr-corner {
-        position: absolute;
-        width: 30px;
-        height: 30px;
-        border: 4px solid #4fd1c5;
-    }
-
+    .scan-header { background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%); color: #fff; padding: 20px 26px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 4px 18px rgba(26,35,126,.25); }
+    .scan-card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 2px 14px rgba(0,0,0,.07); margin-bottom: 20px; }
+    .qr-scanner-wrapper { position: relative; border-radius: 12px; overflow: hidden; border: 3px solid #3949ab; background: #0a1930; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; }
+    #reader video { width: 100% !important; height: auto !important; border-radius: 12px; display: block; }
+    .qr-scanner-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); pointer-events: none; z-index: 10; }
+    .qr-frame { position: relative; width: 220px; height: 220px; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
+    .qr-corner { position: absolute; width: 30px; height: 30px; border: 4px solid #4fd1c5; }
     .qr-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
     .qr-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
     .qr-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
     .qr-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
-
-    .qr-scanner-line {
-        position: absolute;
-        left: 5%;
-        right: 5%;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, #4fd1c5, transparent);
-        box-shadow: 0 0 8px #4fd1c5;
-        animation: qrscan 2s ease-in-out infinite;
-    }
-
-    @keyframes qrscan {
-        0%, 100% { top: 8%; }
-        50% { top: 92%; }
-    }
-
-    .result-card {
-        background: #e8f5e9;
-        border-left: 4px solid #43a047;
-        border-radius: 10px;
-        padding: 18px 20px;
-        margin-top: 20px;
-        display: none;
-    }
-    .result-card.error {
-        background: #fce4ec;
-        border-color: #e53935;
-    }
-
-    .worker-detail-card {
-        background: #fff;
-        border-radius: 14px;
-        padding: 20px;
-        box-shadow: 0 2px 14px rgba(0,0,0,.08);
-        margin-top: 20px;
-        display: none;
-    }
-    .worker-detail-card .wname  { font-size: 20px; font-weight: 700; color: #1a237e; }
-    .worker-detail-card .wfield { font-size: 13px; color: #7b8fa1; margin-bottom: 4px; }
-    .worker-detail-card .wval   { font-size: 14px; font-weight: 600; color: #333; }
-
-    .qr-card-img {
-        width: 100%;
-        max-width: 360px;
-        border-radius: 12px;
-        box-shadow: 0 4px 14px rgba(0,0,0,.15);
-        margin-top: 16px;
-    }
-
-    .btn-qr-action {
-        background: linear-gradient(135deg, #1a237e, #3949ab);
-        color: #fff; border: none;
-        border-radius: 8px;
-        padding: 10px 22px;
-        font-weight: 600;
-        transition: opacity .2s;
-    }
+    .qr-scanner-line { position: absolute; left: 5%; right: 5%; height: 3px; background: linear-gradient(90deg, transparent, #4fd1c5, transparent); box-shadow: 0 0 8px #4fd1c5; animation: qrscan 2s ease-in-out infinite; }
+    @@keyframes qrscan { 0%, 100% { top: 8%; } 50% { top: 92%; } }
+    .result-card { background: #e8f5e9; border-left: 4px solid #43a047; border-radius: 10px; padding: 18px 20px; margin-top: 20px; display: none; }
+    .result-card.error { background: #fce4ec; border-color: #e53935; }
+    .entity-detail-card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 14px rgba(0,0,0,.08); margin-top: 20px; display: none; }
+    .entity-detail-card .ename { font-size: 20px; font-weight: 700; color: #1a237e; }
+    .entity-detail-card .efield { font-size: 13px; color: #7b8fa1; margin-bottom: 4px; }
+    .entity-detail-card .eval { font-size: 14px; font-weight: 600; color: #333; }
+    .qr-card-img { width: 100%; max-width: 360px; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.15); margin-top: 16px; }
+    .btn-qr-action { background: linear-gradient(135deg, #1a237e, #3949ab); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-weight: 600; transition: opacity .2s; }
     .btn-qr-action:hover { opacity: .88; color: #fff; }
-
-    .tab-btn {
-        background: #f0f4f8;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 18px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #1a237e;
-        margin-right: 8px;
-        cursor: pointer;
-        transition: background .2s;
-    }
+    .btn-qr-unbind { background: linear-gradient(135deg, #c62828, #e53935); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-weight: 600; transition: opacity .2s; }
+    .btn-qr-unbind:hover { opacity: .88; color: #fff; }
+    .btn-qr-pending { background: linear-gradient(135deg, #f57f17, #fbc02d); color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-weight: 600; }
+    .tab-btn { background: #f0f4f8; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; color: #1a237e; margin-right: 8px; cursor: pointer; transition: background .2s; }
     .tab-btn.active { background: #1a237e; color: #fff; }
+    .action-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-bound { background: #e8f5e9; color: #2e7d32; }
+    .badge-pending { background: #fff3e0; color: #e65100; }
+    .badge-unbound { background: #fce4ec; color: #c62828; }
+    .badge-info { background: #e3f2fd; color: #1565c0; }
 </style>
 
 <!-- Header -->
@@ -164,7 +51,7 @@
         <i class="fa fa-camera me-2"></i> QR Code Scanner
     </div>
     <div style="font-size:13px;opacity:.8;margin-top:3px;">
-        Scan a worker's QR card to view their profile
+        Scan a QR code to view details and manage bindings
     </div>
 </div>
 
@@ -179,7 +66,6 @@
         </button>
     </div>
 
-    <!-- Camera Tab -->
     <div id="cameraPanel">
         <p class="text-muted" style="font-size:13px;">Allow camera access and point at a QR code.</p>
         <div class="qr-scanner-wrapper" style="position: relative; max-width: 500px; margin: 0 auto;">
@@ -204,11 +90,10 @@
         </div>
     </div>
 
-    <!-- Manual Tab -->
     <div id="manualPanel" style="display:none;">
-        <p class="text-muted" style="font-size:13px;">Enter the QR reference code printed on the worker's card.</p>
+        <p class="text-muted" style="font-size:13px;">Enter the QR reference code.</p>
         <div class="input-group">
-            <input type="text" id="manualQrRef" class="form-control" placeholder="QR reference code (e.g. INF-WRK-12345)" />
+            <input type="text" id="manualQrRef" class="form-control" placeholder="QR reference code" />
             <button class="btn btn-qr-action" onclick="submitManual()">
                 <i class="fa fa-search me-1"></i> Lookup
             </button>
@@ -221,61 +106,30 @@
     <span id="resultMsg"></span>
 </div>
 
-<!-- Worker Detail -->
-<div class="worker-detail-card" id="workerDetailCard">
+<!-- Entity Detail Card -->
+<div class="entity-detail-card" id="entityDetailCard">
     <div class="d-flex justify-content-between align-items-start">
         <div>
-            <div class="wname" id="wdName">-</div>
-            <div class="text-muted" style="font-size:13px;" id="wdRef">-</div>
+            <div class="ename" id="eName">-</div>
+            <div id="eTypeBadge" style="margin-top:4px;"></div>
         </div>
         <div>
-            <span id="wdBadge" class="badge" style="font-size:12px;padding:6px 14px;"></span>
+            <span id="eStatusBadge" class="action-badge" style="font-size:12px;"></span>
         </div>
     </div>
     <hr />
-    <div class="row g-3 mt-1">
-        <div class="col-6 col-md-4">
-            <div class="wfield">Mobile</div>
-            <div class="wval" id="wdMobile">-</div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="wfield">Aadhaar</div>
-            <div class="wval" id="wdAadhaar">-</div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="wfield">Employer</div>
-            <div class="wval" id="wdEmployer">-</div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="wfield">Contractor</div>
-            <div class="wval" id="wdContractor">-</div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="wfield">Site</div>
-            <div class="wval" id="wdSite">-</div>
-        </div>
-        <div class="col-6 col-md-4">
-            <div class="wfield">Scan Time</div>
-            <div class="wval" id="wdScanTime">-</div>
-        </div>
+    <div class="row g-3 mt-1" id="eFields"></div>
+    <div class="text-center" id="eCardSection" style="display:none;">
+        <img id="eCardImg" class="qr-card-img" style="display:none;" alt="QR Card" />
     </div>
-    <div class="text-center">
-        <img id="wdCardImg" class="qr-card-img" style="display:none;" alt="Worker QR Card" />
-    </div>
-    <div class="d-flex gap-2 mt-4">
-        <button class="btn btn-qr-action" onclick="downloadCard()" id="btnDownloadCard" style="display:none;">
-            <i class="fa fa-download me-1"></i> Download QR Card
-        </button>
-        <button class="btn btn-outline-secondary" onclick="resetScan()">
-            <i class="fa fa-redo me-1"></i> Scan Another
-        </button>
-    </div>
+    <div class="d-flex gap-2 mt-4 flex-wrap" id="eActions"></div>
 </div>
 
 <script>
     var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
     var html5QrCode = null;
-    var currentWorkerId = null;
+    var currentScanData = null;
+    var currentBindingId = null;
 
     function switchTab(tab) {
         $('#tabCamera').toggleClass('active', tab === 'camera');
@@ -290,32 +144,22 @@
         html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
             { facingMode: "environment" },
-            {
-                fps: 10,
-                qrbox: { width: 220, height: 220 }
-            },
-            onScanSuccess,
-            onScanError
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            onScanSuccess, onScanError
         )
         .then(function() {
-            $('#btnStartScan').hide().prop('disabled', false).html('<i class="fa fa-play me-2"></i> Start Camera');
+            $('#btnStartScan').hide().prop('disabled', false);
             $('#btnStopScan').show();
             $('#scannerOverlay').show();
         })
         .catch(function(err) {
-            console.error("Camera start failed: ", err);
-            // Fallback to front camera
             html5QrCode.start(
                 { facingMode: "user" },
-                {
-                    fps: 10,
-                    qrbox: { width: 220, height: 220 }
-                },
-                onScanSuccess,
-                onScanError
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                onScanSuccess, onScanError
             )
             .then(function() {
-                $('#btnStartScan').hide().prop('disabled', false).html('<i class="fa fa-play me-2"></i> Start Camera');
+                $('#btnStartScan').hide().prop('disabled', false);
                 $('#btnStopScan').show();
                 $('#scannerOverlay').show();
             })
@@ -333,9 +177,7 @@
                 $('#btnStartScan').show();
                 $('#btnStopScan').hide();
                 $('#scannerOverlay').hide();
-            }).catch(function(err) {
-                console.error("Stop failed: ", err);
-            });
+            }).catch(function() {});
         }
     }
 
@@ -346,21 +188,13 @@
             var ctx = new Ctx();
             var osc = ctx.createOscillator();
             var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = 880;
-            gain.gain.value = 0.3;
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            setTimeout(function() { osc.stop(); ctx.close(); }, 180);
+            osc.type = 'sine'; osc.frequency.value = 880; gain.gain.value = 0.3;
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); setTimeout(function() { osc.stop(); ctx.close(); }, 180);
         } catch(e) {}
     }
 
-    function onScanSuccess(text) {
-        beep();
-        stopScan();
-        processQr(text);
-    }
+    function onScanSuccess(text) { beep(); stopScan(); processQr(text); }
     function onScanError(err) {}
 
     function submitManual() {
@@ -369,37 +203,69 @@
         processQr(ref);
     }
 
+    function postJson(url, data) {
+        return $.ajax({
+            url: QR_BRIDGE + url,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data)
+        });
+    }
+
+    function getJson(url) {
+        return $.ajax({ url: QR_BRIDGE + url, method: 'GET' });
+    }
+
     function processQr(qrReference) {
         $('#resultCard').hide();
-        $('#workerDetailCard').hide();
+        $('#entityDetailCard').hide();
+        currentScanData = null;
+        currentBindingId = null;
 
         var lat = null, lng = null;
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function (p) {
-                lat = p.coords.latitude; lng = p.coords.longitude;
-            });
+            navigator.geolocation.getCurrentPosition(function (p) { lat = p.coords.latitude; lng = p.coords.longitude; });
         }
 
-        $.ajax({
-            url: QR_BRIDGE + '/qr/qr/scan/',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ qr_reference: qrReference, latitude: lat, longitude: lng }),
-            success: function (data) {
-                showResult(true, '✅ QR scanned successfully');
-                renderWorker(data);
-            },
-            error: function (xhr) {
-                if (xhr.status === 401) {
-                    showResult(false, '⏳ Session expired - opening login...');
-                    setTimeout(function () { window.location = '/Login'; }, 1200);
+        postJson('/qr/qr/scan/', { qr_reference: qrReference, latitude: lat, longitude: lng })
+            .done(function(resp) {
+                if (resp.Result === 'Error') {
+                    showResult(false, resp.Message || 'Scan failed');
                     return;
                 }
-                var msg = '❌ Scan failed.';
-                try { var e = JSON.parse(xhr.responseText); msg = '❌ ' + (e.detail || e.error || JSON.stringify(e)); } catch(ex){}
+                var d = resp.Data || resp;
+                var entityType = d.entity_type;
+                var action = d.action;
+
+                if (action === 'contractor_login_required') {
+                    showResult(false, 'Your account is not linked as a contractor. Please contact admin.');
+                    return;
+                }
+                if (action === 'worker_login_required') {
+                    showResult(false, 'Your account is not linked as a worker. Please contact admin.');
+                    return;
+                }
+
+                showResult(true, 'QR scanned successfully');
+                currentScanData = d;
+                currentBindingId = d.binding_id || null;
+
+                if (entityType === 'WORKER') renderWorker(d);
+                else if (entityType === 'EMPLOYER') renderEmployer(d);
+                else if (entityType === 'CONTRACTOR') renderContractor(d);
+                else if (entityType === 'SITE') renderSite(d);
+                else renderGeneric(d);
+            })
+            .fail(function(xhr) {
+                if (xhr.status === 401) {
+                    showResult(false, 'Session expired - redirecting to login...');
+                    setTimeout(function() { window.location = '/Login'; }, 1200);
+                    return;
+                }
+                var msg = 'Scan failed.';
+                try { var e = JSON.parse(xhr.responseText); msg = e.Message || e.detail || msg; } catch(ex){}
                 showResult(false, msg);
-            }
-        });
+            });
     }
 
     function showResult(ok, msg) {
@@ -407,45 +273,257 @@
         $('#resultMsg').html(msg);
     }
 
-    function renderWorker(data) {
-        currentWorkerId = data.worker_id || (data.worker && data.worker.id) || null;
-        var w = data.worker || data;
+    function renderWorker(d) {
+        var w = d.worker || {};
+        var fields = buildFields([
+            ['Worker ID', w.worker_id || '-'],
+            ['Mobile', w.mobile || '-'],
+            ['Designation', w.designation || '-'],
+            ['Employer', (w.employer && (w.employer.name || w.employer)) || '-'],
+            ['Contractor', (w.contractor && (w.contractor.name || w.contractor)) || '-'],
+            ['Site', (w.site && (w.site.name || w.site)) || '-'],
+            ['Scan Time', new Date().toLocaleTimeString()]
+        ]);
 
-        $('#wdName').text(w.name || w.full_name || '-');
-        $('#wdRef').text('Ref: ' + (data.qr_reference || '-'));
-        $('#wdMobile').text(w.mobile || w.phone || '-');
+        $('#eName').text(w.full_name || w.name || '-');
+        $('#eTypeBadge').html('<span class="action-badge badge-info"><i class="fa fa-user me-1"></i> Worker</span>');
 
-        var aadh = w.aadhaar || '';
-        $('#wdAadhaar').text(aadh ? ('••••••••' + aadh.slice(-4)) : '-');
+        var statusText = d.action === 'already_bound' ? 'Active' :
+                         d.action === 'binding_requested' || d.action === 'binding_pending' ? 'Binding Pending' :
+                         d.action === 'bound_elsewhere' ? 'Bound to Other' : 'Unbound';
+        var statusClass = d.action === 'already_bound' ? 'badge-bound' :
+                         d.action === 'binding_pending' || d.action === 'binding_requested' ? 'badge-pending' :
+                         d.action === 'bound_elsewhere' ? 'badge-unbound' : 'badge-info';
+        $('#eStatusBadge').text(statusText).attr('class', 'action-badge ' + statusClass);
 
-        $('#wdEmployer').text((w.employer && (w.employer.name || w.employer)) || '-');
-        $('#wdContractor').text((w.contractor && (w.contractor.name || w.contractor)) || '-');
-        $('#wdSite').text((w.site && (w.site.name || w.site)) || '-');
-        $('#wdScanTime').text(new Date().toLocaleTimeString());
+        $('#eFields').html(fields);
+        $('#eCardSection').show();
 
-        var active = w.is_active !== false;
-        $('#wdBadge').text(active ? 'Active' : 'Inactive')
-            .css({ background: active ? '#e8f5e9' : '#fce4ec', color: active ? '#2e7d32' : '#c62828' });
-
-        if (currentWorkerId) {
-            $('#btnDownloadCard').show();
-            var cardUrl = QR_BRIDGE + '/qr/workers/' + currentWorkerId + '/card/?fmt=png';
-            $('#wdCardImg').attr('src', cardUrl).show();
+        if (w.id) {
+            $('#eCardImg').attr('src', QR_BRIDGE + '/qr/workers/' + w.id + '/card/?fmt=png').show();
+        } else {
+            $('#eCardImg').hide();
         }
 
-        $('#workerDetailCard').show();
+        var actions = '';
+        if (d.action === 'already_bound' && w.id) {
+            actions += '<button class="btn btn-qr-action" onclick="downloadWorkerCard(' + w.id + ')"><i class="fa fa-download me-1"></i> Download QR Card</button>';
+        }
+        actions += '<button class="btn btn-outline-secondary" onclick="resetScan()"><i class="fa fa-redo me-1"></i> Scan Another</button>';
+        $('#eActions').html(actions);
+
+        $('#entityDetailCard').show();
     }
 
-    function downloadCard() {
-        if (!currentWorkerId) return;
-        var url = '/Api/QrBridge/qr/workers/' + currentWorkerId + '/card/?fmt=pdf';
-        window.open(url, '_blank');
+    function renderEmployer(d) {
+        var e = d.employer || {};
+        var fields = buildFields([
+            ['Email', e.email || '-'],
+            ['Contact Person', e.contact_person || '-'],
+            ['Mobile', e.contact_mobile || '-'],
+            ['Industry', e.industry || '-'],
+            ['State', e.state || '-'],
+            ['City', e.city || '-'],
+            ['Scan Time', new Date().toLocaleTimeString()]
+        ]);
+
+        $('#eName').text(e.name || '-');
+        $('#eTypeBadge').html('<span class="action-badge badge-info"><i class="fa fa-building me-1"></i> Employer</span>');
+
+        var statusText, statusClass;
+        if (d.action === 'already_bound') {
+            statusText = 'Bound'; statusClass = 'badge-bound';
+        } else if (d.action === 'binding_requested' || d.action === 'request_pending') {
+            statusText = 'Binding Pending'; statusClass = 'badge-pending';
+        } else if (d.action === 'bound_elsewhere') {
+            statusText = 'Bound to Other'; statusClass = 'badge-unbound';
+        } else {
+            statusText = 'Unbound'; statusClass = 'badge-info';
+        }
+        $('#eStatusBadge').text(statusText).attr('class', 'action-badge ' + statusClass);
+        $('#eFields').html(fields);
+        $('#eCardSection').hide();
+
+        var actions = '';
+        if (d.action === 'already_bound' && d.can_unbind) {
+            actions += '<button class="btn btn-qr-unbind" onclick="unbindEmployer(' + e.id + ')"><i class="fa fa-link-slash me-1"></i> Unbind from Employer</button>';
+        } else if (d.action === 'binding_requested' || d.action === 'request_pending') {
+            actions += '<button class="btn btn-qr-pending" disabled><i class="fa fa-clock me-1"></i> Binding Request Pending</button>';
+        } else if (d.action === 'bound_elsewhere' && d.can_request) {
+            actions += '<button class="btn btn-qr-action" onclick="requestBindEmployer(' + e.id + ')"><i class="fa fa-link me-1"></i> Request Binding</button>';
+        } else if (d.action === 'binding_requested' && d.binding_id) {
+            actions += '<button class="btn btn-qr-pending" disabled><i class="fa fa-clock me-1"></i> Request Sent</button>';
+        }
+        actions += '<button class="btn btn-outline-secondary" onclick="resetScan()"><i class="fa fa-redo me-1"></i> Scan Another</button>';
+        $('#eActions').html(actions);
+
+        $('#entityDetailCard').show();
+    }
+
+    function renderContractor(d) {
+        var c = d.contractor || {};
+        var fields = buildFields([
+            ['Mobile', c.contact_mobile || '-'],
+            ['Site', c.site_name || '-'],
+            ['Primary', c.is_primary ? 'Yes' : 'No'],
+            ['Scan Time', new Date().toLocaleTimeString()]
+        ]);
+
+        $('#eName').text(c.name || '-');
+        $('#eTypeBadge').html('<span class="action-badge badge-info"><i class="fa fa-hard-hat me-1"></i> Contractor</span>');
+
+        var statusText, statusClass;
+        if (d.action === 'already_bound') {
+            statusText = 'Bound'; statusClass = 'badge-bound';
+        } else if (d.action === 'binding_requested' || d.action === 'request_pending') {
+            statusText = 'Binding Pending'; statusClass = 'badge-pending';
+        } else if (d.action === 'bound_elsewhere') {
+            statusText = 'Bound to Other'; statusClass = 'badge-unbound';
+        } else {
+            statusText = 'Info'; statusClass = 'badge-info';
+        }
+        $('#eStatusBadge').text(statusText).attr('class', 'action-badge ' + statusClass);
+        $('#eFields').html(fields);
+        $('#eCardSection').hide();
+
+        var actions = '';
+        if (d.action === 'already_bound' && d.can_unbind) {
+            actions += '<button class="btn btn-qr-unbind" onclick="unbindContractor(' + c.id + ')"><i class="fa fa-link-slash me-1"></i> Unbind Contractor</button>';
+        } else if (d.action === 'binding_requested' || d.action === 'request_pending') {
+            actions += '<button class="btn btn-qr-pending" disabled><i class="fa fa-clock me-1"></i> Binding Request Pending</button>';
+        } else if (d.action === 'binding_requested' && d.binding_id) {
+            actions += '<button class="btn btn-qr-pending" disabled><i class="fa fa-clock me-1"></i> Request Sent</button>';
+        }
+        actions += '<button class="btn btn-outline-secondary" onclick="resetScan()"><i class="fa fa-redo me-1"></i> Scan Another</button>';
+        $('#eActions').html(actions);
+
+        $('#entityDetailCard').show();
+    }
+
+    function renderSite(d) {
+        var s = d.site || {};
+        var fields = buildFields([
+            ['Address', s.address || '-'],
+            ['City', s.city || '-'],
+            ['State', s.state || '-'],
+            ['Scan Time', new Date().toLocaleTimeString()]
+        ]);
+
+        $('#eName').text(s.name || '-');
+        $('#eTypeBadge').html('<span class="action-badge badge-info"><i class="fa fa-map-marker me-1"></i> Site</span>');
+
+        var statusText = d.action === 'already_bound' ? 'Bound' :
+                         d.action === 'binding_requested' || d.action === 'request_pending' ? 'Pending' : 'Unbound';
+        var statusClass = d.action === 'already_bound' ? 'badge-bound' :
+                         d.action === 'binding_requested' ? 'badge-pending' : 'badge-info';
+        $('#eStatusBadge').text(statusText).attr('class', 'action-badge ' + statusClass);
+        $('#eFields').html(fields);
+        $('#eCardSection').hide();
+
+        var actions = '';
+        if (d.action === 'already_bound' && d.can_unbind) {
+            actions += '<button class="btn btn-qr-unbind" onclick="unbindSite(' + s.id + ')"><i class="fa fa-link-slash me-1"></i> Unbind from Site</button>';
+        } else if (d.action === 'binding_requested') {
+            actions += '<button class="btn btn-qr-pending" disabled><i class="fa fa-clock me-1"></i> Request Sent</button>';
+        }
+        actions += '<button class="btn btn-outline-secondary" onclick="resetScan()"><i class="fa fa-redo me-1"></i> Scan Another</button>';
+        $('#eActions').html(actions);
+
+        $('#entityDetailCard').show();
+    }
+
+    function renderGeneric(d) {
+        var fields = buildFields([
+            ['Type', d.entity_type || '-'],
+            ['Action', d.action || '-'],
+            ['Scan Time', new Date().toLocaleTimeString()]
+        ]);
+        $('#eName').text(d.entity_type || 'Unknown');
+        $('#eTypeBadge').html('');
+        $('#eStatusBadge').text(d.action || '-').attr('class', 'action-badge badge-info');
+        $('#eFields').html(fields);
+        $('#eCardSection').hide();
+        $('#eActions').html('<button class="btn btn-outline-secondary" onclick="resetScan()"><i class="fa fa-redo me-1"></i> Scan Another</button>');
+        $('#entityDetailCard').show();
+    }
+
+    function buildFields(pairs) {
+        var html = '';
+        for (var i = 0; i < pairs.length; i++) {
+            html += '<div class="col-6 col-md-4"><div class="efield">' + pairs[i][0] + '</div><div class="eval">' + pairs[i][1] + '</div></div>';
+        }
+        return html;
+    }
+
+    function downloadWorkerCard(workerId) {
+        window.open(QR_BRIDGE + '/qr/workers/' + workerId + '/card/?fmt=pdf', '_blank');
+    }
+
+    function unbindWithId(bindingId, confirmTitle, confirmText) {
+        Swal.fire({
+            title: confirmTitle,
+            text: confirmText,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#c62828',
+            confirmButtonText: 'Yes, Unbind'
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
+            if (!bindingId) {
+                Swal.fire('Error', 'No binding ID available. Please try again.', 'error');
+                return;
+            }
+            Swal.fire({ title: 'Unbinding...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+            postJson('/qr/bindings/' + bindingId + '/unbind/', {})
+                .done(function(r2) {
+                    if (r2.Result === 'Success') {
+                        Swal.fire('Unbound', r2.Message || 'Successfully unbound.', 'success');
+                    } else {
+                        Swal.fire('Error', r2.Message || 'Unbind failed.', 'error');
+                    }
+                    resetScan();
+                })
+                .fail(function(xhr) {
+                    var msg = 'Unbind failed.';
+                    try { msg = JSON.parse(xhr.responseText).Message || msg; } catch(ex){}
+                    Swal.fire('Error', msg, 'error');
+                    resetScan();
+                });
+        });
+    }
+
+    function unbindEmployer(employerId) {
+        unbindWithId(currentBindingId, 'Unbind from Employer?', 'This will remove your association with this employer. You may need to scan again to re-bind.');
+    }
+
+    function unbindContractor(contractorId) {
+        unbindWithId(currentBindingId, 'Unbind Contractor?', 'This will remove the contractor association.');
+    }
+
+    function unbindSite(siteId) {
+        unbindWithId(currentBindingId, 'Unbind from Site?', 'This will remove your association with this site.');
+    }
+
+    function requestBindEmployer(employerId) {
+        Swal.fire({
+            title: 'Request Binding?',
+            text: 'Send a binding request to this employer.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1a237e',
+            confirmButtonText: 'Send Request'
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
+            Swal.fire({ title: 'Sending...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+            resetScan();
+        });
     }
 
     function resetScan() {
         $('#resultCard').hide();
-        $('#workerDetailCard').hide();
-        currentWorkerId = null;
+        $('#entityDetailCard').hide();
+        currentScanData = null;
+        currentBindingId = null;
         switchTab('camera');
     }
 </script>

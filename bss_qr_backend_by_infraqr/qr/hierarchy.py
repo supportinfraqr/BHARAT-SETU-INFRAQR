@@ -60,9 +60,10 @@ def get_worker_details(worker: Worker):
 
 def get_contractor_employers(contractor: Contractor):
     """GUIDE.MD Get_Contractor_Employers(C) -> distinct employers via sites."""
+    from .models import Binding
     employer_ids = (
-        ContractorEmployment.objects
-        .filter(contractor=contractor, status="ACTIVE")
+        Binding.objects
+        .filter(binding_type="EMPLOYER_CONTRACTOR", contractor=contractor, status="ACTIVE")
         .values_list("employer_id", flat=True)
         .distinct()
     )
@@ -71,9 +72,10 @@ def get_contractor_employers(contractor: Contractor):
 
 def get_contractor_sites(contractor: Contractor):
     """GUIDE.MD Get_Contractor_Sites(C) -> distinct sites."""
+    from .models import Binding
     site_ids = (
-        ContractorEmployment.objects
-        .filter(contractor=contractor, status="ACTIVE")
+        Binding.objects
+        .filter(binding_type="EMPLOYER_CONTRACTOR", contractor=contractor, status="ACTIVE")
         .values_list("site_id", flat=True)
         .distinct()
     )
@@ -84,9 +86,10 @@ def get_employer_contractors_at_site(employer: Employer, site: Site):
     """GUIDE.MD Get_Employer_Contractors_At_Site(E, S)."""
     if site.employer_id != employer.pk:
         return []
+    from .models import Binding
     contractor_ids = (
-        ContractorEmployment.objects
-        .filter(employer=employer, site=site, status="ACTIVE")
+        Binding.objects
+        .filter(binding_type="EMPLOYER_CONTRACTOR", employer=employer, site=site, status="ACTIVE")
         .values_list("contractor_id", flat=True)
         .distinct()
     )

@@ -11,3 +11,8 @@ obj/
 venv/
 __pycache__/
 *.pyc
+
+backups/
+EesassinErp/scratch/
+run/apache/logs/
+run/apache/run/

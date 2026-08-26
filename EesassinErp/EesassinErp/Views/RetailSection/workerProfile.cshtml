@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     ViewBag.Title = "Worker Profile";
  Layout = "~/Views/Common/WorkerLayout.cshtml";
@@ -2019,9 +2019,10 @@
 
                     <div class="employeeProfileImageWrap">
 
-                        <img ng-src="{{EmployeeList.EmployeePhotos}}"
+                        <img ng-src="{{EmployeeList.EmployeePhotos || '@Url.Content("~/Content/Photos/default-user.png")'}}"
                              alt="Employee Profile"
-                             class="employeeProfileImage">
+                             class="employeeProfileImage"
+                             onerror="this.onerror=null;this.src='@Url.Content("~/Content/Photos/default-user.png")';">
 
                     </div>
 
@@ -2092,23 +2093,15 @@
 
                 <!-- QR -->
                 <div class="employeeProfileQrSection">
-                    @*<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=EMPLOYEE"
-                           class="employeeProfileQr">*@
-                    <img ng-src="{{getProfQR(EmployeeList.EmployeeCode)}}" style="width: 110px;" class="employeeProfileQr">
+                    <img ng-src="{{getProfQR(EmployeeList.EmployeeCode)}}" style="width:64px;height:64px;object-fit:contain;" class="employeeProfileQr"
+                         onerror="var r=(this.getAttribute('data-retries')||0);this.setAttribute('data-retries',r+1);if(r<3){var self=this;setTimeout(function(){self.src=self.src+'&t='+Date.now()},1200);}">
 
-                    <div class="employeeProfileQrActions" style=" flex-direction: column">
-
-                        <button class="btn employeeProfileOutlineBtn" ng-click="shareEmployeeQR(EmployeeList.EmployeeCode)">
-                            <i class="bi bi-share me-1"></i>
-                            Download/ Share QR
-                        </button>
-
-                        @*<button class="btn employeeProfilePrimaryBtn">
+                    <div class="employeeProfileQrActions" style="flex-direction: column; width: 100%;">
+                        <a class="btn employeeProfileOutlineBtn" ng-href="{{getProfQR(EmployeeList.EmployeeCode)}}" download="QR_Code.png">
+                            <i class="bi bi-download me-1"></i>
                             Download QR
-                        </button>*@
-
+                        </a>
                     </div>
-
                 </div>
 
             </div>

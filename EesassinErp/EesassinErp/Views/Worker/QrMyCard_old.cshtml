@@ -1,0 +1,311 @@
+@{
+    string lt = ViewBag.LoginType?.ToString() ?? Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "";
+    Layout = lt == "7" ? "~/Views/Common/WorkerLayout.cshtml" : "~/Views/Common/_NewRetailLayout.cshtml";
+    ViewBag.Title = "My Identity Card";
+    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+
+
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+        background: #f1f5f9;
+        color: #1e293b;
+        min-height: 100vh;
+    }
+
+    /* ─── Page wrapper ─────────────────────────────────── */
+    .page-wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 20px 60px;
+    }
+
+    /* ─── Top Header/Toolbar ───────────────────────────── */
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 18px 24px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .page-header-left .title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+    .page-header-left .subtitle {
+        font-size: 13px;
+        color: #475569;
+        margin: 4px 0 0 0;
+    }
+    .btn-group-actions { display: flex; gap: 10px; }
+    .btn-act {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    .btn-act-success { 
+        background: #059669; 
+        color: #fff; 
+        box-shadow: 0 4px 12px rgba(5,150,105,0.25); 
+    }
+    .btn-act-success:hover:not(:disabled) { 
+        background: #047857; 
+        transform: translateY(-1px); 
+        color: #fff; 
+    }
+    .btn-act-success:disabled {
+        background: #cbd5e1;
+        color: #94a3b8;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    /* ─── Loading state ────────────────────────────────── */
+    #loadingBlock {
+        text-align: center;
+        padding: 60px 0;
+        color: #64748b;
+    }
+    .spinner-ring {
+        width: 48px; height: 48px;
+        border: 4px solid rgba(0,0,0,0.1);
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 16px;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Viewer and Artboards ─────────────────────────── */
+    .viewer {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        border: 1px solid #e2e8f0;
+    }
+    .cards-stage {
+        display: flex;
+        gap: 28px;
+        justify-content: center;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+    .card-slot {
+        flex: 1 1 400px;
+        max-width: 460px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .card-side-label {
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #64748b;
+    }
+    .artboard {
+        width: 100%;
+        overflow: hidden;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        aspect-ratio: 900 / 1240;
+        position: relative;
+    }
+    .artboard img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    /* shimmer skeleton while loading */
+    .card-skeleton {
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+        background: linear-gradient(
+            90deg,
+            rgba(0,0,0,0.03) 25%,
+            rgba(0,0,0,0.07) 50%,
+            rgba(0,0,0,0.03) 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    @@keyframes shimmer {
+        0%   { background-position: 200% center; }
+        100% { background-position: -200% center; }
+    }
+
+    /* ─── Error alert ──────────────────────────────────── */
+    .error-box {
+        background: rgba(239,68,68,0.1);
+        border: 1px solid rgba(239,68,68,0.3);
+        color: #ef4444;
+        border-radius: 12px;
+        padding: 16px 20px;
+        font-size: 14px;
+        display: none;
+        margin-bottom: 24px;
+    }
+
+    /* ─── Info strip ───────────────────────────── */
+    .card-info-strip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        flex-wrap: wrap;
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+    }
+    .info-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #64748b;
+    }
+    .info-chip i { color: #f58220; font-size: 15px; }
+
+    @@media (max-width: 860px) {
+        .card-slot { flex: 1 1 100%; }
+        .viewer { padding: 16px; }
+    }
+</style>
+
+<div class="page-wrap">
+
+    <!-- Error -->
+    <div id="errorBox" class="error-box">
+        <i class="fa fa-triangle-exclamation me-2"></i>
+        <span id="errorMsg">Failed to load identity card.</span>
+    </div>
+
+    <!-- Top toolbar -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <div class="title">Bharat Shram Setu - Employment Card</div>
+            <div class="subtitle">Verified digital identity card - front &amp; back</div>
+        </div>
+        <div class="btn-group-actions">
+            <button class="btn-act btn-act-success" id="btnPdf" onclick="downloadPdf()" disabled>
+                <i class="fa fa-file-pdf"></i> Download PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingBlock">
+        <div class="spinner-ring"></div>
+        <div style="font-size:14px;color:#475569;">Loading your identity card...</div>
+    </div>
+
+    <!-- Viewer -->
+    <div id="displayArea" class="viewer" style="display:none;">
+        <div class="cards-stage">
+
+            <!-- Front -->
+            <div class="card-slot">
+                <div class="card-side-label">Front Side</div>
+                <div class="artboard" id="frameFront">
+                    <div class="card-skeleton" id="skelFront"></div>
+                    <img id="imgFront" alt="Employment Card - Front" style="display:none;" />
+                </div>
+            </div>
+
+            <!-- Back -->
+            <div class="card-slot">
+                <div class="card-side-label">Back Side</div>
+                <div class="artboard" id="frameBack">
+                    <div class="card-skeleton" id="skelBack"></div>
+                    <img id="imgBack" alt="Employment Card - Back" style="display:none;" />
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Info strip -->
+        <div class="card-info-strip">
+            <div class="info-chip"><i class="fa fa-shield-halved"></i> Verified Identity</div>
+            <div class="info-chip"><i class="fa fa-briefcase"></i> Portable Across Jobs</div>
+            <div class="info-chip"><i class="fa fa-lock"></i> Secure &amp; Trusted</div>
+            <div class="info-chip"><i class="fa fa-qrcode"></i> Scan for Verification</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
+    var loadedCount = 0;
+
+    $(function () {
+        $('#displayArea').show();   // show shells immediately
+        loadCard('front');
+        loadCard('back');
+    });
+
+    function loadCard(side) {
+        var url = QR_BRIDGE + '/qr/my-card/?fmt=png&side=' + side + '&t=' + Date.now();
+        var img = new Image();
+        var imgEl  = side === 'front' ? $('#imgFront')  : $('#imgBack');
+        var skelEl = side === 'front' ? $('#skelFront') : $('#skelBack');
+
+        img.onload = function () {
+            imgEl.attr('src', url).show();
+            skelEl.hide();
+            loadedCount++;
+            if (loadedCount >= 2) {
+                $('#loadingBlock').hide();
+                $('#btnPdf').prop('disabled', false);
+            }
+        };
+
+        img.onerror = function () {
+            skelEl.hide();
+            imgEl.parent().css({ background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' });
+            imgEl.parent().html('<div style="text-align:center;padding:20px;color:#f87171;font-size:13px;"><i class="fa fa-circle-xmark" style="font-size:32px;margin-bottom:10px;display:block;"></i>Could not load ' + side + ' side.<br>Ensure your account is fully set up.</div>');
+            $('#loadingBlock').hide();
+            $('#errorBox').show();
+            $('#errorMsg').text('One or more card sides failed to load. Please check your account setup or contact support.');
+        };
+
+        img.src = url;
+    }
+
+    function downloadPdf() {
+        // side=both → landscape A4 with front on left, back on right
+        window.open(QR_BRIDGE + '/qr/my-card/?fmt=pdf&side=both', '_blank');
+    }
+</script>

@@ -1,311 +1,503 @@
 @{
-    string lt = ViewBag.LoginType?.ToString() ?? Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? "";
+    string lt = Session["loginType"]?.ToString() ?? Session["LoginType"]?.ToString() ?? Session["loginType"]?.ToString() ?? "";
     Layout = lt == "7" ? "~/Views/Common/WorkerLayout.cshtml" : "~/Views/Common/_NewRetailLayout.cshtml";
     ViewBag.Title = "My Identity Card";
-    string qrBase = ViewBag.QrBaseUrl ?? "https://bharat-shramsetu.infraqr.com";
 }
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    :root{
+        --blue:#082b66;
+        --blue2:#063d8c;
+        --green:#159447;
+        --orange:#f58220;
+        --line:#c9d2dc;
+        --text:#101820;
+        --soft:#f5f7fa;
+    }
+    *{box-sizing:border-box}
+    body{background:#f0f4f8;font-family:"Segoe UI",Arial,sans-serif;color:var(--text)}
 
-    body {
-        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-        background: #111;
-        color: #fff;
-        min-height: 100vh;
-    }
+    .card-page{max-width:1100px;margin:0 auto;padding:34px 22px 60px}
 
-    /* ─── Page wrapper ─────────────────────────────────── */
-    .page-wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 32px 20px 60px;
+    .card-toolbar{
+        display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+        margin-bottom:20px;padding:16px 22px;background:#fff;border-radius:14px;
+        box-shadow:0 2px 10px rgba(0,0,0,.06)
     }
+    .card-toolbar h2{margin:0;font-size:20px;font-weight:800;color:#082b66}
+    .card-toolbar .sub{font-size:12px;color:#666;margin-top:2px}
+    .card-toolbar .actions{display:flex;gap:10px}
+    .btn-card{
+        display:inline-flex;align-items:center;gap:7px;padding:10px 20px;
+        border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;
+        transition:all .15s
+    }
+    .btn-card.primary{background:#082b66;color:#fff}
+    .btn-card.primary:hover{background:#063d8c}
+    .btn-card.outline{background:#fff;color:#082b66;border:2px solid #082b66}
+    .btn-card.outline:hover{background:#f0f4f8}
+    .btn-card:disabled{background:#ccc;color:#888;cursor:not-allowed;border-color:#ccc}
 
-    /* ─── Top Header/Toolbar ───────────────────────────── */
-    .page-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin-bottom: 24px;
-        padding: 18px 24px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    .card-stage{
+        width:100%;background:#fff;padding:10px;border-radius:2px;
+        box-shadow:0 4px 24px rgba(0,0,0,.12)
     }
-    .page-header-left .title {
-        font-size: 22px;
-        font-weight: 800;
-        color: #0f172a;
-        margin: 0;
-    }
-    .page-header-left .subtitle {
-        font-size: 13px;
-        color: #475569;
-        margin: 4px 0 0 0;
-    }
-    .btn-group-actions { display: flex; gap: 10px; }
-    .btn-act {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 20px;
-        font-size: 13px;
-        font-weight: 600;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-    }
-    .btn-act-success { 
-        background: #059669; 
-        color: #fff; 
-        box-shadow: 0 4px 12px rgba(5,150,105,0.25); 
-    }
-    .btn-act-success:hover:not(:disabled) { 
-        background: #047857; 
-        transform: translateY(-1px); 
-        color: #fff; 
-    }
-    .btn-act-success:disabled {
-        background: #334155;
-        color: #64748b;
-        cursor: not-allowed;
-        box-shadow: none;
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+    .card{
+        position:relative;aspect-ratio:1.72/1;overflow:hidden;border-radius:16px;
+        background:#fff;border:1px solid #d5dce4;box-shadow:0 3px 12px rgba(0,0,0,.15)
     }
 
-    /* ─── Loading state ────────────────────────────────── */
-    #loadingBlock {
-        text-align: center;
-        padding: 60px 0;
-        color: #aeb7c2;
+    /* FRONT */
+    .front-top{
+        height:22%;padding:12px 18px 7px;display:flex;align-items:center;
+        justify-content:space-between;
+        background:radial-gradient(circle at 82% 20%,rgba(18,151,76,.10),transparent 28%),#fff;
+        border-top:4px solid var(--orange);position:relative
     }
-    .spinner-ring {
-        width: 48px; height: 48px;
-        border: 4px solid rgba(255,255,255,0.1);
-        border-top-color: #2563eb;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto 16px;
+    .front-top:after{
+        content:"";position:absolute;left:0;right:0;bottom:0;height:4px;
+        background:linear-gradient(90deg,var(--orange),#fff 32%,#fff 67%,var(--green))
     }
-    @@keyframes spin { to { transform: rotate(360deg); } }
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand-mark{width:58px;height:45px;position:relative}
+    .person{position:absolute;width:12px;height:18px;border-radius:8px 8px 4px 4px;bottom:5px}
+    .person:before{content:"";position:absolute;width:10px;height:10px;border-radius:50%;top:-9px;left:1px;background:inherit}
+    .p1{left:4px;background:#169447}.p2{left:20px;background:#f58220}.p3{left:35px;background:#169447}
+    .arc{position:absolute;left:0;bottom:0;width:51px;height:24px;border:5px solid var(--blue);border-top:0;border-radius:0 0 50px 50px;transform:rotate(-8deg)}
+    .brand-name{line-height:1;font-weight:900;font-size:19px;color:var(--blue)}
+    .brand-name span{color:var(--orange)}
+    .tagline{margin-top:5px;font-size:7px;color:#444}
+    .employment{text-align:right;font-size:18px;line-height:1.05;font-weight:900;color:#082b66}
 
-    /* ─── Viewer and Artboards ─────────────────────────── */
-    .viewer {
-        background: #1a1a1a;
-        border-radius: 18px;
-        padding: 24px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.45);
-        border: 1px solid rgba(255,255,255,0.05);
+    .verified-bar{
+        height:7%;background:linear-gradient(90deg,#082b66 0 49%,#0b4b96 50% 84%,#118948 85%);
+        color:#fff;display:flex;align-items:center;justify-content:center;
+        font-size:12px;font-weight:800;gap:8px
     }
-    .cards-stage {
-        display: flex;
-        gap: 28px;
-        justify-content: center;
-        align-items: flex-start;
-        flex-wrap: wrap;
-    }
-    .card-slot {
-        flex: 1 1 400px;
-        max-width: 460px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-    .card-side-label {
-        font-size: 13px;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        color: #aeb7c2;
-    }
-    .artboard {
-        width: 100%;
-        overflow: hidden;
-        border-radius: 10px;
-        background: #fff;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-        aspect-ratio: 900 / 1240;
-        position: relative;
-    }
-    .artboard img {
-        display: block;
-        width: 100%;
-        height: auto;
-    }
+    .shield{width:17px;height:17px;border:1.7px solid currentColor;border-radius:50% 50% 45% 45%;position:relative}
+    .shield:after{content:"\2713";position:absolute;left:3px;top:-2px;font-size:12px}
 
-    /* shimmer skeleton while loading */
-    .card-skeleton {
-        width: 100%;
-        height: 100%;
-        border-radius: 10px;
-        background: linear-gradient(
-            90deg,
-            rgba(255,255,255,0.03) 25%,
-            rgba(255,255,255,0.07) 50%,
-            rgba(255,255,255,0.03) 75%
-        );
-        background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
-        position: absolute;
-        top: 0;
-        left: 0;
+    .front-main{height:53%;padding:10px 18px 4px}
+    .identity{display:grid;grid-template-columns:116px 1fr 100px;gap:14px;align-items:center;height:54%}
+
+    .photo{
+        width:108px;height:108px;border-radius:50%;
+        background:linear-gradient(145deg,#11a8e8,#0876c8);
+        border:1px solid #0b4c98;overflow:hidden;display:flex;align-items:flex-end;justify-content:center
     }
-    @@keyframes shimmer {
-        0%   { background-position: 200% center; }
-        100% { background-position: -200% center; }
+    .photo img{width:100%;height:100%;object-fit:cover}
+    .photo .avatar-fallback{display:none}
+    .photo.no-photo .avatar-fallback{display:block}
+    .photo.no-photo img{display:none}
+    .avatar-fallback{position:relative;width:68px;height:80px}
+    .avatar-fallback:before{content:"";position:absolute;width:42px;height:42px;left:13px;top:2px;border-radius:50%;background:#d6a47b}
+    .avatar-fallback:after{content:"";position:absolute;width:68px;height:52px;left:0;bottom:0;border-radius:38px 38px 0 0;background:#263b55}
+    .avatar-hair{position:absolute;width:43px;height:22px;left:12px;top:0;z-index:2;border-radius:50% 50% 35% 35%;background:#1d2835}
+
+    .name{font-size:24px;font-weight:800;color:#082b66;line-height:1}
+    .role{margin-top:7px;font-size:14px}
+    .contractor{margin-top:7px;font-size:13px}
+
+    .qr{width:92px;height:92px;border:5px solid #fff;outline:1px solid #7b8793;overflow:hidden}
+    .qr img{width:100%;height:100%;object-fit:contain}
+
+    .front-grid{border-top:1px solid #aeb9c5;display:grid;grid-template-columns:1fr 1fr;height:46%;padding-top:9px}
+    .info-cell{display:grid;grid-template-columns:38px 1fr;gap:8px;align-items:center;padding:2px 12px 5px 4px;border-right:1px solid #aeb9c5}
+    .info-cell:nth-child(even){border-right:0}
+    .info-cell:nth-child(n+3){border-top:1px solid #aeb9c5}
+    .info-icon{width:34px;height:34px;border:2px solid var(--blue);border-radius:50%;display:grid;place-items:center;color:var(--blue);font-size:14px;font-weight:800}
+    .label{font-size:10px;color:#333}
+    .value{font-size:14px;font-weight:800;margin-top:3px}
+    .city{line-height:1.15}.city small{font-size:11px;font-weight:700}
+
+    .cityscape{
+        position:absolute;left:0;right:0;bottom:11%;height:17%;opacity:.22;
+        background:linear-gradient(180deg,transparent 0 36%,#76a9d7 36% 100%);
+        clip-path:polygon(0 100%,0 75%,5% 72%,5% 60%,8% 60%,8% 74%,13% 68%,13% 48%,16% 48%,16% 74%,21% 61%,21% 40%,24% 40%,24% 70%,29% 58%,29% 28%,33% 28%,33% 70%,38% 55%,38% 45%,41% 45%,41% 73%,46% 62%,46% 35%,50% 35%,50% 73%,55% 52%,55% 25%,59% 25%,59% 72%,65% 58%,65% 42%,68% 42%,68% 72%,73% 55%,73% 31%,77% 31%,77% 70%,83% 62%,83% 45%,87% 45%,87% 73%,92% 60%,92% 37%,96% 37%,96% 72%,100% 70%,100% 100%)
     }
 
-    /* ─── Error alert ──────────────────────────────────── */
-    .error-box {
-        background: rgba(239,68,68,0.1);
-        border: 1px solid rgba(239,68,68,0.3);
-        color: #fca5a5;
-        border-radius: 12px;
-        padding: 16px 20px;
-        font-size: 14px;
-        display: none;
-        margin-bottom: 24px;
+    .front-footer{
+        position:absolute;left:0;right:0;bottom:0;height:12%;background:#082b66;color:#fff;
+        display:grid;grid-template-columns:repeat(4,1fr)
     }
+    .footer-item{display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:11px;line-height:1.2;text-align:center;border-right:1px solid rgba(255,255,255,.5);gap:2px}
+    .footer-item:last-child{border-right:0}
+    .footer-icon{font-size:22px}
 
-    /* ─── Info strip ───────────────────────────── */
-    .card-info-strip {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 32px;
-        flex-wrap: wrap;
-        margin-top: 32px;
-        padding-top: 20px;
-        border-top: 1px solid rgba(255,255,255,0.08);
+    /* BACK */
+    .back-header{
+        height:15%;background:linear-gradient(135deg,#062765,#063c89);color:#fff;
+        display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;position:relative
     }
-    .info-chip {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: #aeb7c2;
-    }
-    .info-chip i { color: #f58220; font-size: 15px; }
+    .back-header:before,.back-header:after{content:"";width:28px;height:1px;background:#fff;opacity:.75;margin:0 9px}
+    .back-list{height:65%;padding:8px 18px 0}
+    .back-row{display:grid;grid-template-columns:28px 1fr 14px 1.05fr;min-height:13%;align-items:center;border-bottom:1px dotted #aeb6bf;font-size:11px}
+    .back-row .bi{width:22px;height:22px;border:2px solid #1b54a0;border-radius:50%;display:grid;place-items:center;color:#1b54a0;font-size:11px}
+    .back-label{font-weight:500}.colon{text-align:center;font-weight:700}.back-value{font-weight:700}
+    .notice{margin-top:5px;background:#eef0f2;border-radius:8px;padding:5px 9px;font-size:7.5px;line-height:1.4}
+    .notice div:before{content:"\2022";margin-right:5px}
+    .dates{height:11%;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:0 18px;font-size:10px;font-weight:700}
+    .dates div:first-child{border-right:1px solid #9da8b4}
+    .dates strong{color:#083f91}
+    .signature-row{height:9%;display:grid;grid-template-columns:1fr 1fr;padding:0 18px;font-size:8px}
+    .signature{font-size:13px;font-family:cursive;border-bottom:1px solid #333;width:80px;margin-bottom:1px}
+    .back-footer{position:absolute;left:0;right:0;bottom:0;height:7%;background:#138a49;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
 
-    @@media (max-width: 860px) {
-        .card-slot { flex: 1 1 100%; }
-        .viewer { padding: 16px; }
+    .loading-overlay{
+        position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:9999;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        font-size:15px;color:#082b66;font-weight:600;gap:16px
+    }
+    .loading-overlay .spinner{width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#082b66;border-radius:50%;animation:spin .7s linear infinite}
+    @@keyframes spin{to{transform:rotate(360deg)}}
+
+    @@media(max-width:900px){.cards{grid-template-columns:1fr}}
+    @@media(max-width:600px){
+        .card-page{padding:15px 8px 30px}
+        .card-stage{padding:4px}
+        .cards{gap:7px}
+        .front-top{padding:7px 9px 4px}
+        .brand-mark{transform:scale(.8);transform-origin:left center}
+        .brand-name{font-size:13px}.tagline{font-size:5px}.employment{font-size:12px}
+        .verified-bar{font-size:8px}.front-main{padding:6px 9px}
+        .identity{grid-template-columns:78px 1fr 64px;gap:7px}
+        .photo{width:72px;height:72px}.qr{width:61px;height:61px}
+        .name{font-size:17px}.role,.contractor{font-size:9px;margin-top:3px}
+        .info-cell{grid-template-columns:24px 1fr;gap:4px;padding:2px 5px}
+        .info-icon{width:23px;height:23px;font-size:10px}
+        .label{font-size:7px}.value{font-size:9px}.city small{font-size:7px}
+        .footer-item{font-size:6px}.footer-icon{font-size:11px}
+        .back-header{font-size:9px}.back-list{padding:4px 8px 0}
+        .back-row{grid-template-columns:19px 1fr 8px 1.05fr;font-size:7px}
+        .back-row .bi{width:16px;height:16px;font-size:7px}
+        .notice{font-size:5px}.dates{padding:0 8px;font-size:7px}
+        .signature-row{padding:0 8px;font-size:6px}.back-footer{font-size:6px}
+    }
+    @@media print{
+        body{background:#fff!important;padding:0!important}
+        .card-page{padding:0!important}
+        .card-toolbar,.loading-overlay{display:none!important}
+        .card-stage{width:100%;box-shadow:none}
     }
 </style>
 
-<div class="page-wrap">
+<!-- Loading -->
+<div class="loading-overlay" id="cardLoader">
+    <div class="spinner"></div>
+    Loading your identity card...
+</div>
 
-    <!-- Error -->
-    <div id="errorBox" class="error-box">
-        <i class="fa fa-triangle-exclamation me-2"></i>
-        <span id="errorMsg">Failed to load identity card.</span>
-    </div>
+<div class="card-page" id="cardPage" style="display:none">
 
-    <!-- Top toolbar -->
-    <div class="page-header">
-        <div class="page-header-left">
-            <div class="title">Bharat Shram Setu — Employment Card</div>
-            <div class="subtitle">Verified digital identity card - front &amp; back</div>
+    <!-- Toolbar -->
+    <div class="card-toolbar">
+        <div>
+            <h2>Bharat Shram Setu &mdash; Employment Card</h2>
+            <div class="sub">Verified digital identity card &mdash; front &amp; back</div>
         </div>
-        <div class="btn-group-actions">
-            <button class="btn-act btn-act-success" id="btnPdf" onclick="downloadPdf()" disabled>
+        <div class="actions">
+            <button class="btn-card outline" onclick="window.print()">
+                <i class="fa fa-print"></i> Print
+            </button>
+            <button class="btn-card primary" onclick="window.print()">
                 <i class="fa fa-file-pdf"></i> Download PDF
             </button>
         </div>
     </div>
 
-    <!-- Loading -->
-    <div id="loadingBlock">
-        <div class="spinner-ring"></div>
-        <div style="font-size:14px;color:#475569;">Loading your identity card...</div>
-    </div>
+    <!-- Card Stage -->
+    <div class="card-stage">
+        <div class="cards">
 
-    <!-- Viewer -->
-    <div id="displayArea" class="viewer" style="display:none;">
-        <div class="cards-stage">
-
-            <!-- Front -->
-            <div class="card-slot">
-                <div class="card-side-label">Front Side</div>
-                <div class="artboard" id="frameFront">
-                    <div class="card-skeleton" id="skelFront"></div>
-                    <img id="imgFront" alt="Employment Card - Front" style="display:none;" />
+            <!-- FRONT -->
+            <section class="card front">
+                <div class="front-top">
+                    <div class="brand">
+                        <div class="brand-mark">
+                            <div class="person p1"></div>
+                            <div class="person p2"></div>
+                            <div class="person p3"></div>
+                            <div class="arc"></div>
+                        </div>
+                        <div>
+                            <div class="brand-name">BHARAT <span>SHRAM SETU</span></div>
+                            <div class="tagline">One Worker. One Identity. One Future.</div>
+                        </div>
+                    </div>
+                    <div class="employment">EMPLOYMENT<br/>CARD</div>
                 </div>
-            </div>
 
-            <!-- Back -->
-            <div class="card-slot">
-                <div class="card-side-label">Back Side</div>
-                <div class="artboard" id="frameBack">
-                    <div class="card-skeleton" id="skelBack"></div>
-                    <img id="imgBack" alt="Employment Card - Back" style="display:none;" />
+                <div class="verified-bar">
+                    <span class="shield"></span> VERIFIED WORKER ID
                 </div>
-            </div>
 
-        </div>
+                <div class="front-main">
+                    <div class="identity">
+                        <div class="photo" id="cardPhoto">
+                            <img id="cardPhotoImg" src="" alt="Photo" style="display:none" />
+                            <div class="avatar-fallback">
+                                <div class="avatar-hair"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="name" id="cName">-</div>
+                            <div class="role" id="cDesignation">-</div>
+                            <div class="contractor">Contractor : <span id="cContractor">-</span></div>
+                        </div>
+                        <div class="qr">
+                            <img id="cQr" src="" alt="QR Code" />
+                        </div>
+                    </div>
 
-        <!-- Info strip -->
-        <div class="card-info-strip">
-            <div class="info-chip"><i class="fa fa-shield-halved"></i> Verified Identity</div>
-            <div class="info-chip"><i class="fa fa-briefcase"></i> Portable Across Jobs</div>
-            <div class="info-chip"><i class="fa fa-lock"></i> Secure &amp; Trusted</div>
-            <div class="info-chip"><i class="fa fa-qrcode"></i> Scan for Verification</div>
+                    <div class="front-grid">
+                        <div class="info-cell">
+                            <div class="info-icon">ID</div>
+                            <div>
+                                <div class="label">Worker Code</div>
+                                <div class="value" id="cCode">-</div>
+                            </div>
+                        </div>
+                        <div class="info-cell">
+                            <div class="info-icon"><i class="bi bi-building"></i></div>
+                            <div>
+                                <div class="label">Department</div>
+                                <div class="value" id="cDept">-</div>
+                            </div>
+                        </div>
+                        <div class="info-cell">
+                            <div class="info-icon"><i class="bi bi-telephone"></i></div>
+                            <div>
+                                <div class="label">Mobile Number</div>
+                                <div class="value" id="cMobile">-</div>
+                            </div>
+                        </div>
+                        <div class="info-cell">
+                            <div class="info-icon"><i class="bi bi-geo-alt"></i></div>
+                            <div class="city">
+                                <div class="label">Work Location</div>
+                                <div class="value" id="cSite">-</div>
+                                <small id="cEmployer">-</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cityscape"></div>
+
+                <div class="front-footer">
+                    <div class="footer-item"><div class="footer-icon"><i class="bi bi-shield-check"></i></div>Verified<br/>Identity</div>
+                    <div class="footer-item"><div class="footer-icon"><i class="bi bi-arrow-left-right"></i></div>Portable<br/>Across Jobs</div>
+                    <div class="footer-item"><div class="footer-icon"><i class="bi bi-lock"></i></div>Secure &amp;<br/>Trusted</div>
+                    <div class="footer-item"><div class="footer-icon"><i class="bi bi-qr-code"></i></div>Scan for<br/>Verification</div>
+                </div>
+            </section>
+
+            <!-- BACK -->
+            <section class="card back">
+                <div class="back-header">Your Identity. Your Work. Your Security.</div>
+                <div class="back-list">
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-droplet"></i></div>
+                        <div class="back-label">Blood Group</div><div class="colon">:</div>
+                        <div class="back-value" id="cBlood">-</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-telephone"></i></div>
+                        <div class="back-label">Emergency Contact</div><div class="colon">:</div>
+                        <div class="back-value" style="color:#124fba" id="cAltMobile">-</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-person"></i></div>
+                        <div class="back-label">Relation</div><div class="colon">:</div>
+                        <div class="back-value" id="cRelation">Father</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-hash"></i></div>
+                        <div class="back-label">Camp No.</div><div class="colon">:</div>
+                        <div class="back-value" style="color:#124fba" id="cCamp">-</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-credit-card"></i></div>
+                        <div class="back-label">UAN No.</div><div class="colon">:</div>
+                        <div class="back-value" id="cUAN">-</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-file-medical"></i></div>
+                        <div class="back-label">ESIC No.</div><div class="colon">:</div>
+                        <div class="back-value" id="cESIC">-</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-person-badge"></i></div>
+                        <div class="back-label">Supervisor Name</div><div class="colon">:</div>
+                        <div class="back-value" id="cSupervisor">Pawan Kumar</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-telephone"></i></div>
+                        <div class="back-label">Supervisor No.</div><div class="colon">:</div>
+                        <div class="back-value" style="color:#124fba" id="cSupervisorNo">9898989898</div>
+                    </div>
+                    <div class="back-row">
+                        <div class="bi"><i class="bi bi-bus-front"></i></div>
+                        <div class="back-label">Route/Bus No.</div><div class="colon">:</div>
+                        <div class="back-value" id="cBus">- -</div>
+                    </div>
+                    <div class="notice">
+                        <div>This identity card must always be carried &amp; displayed for security &amp; identification.</div>
+                        <div>Loss of this card should be reported to the appropriate authority.</div>
+                        <div>This card is not transferable &amp; must be returned immediately on cessation of employment.</div>
+                    </div>
+                </div>
+                <div class="dates">
+                    <div><strong>Issue Date :</strong> <span id="cIssue">-</span></div>
+                    <div><strong>Valid Upto :</strong> <span id="cValid">-</span></div>
+                </div>
+                <div class="signature-row">
+                    <div>
+                        <div class="signature" id="cSigName">-</div>
+                        <b id="cSigName2">-</b><br/>
+                        <span id="cSigDesig">-</span>
+                    </div>
+                    <div><br/><b>Contractor : <span id="cSigCon">-</span></b></div>
+                </div>
+                <div class="back-footer">
+                    <i class="bi bi-shield-check"></i> &nbsp; https://bharat-shram-setu-staging.bharatshramsetu.com
+                </div>
+            </section>
         </div>
     </div>
-
 </div>
 
 <script>
-    var QR_BRIDGE = '@Html.Raw(Url.Content("~/Api/QrBridge"))';
-    var loadedCount = 0;
+    (function () {
+        var API = '@Url.Action("bindworkerdetail", "RetailSection")';
+        var QrBase = '@Url.Content("~/Api/QrBridge")';
 
-    $(function () {
-        $('#displayArea').show();   // show shells immediately
-        loadCard('front');
-        loadCard('back');
-    });
+        function getWorkerId() {
+            var p = new URLSearchParams(window.location.search);
+            return p.get('WorkerId') || p.get('workerid') || p.get('workerId') || '';
+        }
 
-    function loadCard(side) {
-        var url = QR_BRIDGE + '/qr/my-card/?fmt=png&side=' + side + '&t=' + Date.now();
-        var img = new Image();
-        var imgEl  = side === 'front' ? $('#imgFront')  : $('#imgBack');
-        var skelEl = side === 'front' ? $('#skelFront') : $('#skelBack');
+        function mask(val) {
+            if (!val) return '-';
+            val = String(val);
+            return '*'.repeat(Math.max(0, val.length - 4)) + val.slice(-4);
+        }
 
-        img.onload = function () {
-            imgEl.attr('src', url).show();
-            skelEl.hide();
-            loadedCount++;
-            if (loadedCount >= 2) {
-                $('#loadingBlock').hide();
-                $('#btnPdf').prop('disabled', false);
+        function formatDate(d) {
+            if (!d) return '-';
+            try {
+                var dt = new Date(d);
+                if (isNaN(dt)) return d;
+                var dd = String(dt.getDate()).padStart(2, '0');
+                var mm = String(dt.getMonth() + 1).padStart(2, '0');
+                var yyyy = dt.getFullYear();
+                return dd + '/' + mm + '/' + yyyy;
+            } catch (e) { return d; }
+        }
+
+        function setTxt(id, val) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = val || '-';
+        }
+
+        function loadCard(data) {
+            if (!data || !data.Result || !data.Result.length) {
+                document.getElementById('cardLoader').innerHTML =
+                    '<div style="color:#e53935;font-size:16px"><i class="bi bi-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px"></i>Worker data not found.</div>';
+                return;
             }
-        };
+            var w = data.Result[0];
 
-        img.onerror = function () {
-            skelEl.hide();
-            imgEl.parent().css({ background: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' });
-            imgEl.parent().html('<div style="text-align:center;padding:20px;color:#f87171;font-size:13px;"><i class="fa fa-circle-xmark" style="font-size:32px;margin-bottom:10px;display:block;"></i>Could not load ' + side + ' side.<br>Ensure your account is fully set up.</div>');
-            $('#loadingBlock').hide();
-            $('#errorBox').show();
-            $('#errorMsg').text('One or more card sides failed to load. Please check your account setup or contact support.');
-        };
+            setTxt('cName', w.EmployeeName);
+            setTxt('cDesignation', w.EmployeeDesignation);
+            setTxt('cContractor', w.VendorName || w.ContractName || '-');
+            setTxt('cCode', w.EmployeeCode);
+            setTxt('cDept', w.EmployeeDepartment);
+            setTxt('cMobile', mask(w.MobileNumber));
+            setTxt('cSite', w.SiteName || w.Site || '-');
+            setTxt('cEmployer', w.ClientName || w.EmployerName || '-');
+            setTxt('cBlood', w.BloodGroup);
+            setTxt('cAltMobile', mask(w.AlternativeMobileNumber));
+            setTxt('cCamp', w.CampNumber);
+            setTxt('cUAN', mask(w.PreviousUAN));
+            setTxt('cESIC', mask(w.PreviousESI));
+            setTxt('cBus', w.BusNo || w.RouteName || '- -');
+            setTxt('cIssue', formatDate(w.CreatedOn));
+            setTxt('cValid', formatDate(w.ValidTill));
+            setTxt('cSigName', w.EmployeeName || '-');
+            setTxt('cSigName2', w.EmployeeName || '-');
+            setTxt('cSigDesig', w.EmployeeDesignation || '-');
+            setTxt('cSigCon', w.VendorName || w.ContractName || '-');
 
-        img.src = url;
-    }
+            // Photo
+            var photoImg = document.getElementById('cardPhotoImg');
+            var photoWrap = document.getElementById('cardPhoto');
+            if (w.EmployeePhotos) {
+                photoImg.src = w.EmployeePhotos;
+                photoImg.style.display = 'block';
+                photoWrap.classList.remove('no-photo');
+                photoImg.onerror = function () {
+                    photoImg.style.display = 'none';
+                    photoWrap.classList.add('no-photo');
+                };
+            } else {
+                photoImg.style.display = 'none';
+                photoWrap.classList.add('no-photo');
+            }
 
-    function downloadPdf() {
-        // side=both → landscape A4 with front on left, back on right
-        window.open(QR_BRIDGE + '/qr/my-card/?fmt=pdf&side=both', '_blank');
-    }
+            // QR
+            var qrImg = document.getElementById('cQr');
+            if (w.Id) {
+                qrImg.src = QrBase + '/qr/workers/' + w.Id + '/card/?fmt=qr&t=' + Date.now();
+            } else {
+                qrImg.src = QrBase + '/qr/my-card/?fmt=qr&t=' + Date.now();
+            }
+
+            document.getElementById('cardLoader').style.display = 'none';
+            document.getElementById('cardPage').style.display = 'block';
+        }
+
+        function loadCardById(workerId) {
+            $.ajax({
+                url: API,
+                method: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                data: '{obj:' + JSON.stringify({ ActionType: 1, UserId: workerId }) + '}',
+                success: function (res) {
+                    if (res && res.Result && res.Result.length) {
+                        loadCard(res);
+                    } else {
+                        loadByLogin();
+                    }
+                },
+                error: function () { loadByLogin(); }
+            });
+        }
+
+        function loadByLogin() {
+            var userId = sessionStorage.getItem('LoginId') || '@(Session["LoginId"]?.ToString() ?? Session["loginId"]?.ToString() ?? "")';
+            $.ajax({
+                url: API,
+                method: 'POST',
+                contentType: 'application/json; charset=utf-8',
+                data: '{obj:' + JSON.stringify({ ActionType: 1, UserId: userId }) + '}',
+                success: function (res) { loadCard(res); },
+                error: function () {
+                    document.getElementById('cardLoader').innerHTML =
+                        '<div style="color:#e53935;font-size:16px"><i class="bi bi-exclamation-triangle" style="font-size:32px;display:block;margin-bottom:10px"></i>Failed to load worker data. Please try again.</div>';
+                }
+            });
+        }
+
+        var wid = getWorkerId();
+        if (wid) {
+            loadCardById(wid);
+        } else {
+            loadByLogin();
+        }
+    })();
 </script>

@@ -1,4 +1,4 @@
-﻿app.controller('WorkerDashboardController', function ($scope, $http, myService) {
+app.controller('WorkerDashboardController', function ($scope, $http, myService) {
     $scope.bindworkerdashboard = function () {
         $scope.showLoader();
 
@@ -22,6 +22,8 @@
                     $scope.bindContractorDetail($scope.DashboardDetail.UserId, $scope.DashboardDetail.PartyId);
                     $scope.getprincipledetail($scope.DashboardDetail.UserId, $scope.DashboardDetail.PartyId);
                 }
+                // Load actual bindings from QR system
+                $scope.loadQrBindings();
                 $scope.$applyAsync();
             }
             $scope.hideLoader();
@@ -49,6 +51,62 @@
                 console.error('Error:', error);
             });
     };
+
+    // ── QR Binding Data ─────────────────────────────────────────────────────
+    $scope.QrContractor = null;
+    $scope.QrEmployer = null;
+
+    $scope.loadQrBindings = function () {
+        $http.get('../Api/QrBridge/qr/bindings/list/')
+            .then(function (res) {
+                if (res.data && res.data.Result === 'Success' && res.data.Data) {
+                    var bindings = res.data.Data;
+                    // Find ACTIVE worker-contractor binding
+                    var wcBinding = null;
+                    for (var i = 0; i < bindings.length; i++) {
+                        var b = bindings[i];
+                        if ((b.binding_type === 'WORKER_CONTRACTOR' || b.binding_type === 'CONTRACTOR_WORKER') &&
+                            (b.status === 'ACTIVE' || b.status === 'ACCEPTED')) {
+                            wcBinding = b;
+                            break;
+                        }
+                    }
+                    if (wcBinding) {
+                        $scope.QrContractor = {
+                            name: wcBinding.contractor_name || wcBinding.contractor || '-',
+                            code: wcBinding.contractor_code || '-',
+                            contact: wcBinding.contractor_contact || '-',
+                            email: wcBinding.contractor_email || '-',
+                            status: wcBinding.status
+                        };
+                    }
+                    // Find ACTIVE employer binding
+                    var ecBinding = null;
+                    for (var j = 0; j < bindings.length; j++) {
+                        var bj = bindings[j];
+                        if ((bj.binding_type === 'EMPLOYER_CONTRACTOR' || bj.binding_type === 'WORKER_EMPLOYER') &&
+                            (bj.status === 'ACTIVE' || bj.status === 'ACCEPTED')) {
+                            ecBinding = bj;
+                            break;
+                        }
+                    }
+                    if (ecBinding) {
+                        $scope.QrEmployer = {
+                            name: ecBinding.employer_name || ecBinding.employer || '-',
+                            code: ecBinding.employer_code || '-',
+                            industry: ecBinding.employer_industry || '-',
+                            email: ecBinding.employer_email || '-',
+                            status: ecBinding.status
+                        };
+                    }
+                    $scope.$applyAsync();
+                }
+            })
+            .catch(function () {
+                // If QR bindings fail, fall back to legacy SP data silently
+            });
+    };
+    // ───────────────────────────────────────────────────────────────────────
 
     $scope.maskNumber = function (value) {
         if (!value) return '';

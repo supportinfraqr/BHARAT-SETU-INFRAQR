@@ -189,7 +189,7 @@
                 <div class="workerProfileLeft">
 
                     <div class="workerProfileImage">
-                        <img ng-src="{{DashboardDetail.EmployeePhotos}}" alt=""
+                        <img ng-src="{{DashboardDetail.EmployeePhotos || '/Api/QrBridge/qr/my-card/?fmt=qr&t=' + Date.now()}}" alt=""
                              onerror="this.onerror=null;this.src='@Url.Content("~/Content/Photos/default-user.png")';">
                     </div>
 
@@ -288,8 +288,8 @@
                 </div>
 
                 <div class="workerQrBox">
-                    <img id="dashQrImg" src="@Url.Content("~/Api/QrBridge/qr/me/")" style="width:64px;height:64px;object-fit:contain;" alt="QR Code"
-                         onerror="var r=(this.getAttribute('data-retries')||0);this.setAttribute('data-retries',r+1);if(r<3){var self=this;setTimeout(function(){self.src='@Url.Content("~/Api/QrBridge/qr/me/")'+'?t='+Date.now()},1200);}">
+                    <img id="dashQrImg" src="@Url.Content("~/Api/QrBridge/qr/my-card/?fmt=qr")" style="width:64px;height:64px;object-fit:contain;" alt="QR Code"
+                         onerror="var r=(this.getAttribute('data-retries')||0);this.setAttribute('data-retries',r+1);if(r<3){var self=this;setTimeout(function(){self.src='@Url.Content("~/Api/QrBridge/qr/my-card/?fmt=qr")'+'&t='+Date.now()},1200);}">
                 </div>
 
             </div>

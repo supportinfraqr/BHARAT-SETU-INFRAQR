@@ -1,4 +1,4 @@
-﻿app.NewEmployeeController = function ($scope, $element, $filter, myService, $http, $timeout) {
+app.NewEmployeeController = function ($scope, $element, $filter, myService, $http, $timeout) {
 
     $scope.IsEmailDisabled = false;
     $scope.IsMobileDisabled = false;
@@ -217,12 +217,11 @@
 
     $scope.getQrUrl = function () {
 
+        if ($scope.EmployeeList && $scope.EmployeeList.Id) {
+            return '/Api/QrBridge/qr/workers/' + $scope.EmployeeList.Id + '/card/?fmt=qr&t=' + Date.now();
+        }
         if (!$scope.EmpCode) return "";
-
-        var data =
-            "https://login.bharatshramsetu.com/icard.html?id=" + $scope.EmpCode + "";
-
-        return "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(data);
+        return '/Api/QrBridge/qr/my-card/?fmt=qr&t=' + Date.now();
     };
 
     $scope.printIDCard = function () {
@@ -2565,10 +2564,10 @@
     };
 
     $scope.getProfQR = function (EmpCode) {
-        if (!EmpCode) return "";
-        var data =
-            "https://login.bharatshramsetu.com/icard.html?id=" + EmpCode + "";
-        return "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(data);
+        if ($scope.EmployeeList && $scope.EmployeeList.Id) {
+            return '/Api/QrBridge/qr/workers/' + $scope.EmployeeList.Id + '/card/?fmt=qr';
+        }
+        return '/Api/QrBridge/qr/my-card/?fmt=qr';
     };
 
     $scope.maskNumber = function (value) {
@@ -3107,14 +3106,7 @@
 
 
 
-    $scope.getProfQR = function (employeeCode) {
 
-        var url =
-            "https://login.bharatshramsetu.com/icard.html?id=" + employeeCode;
-
-        return "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="
-            + encodeURIComponent(url);
-    };
 
     var isSharing = false;
 
@@ -3140,9 +3132,7 @@
         );
 
 
-        qrUrlForShare =
-            "https://login.bharatshramsetu.com/icard.html?id="
-            + employeeCode;
+        qrUrlForShare = window.location.origin + '/qr/card/' + employeeCode;
 
 
         console.log("QR Ready");
@@ -3152,11 +3142,7 @@
 
         try {
 
-            var imageUrl =
-                "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data="
-                + encodeURIComponent(
-                    "https://login.bharatshramsetu.com/icard.html?id=" + employeeCode
-                );
+            var imageUrl = $scope.getProfQR(employeeCode);
 
 
             // image download

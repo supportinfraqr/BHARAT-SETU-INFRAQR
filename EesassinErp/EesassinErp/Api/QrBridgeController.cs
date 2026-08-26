@@ -93,6 +93,18 @@ namespace EesassinErp.Controllers
 
         // ─── Workers ───────────────────────────────────────────────────────────
 
+        /// <summary>GET /Api/QrBridge/qr/me/ — Return the logged-in user's QR code as a PNG image</summary>
+        [HttpGet]
+        [Route("qr/me/")]
+        public async Task<IHttpActionResult> MyQrCode()
+        {
+            var result = await ForwardAsync("GET", "/api/qr/me/", null, GetToken(), binary: true);
+            var resp = new HttpResponseMessage((HttpStatusCode)result.StatusCode);
+            resp.Content = new ByteArrayContent(result.BinaryBody ?? new byte[0]);
+            resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+            return ResponseMessage(resp);
+        }
+
         /// <summary>GET /Api/QrBridge/qr/workers/</summary>
         [HttpGet]
         [Route("qr/workers/")]

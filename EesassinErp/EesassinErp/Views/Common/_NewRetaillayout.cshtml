@@ -581,6 +581,9 @@
                     <li ng-if="loginType == 5">
                         <a href="/qr/mysites" class="dropdown-item">My Sites</a>
                     </li>
+                    <li ng-if="loginType == 5">
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a>
+                    </li>
 
                     <!-- Contractor (loginType 2 or 6) -->
                     <li ng-if="loginType == 2 || loginType == 6">
@@ -591,6 +594,9 @@
                     </li>
                     <li ng-if="loginType == 2 || loginType == 6">
                         <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+                    <li ng-if="loginType == 2 || loginType == 6">
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a>
                     </li>
 
                     <!-- Worker (loginType 7) -->

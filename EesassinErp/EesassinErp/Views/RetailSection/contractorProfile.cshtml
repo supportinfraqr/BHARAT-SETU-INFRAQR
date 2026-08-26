@@ -1,4 +1,4 @@
-﻿
+
 @{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     ViewBag.Title = "Contractor Profile";
@@ -2181,12 +2181,14 @@
     });
 
     /* MULTI SELECT */
-    const display = document.getElementById("multiDisplay");
+    const multiDisplayInput = document.getElementById("multiDisplay");
     const dropdown = document.getElementById("multiDropdown");
 
-    display.addEventListener("click", () => {
-        dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-    });
+    if (multiDisplayInput) {
+        multiDisplayInput.addEventListener("click", () => {
+            dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+        });
+    }
 
     dropdown.addEventListener("change", () => {
         const checks = dropdown.querySelectorAll("input[type=checkbox]");
@@ -2198,7 +2200,9 @@
             }
         });
 
-        display.value = selected.join(", ");
+        if (multiDisplayInput) {
+            multiDisplayInput.value = selected.join(", ");
+        }
     });
 
     /* CLOSE ON OUTSIDE CLICK */
