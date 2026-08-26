@@ -446,11 +446,8 @@
                     Dashboard
                 </button>
                 <ul class="dropdown-menu">
-                    <li ng-if="isDashboardLoading">
-                        <i class="fa fa-spinner fa-spin"></i> Loading...
-                    </li>
-                    <li ng-if="!isDashboardLoading" ng-repeat="x in DahboardList | filter: { PageName : 'Dashboard' }">
-                        <a ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)" class="dropdown-item">{{ x.SectionName }}</a>
+                    <li>
+                        <a href="../Dashboard/PrincipleEmployerDashboard" class="dropdown-item">Principal Employer Dashboard</a>
                     </li>
                 </ul>
             </div>
