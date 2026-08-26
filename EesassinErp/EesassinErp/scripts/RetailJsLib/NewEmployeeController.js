@@ -2563,11 +2563,14 @@ app.NewEmployeeController = function ($scope, $element, $filter, myService, $htt
             });
     };
 
+    $scope.QrImageUrl = '';
     $scope.getProfQR = function (EmpCode) {
-        if ($scope.EmployeeList && $scope.EmployeeList.Id) {
-            return '/Api/QrBridge/qr/workers/' + $scope.EmployeeList.Id + '/card/?fmt=qr';
-        }
-        return '/Api/QrBridge/qr/my-card/?fmt=qr';
+        if ($scope.QrImageUrl) return $scope.QrImageUrl;
+        var id = ($scope.EmployeeList && ($scope.EmployeeList.QRCodeId || $scope.EmployeeList.Id || $scope.EmployeeList.EmployeeId)) || '';
+        $scope.QrImageUrl = id
+            ? '/Api/QrBridge/qr/workers/' + id + '/card/?fmt=qr&t=' + Date.now()
+            : '/Api/QrBridge/qr/my-card/?fmt=qr&t=' + Date.now();
+        return $scope.QrImageUrl;
     };
 
     $scope.maskNumber = function (value) {
