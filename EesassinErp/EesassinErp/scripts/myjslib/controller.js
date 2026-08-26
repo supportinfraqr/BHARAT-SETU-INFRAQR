@@ -807,6 +807,34 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
         if (lt === '7') return 'Worker Dashboard';
         return 'Dashboard'; // 5 and default
     })();
+
+    // Role-aware "Master" dropdown items.
+    // loginType: 1=Admin, 5=Employer, 2/6=Contractor, 7=Worker
+    $scope.myMasterItems = (function () {
+        var lt = String($scope.loginType || loginType || '');
+        var contractorItems = [
+            { label: 'Contractor Gate Pass', url: '../dashboard/ContractorGatePass' },
+            { label: 'Contractor Rozgar', url: '../Rozgar/ContractorRozgar' },
+            { label: 'Contractor Compliance', url: '../RetailSection/ContractorCompliance' },
+            { label: 'Worker Master', url: '../RetailSection/ContractorWorker' },
+            { label: 'Compliance Submission', url: '../Dashboard/CommunicationClient' }
+        ];
+        var employerItems = [
+            { label: 'Worker GatePass', url: '../dashboard/PrincipleEmployerGatePass' },
+            { label: 'Contractor Compliance', url: '../RetailSection/ContractorCompliance' },
+            { label: 'Worker Master', url: '../RetailSection/ContractorWorker' },
+            { label: 'Compliance Submission', url: '../Dashboard/CommunicationClient' }
+        ];
+        var workerItems = [
+            { label: 'Worker GatePass', url: '../dashboard/PrincipleEmployerGatePass' },
+            { label: 'Worker Master', url: '../RetailSection/ContractorWorker' },
+            { label: 'Compliance Submission', url: '../Dashboard/CommunicationClient' }
+        ];
+        if (lt === '2' || lt === '6') return contractorItems;
+        if (lt === '7') return workerItems;
+        if (lt === '5') return employerItems;
+        return employerItems; // admin/1 and default
+    })();
     
      
     $scope.cancelRedirect = function () {

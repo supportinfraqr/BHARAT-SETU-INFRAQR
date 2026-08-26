@@ -458,10 +458,9 @@
                     Master
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a href="../dashboard/PrincipleEmployerGatePass" class="dropdown-item">Worker GatePass</a></li>
-                    <li><a href="../RetailSection/ContractorCompliance" class="dropdown-item">Contractor Compliance</a></li>
-                    <li><a href="../RetailSection/ContractorWorker" class="dropdown-item">Worker Master</a></li>
-                    <li><a href="../Dashboard/CommunicationClient" class="dropdown-item">Compliance Submission</a></li>
+                    <li ng-repeat="m in myMasterItems">
+                        <a href="{{m.url}}" class="dropdown-item">{{m.label}}</a>
+                    </li>
                 </ul>
             </div>
 
