@@ -222,6 +222,13 @@
     }
     @@media print{
         body{background:#fff!important;padding:0!important;margin:0!important}
+        /* Hide ERP layout chrome (header navbar, footer, breadcrumbs, modals, loader) */
+        .navbar,.nav-left,.nav-center,.nav-right,
+        .topbar,.footer,.main-footer,.breadcrumb,.page-title,
+        .modal,.modal-backdrop,.loader-overlay,
+        .griviences,.sidebar,.header-top,footer{
+            display:none!important
+        }
         .card-page{padding:0!important;margin:0!important;max-width:100%!important}
         .card-toolbar,.loading-overlay{display:none!important}
         .card-stage{
