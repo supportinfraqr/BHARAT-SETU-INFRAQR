@@ -469,12 +469,7 @@
                     Report
                 </button>
                 <ul class="dropdown-menu">
-                    <li ng-if="isDashboardLoading">
-                        <i class="fa fa-spinner fa-spin"></i> Loading...
-                    </li>
-                    <li ng-if="!isDashboardLoading" ng-repeat="x in DahboardList | filter: { PageName : 'Report' }">
-                        <a class="dropdown-item" ng-click="loadPage(x.Url);ManageLog('Click on '+ x.SectionName)">{{ x.SectionName }}</a>
-                    </li>
+                    <li><a href="../Dashboard/ComplianceReport" class="dropdown-item">Compliance Report</a></li>
                 </ul>
             </div>
 
