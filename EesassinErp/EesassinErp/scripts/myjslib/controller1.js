@@ -11,7 +11,6 @@ var CreatedOn = sessionStorage.getItem("CreatedOn");
 var Photo = sessionStorage.getItem("Photo");
 var BranchAddress = sessionStorage.getItem("BranchAddress");
 
-debugger;
 if (LoginId == "-1" || LoginId == null || LoginId == "" || LoginId == "null") {
     window.top.location.href = '../Login/Login';
 } 

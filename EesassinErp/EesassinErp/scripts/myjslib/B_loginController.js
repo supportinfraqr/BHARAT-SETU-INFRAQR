@@ -1,6 +1,5 @@
 ﻿var myLoginApp = angular.module('myLoginApp', []);
 
-debugger;
 myLoginApp.service("myLoginService", function ($http) {
     this.methode = function (methodType, virtualUrl, dataList) {
         return $http({

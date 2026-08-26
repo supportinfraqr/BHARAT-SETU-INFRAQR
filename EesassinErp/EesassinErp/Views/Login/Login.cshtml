@@ -18,6 +18,9 @@
 
 @*<script src="~/Content/NewLogin/script.js"></script>*@
 <style>
+    [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+        display: none !important;
+    }
     button.swal2-confirm.swal2-styled {
         background: #022B5E !important;
     }
@@ -54,7 +57,7 @@ debugger;
     window.location.href = "tel:9650887008";
 }
 </script>
-<div class="newLoginPage" ng-app="myLoginApp" ng-controller="myLoginController">
+<div class="newLoginPage" ng-app="myLoginApp" ng-controller="myLoginController" ng-cloak>
 
     <!-- ========================= -->
     <!-- MAIN SECTION -->

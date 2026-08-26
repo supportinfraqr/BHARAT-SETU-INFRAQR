@@ -3724,7 +3724,6 @@ function looselyMatch(requiredText, extractedText) {
 
 
 function getdetail(file, FileName, ocrText, callback) {
-    debugger;
     const fileType = file.type;
 
     const isPDF = fileType === "application/pdf";

@@ -1,7 +1,6 @@
 var user = JSON.parse(sessionStorage.getItem("userSession")) || {};
  
 var LoginId = sessionStorage.getItem("LoginId");
-debugger;
 var MapId = sessionStorage.getItem("MapId");
 var MapUser = sessionStorage.getItem("MapUser");
 var BranchCode = sessionStorage.getItem("BranchCode");
@@ -768,7 +767,6 @@ app.controller('myController', function ($scope, $element, $sce, $timeout, $inte
             });
         }, 1000);
     };
-    debugger;
 
     //if (DashboardSwitch != 'Supplier' && DashboardSwitch != null) {
     //if (loginType != '1') { 
