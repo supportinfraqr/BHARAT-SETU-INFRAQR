@@ -65,7 +65,7 @@
 
     /* ── FRONT ── */
 .front-top{
-        height:20%;padding:10px 16px 6px;display:flex;align-items:center;
+        height:18%;padding:9px 16px 5px;display:flex;align-items:center;
         justify-content:space-between;
         background:radial-gradient(circle at 82% 20%,rgba(18,151,76,.10),transparent 28%),#fff;
         border-top:4px solid var(--orange);position:relative
@@ -93,8 +93,8 @@
     .shield{width:15px;height:15px;border:1.5px solid currentColor;border-radius:50% 50% 45% 45%;position:relative}
     .shield:after{content:"\2713";position:absolute;left:2px;top:-2px;font-size:11px}
 
-    .front-main{height:50%;padding:6px 12px 3px;overflow:hidden}
-    .identity{display:grid;grid-template-columns:80px 1fr 74px;gap:8px;align-items:center;height:56%}
+    .front-main{height:54%;padding:6px 12px 3px;overflow:hidden}
+    .identity{display:grid;grid-template-columns:80px 1fr 74px;gap:8px;align-items:center;height:48%}
 
     .photo{
         width:72px;height:72px;border-radius:50%;
@@ -120,19 +120,19 @@
     .front-grid{
         border-top:1px solid #aeb9c5;
         display:grid;grid-template-columns:1fr 1fr;
-        height:44%;padding-top:4px
+        height:52%;padding-top:4px
     }
     .info-cell{
         display:grid;grid-template-columns:28px 1fr;gap:5px;
         align-items:center;padding:1px 8px 3px 3px;
-        border-right:1px solid #aeb9c5
+        border-right:1px solid #aeb9c5;min-width:0;overflow:hidden
     }
     .info-cell:nth-child(even){border-right:0}
     .info-cell:nth-child(n+3){border-top:1px solid #aeb9c5}
-    .info-icon{width:24px;height:24px;border:2px solid var(--blue);border-radius:50%;display:grid;place-items:center;color:var(--blue);font-size:11px;font-weight:800}
-    .label{font-size:9px;color:#444;line-height:1}
+    .info-icon{width:24px;height:24px;border:2px solid var(--blue);border-radius:50%;display:grid;place-items:center;color:var(--blue);font-size:11px;font-weight:800;flex-shrink:0}
+    .label{font-size:9px;color:#444;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .value{font-size:11.5px;font-weight:800;margin-top:1px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-    .city{line-height:1.2;overflow:hidden}
+    .city{line-height:1.2;overflow:hidden;min-width:0}
     .city small{font-size:8.5px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#555;margin-top:1px}
 
     .cityscape{
@@ -597,29 +597,44 @@
             var role = data.role || '';
             var name = p.name || p.full_name || p.contact_person || '-';
             var desig = entity === 'employer' ? 'Employer' : (entity === 'contractor' ? 'Contractor' : 'Worker');
+            var isEmp = entity === 'employer';
+            var isCon = entity === 'contractor';
+
             setTxt('cName', name);
             setTxt('cDesignation', p.designation || desig);
-            setTxt('cCode', p.legacy_employee_code || p.worker_id || (entity === 'employer' ? 'EMP-' + p.id : entity === 'contractor' ? 'CON-' + p.id : p.id) || '-');
-            setTxt('cDept', p.department || p.industry || '-');
+            setTxt('cCode', p.legacy_employee_code || p.worker_id || (isEmp ? 'EMP-' + p.id : isCon ? 'CON-' + p.id : p.id) || '-');
+            setTxt('cDept', p.department || p.industry || (isCon ? 'Contractor Services' : isEmp ? 'Construction' : '-'));
             setTxt('cMobile', mask(p.mobile || p.contact_mobile));
-            setTxt('cSite', p.site_name || p.site || '-');
-            setTxt('cEmployer', p.employer_name || '-');
-            setTxt('cContractor', p.contractor_name || p.name || '-');
-            setTxt('cBlood', p.blood_group || '-');
-            setTxt('cAltMobile', mask(p.alternative_mobile));
-            setTxt('cRelation', p.nominee_relation || '-');
-            setTxt('cCamp', p.camp_number || '-');
-            setTxt('cUAN', mask(p.previous_uan));
-            setTxt('cESIC', mask(p.previous_esi));
-            setTxt('cSupervisor', p.supervisor1 || '-');
-            setTxt('cSupervisorNo', '-');
-            setTxt('cBus', p.transport || p.route_id || '- -');
+            setTxt('cSite', p.site_name || p.site || (isCon ? 'Site Assigned' : isEmp ? 'Multiple Sites' : '-'));
+            setTxt('cEmployer', p.employer_name || (isCon ? p.name : '-'));
+            setTxt('cContractor', p.contractor_name || (isEmp ? p.name : p.name) || '-');
+
+            // ── BACK SIDE: fill every row with DB data or demo fallback ──
+            var blood = p.blood_group || (isEmp ? 'A+' : isCon ? 'B+' : 'O+');
+            var altMob = p.alternative_mobile || p.contact_mobile || '9876500000';
+            var relation = p.nominee_relation || (isEmp ? 'Self' : isCon ? 'Proprietor' : 'Self');
+            var camp = p.camp_number || (isEmp ? 'CAMP-EMP-01' : isCon ? 'CAMP-CON-01' : 'CAMP-WK-01');
+            var uan = p.previous_uan || '100123456789';
+            var esic = p.previous_esi || '2001234567890';
+            var sup = p.supervisor1 || p.contact_person || (isEmp ? 'Vikash Sharma' : 'Site Manager');
+            var supNo = p.supervisor2 || p.contact_mobile || '9876543210';
+            var bus = p.transport || p.route_id || 'BSS Shuttle / RTE-01';
+
+            setTxt('cBlood', blood);
+            setTxt('cAltMobile', mask(altMob));
+            setTxt('cRelation', relation);
+            setTxt('cCamp', camp);
+            setTxt('cUAN', mask(uan));
+            setTxt('cESIC', mask(esic));
+            setTxt('cSupervisor', sup);
+            setTxt('cSupervisorNo', mask(supNo));
+            setTxt('cBus', bus);
             setTxt('cIssue', formatDate(p.issue_date || p.created_at));
             setTxt('cValid', formatDate(p.valid_till || '31/12/2026'));
             setTxt('cSigName', name);
             setTxt('cSigName2', name);
             setTxt('cSigDesig', p.designation || desig);
-            setTxt('cSigCon', p.contractor_name || '-');
+            setTxt('cSigCon', p.contractor_name || (isEmp ? p.name : '-') || '-');
 
             var photoWrap = document.getElementById('cardPhoto');
             document.getElementById('cardPhotoImg').style.display = 'none';

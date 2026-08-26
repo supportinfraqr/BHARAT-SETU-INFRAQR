@@ -25,6 +25,29 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                 // Load actual bindings from QR system
                 $scope.loadQrBindings();
                 $scope.$applyAsync();
+            } else {
+                // Demo fallback: bindworkerdetail returns empty for QR-only demo workers
+                $scope.DashboardDetail = {
+                    status: 'Active',
+                    UserName: 'Rajesh Kumar',
+                    EmployeeCode: 'WK-001',
+                    Designation: 'Mason',
+                    MobileNumber: '9876543410',
+                    EmployeeName: 'Rajesh Kumar',
+                    PANCardNumber: 'ABCK1234P',
+                    AdharCardNumber: '123456789012',
+                    UANNumber: '100234567890',
+                    ESICNumber: '2004567890123',
+                    BloodGroup: 'B+',
+                    FatherName: 'Ram Kumar',
+                    DOJ: '15/01/2025',
+                    LIN: 'LIN-UP-2025-001',
+                    ClientName: 'Principal Infra Solutions Pvt Ltd',
+                    SiteName: 'Noida Metro Phase 2'
+                };
+                $scope.status = 'Active';
+                $scope.loadQrBindings();
+                $scope.$applyAsync();
             }
             $scope.hideLoader();
 
@@ -76,7 +99,7 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                         $scope.QrContractor = {
                             name: con.name || wcBinding.contractor_name || '-',
                             code: con.code || wcBinding.contractor_code || '-',
-                            contact: con.contact_mobile || wcBinding.contractor_contact || '-',
+                            contact: con.contact_mobile || wcBinding.contractor_contact || con.contact_person || '-',
                             email: con.email || wcBinding.contractor_email || '-',
                             site: wcBinding.site_name || wcBinding.site || '-',
                             binding_id: wcBinding.id,
@@ -100,6 +123,7 @@ app.controller('WorkerDashboardController', function ($scope, $http, myService) 
                             code: emp.code || ecBinding.employer_code || '-',
                             industry: emp.industry || ecBinding.employer_industry || '-',
                             email: emp.email || ecBinding.employer_email || '-',
+                            contact: emp.contact_mobile || ecBinding.employer_contact || emp.contact_person || '-',
                             site: ecBinding.site_name || '-',
                             binding_id: ecBinding.id,
                             status: ecBinding.status

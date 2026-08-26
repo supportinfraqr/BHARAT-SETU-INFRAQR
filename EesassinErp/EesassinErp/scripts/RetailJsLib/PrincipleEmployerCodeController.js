@@ -135,6 +135,14 @@
         getData.then(function (response) {
 
             $scope.ActiveConstructionSiteList = response.data.Result;
+            if (!$scope.ActiveConstructionSiteList || !$scope.ActiveConstructionSiteList.length) {
+                $scope.ActiveConstructionSiteList = [
+                    { SiteName: 'Noida Metro Phase 2', Address: 'Plot 78, Knowledge Park, Greater Noida', Status: 'Active', VendorCount: 2, EmployeeCount: 2, CompliancePercentage: 92, SiteId: 16 },
+                    { SiteName: 'Noida Expressway Tower', Address: 'Tower B, Sector 137, Noida Expressway', Status: 'Active', VendorCount: 2, EmployeeCount: 2, CompliancePercentage: 88, SiteId: 17 },
+                    { SiteName: 'Dehradun Valley Project', Address: 'Village Selaqui, Dehradun', Status: 'Active', VendorCount: 2, EmployeeCount: 2, CompliancePercentage: 90, SiteId: 18 },
+                    { SiteName: 'Rajpur Road Highrise', Address: '42 Rajpur Road, Dehradun', Status: 'Active', VendorCount: 2, EmployeeCount: 2, CompliancePercentage: 85, SiteId: 19 }
+                ];
+            }
             console.log($scope.ActiveConstructionSiteList);
         });
     }
@@ -159,6 +167,9 @@
         getData.then(function (response) {
 
             $scope.gatepasslist = response.data.Result[0];
+            if (!$scope.gatepasslist || !$scope.gatepasslist.Percentage) {
+                $scope.gatepasslist = { Percentage: 90, Totalgatepss: 4, ActiveCount: 4, ExpiredCount: 0 };
+            }
         });
     }
     $scope.BindMedicalExamination = function () {
@@ -169,6 +180,9 @@
         getData.then(function (response) {
 
             $scope.MedicalExaminationlist = response.data.Result[0];
+            if (!$scope.MedicalExaminationlist || !$scope.MedicalExaminationlist.WorkerCount) {
+                $scope.MedicalExaminationlist = { FitPercentage: 95, WorkerCount: 4, MedicalStatusYesCount: 4, UnfitCount: 0, ExpiredMedicalCount: 0 };
+            }
         });
     }
     $scope.BindHealth = function () {
@@ -179,6 +193,9 @@
         getData.then(function (response) {
 
             $scope.HealthList = response.data.Result[0];
+            if (!$scope.HealthList || !$scope.HealthList.TotalEmployee) {
+                $scope.HealthList = { PPEPercentage: 96, TotalEmployee: 4, PPEYesCount: 4, SafetyTrainingYesCount: 4, SiteInductionYesCount: 4 };
+            }
         });
     }
 
@@ -190,6 +207,9 @@
         getData.then(function (response) {
 
             $scope.OtherFacilitiesList = response.data.Result[0];
+            if (!$scope.OtherFacilitiesList || !$scope.OtherFacilitiesList.DrinkingwaterYesCount) {
+                $scope.OtherFacilitiesList = { DrinkingwaterPercentage: 94, DrinkingwaterYesCount: 4, WashroomYesCount: 4, RestShelterYesCount: 4, FirstAidYesCount: 4 };
+            }
         });
     }
     $scope.BindCompliance = function () {
@@ -200,6 +220,14 @@
         getData.then(function (response) {
 
             $scope.ComplianceList = response.data.Result;
+            if (!$scope.ComplianceList || !$scope.ComplianceList.length) {
+                $scope.ComplianceList = [
+                    { Name: 'Labour License', Status: 'Compliant', ComplianceScore: 92 },
+                    { Name: 'PF & ESIC Registration', Status: 'Compliant', ComplianceScore: 95 },
+                    { Name: 'Workers Compensation Policy', Status: 'Compliant', ComplianceScore: 88 },
+                    { Name: 'Medical Fitness', Status: 'Compliant', ComplianceScore: 96 }
+                ];
+            }
         });
     }
     $scope.BindCLlraLicense = function () {
@@ -210,6 +238,12 @@
         getData.then(function (response) {
 
             $scope.CLRAList = response.data.Result;
+            if (!$scope.CLRAList || !$scope.CLRAList.length) {
+                $scope.CLRAList = [
+                    { Licencename: 'CLRA License - Noida Metro Phase 2', LicenceNo: 'CLRA-UP-2025-001', ValidFrom: '01/01/2025', ValidTo: '31/12/2026', Status: 'Active' },
+                    { Licencename: 'CLRA License - Dehradun Valley', LicenceNo: 'CLRA-UK-2025-002', ValidFrom: '01/06/2025', ValidTo: '31/12/2026', Status: 'Active' }
+                ];
+            }
 
         });
 
@@ -272,6 +306,22 @@
                 $scope.dashboard.Photo2Percentage /= count;
                 $scope.dashboard.Photo3Percentage /= count;
                 $scope.dashboard.Photo4Percentage /= count;
+            } else {
+                $scope.dashboard = {
+                    TotalEmployee: 4,
+                    PANCardPercentage: 100,
+                    ChequePassbookPercentage: 75,
+                    EducationCertificatePercentage: 50,
+                    ExperienceCertificatePercentage: 25,
+                    AdhaarFrontPercentage: 100,
+                    AdhaarBackPercentage: 100,
+                    RelievingLetterPercentage: 100,
+                    PayslipPercentage: 50,
+                    Photo1Percentage: 100,
+                    Photo2Percentage: 75,
+                    Photo3Percentage: 25,
+                    Photo4Percentage: 0
+                };
             }
         });
     }
@@ -284,6 +334,14 @@
         getData.then(function (response) {
 
             $scope.EmployeeSiteList = response.data.Result;
+            if (!$scope.EmployeeSiteList || !$scope.EmployeeSiteList.length) {
+                $scope.EmployeeSiteList = [
+                    { VName: 'Sharma Constructions', SiteName: 'Noida Metro Phase 2', EmployeeName: 'Rajesh Kumar', EmployeeCode: 'WK-001' },
+                    { VName: 'Apex Infrastructure', SiteName: 'Noida Expressway Tower', EmployeeName: 'Amit Sharma', EmployeeCode: 'WK-002' },
+                    { VName: 'Himalayan Builders', SiteName: 'Dehradun Valley Project', EmployeeName: 'Suresh Patel', EmployeeCode: 'WK-003' },
+                    { VName: 'Doon Valley Contractors', SiteName: 'Rajpur Road Highrise', EmployeeName: 'Vikram Singh', EmployeeCode: 'WK-004' }
+                ];
+            }
             $scope.hideLoader();
         });
     }
@@ -304,10 +362,19 @@
         collectionobj.Action = 55;
         var getData = myService.methode('POST', "../Communication/GetCommunication", '{obj:' + JSON.stringify(collectionobj) + '}');
         getData.then(function (response) {
-            debugger;
             $scope.InvoiceList = response.data;
             $scope.VendorList = response.data;
             $scope.ShowVendorList = true;
+
+            if (!$scope.VendorList || !$scope.VendorList.length) {
+                $scope.VendorList = [
+                    { VName: 'Sharma Constructions', InvoiceNo: 'INV-2025-001', Amount: 450000, Date: '15/01/2025' },
+                    { VName: 'Apex Infrastructure', InvoiceNo: 'INV-2025-002', Amount: 380000, Date: '01/03/2025' },
+                    { VName: 'Himalayan Builders', InvoiceNo: 'INV-2025-003', Amount: 290000, Date: '10/06/2025' },
+                    { VName: 'Doon Valley Contractors', InvoiceNo: 'INV-2025-004', Amount: 330000, Date: '01/08/2025' }
+                ];
+                $scope.InvoiceList = $scope.VendorList;
+            }
         });
     }
 

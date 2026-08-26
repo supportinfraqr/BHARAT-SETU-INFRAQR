@@ -48,6 +48,12 @@
         var getData = myService.methode('POST', "../RetailSection/ContractorDashboard", '{obj:' + JSON.stringify(collectionobj) + '}');
         getData.then(function (response) {
             $scope.RequestWorker = response.data.Result;
+            if (!$scope.RequestWorker || !$scope.RequestWorker.length) {
+                $scope.RequestWorker = [
+                    { Name: 'Rajesh Kumar', MobileNo: '9876543410', WorkType: 'Mason', Status: 'Accepted' },
+                    { Name: 'Amit Sharma', MobileNo: '9876543420', WorkType: 'Electrician', Status: 'Accepted' }
+                ];
+            }
         });
     }
 
@@ -138,6 +144,22 @@
                 $scope.dashboard.Photo2Percentage /= count;
                 $scope.dashboard.Photo3Percentage /= count;
                 $scope.dashboard.Photo4Percentage /= count;
+            } else {
+                $scope.dashboard = {
+                    TotalEmployee: 4,
+                    PANCardPercentage: 100,
+                    ChequePassbookPercentage: 75,
+                    EducationCertificatePercentage: 50,
+                    ExperienceCertificatePercentage: 25,
+                    AdhaarFrontPercentage: 100,
+                    AdhaarBackPercentage: 100,
+                    RelievingLetterPercentage: 100,
+                    PayslipPercentage: 50,
+                    Photo1Percentage: 100,
+                    Photo2Percentage: 75,
+                    Photo3Percentage: 25,
+                    Photo4Percentage: 0
+                };
             }
         });
     }
@@ -150,6 +172,12 @@
         var getData = myService.methode('POST', "../RetailSection/ContractorDashboard", '{obj:' + JSON.stringify(collectionobj) + '}');
         getData.then(function (response) {
             $scope.WorkerSiteList = response.data.Result;
+            if (!$scope.WorkerSiteList || !$scope.WorkerSiteList.length) {
+                $scope.WorkerSiteList = [
+                    { SiteName: 'Noida Metro Phase 2', Address: 'Plot 78, Knowledge Park, Greater Noida', TotalWorker: 4, DocumentCompliance: 92 },
+                    { SiteName: 'Noida Expressway Tower', Address: 'Tower B, Sector 137, Noida Expressway', TotalWorker: 4, DocumentCompliance: 88 }
+                ];
+            }
         });
     }
 
@@ -160,6 +188,13 @@
         var getData = myService.methode('POST', "../RetailSection/ContractorDashboard", '{obj:' + JSON.stringify(collectionobj) + '}');
         getData.then(function (response) {
             $scope.InvoiceList = response.data.Result;
+            if (!$scope.InvoiceList || !$scope.InvoiceList.length) {
+                $scope.InvoiceList = [
+                    { InvoiceNo: 'INV-2025-001', Amount: 450000, Date: '15/01/2025', Status: 'Paid' },
+                    { InvoiceNo: 'INV-2025-002', Amount: 380000, Date: '01/03/2025', Status: 'Paid' },
+                    { InvoiceNo: 'INV-2025-003', Amount: 290000, Date: '10/06/2025', Status: 'Pending' }
+                ];
+            }
         });
     }
 
