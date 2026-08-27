@@ -49,6 +49,7 @@
     .upload-dropzone { border: 2px dashed #3949ab; border-radius: 12px; padding: 34px 20px; text-align: center; cursor: pointer; background: #fafbff; transition: background .2s, border-color .2s; }
     .upload-dropzone:hover, .upload-dropzone.dragover { background: #eef3ff; border-color: #1a237e; }
     .upload-preview { max-width: 240px; max-height: 240px; border-radius: 12px; border: 3px solid #3949ab; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+    .upload-dropzone .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 </style>
 
 <!-- Header -->
@@ -116,12 +117,12 @@
 
     <div id="uploadPanel" style="display:none;">
         <p class="text-muted" style="font-size:13px;">Select a QR code image (PNG/JPG) to scan. Useful on laptops without a camera.</p>
-        <div id="uploadDropzone" class="upload-dropzone">
+        <label for="qrFileInput" id="uploadDropzone" class="upload-dropzone" role="button" tabindex="0">
             <i class="fa fa-cloud-upload-alt fa-3x mb-2" style="color:#3949ab;"></i>
             <div style="font-weight:600;color:#1a237e;">Click to choose an image or drag &amp; drop here</div>
             <div style="font-size:12px;color:#7b8fa1;margin-top:4px;">Supported: PNG, JPG, JPEG, WebP</div>
-            <input type="file" id="qrFileInput" accept="image/*,image/png" style="display:none;" />
-        </div>
+            <input type="file" id="qrFileInput" accept="image/*,image/png" class="sr-only" />
+        </label>
         <div class="text-center mt-3" id="uploadPreviewWrap" style="display:none;">
             <img id="uploadPreview" class="upload-preview" alt="QR preview" />
             <div class="mt-2">
@@ -282,7 +283,8 @@
     var _pendingUploadFile = null;
 
     function openFilePicker() {
-        $('#qrFileInput').trigger('click');
+        var input = document.getElementById('qrFileInput');
+        if (input) input.click();
     }
 
     function handleQrFile(file) {
@@ -336,7 +338,6 @@
             var file = this.files && this.files[0];
             if (file) handleQrFile(file);
         });
-        $('#uploadDropzone').on('click', openFilePicker);
         var $dz = $('#uploadDropzone');
         $dz.on('dragover dragenter', function(e) { e.preventDefault(); e.stopPropagation(); $dz.addClass('dragover'); });
         $dz.on('dragleave dragend', function(e) { e.preventDefault(); e.stopPropagation(); $dz.removeClass('dragover'); });
