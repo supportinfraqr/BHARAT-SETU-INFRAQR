@@ -86,17 +86,7 @@
     .tag-active { background: #def7ec; color: #03543f; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
     .tag-inactive { background: #fde8e8; color: #9b1c1c; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 
-    .worker-card-footer {
-        border-top: 1px solid #f3f4f6;
-        padding-top: 12px;
-        margin-top: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .qr-mini-badge { font-size: 12px; font-weight: 700; color: #2563eb; }
-    .card-link { font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; }
-    .card-link:hover { text-decoration: underline; }
+
 </style>
 
 <div class="workers-container">
@@ -185,7 +175,7 @@
             var employer = w.employer_name || (w.employer ? '#' + w.employer : 'Unbound');
             var contractor = w.contractor_name || (w.contractor ? '#' + w.contractor : 'Unbound');
 
-            html += '<div class="worker-card" onclick="location.href=\'/qr/card/' + w.id + '\'">' +
+            html += '<div class="worker-card">' +
                 '<div>' +
                     '<div class="worker-card-header">' +
                         '<div class="worker-avatar">' + letter + '</div>' +
@@ -200,10 +190,6 @@
                         '<p><b>Employer:</b> ' + escHtml(employer) + '</p>' +
                         '<p><b>Contractor:</b> ' + escHtml(contractor) + '</p>' +
                     '</div>' +
-                '</div>' +
-                '<div class="worker-card-footer">' +
-                    '<span class="qr-mini-badge"><i class="fa fa-qrcode"></i> QR ID</span>' +
-                    '<span class="card-link">View ID Card <i class="fa fa-arrow-right"></i></span>' +
                 '</div>' +
             '</div>';
         });

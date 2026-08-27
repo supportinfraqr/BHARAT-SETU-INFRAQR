@@ -80,12 +80,24 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
         return myLoginService.methode('POST', url, '{obj:' + JSON.stringify(obj) + '}');
     }
     function _goAfterBridge(path) {
-        // Redirect immediately after ERP login succeeds — do NOT block on the
-        // QR bridge auth. The bridge JWT is cached in the background; if the
-        // very first QR call hits a cold session, the bridge retries via its
-        // own anon/fallback path. Login must feel instant.
-        _bridgeAuthPending = null;
-        window.location.href = path;
+        // Wait for the bridge JWT to be cached (usually ~100ms now) so QR
+        // pages don't get 401 'Session expired'. Hard cap at 2.5s so login
+        // can never freeze — then redirect regardless.
+        if (_bridgeAuthPending) {
+            var p = _bridgeAuthPending; _bridgeAuthPending = null;
+            var done = false;
+            var force = setTimeout(function () {
+                if (!done) { done = true; window.location.href = path; }
+            }, 2500);
+            p.always(function () {
+                if (done) return;
+                done = true;
+                clearTimeout(force);
+                window.location.href = path;
+            });
+        } else {
+            window.location.href = path;
+        }
     }
     function getPlain(url) {
         return myLoginService.methode('GET', url, '{}');

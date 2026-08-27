@@ -480,9 +480,14 @@ class QRCodeView(APIView):
                 con_id2, role2 = _scanner_contractor(request)
                 if con_id2:
                     contractor = Contractor.objects.filter(pk=con_id2).first()
-                    if contractor and contractor.employer_id == entity.pk:
+                    active_ec = Binding.objects.filter(
+                        binding_type="EMPLOYER_CONTRACTOR", employer=entity, contractor=contractor, status="ACTIVE"
+                    ).exists()
+                    if active_ec:
                         data["binding_status"] = "ALREADY_BOUND"
-                    elif contractor and contractor.employer_id:
+                    elif Binding.objects.filter(
+                        binding_type="EMPLOYER_CONTRACTOR", contractor=contractor, status="ACTIVE"
+                    ).exclude(employer=entity).exists():
                         data["binding_status"] = "BOUND_ELSEWHERE"
                     else:
                         pending = Binding.objects.filter(
@@ -508,9 +513,14 @@ class QRCodeView(APIView):
                     if not worker:
                         worker = Worker.objects.filter(mobile=request.user.mobile).first()
                     if worker:
-                        if worker.contractor_id == entity.pk:
+                        active_wc = Binding.objects.filter(
+                            binding_type="WORKER_CONTRACTOR", contractor=entity, worker=worker, status="ACTIVE"
+                        ).exists()
+                        if active_wc:
                             data["binding_status"] = "ALREADY_BOUND"
-                        elif worker.contractor_id:
+                        elif Binding.objects.filter(
+                            binding_type="WORKER_CONTRACTOR", worker=worker, status="ACTIVE"
+                        ).exclude(contractor=entity).exists():
                             data["binding_status"] = "BOUND_ELSEWHERE"
                         else:
                             pending = Binding.objects.filter(
@@ -519,11 +529,16 @@ class QRCodeView(APIView):
                             data["binding_status"] = "PENDING" if pending else "NOT_REQUESTED"
                 # If scanner is an employer, attach binding status (employer <-> contractor)
                 elif role == EMPLOYER:
-                    if entity.employer_id == emp_id or ContractorEmployment.objects.filter(
+                    active_ec = Binding.objects.filter(
+                        binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=entity, status="ACTIVE"
+                    ).exists()
+                    if active_ec or ContractorEmployment.objects.filter(
                         contractor=entity, employer_id=emp_id, status="ACTIVE"
                     ).exists():
                         data["binding_status"] = "ALREADY_BOUND"
-                    elif entity.employer_id:
+                    elif Binding.objects.filter(
+                        binding_type="EMPLOYER_CONTRACTOR", contractor=entity, status="ACTIVE"
+                    ).exclude(employer_id=emp_id).exists():
                         data["binding_status"] = "BOUND_ELSEWHERE"
                     else:
                         pending = Binding.objects.filter(
@@ -532,7 +547,9 @@ class QRCodeView(APIView):
                         data["binding_status"] = "PENDING" if pending else "NOT_REQUESTED"
             elif qr.entity_type == "WORKER" and entity:
                 full = (role in (SUPER, STAFF) or (role == EMPLOYER and entity.employer_id == emp_id)
-                        or (role in (PRIMARY, SECONDARY) and entity.contractor_id == con_id)
+                        or (role in (PRIMARY, SECONDARY) and Binding.objects.filter(
+                            binding_type="WORKER_CONTRACTOR", contractor_id=con_id, worker=entity, status="ACTIVE"
+                        ).exists())
                         or (role == WORKER and entity.pk == (Worker.objects.filter(
                             legacy_employee_code=request.user.username).values_list("pk", flat=True).first())))
                 data["entity_details"] = {
@@ -549,9 +566,14 @@ class QRCodeView(APIView):
                 # Contractor scanning a worker: report binding status so the UI can
                 # offer "Bind Worker" or "Mark Attendance".
                 if role in (PRIMARY, SECONDARY):
-                    if entity.contractor_id == con_id:
+                    active_wc = Binding.objects.filter(
+                        binding_type="WORKER_CONTRACTOR", contractor_id=con_id, worker=entity, status="ACTIVE"
+                    ).exists()
+                    if active_wc:
                         data["binding_status"] = "ALREADY_BOUND"
-                    elif entity.contractor_id:
+                    elif Binding.objects.filter(
+                        binding_type="WORKER_CONTRACTOR", worker=entity, status="ACTIVE"
+                    ).exclude(contractor_id=con_id).exists():
                         data["binding_status"] = "BOUND_ELSEWHERE"
                     else:
                         data["binding_status"] = "NOT_BOUND"
@@ -632,7 +654,13 @@ class QRScanView(APIView):
 
             # Contractor scans a worker QR
             if scanner_role in (PRIMARY, SECONDARY):
-                if con_id and worker.contractor_id and worker.contractor_id != con_id:
+                active_binding_here = Binding.objects.filter(
+                    binding_type="WORKER_CONTRACTOR", contractor_id=con_id, worker=worker, status="ACTIVE"
+                ).first()
+                active_binding_elsewhere = Binding.objects.filter(
+                    binding_type="WORKER_CONTRACTOR", worker=worker, status="ACTIVE"
+                ).exclude(contractor_id=con_id).first()
+                if con_id and active_binding_elsewhere:
                     # Worker already bound to another contractor
                     log_scan(request, qr, worker=worker, scan_result="WORKER_BOUND_ELSEWHERE", lat=lat, lng=lng)
                     return Response({
@@ -643,18 +671,15 @@ class QRScanView(APIView):
                             "worker": {"id": worker.pk, "full_name": worker.full_name, "worker_id": worker.worker_id},
                         },
                     })
-                if worker.contractor_id == con_id:
+                if active_binding_here:
                     # Already bound to this contractor -> can mark attendance
-                    active_binding = Binding.objects.filter(
-                        binding_type="WORKER_CONTRACTOR", contractor_id=con_id, worker=worker, status="ACTIVE"
-                    ).first()
                     return Response({
                         "Result": "Success",
                         "Data": {
                             "entity_type": "WORKER",
                             "action": "already_bound",
                             "worker": WorkerSerializer(worker).data,
-                            "binding_id": active_binding.pk if active_binding else None,
+                            "binding_id": active_binding_here.pk,
                         },
                     })
                 # Unbound worker -> contractor can bind (create a WORKER_CONTRACTOR binding request)
@@ -797,12 +822,13 @@ class QRScanView(APIView):
                     "is_primary": contractor.is_primary,
                 }
                 # Already bound to this employer
-                if contractor.employer_id == emp_id or ContractorEmployment.objects.filter(
+                active_ec = Binding.objects.filter(
+                    binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=contractor, status="ACTIVE"
+                ).first()
+                if active_ec or ContractorEmployment.objects.filter(
                     contractor=contractor, employer_id=emp_id, status="ACTIVE"
                 ).exists():
-                    active_binding = Binding.objects.filter(
-                        binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=contractor, status="ACTIVE"
-                    ).first()
+                    active_binding = active_ec
                     if not active_binding:
                         active_binding = Binding.objects.create(
                             binding_type="EMPLOYER_CONTRACTOR", employer_id=emp_id, contractor=contractor,
@@ -817,10 +843,12 @@ class QRScanView(APIView):
                                  "site_id": active_binding.site_id, "site_name": active_binding.site_name},
                     })
                 # Bound to another employer
-                if contractor.employer_id:
+                if Binding.objects.filter(
+                    binding_type="EMPLOYER_CONTRACTOR", contractor=contractor, status="ACTIVE"
+                ).exclude(employer_id=emp_id).exists():
                     return Response({
                         "Result": "Success",
-                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "employer_sites": employer_sites, "action": "bound_elsewhere", "can_request": True, "current_employer_id": contractor.employer_id},
+                        "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "employer_sites": employer_sites, "action": "bound_elsewhere", "can_request": True},
                     })
                 # Avoid duplicate pending requests
                 existing = Binding.objects.filter(
@@ -881,13 +909,18 @@ class QRScanView(APIView):
                         "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "worker_login_required"},
                     })
                 # Worker already bound to this contractor
-                if worker.contractor_id == contractor.pk:
+                active_wc = Binding.objects.filter(
+                    binding_type="WORKER_CONTRACTOR", contractor=contractor, worker=worker, status="ACTIVE"
+                ).exists()
+                if active_wc:
                     return Response({
                         "Result": "Success",
                         "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "already_bound", "can_unbind": True},
                     })
                 # Worker bound to another contractor
-                if worker.contractor_id:
+                if Binding.objects.filter(
+                    binding_type="WORKER_CONTRACTOR", worker=worker, status="ACTIVE"
+                ).exclude(contractor=contractor).exists():
                     return Response({
                         "Result": "Success",
                         "Data": {"entity_type": "CONTRACTOR", "contractor": basic, "action": "bound_elsewhere", "can_request": True},
@@ -945,17 +978,12 @@ class QRScanView(APIView):
                 })
             contractor = Contractor.objects.filter(pk=con_id).first()
             # If contractor is bound to THIS employer -> option to unbind
-            if contractor and contractor.employer_id == employer.pk:
+            active_binding = None
+            if contractor:
                 active_binding = Binding.objects.filter(
                     binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor, status="ACTIVE"
                 ).first()
-                if not active_binding:
-                    active_binding = Binding.objects.create(
-                        binding_type="EMPLOYER_CONTRACTOR", employer=employer, contractor=contractor,
-                        status="ACTIVE", initiator_consent="APPROVED", approver_consent="APPROVED",
-                        initiator_consent_at=timezone.now(), approver_consent_at=timezone.now(),
-                        consent_channel="APP",
-                    )
+            if active_binding:
                 return Response({
                     "Result": "Success",
                     "Data": {"entity_type": "EMPLOYER", "employer": basic, "employer_sites": employer_sites,
@@ -963,7 +991,9 @@ class QRScanView(APIView):
                              "site_id": active_binding.site_id, "site_name": active_binding.site_name},
                 })
             # If bound to another employer -> show basic info + option to request binding here
-            if contractor and contractor.employer_id:
+            if contractor and Binding.objects.filter(
+                binding_type="EMPLOYER_CONTRACTOR", contractor=contractor, status="ACTIVE"
+            ).exclude(employer=employer).exists():
                 return Response({
                     "Result": "Success",
                     "Data": {
@@ -972,7 +1002,6 @@ class QRScanView(APIView):
                         "employer_sites": employer_sites,
                         "action": "bound_elsewhere",
                         "can_request": True,
-                        "current_employer_id": contractor.employer_id,
                     },
                 })
             # Unbound contractor -> create PENDING request (avoid duplicates)
@@ -1114,7 +1143,9 @@ class BindingCreate(APIView):
                     return Response({"Result": "Error", "Message": "Binding requires permitted geo-location"}, status=400)
             elif contractor.location_lat:
                 return Response({"Result": "Error", "Message": "Location unavailable for binding"}, status=400)
-            if worker.contractor_id and worker.contractor_id != int(contractor_id):
+            if Binding.objects.filter(
+                binding_type="WORKER_CONTRACTOR", worker=worker, status="ACTIVE"
+            ).exclude(contractor_id=int(contractor_id)).exists():
                 return Response({"Result": "Error", "Message": "Worker already bound to another contractor"}, status=409)
             binding = Binding.objects.create(
                 binding_type=binding_type, employer_id=employer_id or contractor.employer_id,
@@ -1431,7 +1462,10 @@ class WorkerUnbind(APIView):
                 binding.status = "ENDED"
                 binding.ended_at = timezone.now()
                 binding.save()
-            # Do not clear contractor/employer links so they remain visible as unbound/expired
+                worker.contractor = None
+                worker.employer = None
+                worker.site = None
+                worker.save(update_fields=["contractor", "employer", "site"])
             write_audit(request, "WORKER_UNBOUND", "WORKER", worker.pk,
                         previous=str(binding.contractor_id) if binding else "", new="")
         return Response({"Result": "Success", "Message": f"Worker {worker.full_name} unbound"})
