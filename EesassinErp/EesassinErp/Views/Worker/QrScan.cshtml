@@ -46,6 +46,9 @@
     .badge-pending { background: #fff3e0; color: #e65100; }
     .badge-unbound { background: #fce4ec; color: #c62828; }
     .badge-info { background: #e3f2fd; color: #1565c0; }
+    .upload-dropzone { border: 2px dashed #3949ab; border-radius: 12px; padding: 34px 20px; text-align: center; cursor: pointer; background: #fafbff; transition: background .2s, border-color .2s; }
+    .upload-dropzone:hover, .upload-dropzone.dragover { background: #eef3ff; border-color: #1a237e; }
+    .upload-preview { max-width: 240px; max-height: 240px; border-radius: 12px; border: 3px solid #3949ab; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
 </style>
 
 <!-- Header -->
@@ -71,6 +74,9 @@
         </button>
         <button class="tab-btn" id="tabManual" onclick="switchTab('manual')">
             <i class="fa fa-keyboard me-1"></i> Manual Entry
+        </button>
+        <button class="tab-btn" id="tabUpload" onclick="switchTab('upload')">
+            <i class="fa fa-upload me-1"></i> Upload PNG
         </button>
     </div>
 
@@ -107,9 +113,29 @@
             </button>
         </div>
     </div>
-</div>
 
-<!-- Result -->
+    <div id="uploadPanel" style="display:none;">
+        <p class="text-muted" style="font-size:13px;">Select a QR code image (PNG/JPG) to scan. Useful on laptops without a camera.</p>
+        <div id="uploadDropzone" class="upload-dropzone">
+            <i class="fa fa-cloud-upload-alt fa-3x mb-2" style="color:#3949ab;"></i>
+            <div style="font-weight:600;color:#1a237e;">Click to choose an image or drag &amp; drop here</div>
+            <div style="font-size:12px;color:#7b8fa1;margin-top:4px;">Supported: PNG, JPG, JPEG, WebP</div>
+            <input type="file" id="qrFileInput" accept="image/*,image/png" style="display:none;" />
+        </div>
+        <div class="text-center mt-3" id="uploadPreviewWrap" style="display:none;">
+            <img id="uploadPreview" class="upload-preview" alt="QR preview" />
+            <div class="mt-2">
+                <button class="btn btn-qr-action" id="btnScanUpload" onclick="scanUploadedFile()">
+                    <i class="fa fa-qrcode me-2"></i> Scan Image
+                </button>
+                <button class="btn btn-outline-secondary ms-2" id="btnChooseAnother" onclick="openFilePicker()">
+                    <i class="fa fa-folder-open me-1"></i> Choose Another
+                </button>
+            </div>
+            </div>
+        </div>
+        <div style="display:none;" id="qrFileScanTarget"></div>
+    </div>
 <div class="result-card" id="resultCard">
     <span id="resultMsg"></span>
 </div>
@@ -146,8 +172,10 @@
     function switchTab(tab) {
         $('#tabCamera').toggleClass('active', tab === 'camera');
         $('#tabManual').toggleClass('active', tab === 'manual');
+        $('#tabUpload').toggleClass('active', tab === 'upload');
         $('#cameraPanel').toggle(tab === 'camera');
         $('#manualPanel').toggle(tab === 'manual');
+        $('#uploadPanel').toggle(tab === 'upload');
         if (tab !== 'camera' && html5QrCode) stopScan();
     }
 
@@ -249,6 +277,74 @@
         var ref = $('#manualQrRef').val().trim();
         if (!ref) { Swal.fire('Missing', 'Please enter a QR reference code.', 'warning'); return; }
         processQr(ref);
+    }
+
+    var _pendingUploadFile = null;
+
+    function openFilePicker() {
+        $('#qrFileInput').trigger('click');
+    }
+
+    function handleQrFile(file) {
+        if (!file) return;
+        var isImg = /^image\//.test(file.type) || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+        if (!isImg) { Swal.fire('Invalid File', 'Please select an image file (PNG/JPG).', 'warning'); return; }
+        _pendingUploadFile = file;
+        var url = URL.createObjectURL(file);
+        $('#uploadPreview').attr('src', url);
+        $('#uploadDropzone').hide();
+        $('#uploadPreviewWrap').show();
+    }
+
+    function scanUploadedFile() {
+        var file = _pendingUploadFile;
+        if (!file) { Swal.fire('Missing', 'Please choose a QR image first.', 'warning'); return; }
+        var btn = $('#btnScanUpload');
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-pulse me-2"></i> Scanning image...');
+        try {
+            var hs = new Html5Qrcode("qrFileScanTarget");
+            hs.scanFile(file, /* showImage */ true)
+                .then(function(decodedText) {
+                    btn.prop('disabled', false).html('<i class="fa fa-qrcode me-2"></i> Scan Image');
+                    try { hs.clear(); } catch(e){}
+                    beep();
+                    _pendingUploadFile = null;
+                    resetUploadPanel();
+                    processQr(decodedText);
+                })
+                .catch(function(err) {
+                    btn.prop('disabled', false).html('<i class="fa fa-qrcode me-2"></i> Scan Image');
+                    try { hs.clear(); } catch(e){}
+                    Swal.fire('QR Not Found', 'Could not read a QR code from this image. Use a clearer or tightly-cropped image.', 'error');
+                });
+        } catch (e) {
+            btn.prop('disabled', false).html('<i class="fa fa-qrcode me-2"></i> Scan Image');
+            Swal.fire('Error', 'Could not scan the image: ' + e, 'error');
+        }
+    }
+
+    function resetUploadPanel() {
+        _pendingUploadFile = null;
+        $('#qrFileInput').val('');
+        $('#uploadPreview').removeAttr('src');
+        $('#uploadPreviewWrap').hide();
+        $('#uploadDropzone').show();
+    }
+
+    function initUploadMode() {
+        $('#qrFileInput').on('change', function() {
+            var file = this.files && this.files[0];
+            if (file) handleQrFile(file);
+        });
+        $('#uploadDropzone').on('click', openFilePicker);
+        var $dz = $('#uploadDropzone');
+        $dz.on('dragover dragenter', function(e) { e.preventDefault(); e.stopPropagation(); $dz.addClass('dragover'); });
+        $dz.on('dragleave dragend', function(e) { e.preventDefault(); e.stopPropagation(); $dz.removeClass('dragover'); });
+        $dz.on('drop', function(e) {
+            e.preventDefault(); e.stopPropagation(); $dz.removeClass('dragover');
+            var file = e.originalEvent.dataTransfer && e.originalEvent.dataTransfer.files && e.originalEvent.dataTransfer.files[0];
+            if (file) handleQrFile(file);
+        });
     }
 
     function postJson(url, data) {
@@ -573,6 +669,7 @@
         $('#entityDetailCard').hide();
         currentScanData = null;
         currentBindingId = null;
+        if (_pendingUploadFile) resetUploadPanel();
         switchTab('camera');
         restartCamera();
     }
@@ -590,4 +687,6 @@
             $actions.prepend('<button class="btn btn-qr-action btn-scan-next" onclick="resetScan()"><i class="fa fa-camera me-1"></i> Scan Next</button>');
         }
     }
+
+    $(function() { initUploadMode(); });
 </script>
