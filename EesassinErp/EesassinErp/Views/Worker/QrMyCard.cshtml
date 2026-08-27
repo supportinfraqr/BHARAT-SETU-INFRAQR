@@ -504,13 +504,54 @@
             if (el) el.textContent = val || '-';
         }
 
+        // Resilient bridge GET: on an intermittent 401, transparently re-login
+        // to the bridge using the credentials cached at login, then retry once.
+        function qBridgeReAuth() {
+            var creds = null;
+            try { creds = JSON.parse(sessionStorage.getItem('bssBridgeCreds') || 'null'); } catch (e) { }
+            if (!creds || !creds.username) return $.Deferred().reject().promise();
+            return $.post(QrBase + '/auth/login/', {
+                username: creds.username,
+                password: creds.password || ''
+            });
+        }
+
+        function qBridgeJson(url, attempt) {
+            attempt = attempt || 0;
+            var dfd = $.Deferred();
+            $.get(url)
+                .done(function (data) { dfd.resolve(data); })
+                .fail(function (xhr) {
+                    if (attempt === 0 && xhr && xhr.status === 401) {
+                        qBridgeReAuth().done(function () {
+                            qBridgeJson(url, 1).done(dfd.resolve).fail(dfd.reject);
+                        }).fail(function () { dfd.reject(xhr); });
+                    } else {
+                        dfd.reject(xhr || 'error');
+                    }
+                });
+            return dfd.promise();
+        }
+
         function setStandaloneQr(qrUrl) {
             var panel = document.getElementById('standaloneQrPanel');
             var img = document.getElementById('standaloneQrImg');
             var dl1 = document.getElementById('downloadQrBtn');
             var dl2 = document.getElementById('downloadQrBtn2');
             if (!panel || !qrUrl) return;
-            img.src = qrUrl;
+            var attempt = 0;
+            var doLoad = function () {
+                img.src = qrUrl + '&t=' + Date.now();
+            };
+            img.onerror = function () {
+                if (attempt === 0) {
+                    attempt = 1;
+                    qBridgeReAuth().done(doLoad).fail(doLoad);
+                } else {
+                    img.onerror = null;
+                }
+            };
+            doLoad();
             var clean = qrUrl.split('&t=')[0];
             if (dl1) { dl1.href = clean; dl1.style.display = 'inline-flex'; }
             if (dl2) { dl2.href = clean; }
@@ -647,7 +688,7 @@
         }
 
         function loadEntityCard() {
-            $.get(QrBase + '/qr/profile/me/')
+            qBridgeJson(QrBase + '/qr/profile/me/')
                 .done(function (res) {
                     if (res && res.Result === 'Success' && res.Data && res.Data.profile) {
                         renderEntityCard(res.Data);

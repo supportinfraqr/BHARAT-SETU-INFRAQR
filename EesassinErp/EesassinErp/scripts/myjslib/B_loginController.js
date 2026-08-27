@@ -73,8 +73,23 @@ myLoginApp.controller('myLoginController', function ($scope, $timeout, myLoginSe
     $timeout(function () { $('#username-input').val('').focus(); }, 50);
      
     var _bridgeAuthPending = null;
+
+    // Cache bridge credentials (same-origin, session-only) so QR pages can
+    // transparently re-authenticate the bridge on an intermittent 401 instead
+    // of showing "Failed to load identity data."
+    function cacheBridgeCreds(username, password) {
+        if (!username) return;
+        try {
+            sessionStorage.setItem('bssBridgeCreds', JSON.stringify({
+                username: username,
+                password: password || ''
+            }));
+        } catch (e) { }
+    }
+
     function postObj(url, obj) {
         if (url.indexOf('NGetUserId') !== -1) {
+            cacheBridgeCreds(obj.Username || obj.username || '', obj.Password || obj.password || '');
             _bridgeAuthPending = $.post('../Api/QrBridge/auth/login/', { username: obj.Username || obj.username || '', password: obj.Password || obj.password || '' });
         }
         return myLoginService.methode('POST', url, '{obj:' + JSON.stringify(obj) + '}');
