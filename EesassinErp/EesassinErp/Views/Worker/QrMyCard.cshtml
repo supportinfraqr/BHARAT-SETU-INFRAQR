@@ -234,7 +234,7 @@
             display:none!important
         }
         .card-page{padding:0!important;margin:0!important;max-width:100%!important}
-        .card-toolbar,.loading-overlay{display:none!important}
+        .card-toolbar,.loading-overlay,.standalone-qr{display:none!important}
         .card-stage{
             padding:0!important;margin:0!important;
             box-shadow:none!important;border-radius:0!important;background:#fff!important
@@ -255,6 +255,24 @@
         }
         @@page{size:auto;margin:10mm}
     }
+    .standalone-qr{
+        display:flex;justify-content:center;margin-bottom:20px
+    }
+    .sqr-box{
+        background:#fff;border-radius:14px;padding:22px 28px;
+        box-shadow:0 2px 10px rgba(0,0,0,.06);text-align:center
+    }
+    .sqr-title{
+        font-size:14px;font-weight:800;color:#022B5E;margin-bottom:14px
+    }
+    .sqr-box img{
+        width:200px;height:200px;border:3px solid #022B5E;border-radius:12px;
+        padding:6px;background:#fff
+    }
+    .sqr-sub{
+        font-size:12px;color:#666;margin:12px 0 14px
+    }
+    .sqr-dl{display:inline-flex!important;text-decoration:none}
 </style>
 
 <!-- Loading -->
@@ -273,11 +291,26 @@
         </div>
         <div class="actions">
             <button class="btn-card outline" onclick="window.print()">
-                <i class="fa fa-print"></i> Print
+                <i class="bi bi-printer"></i> Print
             </button>
             <button class="btn-card primary" onclick="window.print()">
-                <i class="fa fa-file-pdf"></i> Download PDF
+                <i class="bi bi-file-earmark-pdf"></i> Download PDF
             </button>
+            <a class="btn-card primary" id="downloadQrBtn" href="#" download="bss-qr-code.png" style="display:none;text-decoration:none">
+                <i class="bi bi-download"></i> Download QR
+            </a>
+        </div>
+    </div>
+
+    <!-- Standalone QR -->
+    <div class="standalone-qr" id="standaloneQrPanel" style="display:none">
+        <div class="sqr-box">
+            <div class="sqr-title"><i class="bi bi-qr-code"></i> Standalone QR Code</div>
+            <img id="standaloneQrImg" src="" alt="Standalone QR Code" />
+            <div class="sqr-sub">Scan this code to verify your identity</div>
+            <a class="btn-card primary sqr-dl" id="downloadQrBtn2" href="#" download="bss-qr-code.png">
+                <i class="bi bi-download"></i> Download QR
+            </a>
         </div>
     </div>
 
@@ -471,6 +504,19 @@
             if (el) el.textContent = val || '-';
         }
 
+        function setStandaloneQr(qrUrl) {
+            var panel = document.getElementById('standaloneQrPanel');
+            var img = document.getElementById('standaloneQrImg');
+            var dl1 = document.getElementById('downloadQrBtn');
+            var dl2 = document.getElementById('downloadQrBtn2');
+            if (!panel || !qrUrl) return;
+            img.src = qrUrl;
+            var clean = qrUrl.split('&t=')[0];
+            if (dl1) { dl1.href = clean; dl1.style.display = 'inline-flex'; }
+            if (dl2) { dl2.href = clean; }
+            panel.style.display = 'flex';
+        }
+
         function loadCard(data) {
             if (!data || !data.Result || !data.Result.length) {
                 document.getElementById('cardLoader').innerHTML =
@@ -527,11 +573,14 @@
 
             // QR
             var qrImg = document.getElementById('cQr');
+            var qrUrl;
             if (w.Id) {
-                qrImg.src = QrBase + '/qr/workers/' + w.Id + '/card/?fmt=qr&t=' + Date.now();
+                qrUrl = QrBase + '/qr/workers/' + w.Id + '/card/?fmt=qr';
             } else {
-                qrImg.src = QrBase + '/qr/my-card/?fmt=qr&t=' + Date.now();
+                qrUrl = QrBase + '/qr/my-card/?fmt=qr';
             }
+            qrImg.src = qrUrl + '&t=' + Date.now();
+            setStandaloneQr(qrUrl + '&t=' + Date.now());
 
             document.getElementById('cardLoader').style.display = 'none';
             document.getElementById('cardPage').style.display = 'block';
@@ -663,7 +712,9 @@
             photoWrap.classList.add('no-photo');
 
             var qrImg = document.getElementById('cQr');
-            qrImg.src = QrBase + '/qr/my-card/?fmt=qr&t=' + Date.now();
+            var qrUrl = QrBase + '/qr/my-card/?fmt=qr';
+            qrImg.src = qrUrl + '&t=' + Date.now();
+            setStandaloneQr(qrUrl + '&t=' + Date.now());
 
             document.getElementById('cardLoader').style.display = 'none';
             document.getElementById('cardPage').style.display = 'block';
