@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.egg-info/
+db.sqlite3
+staticfiles/
+media/
+
+# Tooling
+.venv/
+venv/
+.DS_Store
