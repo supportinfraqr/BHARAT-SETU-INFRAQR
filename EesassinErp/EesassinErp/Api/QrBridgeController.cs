@@ -93,6 +93,18 @@ namespace EesassinErp.Controllers
 
         // ─── Workers ───────────────────────────────────────────────────────────
 
+        /// <summary>GET /Api/QrBridge/qr/me/ — Return the logged-in user's QR code as a PNG image</summary>
+        [HttpGet]
+        [Route("qr/me/")]
+        public async Task<IHttpActionResult> MyQrCode()
+        {
+            var result = await ForwardAsync("GET", "/api/qr/me/", null, GetToken(), binary: true);
+            var resp = new HttpResponseMessage((HttpStatusCode)result.StatusCode);
+            resp.Content = new ByteArrayContent(result.BinaryBody ?? new byte[0]);
+            resp.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+            return ResponseMessage(resp);
+        }
+
         /// <summary>GET /Api/QrBridge/qr/workers/</summary>
         [HttpGet]
         [Route("qr/workers/")]
@@ -326,6 +338,48 @@ namespace EesassinErp.Controllers
         public async Task<IHttpActionResult> Scans()
             => ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/scans/", null, GetToken())));
 
+        // ─── Sites ────────────────────────────────────────────────────────────
+
+        /// <summary>GET /Api/QrBridge/qr/sites/ — list the employer's sites</summary>
+        [HttpGet]
+        [Route("qr/sites/")]
+        public async Task<IHttpActionResult> Sites()
+            => ResponseMessage(BuildResponse(await ForwardAsync("GET", "/api/qr/sites/", null, GetToken())));
+
+        /// <summary>POST /Api/QrBridge/qr/sites/ — create a site (belongs to employer)</summary>
+        [HttpPost]
+        [Route("qr/sites/")]
+        public async Task<IHttpActionResult> CreateSite()
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("POST", "/api/qr/sites/", body, GetToken())));
+        }
+
+        /// <summary>PUT /Api/QrBridge/qr/sites/{id}/ — update a site</summary>
+        [HttpPut]
+        [Route("qr/sites/{siteId}/")]
+        public async Task<IHttpActionResult> UpdateSite(int siteId)
+        {
+            var body = await Request.Content.ReadAsStringAsync();
+            return ResponseMessage(BuildResponse(await ForwardAsync("PUT", $"/api/qr/sites/{siteId}/", body, GetToken())));
+        }
+
+        /// <summary>DELETE /Api/QrBridge/qr/sites/{id}/ — delete a site</summary>
+        [HttpDelete]
+        [Route("qr/sites/{siteId}/")]
+        public async Task<IHttpActionResult> DeleteSite(int siteId)
+            => ResponseMessage(BuildResponse(await ForwardAsync("DELETE", $"/api/qr/sites/{siteId}/", null, GetToken())));
+
+        /// <summary>GET /Api/QrBridge/qr/qr/geocode/?lat=..&amp;lng=.. — reverse geocode for the map picker</summary>
+        [HttpGet]
+        [Route("qr/qr/geocode/")]
+        public async Task<IHttpActionResult> Geocode()
+        {
+            string qs = HttpContext.Current.Request.QueryString.ToString();
+            string path = "/api/qr/qr/geocode/" + (string.IsNullOrEmpty(qs) ? "" : "?" + qs);
+            return ResponseMessage(BuildResponse(await ForwardAsync("GET", path, null, GetToken())));
+        }
+
         // ─── Proxy Core ────────────────────────────────────────────────────────
 
         /// <summary>Mono's Web API host provides no HttpSessionState to ApiControllers
@@ -343,12 +397,52 @@ namespace EesassinErp.Controllers
             => StoreToken(token, HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value);
 
         private void StoreToken(string token, string sessionId)
-            => System.Web.HttpRuntime.Cache.Insert(TokenCacheKey(sessionId), token, null,
+        {
+            System.Web.HttpRuntime.Cache.Insert(TokenCacheKey(sessionId), token, null,
                 System.Web.Caching.Cache.NoAbsoluteExpiration,
                 TimeSpan.FromMinutes(TokenSlidingMinutes));
+            // Persist across app-pool recycles: cache dies with the process,
+            // but the ASP.NET_SessionId cookie survives on the client.
+            try
+            {
+                var dir = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/BssJwt")
+                          ?? @"C:\BSS\BssJwt";
+                System.IO.Directory.CreateDirectory(dir);
+                var sb = new System.Text.StringBuilder();
+                foreach (char ch in (sessionId ?? "anon"))
+                    if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+                var safe = sb.Length == 0 ? "anon" : sb.ToString();
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir, safe + ".txt"), token);
+            }
+            catch { }
+        }
 
         private string GetToken()
-            => System.Web.HttpRuntime.Cache[TokenCacheKey()] as string;
+        {
+            var key = TokenCacheKey();
+            var tok = System.Web.HttpRuntime.Cache[key] as string;
+            if (!string.IsNullOrEmpty(tok)) return tok;
+            // Cache miss (recycle/idle): hydrate from disk
+            try
+            {
+                var dir = System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/BssJwt")
+                          ?? @"C:\BSS\BssJwt";
+                var sb = new System.Text.StringBuilder();
+                foreach (char ch in (HttpContext.Current?.Request?.Cookies["ASP.NET_SessionId"]?.Value ?? "anon"))
+                    if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+                var p = System.IO.Path.Combine(dir, (sb.Length == 0 ? "anon" : sb.ToString()) + ".txt");
+                if (System.IO.File.Exists(p))
+                {
+                    tok = System.IO.File.ReadAllText(p).Trim();
+                    if (!string.IsNullOrEmpty(tok))
+                        System.Web.HttpRuntime.Cache.Insert(key, tok, null,
+                            System.Web.Caching.Cache.NoAbsoluteExpiration,
+                            TimeSpan.FromMinutes(TokenSlidingMinutes));
+                }
+            }
+            catch { }
+            return tok;
+        }
 
         private class ProxyResult
         {

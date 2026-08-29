@@ -18,3 +18,11 @@ frontend-package.zip
 *.bak
 EesassinErp/nuget.exe
 !BSS_PROJECT_INFRAQR/docs/bss_schema.sql
+
+# Sensitive / non-source files (must NOT go on GitHub)
+*.pem
+bharat-shram-setu-staging-key.pem
+auth_flow/
+auth_flow.zip
+*.docx
+development-demo/

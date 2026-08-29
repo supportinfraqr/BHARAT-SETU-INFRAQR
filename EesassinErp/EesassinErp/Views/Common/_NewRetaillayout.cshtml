@@ -268,12 +268,161 @@
             height: 18px;
         }
 
+        /*-- NavLinks inside Navbar --*/
+        .nav-center-btn {
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #022B5E;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: .25s ease;
+            text-decoration: none;
+        }
+        .nav-center-btn:hover {
+            background: #FFF;
+            color: #022B5E;
+        }
+        .nav-center-btn.active {
+            background: #fff;
+            color: #022B5E;
+            border: 1px solid #022B5E;
+        }
+        .nav-center-btn:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
 
 
     </style>
 
+    <style>
+        /* ── QR SYSTEM pages: match the ERP theme (muted orange + neutral),
+               no bright Tailwind indigo/blue/green/red highlights ── */
+        body.qr-page {
+            background: #f4f6f9;
+        }
+        /* Primary actions → ERP orange */
+        body.qr-page .btn-action,
+        body.qr-page .btn-act-primary,
+        body.qr-page .btn-save,
+        body.qr-page .btn-approve,
+        body.qr-page .btn-dl,
+        body.qr-page .btn-card,
+        body.qr-page .btn-qr-action {
+            background: #e45d27 !important;
+            border-color: #e45d27 !important;
+            color: #fff !important;
+        }
+        body.qr-page .btn-action:hover,
+        body.qr-page .btn-act-primary:hover,
+        body.qr-page .btn-save:hover,
+        body.qr-page .btn-approve:hover,
+        body.qr-page .btn-dl:hover,
+        body.qr-page .btn-card:hover,
+        body.qr-page .btn-qr-action:hover {
+            background: #c94a1d !important;
+            border-color: #c94a1d !important;
+        }
+        /* Success actions stay green (semantic) but muted ERP tone */
+        body.qr-page .btn-act-success,
+        body.qr-page .btn-success {
+            background: #2f7d43 !important;
+            border-color: #2f7d43 !important;
+            color: #fff !important;
+        }
+        /* Destructive actions → muted red */
+        body.qr-page .btn-reject {
+            background: #c0392b !important;
+            border-color: #c0392b !important;
+            color: #fff !important;
+        }
+        /* Ghost/secondary → neutral */
+        body.qr-page .btn-ghost,
+        body.qr-page .filter-btn {
+            background: #fff !important;
+            border: 1px solid #d1d5db !important;
+            color: #475569 !important;
+        }
+        /* Links → ERP orange */
+        body.qr-page a.op-link,
+        body.qr-page a.card-link,
+        body.qr-page .leaf-name a {
+            color: #e45d27 !important;
+        }
+        /* Inputs focus → orange ring */
+        body.qr-page input:focus,
+        body.qr-page textarea:focus,
+        body.qr-page select:focus {
+            border-color: #e45d27 !important;
+            box-shadow: 0 0 0 2px rgba(228, 93, 39, 0.15) !important;
+        }
+        /* Tabs active → orange */
+        body.qr-page .tab-btn.active,
+        body.qr-page .user-tab.active,
+        body.qr-page .nav-pills .nav-link.active {
+            background: #e45d27 !important;
+            border-color: #e45d27 !important;
+            color: #fff !important;
+        }
+        /* Headings/indigo accents → neutral navy-graphite */
+        body.qr-page .qr-page-title,
+        body.qr-page .branch-title,
+        body.qr-page .entity-name,
+        body.qr-page .wname,
+        body.qr-page .op-title {
+            color: #24344d !important;
+        }
+        /* QR scan gradients (indigo) → neutral blue-graphite */
+        body.qr-page .scan-header,
+        body.qr-page .gateway-header {
+            background: linear-gradient(135deg, #24344d 0%, #3d557a 100%) !important;
+            color: #fff !important;
+        }
+        /* Card-viewer pages (QrMyCard/QrWorkerCard) — replace dark navy page
+           background with the ERP light theme; card canvas itself stays white */
+        body.qr-page {
+            background: #f4f6f9 !important;
+        }
+        body.qr-page .card-viewer,
+        body.qr-page .card-flip-wrap,
+        body.qr-page .viewer-wrap {
+            background: #fff !important;
+        }
+        /* Status badges → muted, ERP-style */
+        body.qr-page .badge-pending,
+        body.qr-page .pill-muted,
+        body.qr-page .tag-inactive,
+        body.qr-page .badge-inactive {
+            background: #fef3e2 !important;
+            color: #a1581f !important;
+        }
+        body.qr-page .badge-approved,
+        body.qr-page .pill-approved,
+        body.qr-page .tag-active,
+        body.qr-page .badge-active {
+            background: #e8f5e9 !important;
+            color: #2f7d43 !important;
+        }
+        body.qr-page .badge-rejected {
+            background: #fdecea !important;
+            color: #c0392b !important;
+        }
+        /* Flash messages → neutral */
+        body.qr-page .flash-ok { background: #e8f5e9 !important; color: #2f7d43 !important; }
+        body.qr-page .flash-err { background: #fdecea !important; color: #c0392b !important; }
+    </style>
+
 </head>
-<body>
+<body class="@(ViewContext.RouteData.Values["action"]?.ToString()?.StartsWith("Qr") == true ? "qr-page" : "")">
     <div id="cover-spin"></div>
     <!-- FULL PAGE PROCESS OVERLAY -->
     <div ng-show="showLogoutProcess"
@@ -330,11 +479,11 @@
     <nav class="navbar px-4" style="background: #F4F9FF;" ng-init="BindMenus()">
         <!-- Left logo -->
         <div class="nav-left">
-            <img src="~/CommonDashboard/assets/icons/NewLogo.png" alt="Logo" class="logo" />
+            <img src="~/Content/img/favicon.png" alt="Logo" class="logo" style="height:40px;width:auto;object-fit:contain;" />
         </div>
       
         <!-- Center nav items -->
-        <div class="nav-center d-flex gap-3">
+        <div class="nav-center d-flex gap-3" ng-if="loginType != 7">
             <!-- Dashboard dropdown -->
           
             <div class="dropdown" >
@@ -420,7 +569,13 @@
                         <a href="/qr/worker" class="dropdown-item">My Workers</a>
                     </li>
                     <li ng-if="loginType == 5">
+                        <a href="/qr/mycontractors" class="dropdown-item">My Contractors</a>
+                    </li>
+                    <li ng-if="loginType == 5">
                         <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
+                    </li>
+                    <li ng-if="loginType == 5">
+                        <a href="/qr/mysites" class="dropdown-item">My Sites</a>
                     </li>
 
                     <!-- Contractor (loginType 2 or 6) -->
@@ -442,7 +597,7 @@
                         <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
                     </li>
                     <li ng-if="loginType == 7">
-                        <a href="/qr/idcard" class="dropdown-item">My Identity Card</a>
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a>
                     </li>
                     <li ng-if="loginType == 7">
                         <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
@@ -451,10 +606,46 @@
                     <!-- General options for all authenticated users -->
                     <li class="dropdown-divider"></li>
                     <li>
-                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My ID Card</a>
+                        <a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Worker Center nav items (loginType == 7) -->
+        <div class="nav-center d-flex align-items-center gap-2" ng-if="loginType == 7">
+            <a href="../Dashboard/WorkerDashboard" class="nav-center-btn" style="text-decoration:none;">
+                Dashboard
+            </a>
+
+            <a href="../Rozgar/WorkerRozgar" class="nav-center-btn" style="text-decoration:none;">
+                Rozgar Setu
+            </a>
+
+            <a href="#" class="nav-center-btn" style="text-decoration:none;">
+                Skill
+            </a>
+
+            <a href="#" class="nav-center-btn" style="text-decoration:none;">
+                Compliance
+            </a>
+
+            <div class="dropdown">
+                <button class="nav-center-btn active dropdown-toggle" type="button" data-bs-toggle="dropdown" style="border: 1px solid #022B5E; background: #fff; color: #022B5E;">
+                    QR System
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="/qr/mycontractors" class="dropdown-item">My Contractors</a>
                     </li>
                     <li>
-                        <a href="/qr/scan" class="dropdown-item"><i class="fa fa-camera me-2"></i>Scan / Bind QR</a>
+                        <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
+                    </li>
+                    <li>
+                        <a href="/qr/idcard" class="dropdown-item"><i class="fa fa-id-card me-2"></i>My Identity Card</a>
+                    </li>
+                    <li>
+                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
                     </li>
                 </ul>
             </div>

@@ -1,11 +1,13 @@
-﻿ 
+ 
 
 <!DOCTYPE html>
 <html ng-app="myApp" ng-controller="myController" ng-cloak>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bharatshramsetu</title>
+    <title>BharatShramSetu</title>
+    <link rel="icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
+    <link rel="shortcut icon" href="@Url.Content("~/Content/img/favicon.png")" type="image/x-icon">
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -50,7 +52,6 @@
     <!-- Your Angular App Files (ALWAYS AFTER Angular & Plugins) -->
     <script src="@Url.Content("~/Scripts/myjslib/app.js?Ver="+ViewBag.Version+"")"></script>
     <script src="@Url.Content("~/Scripts/myjslib/service.js?Ver="+ViewBag.Version+"")"></script>
-    <script src="@Url.Content("~/scripts/api/bharat-setu-api.js?Ver="+ViewBag.Version+"")"></script>
     <script src="@Url.Content("~/Scripts/myjslib/controller.js?Ver="+ViewBag.Version+"")"></script>
     <script src="@Url.Content("~/Scripts/myjslib/ddlBindings.js?Ver="+ViewBag.Version+"")"></script>
     <script src="@Url.Content("~/Scripts/myjslib/Authorization.js?Ver="+ViewBag.Version+"")"></script>
@@ -447,7 +448,7 @@
     <nav class="navbar px-4" style="background: #F4F9FF;" ng-init="BindMenus()">
         <!-- Left logo -->
         <div class="nav-left">
-            <img src="~/CommonDashboard/assets/icons/BharatShramSetu (1).png" alt="Logo" class="logo" />
+            <img src="~/Content/img/favicon.png" alt="Logo" class="logo" style="height:40px;width:auto;object-fit:contain;" />
         </div>
 
         <!-- Center nav items -->
@@ -469,6 +470,10 @@
                 Compliance
             </a>
 
+            <a href="@Url.Content("~/qr/idcard")" class="nav-center-btn" style="text-decoration:none;">
+                QR System
+            </a>
+
         </div>
 
         <!-- Right icons & profile -->
@@ -479,7 +484,7 @@
             <!-- Language Selector -->
             <div class="dropdown language-dropdown">
                 <button class="language-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="~/CommonDashboard/assets/icons/language.svg" alt="Language" class="language-icon">
+                    <i class="fa fa-globe" style="font-size:18px; color:#022B5E;"></i>
 
                     <span class="language-text">English</span>
 
@@ -580,29 +585,6 @@
                     <img src="~/CommonDashboard/assets/icons/Grievance.svg"
                          alt="Grievance" class="icon cursor-pointer">
                 </a>
-            </div>
-
-            <!-- QR Services -->
-            <div class="dropdown language-dropdown">
-                <button class="language-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="language-text">QR Services</span>
-                    <i class="bi bi-chevron-down"></i>
-                </button>
-
-                <ul class="dropdown-menu dropdown-menu-end language-menu">
-                    <li>
-                        <a href="/qr/mycontractors" class="dropdown-item">My Contractors</a>
-                    </li>
-                    <li>
-                        <a href="/qr/workemployers" class="dropdown-item">My Employers</a>
-                    </li>
-                    <li>
-                        <a href="/qr/idcard" class="dropdown-item">My Identity Card</a>
-                    </li>
-                    <li>
-                        <a href="/qr/bindingrequests" class="dropdown-item">Binding Requests</a>
-                    </li>
-                </ul>
             </div>
 
 

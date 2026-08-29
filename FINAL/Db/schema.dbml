@@ -1,0 +1,691 @@
+// ==========================================
+// Bharat Shram Setu (BSS) — Database Diagram
+// DBML representation for dbdiagram.io
+// ==========================================
+
+Table app_role {
+  id int [pk, increment]
+  code varchar(40) [unique, not null]
+  label varchar(60) [not null]
+  is_login_role boolean [not null, default: true]
+  sort_order smallint [not null, default: 0]
+}
+
+Table users {
+  id bigint [pk, increment]
+  role varchar(40) [not null, ref: > app_role.code]
+  password_hash varchar(255)
+  account_active boolean [not null, default: true]
+  is_verified boolean [not null, default: false]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table user_credentials {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  identity_type varchar(20) [not null, note: "mobile, email, aadhaar, login_id"]
+  identity_value varchar(255) [not null]
+  is_primary boolean [not null, default: false]
+  verified boolean [not null, default: false]
+  password_hash varchar(255)
+  mpin_hash varchar(255)
+  created_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (identity_type, identity_value) [unique]
+  }
+}
+
+Table contractor_profiles {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  contractor_name varchar(120)
+  contractor_code varchar(40)
+  contact_person varchar(120)
+  mobile varchar(20)
+  email varchar(120)
+  state varchar(60)
+  district varchar(60)
+  address varchar(255)
+  gstin varchar(40)
+  pan_no varchar(20)
+  lin varchar(40)
+  approval_status varchar(20) [not null, default: "PENDING"]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table employer_profiles {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  employer_name varchar(120)
+  employer_code varchar(40)
+  contact_person varchar(120)
+  mobile varchar(20)
+  email varchar(120)
+  state varchar(60)
+  district varchar(60)
+  address varchar(255)
+  industry varchar(80)
+  gstin varchar(40)
+  pan_no varchar(20)
+  lin varchar(40)
+  approval_status varchar(20) [not null, default: "PENDING"]
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table government_profile {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  gov_type varchar(20) [not null, note: "inspector, admin"]
+  officer_name varchar(120)
+  department varchar(80)
+  designation varchar(80)
+  jurisdiction varchar(120)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table bss_staff_profile {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  employee_code varchar(40)
+  full_name varchar(120)
+  department varchar(80)
+  designation varchar(80)
+  mobile varchar(20)
+  email varchar(120)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table it_profile {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  employee_code varchar(40)
+  full_name varchar(120)
+  department varchar(80)
+  designation varchar(80)
+  mobile varchar(20)
+  email varchar(120)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table site {
+  // One row per physical site. Site -> Many-to-One -> Employer.
+  // One EMPLOYER can own MANY SITES (employer_id is NOT unique) and can put
+  // DIFFERENT contractors on DIFFERENT sites, e.g.
+  //   E1 owns S1,S2,S3 ; C1 manages S1&S2 ; C2 manages S3.
+  // Each employer-generated site QR token maps to one site row.
+  // Employer derived via site.employer_id; contractor-site via worker_contractor_binding.site_id.
+  id bigint [pk, increment]
+  site_name varchar(120)
+  site_code varchar(40) [unique, not null]
+  employer_id bigint [not null, ref: > users.id, note: "site owner (role='employer'); NON-unique => employer has many sites"]
+  latitude numeric [note: "GPS latitude; geolocation / attendance geofencing"]
+  longitude numeric [note: "GPS longitude; geolocation / attendance geofencing"]
+  site_qr_token uuid [not null, default: `gen_random_uuid()`, unique, note: "site-based QR code identity"]
+  location varchar(255)
+  city varchar(60)
+  district varchar(60)
+  state varchar(60)
+  pincode varchar(10)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (employer_id) [name: 'idx_site_employer', note: "many sites per employer"]
+  }
+}
+
+Table worker_contractor_binding {
+  // Contractor manages MULTIPLE SITES via one binding row per site:
+  //   (W1, C1, S1) and (W2, C1, S2)  =>  C1 manages both S1 and S2.
+  // 1 worker = 1 ACTIVE site enforced by PARTIAL unique index on worker_id
+  // where binding_status = 'ACCEPTED' (allows PENDING on other sites).
+  // Employer derived through site.employer_id (constant E-C-S-W tuple).
+  id bigint [pk, increment]
+  worker_id bigint [not null, ref: > users.id, note: "W"]
+  contractor_id bigint [not null, ref: > users.id, note: "C"]
+  site_id bigint [not null, ref: > site.id, note: "S"]
+  binding_status varchar(20) [not null, default: "PENDING", note: "PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED"]
+  consent_worker boolean [not null, default: false]
+  consent_contractor boolean [not null, default: false]
+  consent_method varchar(20) [note: "app, ivr, sms_otp, voice"]
+  accepted_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (worker_id, contractor_id, site_id) [unique, note: "constant E-C-S-W tuple; E via site"]
+    (worker_id) [name: 'uq_binding_one_active_site_per_worker', unique, note: "PARTIAL: WHERE binding_status='ACCEPTED' => 1 worker = 1 active site"]
+    (contractor_id) [name: 'idx_binding_contractor']
+    (worker_id) [name: 'idx_binding_worker']
+  }
+}
+
+Table worker_identity {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  bss_worker_id varchar(20) [unique, not null]
+  name varchar(120)
+  gender varchar(10)
+  date_of_birth date
+  age smallint
+  mobile_number varchar(20)
+  alternate_mobile varchar(20)
+  email varchar(120)
+  marital_status varchar(20)
+  father_name varchar(120)
+  mother_name varchar(120)
+  spouse_name varchar(120)
+  emergency_contact_name varchar(120)
+  emergency_contact_number varchar(20)
+  emergency_contact_relation varchar(60)
+  disability_status varchar(40)
+  disability_type_pct varchar(80)
+  blood_group varchar(10)
+  religion varchar(40)
+  caste varchar(40)
+  photo varchar(255)
+  pan varchar(20)
+  aadhaar varchar(20)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_address_mobility {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  current_address varchar(255)
+  current_state varchar(60)
+  current_district varchar(60)
+  current_city varchar(60)
+  current_pincode varchar(10)
+  permanent_address varchar(255)
+  permanent_state varchar(60)
+  permanent_district varchar(60)
+  permanent_city varchar(60)
+  permanent_pincode varchar(10)
+  migrant_worker boolean
+  migration_type varchar(40)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_family_dependants {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  family_members_count smallint
+  dependants_count smallint
+  name varchar(120)
+  dependant varchar(40)
+  relation varchar(60)
+  nominee_age smallint
+  nominee_dob date
+  contact varchar(20)
+  address varchar(255)
+  nominee boolean
+  nominee_type varchar(40)
+  pan_copy_nominee boolean
+  aadhaar_copy_nominee boolean
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_social_security {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  epfo_uan varchar(40)
+  esic_ip_number varchar(40)
+  lwf_no varchar(40)
+  wc_policy_no varchar(40)
+  e_shram_no varchar(40)
+  bocw_reg_number varchar(40)
+  state_worker_id varchar(40)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_welfare_safety {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  ppe_required boolean
+  types_of_ppe_given varchar(120)
+  safety_training_completed boolean
+  site_induction_status varchar(40)
+  insurance_status varchar(40)
+  accomodation_provided varchar(40)
+  police_verification varchar(40)
+  training_date date
+  trainer_name varchar(120)
+  temp_gatepass_status varchar(40)
+  tgp_no varchar(40)
+  temp_gatepass_start_date date
+  temp_gatepass_end_date date
+  permanent_gatepass_status varchar(40)
+  pgp_no varchar(40)
+  permanent_gatepass_start_date date
+  permanent_gatepass_end_date date
+  medical_examination_status varchar(40)
+  last_medical_examination date
+  medical_fitness_status varchar(40)
+  next_medical_due date
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_banking {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  bank_name varchar(120)
+  bank_account_holder_name varchar(120)
+  bank_account_number varchar(40)
+  ifsc_code varchar(20)
+  bank_verification_status varchar(40)
+  upi_enabled boolean
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_classification {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  worker_category varchar(60)
+  sector varchar(80)
+  industry varchar(80)
+  occupation varchar(80)
+  skill varchar(80)
+  current_employment_status varchar(40)
+  total_worker_experience varchar(40)
+  gig_platform_worker_id varchar(60)
+  gig_platform_name varchar(120)
+  gig_platform_type varchar(60)
+  gig_date_joined_platform date
+  gig_avg_hours_per_day varchar(40)
+  gig_avg_days_per_week varchar(40)
+  gig_service_area varchar(120)
+  gig_vehicle_type varchar(60)
+  gig_vehicle_ownership varchar(40)
+  gig_dl_number varchar(40)
+  gig_dl_expiry date
+  se_business_name varchar(120)
+  se_business_type varchar(60)
+  se_registration_status varchar(40)
+  se_start_date date
+  se_business_location varchar(120)
+  se_avg_hours_per_day varchar(40)
+  se_avg_days_per_week varchar(40)
+  se_num_employees smallint
+  se_employer_or_business_name varchar(120)
+  season_job_work_type varchar(80)
+  season_start_date date
+  season_end_date date
+  season_avg_hours_per_day varchar(40)
+  season_avg_days_per_week varchar(40)
+  season_work_location varchar(120)
+  season_expected_income varchar(40)
+  season_payment_frequency varchar(40)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_employment {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  assignment_id bigint [ref: > worker_contractor_binding.id]
+  camp_no varchar(40)
+  shift varchar(40)
+  ref_worker_id varchar(40)
+  doj date
+  designation varchar(80)
+  department varchar(80)
+  id_card_issue_date date
+  id_card_validity_till date
+  transport_facility varchar(40)
+  route varchar(80)
+  bus_no varchar(40)
+  status varchar(40)
+  pf_account varchar(40)
+  nature_of_job varchar(120)
+  type_of_work varchar(120)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table skill_master {
+  id bigint [pk, increment]
+  code varchar(6) [unique, not null]
+  sector varchar(60) [not null]
+  family varchar(80)
+  occupation varchar(120) [not null]
+  typical_level varchar(40)
+  industry_use varchar(200)
+  description varchar(300)
+  sort_order smallint [not null, default: 0]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_skills_employability {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  qualification_course varchar(120)
+  board_university varchar(120)
+  passing_year varchar(10)
+  primary_skill varchar(80)
+  primary_skill_code varchar(6) [ref: > skill_master.code]
+  secondary_skills varchar(255)
+  skill_experience_years varchar(20)
+  certification_name varchar(120)
+  certification_number varchar(60)
+  certification_authority varchar(120)
+  certification_expiry date
+  languages_known varchar(255)
+}
+
+Table worker_other {
+  id bigint [pk, increment]
+  user_id bigint [not null, unique, ref: - users.id]
+  consent_registration boolean
+  consent_verification boolean
+  consent_date date
+  qr_opt_in boolean [not null, default: false]
+  registration_source varchar(80)
+  registered_by varchar(120)
+  registration_date date
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table rbac_permissions {
+  id bigint [pk, increment]
+  role varchar(40) [not null, ref: > app_role.code]
+  resource varchar(60) [not null]
+  field varchar(60) [not null]
+  access varchar(20) [not null, note: "view, edit, masked, view_masked, restricted, full, no, conditional, optional"]
+  reveal_type varchar(20) [note: "full, verified_only, band_only, public"]
+  binding_scope varchar(20) [note: "unbound, bound"]
+  scope varchar(40)
+  created_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (role, resource, field, binding_scope) [unique]
+  }
+}
+
+Table qr_role_access {
+  id bigint [pk, increment]
+  role varchar(40) [not null, ref: > app_role.code]
+  binding_scope varchar(20) [note: "unbound, bound"]
+  grant_mechanism varchar(120)
+  default_access varchar(60)
+  sensitive_allowed boolean [not null, default: false]
+  optional_identifiers boolean [not null, default: false]
+  recommended_scope varchar(255)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (role, binding_scope) [unique]
+  }
+}
+
+Table lookup_value {
+  id bigint [pk, increment]
+  category varchar(60) [not null]
+  value varchar(120) [not null]
+  sort_order smallint [not null, default: 0]
+  created_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (category, value) [unique]
+  }
+}
+
+Table worker_category_master {
+  id bigint [pk, increment]
+  code varchar(5) [unique, not null]
+  name varchar(120) [not null]
+  definition varchar(500)
+  typical_workplaces varchar(300)
+  primary_relationship varchar(120)
+  data_focus varchar(300)
+  sort_order smallint [not null, default: 0]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table contractor_job {
+  id bigint [pk, increment]
+  contractor_id bigint [not null, ref: > users.id]
+  site_id bigint [ref: > site.id]
+  job_title varchar(120) [not null]
+  job_description varchar(500)
+  wage_offered varchar(60)
+  start_date date
+  validity_until date
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table rozgar_request {
+  id bigint [pk, increment]
+  job_id bigint [not null, ref: > contractor_job.id]
+  contractor_id bigint [not null, ref: > users.id]
+  worker_id bigint [not null, ref: > users.id]
+  status varchar(20) [not null, default: "PENDING", note: "PENDING, ACCEPTED, REJECTED, CANCELLED, EXPIRED"]
+  requested_at timestamp [not null, default: `now()`]
+  responded_at timestamp
+  expires_at timestamp
+  notes varchar(500)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_grievance {
+  id bigint [pk, increment]
+  worker_id bigint [not null, ref: > users.id]
+  language varchar(40)
+  recording_file varchar(255)
+  recording_duration_secs integer
+  body varchar(1000)
+  status varchar(30) [not null, default: "RECORDED", note: "RECORDED, SUBMITTED, VIEWED_ON_DASHBOARD"]
+  submitted_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_document_master {
+  id bigint [pk, increment]
+  code varchar(6) [unique, not null]
+  document_name varchar(120) [not null]
+  is_mandatory boolean [not null, default: false]
+  uploaded_by varchar(20) [not null, default: "worker", note: "worker, system"]
+  sort_order smallint [not null, default: 0]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+}
+
+Table worker_documents {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  document_id bigint [not null, ref: > worker_document_master.id]
+  file_name varchar(255)
+  file_path varchar(255)
+  file_size bigint
+  mime_type varchar(100)
+  status varchar(20) [not null, default: "UPLOADED", note: "UPLOADED, VERIFIED, REJECTED"]
+  uploaded_at timestamp [not null, default: `now()`]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (user_id, document_id, file_name) [unique]
+  }
+}
+
+Table attendance_device {
+  // Physical capture hardware / scan point bound to a site.
+  // capture_type: QR = QR scanner, NFC = tap terminal, CAMERA = image/face terminal.
+  id bigint [pk, increment]
+  site_id bigint [not null, ref: > site.id]
+  contractor_id bigint [ref: > users.id]
+  device_code varchar(40) [unique, not null]
+  device_name varchar(120)
+  capture_type varchar(20) [not null, note: "QR, NFC, CAMERA"]
+  device_serial varchar(80)
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (site_id) [name: 'idx_att_device_site']
+  }
+}
+
+Table attendance {
+  // Attendance punch/log captured by QR, NFC or CAMERA (image/face).
+  // Linked to E-C-S-W via worker/site/contractor; employer derived via site.
+  id bigint [pk, increment]
+  worker_id bigint [not null, ref: > users.id, note: "W"]
+  site_id bigint [not null, ref: > site.id, note: "S"]
+  contractor_id bigint [ref: > users.id, note: "C (optional)"]
+  device_id bigint [ref: > attendance_device.id]
+  attendance_date date [not null, default: `CURRENT_DATE`]
+  check_in_time timestamp
+  check_out_time timestamp
+  status varchar(20) [not null, default: "PRESENT", note: "PRESENT, ABSENT, LEAVE, HOLIDAY, EXPECTED, LATE, HALF_DAY"]
+  capture_method varchar(20) [not null, note: "QR, NFC, CAMERA"]
+  verification_type varchar(30) [note: "qr_worker, qr_site, nfc_card, face_image, badge_image"]
+  image_file varchar(255) [note: "captured image path (CAMERA)"]
+  confidence_pct numeric [note: "face/badge match confidence (CAMERA)"]
+  gps_lat numeric [note: "geofence lat read at punch"]
+  gps_long numeric [note: "geofence long read at punch"]
+  is_geofence_ok boolean
+  is_verified boolean [not null, default: false]
+  verified_by bigint [ref: > users.id]
+  verified_at timestamp
+  remarks varchar(255)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (worker_id, attendance_date) [name: 'idx_attendance_worker_date']
+    (site_id, attendance_date) [name: 'idx_attendance_site_date']
+    (contractor_id) [name: 'idx_attendance_contractor']
+  }
+}
+
+Table worker_wages {
+  // Earned wages per worker per pay period; auto-computed from attendance or manual.
+  id bigint [pk, increment]
+  worker_id bigint [not null, ref: > users.id, note: "W"]
+  site_id bigint [ref: > site.id, note: "S"]
+  contractor_id bigint [ref: > users.id, note: "C"]
+  period_start date [not null]
+  period_end date [not null]
+  wage_frequency varchar(20) [not null, default: "MONTHLY", note: "DAILY, WEEKLY, MONTHLY, PIECE_RATE"]
+  days_present numeric [not null, default: 0]
+  days_absent numeric [not null, default: 0]
+  daily_wage numeric
+  units_done numeric [note: "piece-rate units (PIECE_RATE)"]
+  piece_rate numeric [note: "per-unit amount (PIECE_RATE)"]
+  base_wage numeric
+  overtime_hours numeric [not null, default: 0]
+  overtime_amount numeric [not null, default: 0]
+  gross_wage numeric [not null, default: 0]
+  deductions_amount numeric [not null, default: 0]
+  net_wage numeric [not null, default: 0]
+  status varchar(20) [not null, default: "DRAFT", note: "DRAFT, APPROVED, PAID, CANCELLED"]
+  computed_from_attendance boolean [not null, default: false]
+  approved_by bigint [ref: > users.id]
+  approved_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (worker_id, period_start, period_end) [unique, note: "one wage row per pay cycle"]
+    (worker_id) [name: 'idx_wages_worker']
+    (site_id) [name: 'idx_wages_site']
+  }
+}
+
+Table wage_payment {
+  // Disbursement of an approved wage record (money transfer).
+  id bigint [pk, increment]
+  worker_wages_id bigint [not null, ref: > worker_wages.id]
+  pay_mode varchar(20) [not null, note: "BANK, UPI, CASH"]
+  amount numeric [not null]
+  paid_at timestamp [not null, default: `now()`]
+  transaction_ref varchar(80)
+  bank_account_last4 varchar(10)
+  upi_id varchar(80)
+  paid_by bigint [ref: > users.id, note: "processor (contractor/employer)"]
+  remarks varchar(255)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (worker_wages_id) [name: 'idx_wage_payment_wages']
+  }
+}
+
+Table document_access_token {
+  // Time-bound / timed tokens for secure document access & verification.
+  // Short-lived token, stored hashed; expires at expires_at (time-bound),
+  // optionally limited by max_uses; can be USED / EXPIRED / REVOKED.
+  id bigint [pk, increment]
+  token_type varchar(30) [not null, note: "DOCUMENT_VIEW, DOCUMENT_VERIFY, DOCUMENT_DOWNLOAD, ONBOARDING, OFFER_LETTER"]
+  document_id bigint [ref: > worker_documents.id, note: "optional target document"]
+  subject_id bigint [ref: > users.id, note: "entity the token is about (worker)"]
+  requester_id bigint [ref: > users.id, note: "who requested/issued"]
+  token_hash varchar(128) [unique, not null, note: "hashed token value (never raw)"]
+  status varchar(20) [not null, default: "ACTIVE", note: "ACTIVE, USED, EXPIRED, REVOKED"]
+  issued_at timestamp [not null, default: `now()`]
+  expires_at timestamp [not null, note: "time-bound expiry"]
+  used_at timestamp
+  max_uses smallint [not null, default: 1]
+  use_count smallint [not null, default: 0]
+  redirect_url varchar(255)
+  ip_address varchar(45)
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (token_hash) [name: 'idx_doc_token_hash']
+    (expires_at) [name: 'idx_doc_token_expiry']
+    (document_id) [name: 'idx_doc_token_doc']
+  }
+}
+
+Table worker_gate_pass {
+  // Temporary (TGP) / Permanent (PGP) site access permits.
+  // From 'workplace compliance' 10-17, auto-sourced from contractor gate pass.
+  // Each pass is time-bound (start/end date), has its own status & number;
+  // a worker can hold multiple passes over time (child table, not flat cols).
+  id bigint [pk, increment]
+  worker_id bigint [not null, ref: > users.id]
+  site_id bigint [ref: > site.id, note: "site the pass grants access to"]
+  gate_pass_type varchar(20) [not null, note: "TGP (Temporary), PGP (Permanent)"]
+  gate_pass_no varchar(40) [not null]
+  status varchar(20) [not null, default: "ACTIVE", note: "ACTIVE, EXPIRED, REVOKED, PENDING"]
+  start_date date
+  end_date date [note: "time-bound validity"]
+  issued_by bigint [ref: > users.id, note: "contractor who issued"]
+  source varchar(20) [not null, default: "CONTRACTOR_GATE_PASS", note: "CONTRACTOR_GATE_PASS, MANUAL, SYSTEM"]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+
+  Indexes {
+    (worker_id, gate_pass_type, gate_pass_no) [unique]
+    (worker_id) [name: 'idx_gate_pass_worker']
+    (worker_id, gate_pass_type) [name: 'idx_gate_pass_type']
+  }
+}

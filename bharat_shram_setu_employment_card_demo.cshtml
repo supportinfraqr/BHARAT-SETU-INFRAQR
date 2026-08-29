@@ -1,0 +1,850 @@
+@{
+    ViewData["Title"] = "Bharat Shram Setu Employment Card";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+
+    <style>
+        :root{
+            --blue:#082b66;
+            --blue2:#063d8c;
+            --green:#159447;
+            --orange:#f58220;
+            --line:#c9d2dc;
+            --text:#101820;
+            --soft:#f5f7fa;
+        }
+
+        *{box-sizing:border-box}
+
+        body{
+            margin:0;
+            background:#151515;
+            font-family:"Segoe UI",Arial,sans-serif;
+            color:var(--text);
+        }
+
+        .screen{
+            min-height:100vh;
+            padding:34px 22px 60px;
+        }
+
+        .demo-header{
+            width:min(1200px,100%);
+            margin:0 auto 18px;
+            color:#fff;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+
+        .demo-header h1{
+            margin:0;
+            font-size:22px;
+        }
+
+        .demo-badge{
+            padding:7px 12px;
+            border-radius:20px;
+            background:#7b1717;
+            font-size:11px;
+            font-weight:800;
+            letter-spacing:.8px;
+        }
+
+        /*
+           CARD CANVAS
+           The dimensions intentionally match the wide two-card composition
+           in the supplied reference.
+        */
+        .card-stage{
+            width:min(1100px,100%);
+            margin:auto;
+            background:#fff;
+            padding:10px;
+            border-radius:2px;
+        }
+
+        .cards{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:10px;
+        }
+
+        .card{
+            position:relative;
+            aspect-ratio:1.72 / 1;
+            overflow:hidden;
+            border-radius:16px;
+            background:#fff;
+            border:1px solid #d5dce4;
+            box-shadow:0 3px 12px rgba(0,0,0,.15);
+        }
+
+        /* ---------- FRONT ---------- */
+
+        .front-top{
+            height:22%;
+            padding:12px 18px 7px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            background:
+                radial-gradient(circle at 82% 20%,rgba(18,151,76,.10),transparent 28%),
+                #fff;
+            border-top:4px solid var(--orange);
+            position:relative;
+        }
+
+        .front-top:after{
+            content:"";
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:0;
+            height:4px;
+            background:linear-gradient(90deg,var(--orange),#fff 32%,#fff 67%,var(--green));
+        }
+
+        .brand{
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+
+        .brand-mark{
+            width:58px;
+            height:45px;
+            position:relative;
+        }
+
+        .person{
+            position:absolute;
+            width:12px;
+            height:18px;
+            border-radius:8px 8px 4px 4px;
+            bottom:5px;
+        }
+
+        .person:before{
+            content:"";
+            position:absolute;
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            top:-9px;
+            left:1px;
+            background:inherit;
+        }
+
+        .p1{left:4px;background:#169447}
+        .p2{left:20px;background:#f58220}
+        .p3{left:35px;background:#169447}
+
+        .arc{
+            position:absolute;
+            left:0;
+            bottom:0;
+            width:51px;
+            height:24px;
+            border:5px solid var(--blue);
+            border-top:0;
+            border-radius:0 0 50px 50px;
+            transform:rotate(-8deg);
+        }
+
+        .brand-name{
+            line-height:1;
+            font-weight:900;
+            font-size:19px;
+            color:var(--blue);
+        }
+
+        .brand-name span{
+            color:var(--orange);
+        }
+
+        .tagline{
+            margin-top:5px;
+            font-size:7px;
+            color:#444;
+        }
+
+        .employment{
+            text-align:right;
+            font-size:18px;
+            line-height:1.05;
+            font-weight:900;
+            color:#082b66;
+        }
+
+        .verified-bar{
+            height:7%;
+            background:linear-gradient(90deg,#082b66 0 49%,#0b4b96 50% 84%,#118948 85%);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:12px;
+            font-weight:800;
+            gap:8px;
+        }
+
+        .shield{
+            width:17px;
+            height:17px;
+            border:1.7px solid currentColor;
+            border-radius:50% 50% 45% 45%;
+            position:relative;
+        }
+
+        .shield:after{
+            content:"✓";
+            position:absolute;
+            left:3px;
+            top:-2px;
+            font-size:12px;
+        }
+
+        .front-main{
+            height:53%;
+            padding:10px 18px 4px;
+        }
+
+        .identity{
+            display:grid;
+            grid-template-columns:116px 1fr 100px;
+            gap:14px;
+            align-items:center;
+            height:54%;
+        }
+
+        .photo{
+            width:108px;
+            height:108px;
+            border-radius:50%;
+            background:linear-gradient(145deg,#11a8e8,#0876c8);
+            border:1px solid #0b4c98;
+            display:grid;
+            place-items:end center;
+            overflow:hidden;
+        }
+
+        .avatar{
+            width:68px;
+            height:80px;
+            position:relative;
+            margin-bottom:3px;
+        }
+
+        .avatar:before{
+            content:"";
+            position:absolute;
+            width:42px;
+            height:42px;
+            left:13px;
+            top:2px;
+            border-radius:50%;
+            background:#d6a47b;
+        }
+
+        .avatar:after{
+            content:"";
+            position:absolute;
+            width:68px;
+            height:52px;
+            left:0;
+            bottom:0;
+            border-radius:38px 38px 0 0;
+            background:#263b55;
+        }
+
+        .avatar-hair{
+            position:absolute;
+            width:43px;
+            height:22px;
+            left:12px;
+            top:0;
+            z-index:2;
+            border-radius:50% 50% 35% 35%;
+            background:#1d2835;
+        }
+
+        .name{
+            font-size:24px;
+            font-weight:800;
+            color:#082b66;
+            line-height:1;
+        }
+
+        .role{
+            margin-top:7px;
+            font-size:14px;
+        }
+
+        .contractor{
+            margin-top:7px;
+            font-size:13px;
+        }
+
+        .qr{
+            width:92px;
+            height:92px;
+            border:5px solid #fff;
+            outline:1px solid #7b8793;
+            background:
+                repeating-conic-gradient(#111 0 25%,#fff 0 50%) 50%/13px 13px;
+            position:relative;
+        }
+
+        .qr:before{
+            content:"";
+            position:absolute;
+            inset:7px;
+            background:
+                linear-gradient(90deg,transparent 35%,#111 35% 43%,transparent 43% 66%,#111 66% 74%,transparent 74%),
+                linear-gradient(0deg,transparent 34%,#111 34% 43%,transparent 43% 65%,#111 65% 73%,transparent 73%),
+                #fff;
+            opacity:.92;
+        }
+
+        .front-grid{
+            border-top:1px solid #aeb9c5;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            height:46%;
+            padding-top:9px;
+        }
+
+        .info-cell{
+            display:grid;
+            grid-template-columns:38px 1fr;
+            gap:8px;
+            align-items:center;
+            padding:2px 12px 5px 4px;
+            border-right:1px solid #aeb9c5;
+        }
+
+        .info-cell:nth-child(even){border-right:0}
+
+        .info-cell:nth-child(n+3){
+            border-top:1px solid #aeb9c5;
+        }
+
+        .info-icon{
+            width:34px;
+            height:34px;
+            border:2px solid var(--blue);
+            border-radius:50%;
+            display:grid;
+            place-items:center;
+            color:var(--blue);
+            font-size:16px;
+            font-weight:800;
+        }
+
+        .label{
+            font-size:10px;
+            color:#333;
+        }
+
+        .value{
+            font-size:14px;
+            font-weight:800;
+            margin-top:3px;
+        }
+
+        .city{
+            line-height:1.15;
+        }
+
+        .city small{
+            font-size:11px;
+            font-weight:700;
+        }
+
+        .cityscape{
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:9%;
+            height:17%;
+            opacity:.22;
+            background:
+                linear-gradient(180deg,transparent 0 36%,#76a9d7 36% 100%);
+            clip-path:polygon(
+                0 100%,0 75%,5% 72%,5% 60%,8% 60%,8% 74%,
+                13% 68%,13% 48%,16% 48%,16% 74%,21% 61%,21% 40%,
+                24% 40%,24% 70%,29% 58%,29% 28%,33% 28%,33% 70%,
+                38% 55%,38% 45%,41% 45%,41% 73%,46% 62%,46% 35%,
+                50% 35%,50% 73%,55% 52%,55% 25%,59% 25%,59% 72%,
+                65% 58%,65% 42%,68% 42%,68% 72%,73% 55%,73% 31%,
+                77% 31%,77% 70%,83% 62%,83% 45%,87% 45%,87% 73%,
+                92% 60%,92% 37%,96% 37%,96% 72%,100% 70%,100% 100%
+            );
+        }
+
+        .front-footer{
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:0;
+            height:10%;
+            background:#082b66;
+            color:#fff;
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+        }
+
+        .footer-item{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            flex-direction:column;
+            font-size:8px;
+            line-height:1.1;
+            text-align:center;
+            border-right:1px solid rgba(255,255,255,.5);
+            gap:3px;
+        }
+
+        .footer-item:last-child{border-right:0}
+
+        .footer-icon{
+            font-size:17px;
+        }
+
+        /* ---------- BACK ---------- */
+
+        .back{
+            background:#fff;
+        }
+
+        .back-header{
+            height:15%;
+            background:linear-gradient(135deg,#062765,#063c89);
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:14px;
+            font-weight:700;
+            position:relative;
+        }
+
+        .back-header:before,
+        .back-header:after{
+            content:"";
+            width:28px;
+            height:1px;
+            background:#fff;
+            opacity:.75;
+            margin:0 9px;
+        }
+
+        .back-list{
+            height:65%;
+            padding:8px 18px 0;
+        }
+
+        .back-row{
+            display:grid;
+            grid-template-columns:28px 1fr 14px 1.05fr;
+            min-height:13%;
+            align-items:center;
+            border-bottom:1px dotted #aeb6bf;
+            font-size:11px;
+        }
+
+        .back-row .bi{
+            width:22px;
+            height:22px;
+            border:2px solid #1b54a0;
+            border-radius:50%;
+            display:grid;
+            place-items:center;
+            color:#1b54a0;
+            font-size:11px;
+        }
+
+        .back-label{font-weight:500}
+        .colon{text-align:center;font-weight:700}
+        .back-value{font-weight:700}
+
+        .notice{
+            margin-top:5px;
+            background:#eef0f2;
+            border-radius:8px;
+            padding:5px 9px;
+            font-size:7.5px;
+            line-height:1.4;
+        }
+
+        .notice div:before{
+            content:"•";
+            margin-right:5px;
+        }
+
+        .dates{
+            height:11%;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            align-items:center;
+            padding:0 18px;
+            font-size:10px;
+            font-weight:700;
+        }
+
+        .dates div:first-child{
+            border-right:1px solid #9da8b4;
+        }
+
+        .dates strong{color:#083f91}
+
+        .signature-row{
+            height:9%;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            padding:0 18px;
+            font-size:8px;
+        }
+
+        .signature{
+            font-size:13px;
+            font-family:cursive;
+            border-bottom:1px solid #333;
+            width:80px;
+            margin-bottom:1px;
+        }
+
+        .back-footer{
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:0;
+            height:7%;
+            background:#138a49;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:9px;
+            font-weight:700;
+        }
+
+        .demo-watermark{
+            position:absolute;
+            z-index:20;
+            inset:0;
+            pointer-events:none;
+            display:grid;
+            place-items:center;
+            font-size:36px;
+            font-weight:900;
+            letter-spacing:7px;
+            color:rgba(130,0,0,.08);
+            transform:rotate(-18deg);
+        }
+
+        @media(max-width:900px){
+            .cards{
+                grid-template-columns:1fr;
+            }
+
+            .card{
+                aspect-ratio:1.72/1;
+            }
+        }
+
+        @media(max-width:600px){
+            .screen{padding:15px 8px 30px}
+            .card-stage{padding:4px}
+            .cards{gap:7px}
+            .front-top{padding:7px 9px 4px}
+            .brand-mark{transform:scale(.8);transform-origin:left center}
+            .brand-name{font-size:13px}
+            .tagline{font-size:5px}
+            .employment{font-size:12px}
+            .verified-bar{font-size:8px}
+            .front-main{padding:6px 9px}
+            .identity{grid-template-columns:78px 1fr 64px;gap:7px}
+            .photo{width:72px;height:72px}
+            .qr{width:61px;height:61px}
+            .name{font-size:17px}
+            .role,.contractor{font-size:9px;margin-top:3px}
+            .info-cell{grid-template-columns:24px 1fr;gap:4px;padding:2px 5px}
+            .info-icon{width:23px;height:23px;font-size:10px}
+            .label{font-size:7px}
+            .value{font-size:9px}
+            .city small{font-size:7px}
+            .footer-item{font-size:6px}
+            .footer-icon{font-size:11px}
+            .back-header{font-size:9px}
+            .back-list{padding:4px 8px 0}
+            .back-row{grid-template-columns:19px 1fr 8px 1.05fr;font-size:7px}
+            .back-row .bi{width:16px;height:16px;font-size:7px}
+            .notice{font-size:5px}
+            .dates{padding:0 8px;font-size:7px}
+            .signature-row{padding:0 8px;font-size:6px}
+            .back-footer{font-size:6px}
+        }
+
+        @media print{
+            body{background:#fff;padding:0}
+            .screen{padding:0}
+            .demo-header{display:none}
+            .card-stage{width:100%;box-shadow:none}
+            .demo-watermark{display:none}
+        }
+    </style>
+</head>
+
+<body>
+<div class="screen">
+
+    <div class="demo-header">
+        <div>
+            <h1>Bharat Shram Setu — Employment Card</h1>
+            <div class="subtitle">Responsive ASP.NET Core Razor UI</div>
+        </div>
+        <div class="demo-badge">DEMO / UI MOCKUP</div>
+    </div>
+
+    <div class="card-stage">
+        <div class="cards">
+
+            <!-- FRONT -->
+            <section class="card front">
+
+                <div class="front-top">
+                    <div class="brand">
+                        <div class="brand-mark">
+                            <div class="person p1"></div>
+                            <div class="person p2"></div>
+                            <div class="person p3"></div>
+                            <div class="arc"></div>
+                        </div>
+
+                        <div>
+                            <div class="brand-name">
+                                BHARAT <span>SHRAM SETU</span>
+                            </div>
+                            <div class="tagline">
+                                One Worker. One Identity. One Future.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="employment">
+                        EMPLOYMENT<br />CARD
+                    </div>
+                </div>
+
+                <div class="verified-bar">
+                    <span class="shield"></span>
+                    VERIFIED WORKER ID
+                </div>
+
+                <div class="front-main">
+
+                    <div class="identity">
+                        <div class="photo">
+                            <div class="avatar">
+                                <div class="avatar-hair"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="name">Ramesh</div>
+                            <div class="role">Manager</div>
+                            <div class="contractor">
+                                Contractor : Contractor Demo
+                            </div>
+                        </div>
+
+                        <!-- Demo placeholder QR — replace with your generated QR -->
+                        <div class="qr" aria-label="Demo QR placeholder"></div>
+                    </div>
+
+                    <div class="front-grid">
+
+                        <div class="info-cell">
+                            <div class="info-icon">ID</div>
+                            <div>
+                                <div class="label">Worker Code</div>
+                                <div class="value">R0826UP2248</div>
+                            </div>
+                        </div>
+
+                        <div class="info-cell">
+                            <div class="info-icon">▦</div>
+                            <div>
+                                <div class="label">Department</div>
+                                <div class="value">HR</div>
+                            </div>
+                        </div>
+
+                        <div class="info-cell">
+                            <div class="info-icon">☎</div>
+                            <div>
+                                <div class="label">Mobile Number</div>
+                                <div class="value">9452365241</div>
+                            </div>
+                        </div>
+
+                        <div class="info-cell">
+                            <div class="info-icon">●</div>
+                            <div class="city">
+                                <div class="label">Work Location</div>
+                                <div class="value">Noida 15</div>
+                                <small>Principal Demo (Noida)</small>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cityscape"></div>
+
+                <div class="front-footer">
+                    <div class="footer-item">
+                        <div class="footer-icon">♙</div>
+                        Verified<br />Identity
+                    </div>
+                    <div class="footer-item">
+                        <div class="footer-icon">▣</div>
+                        Portable<br />Across Jobs
+                    </div>
+                    <div class="footer-item">
+                        <div class="footer-icon">♢</div>
+                        Secure &amp;<br />Trusted
+                    </div>
+                    <div class="footer-item">
+                        <div class="footer-icon">⌗</div>
+                        Scan for<br />Verification
+                    </div>
+                </div>
+
+                <div class="demo-watermark">DEMO</div>
+            </section>
+
+
+            <!-- BACK -->
+            <section class="card back">
+
+                <div class="back-header">
+                    Your Identity. Your Work. Your Security.
+                </div>
+
+                <div class="back-list">
+
+                    <div class="back-row">
+                        <div class="bi">◉</div>
+                        <div class="back-label">Blood Group</div>
+                        <div class="colon">:</div>
+                        <div class="back-value">B+</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">☎</div>
+                        <div class="back-label">Emergency Contact Number</div>
+                        <div class="colon">:</div>
+                        <div class="back-value" style="color:#124fba;">9452365241</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">♙</div>
+                        <div class="back-label">Relation</div>
+                        <div class="colon">:</div>
+                        <div class="back-value">Father</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">△</div>
+                        <div class="back-label">Camp No.</div>
+                        <div class="colon">:</div>
+                        <div class="back-value" style="color:#124fba;">87545465465465</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">♧</div>
+                        <div class="back-label">UAN No.</div>
+                        <div class="colon">:</div>
+                        <div class="back-value">654896414654687941567986</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">♢</div>
+                        <div class="back-label">ESIC No.</div>
+                        <div class="colon">:</div>
+                        <div class="back-value">465465465465465454</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">♙</div>
+                        <div class="back-label">Supervisor Name</div>
+                        <div class="colon">:</div>
+                        <div class="back-value">Pawan Kumar</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">☎</div>
+                        <div class="back-label">Supervisor No.</div>
+                        <div class="colon">:</div>
+                        <div class="back-value" style="color:#124fba;">9898989898</div>
+                    </div>
+
+                    <div class="back-row">
+                        <div class="bi">▣</div>
+                        <div class="back-label">Route/Bus No.</div>
+                        <div class="colon">:</div>
+                        <div class="back-value">- -</div>
+                    </div>
+
+                    <div class="notice">
+                        <div>This identity card must always be carried &amp; displayed for security &amp; identification.</div>
+                        <div>Loss of this card should be reported to the appropriate authority.</div>
+                        <div>This card is not transferable &amp; must be returned immediately on cessation of employment.</div>
+                    </div>
+
+                </div>
+
+                <div class="dates">
+                    <div>
+                        <strong>Issue Date :</strong> 21/08/2026
+                    </div>
+                    <div>
+                        <strong>Valid Upto :</strong> 29/08/2026
+                    </div>
+                </div>
+
+                <div class="signature-row">
+                    <div>
+                        <div class="signature">Ramesh</div>
+                        <b>Ramesh</b><br />
+                        Manager
+                    </div>
+
+                    <div>
+                        <br />
+                        <b>Contractor : Contractor Demo</b>
+                    </div>
+                </div>
+
+                <div class="back-footer">
+                    ◉ &nbsp; https://login.bharatshramsetu.com/RetailSection/ContractorWorker
+                </div>
+
+                <div class="demo-watermark">DEMO</div>
+            </section>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>

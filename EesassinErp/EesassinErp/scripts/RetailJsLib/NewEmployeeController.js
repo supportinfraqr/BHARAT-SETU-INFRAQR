@@ -1,4 +1,4 @@
-﻿app.NewEmployeeController = function ($scope, $element, $filter, myService, $http, $timeout) {
+app.NewEmployeeController = function ($scope, $element, $filter, myService, $http, $timeout) {
 
     $scope.IsEmailDisabled = false;
     $scope.IsMobileDisabled = false;
@@ -2565,10 +2565,10 @@
     };
 
     $scope.getProfQR = function (EmpCode) {
-        if (!EmpCode) return "";
-        var data =
-            "https://login.bharatshramsetu.com/icard.html?id=" + EmpCode + "";
-        return "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=" + encodeURIComponent(data);
+        if ($scope.EmployeeList && $scope.EmployeeList.Id) {
+            return '/Api/QrBridge/qr/workers/' + $scope.EmployeeList.Id + '/card/';
+        }
+        return '';
     };
 
     $scope.maskNumber = function (value) {

@@ -1,10 +1,14 @@
-﻿@{
+@{
     ViewBag.Version = System.Configuration.ConfigurationManager.AppSettings["version"];
     Layout = null;
+    Response.ContentType = "text/html; charset=utf-8";
 }
+<meta charset="utf-8" />
+<link rel="shortcut icon" href="~/favicon.ico?v=9999" />
+<link rel="icon" href="~/favicon.png?v=9999" type="image/png" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link href="~/Content/NewLogin/style.css" rel="stylesheet" />
-<link href="@Url.Content("~/Content/plugins/assets/css/font-icons/font-awesome.css")" rel="stylesheet" media="all" />
+<link href="~/Content/NewLogin/style.css?v=9999" rel="stylesheet" />
+<link href="@Url.Content("~/Content/plugins/assets/css/font-icons/font-awesome.css")?v=9999" rel="stylesheet" media="all" />
 <script type="text/javascript" src="@Url.Content("~/scripts/jquery-1.12.4.js?Ver="+ViewBag.Version+"")" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js" defer></script>
@@ -820,10 +824,10 @@ debugger;
                                     type="button">
 
                                 <span class="registerBtnIcon">
-                                    <img src="~/Content/NewLogin/images/digilocker.svg" alt="Digilocker">
+                                    <img src="~/Content/NewLogin/images/aadhaar.svg" alt="Aadhaar">
                                 </span>
 
-                                <span>Digilocker</span>
+                                <span>Aadhaar</span>
                             </button>
 
                             <button class="newRegisterWhatsappBtn callBtn"
@@ -993,14 +997,14 @@ debugger;
                                 <span>WhatsApp</span>
                             </button>
 
-                            <button class="newRegisterWhatsappBtn digiLockerBtn"
+                            <button class="newRegisterWhatsappBtn digiLockerBtn" ng-click="DigilockerRegistration()"
                                     type="button">
 
                                 <span class="registerBtnIcon">
-                                    <img src="~/Content/NewLogin/images/digilocker.svg" alt="Digilocker">
+                                    <img src="~/Content/NewLogin/images/aadhaar.svg" alt="Aadhaar">
                                 </span>
 
-                                <span>Digilocker</span>
+                                <span>Aadhaar</span>
                             </button>
 
                             <button class="newRegisterWhatsappBtn callBtn"
@@ -1583,7 +1587,55 @@ debugger;
 
     </div>
 
+    <!-- ================================= -->
+    <!-- GOVERNMENT & WORKER INITIATIVES -->
+    <!-- ================================= -->
+    <section class="bss-initiatives">
+        <div class="bss-init-head">
+            <span class="bss-init-eyebrow">Nation First, Worker First</span>
+            <h2>Four Converging Transformations</h2>
+            <p>Empowering India's workforce through digital identity, welfare and transparency.</p>
+        </div>
 
+        <div class="bss-init-grid">
+            <div class="bss-init-card">
+                <div class="bss-init-card-header">
+                    <span class="bss-init-num">1.</span>
+                    <h4>Regulatory transformation</h4>
+                </div>
+                <p>India’s four Labour Codes consolidate 29 central labour laws and, since 21 November 2025, form the operative direction of the labour framework. The promise is both worker protection and ease of compliance; the execution challenge is to translate law into usable, state-aware, role-aware workflows.</p>
+            </div>
+            <div class="bss-init-card">
+                <div class="bss-init-card-header">
+                    <span class="bss-init-num">2.</span>
+                    <h4>Digital transformation</h4>
+                </div>
+                <p>Identity, payments, taxation and health have demonstrated the power of digital rails. The next frontier is a trusted work record that is portable, interoperable and useful-without creating private surveillance architecture or duplicating sovereign systems.</p>
+            </div>
+            <div class="bss-init-card">
+                <div class="bss-init-card-header">
+                    <span class="bss-init-num">3.</span>
+                    <h4>Sustainability transformation</h4>
+                </div>
+                <p>Responsible enterprise is moving beyond the factory gate. Safety, working conditions, social security, migrant vulnerability, contractor practices and value-chain labour evidence increasingly sit within ESG and responsible-business scrutiny.</p>
+            </div>
+            <div class="bss-init-card">
+                <div class="bss-init-card-header">
+                    <span class="bss-init-num">4.</span>
+                    <h4>Purpose transformation</h4>
+                </div>
+                <p>The legitimacy of business will depend not only on the value it captures but on the value it restores-to people, communities and the planet. The worker cannot remain an invisible input in a celebrated supply chain.</p>
+            </div>
+        </div>
+
+        <div class="bss-worker-strip">
+            <div class="bss-worker-emblem">&#2332;</div>
+            <div class="bss-worker-inner">
+                <p class="bss-worker-jai"><b>&#2332;&#2351; &#2361;&#2367;&#2344;&#2381;&#2342; &#183; &#2332;&#2351; &#2349;&#2366;&#2352;&#2340; &#183; &#2349;&#2366;&#2352;&#2340; &#2350;&#2366;&#2340;&#2366; &#2325;&#2368; &#2332;&#2351;</b></p>
+                <p class="bss-worker-sub">BharatShramSetu stands with every worker building a New India.</p>
+            </div>
+        </div>
+    </section>
 
     <!-- ================================= -->
     <!-- FOOTER -->
