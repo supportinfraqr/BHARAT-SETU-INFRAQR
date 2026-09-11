@@ -16,7 +16,7 @@ import {
 
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
-  const { worker, updateWorker } = useWorker();
+  const { worker, portal, updateWorker } = useWorker();
   const mobilityRef = useRef<MobilitySectionHandle>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
@@ -838,55 +838,55 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Name</label>
-                   <input type="text" defaultValue="Shapoorji Pallonji" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.employerDetails?.name ?? worker.employment.employer} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Code</label>
-                   <input type="text" defaultValue="BSS-EMP-98921" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.employerDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Email ID</label>
-                   <input type="text" defaultValue="hr.lt@larsentoubro.example" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.employerDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer State</label>
-                   <input type="text" defaultValue="Maharashtra" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer State</label>
+                  <input type="text" defaultValue={worker.employment.employerDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Address</label>
-                   <input type="text" defaultValue="L&T House, Ballard Estate, Mumbai 400001" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.employerDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Industry</label>
-                   <input type="text" defaultValue="Infrastructure & Construction" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.employerDetails?.industry} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Principal Employer LIN No.</label>
-                   <input type="text" defaultValue="LIN-MH-77412" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.employerDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Name</label>
-                   <input type="text" defaultValue="Shapoorji Engineering" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.contractorDetails?.name ?? worker.employment.contractor} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Code</label>
-                   <input type="text" defaultValue="BSS-CON-1029" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.contractorDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Email</label>
-                   <input type="text" defaultValue="contracts@rkbuildcon.example" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.contractorDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor State</label>
-                   <input type="text" defaultValue="Maharashtra" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor State</label>
+                  <input type="text" defaultValue={worker.employment.contractorDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Address</label>
-                   <input type="text" defaultValue="Plot 14, MIDC Andheri East, Mumbai 400093" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.contractorDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor LIN</label>
-                   <input type="text" defaultValue="LIN-MH-12938" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input type="text" defaultValue={worker.employment.contractorDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
               </div>
 
@@ -895,47 +895,47 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Name</label>
-                    <input type="text" defaultValue="Navi Mumbai Airport (S-092)" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Code</label>
-                    <input type="text" defaultValue="NMIA-S092" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Location</label>
-                    <input type="text" defaultValue="Uran, Navi Mumbai, Maharashtra" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.siteDetails?.location} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">State</label>
-                    <input type="text" defaultValue="Maharashtra" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.siteDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Designation & Department</label>
-                    <input type="text" defaultValue="Bar Bender - Civil Works" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={[worker.employment.designation, worker.employment.department].filter(Boolean).join(" - ")} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nature of Job</label>
-                    <input type="text" defaultValue="Permanent" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.natureOfJob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Type of Work</label>
-                    <input type="text" defaultValue="Manual Labour" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.typeOfWork} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Date of Joining</label>
-                    <input type="text" defaultValue="14 Aug 2024" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.doj} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employment Status</label>
-                    <input type="text" defaultValue="Active" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
+                    <input type="text" defaultValue={worker.employment.status} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Reference Worker ID</label>
-                    <input type="text" defaultValue="REF-W-10452" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.refWorkerId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">PF Account</label>
-                    <input type="text" defaultValue="MH/MUM/0098214/000/1045821" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.pfAccount} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                 </div>
               </div>
@@ -945,31 +945,31 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Shift</label>
-                    <input type="text" defaultValue="Morning (08:00 AM - 05:00 PM)" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.shift} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Camp No.</label>
-                    <input type="text" defaultValue="Camp A - Sector 12" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.campNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Transport Facility</label>
-                    <input type="text" defaultValue="Provided" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
+                    <input type="text" defaultValue={worker.employment.transportFacility} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Route</label>
-                    <input type="text" defaultValue="Camp A → Site Gate 2 (NH 348)" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.route} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bus No.</label>
-                    <input type="text" defaultValue="MH-04-AB-1234" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.busNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">ID Card Issue Date</label>
-                    <input type="text" defaultValue="14 Aug 2024" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.idCardIssueDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">ID Card Validity Till</label>
-                    <input type="text" defaultValue="14 Aug 2025" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.employment.idCardValidityTill} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                 </div>
               </div>
@@ -985,14 +985,23 @@ export default function WorkerProfilePage() {
                     {/* Today's Status (Always Visible) */}
                     <div className="p-5 flex flex-col md:flex-row justify-between md:items-center gap-4">
                       <div className="flex items-start gap-4">
-                        <div className="bg-[#E8F5E9] p-3 rounded-full text-[#2F9E67] flex-shrink-0">
+                        <div className={`p-3 rounded-full flex-shrink-0 ${(portal.attendance.records[0]?.presence === 'Present') ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-gray-400'}`}>
                           <CheckCircle2 size={24} />
                         </div>
                         <div>
-                          <p className="font-semibold text-[#1D1D1F] text-[16px]">Present Today</p>
-                          <p className="text-[13px] text-[#86868B] mt-1 flex items-center gap-1">
-                            <Clock size={14} /> Checked-in at 08:45 AM
-                          </p>
+                          {portal.attendance.records.length > 0 ? (
+                            <>
+                              <p className="font-semibold text-[#1D1D1F] text-[16px]">{portal.attendance.records[0].presence === 'Present' ? 'Present' : portal.attendance.records[0].presence}</p>
+                              <p className="text-[13px] text-[#86868B] mt-1 flex items-center gap-1">
+                                <Clock size={14} /> {portal.attendance.records[0].date || ''}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-semibold text-[#1D1D1F] text-[16px]">No attendance records</p>
+                              <p className="text-[13px] text-[#86868B] mt-1">Attendance is captured once you are bound to a contractor.</p>
+                            </>
+                          )}
                         </div>
                       </div>
                       
@@ -1070,37 +1079,26 @@ export default function WorkerProfilePage() {
                 <div>
                   <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-4">Historical Bindings</h3>
                   <div className="bg-white border border-black/10 rounded-2xl overflow-hidden divide-y divide-black/5">
-                    
-                    {/* Active */}
-                    <div className="p-5 flex flex-col md:flex-row justify-between md:items-center gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 bg-[#E8F5E9] p-2 rounded-full text-[#2F9E67]">
-                          <Briefcase size={16} />
+                    {(portal.bindings ?? []).length ? (portal.bindings ?? []).map(b => {
+                      const active = b.status === 'Accepted';
+                      return (
+                        <div key={b.id} className={`p-5 flex flex-col md:flex-row justify-between md:items-center gap-4 ${active ? '' : 'bg-gray-50/50'}`}>
+                          <div className="flex items-start gap-3">
+                            <div className={`mt-0.5 p-2 rounded-full ${active ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-200 text-gray-600'}`}>
+                              {active ? <Briefcase size={16} /> : <Building2 size={16} />}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-[#1D1D1F] text-[15px]">{b.contractor || '—'}</p>
+                              <p className="text-[13px] text-[#86868B]">{[b.site, b.designation].filter(Boolean).join(' • ') || '—'}</p>
+                              <p className="text-[12px] text-gray-500 mt-1">{b.requestedOn || '—'}</p>
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-[12px] font-bold self-start md:self-auto tracking-wider ${active ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-200 text-gray-600'}`}>{active ? 'ACTIVE' : b.status.toUpperCase()}</span>
                         </div>
-                        <div>
-                          <p className="font-semibold text-[#1D1D1F] text-[15px]">Shapoorji Pallonji</p>
-                          <p className="text-[13px] text-[#86868B]">Navi Mumbai Airport (S-092) • Bar Bender</p>
-                          <p className="text-[12px] text-gray-500 mt-1">14 Aug 2024 - Present</p>
-                        </div>
-                      </div>
-                      <span className="bg-[#E8F5E9] text-[#2F9E67] px-3 py-1 rounded-full text-[12px] font-bold self-start md:self-auto tracking-wider">ACTIVE</span>
-                    </div>
-
-                    {/* Past */}
-                    <div className="p-5 flex flex-col md:flex-row justify-between md:items-center gap-4 bg-gray-50/50">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 bg-gray-200 p-2 rounded-full text-gray-600">
-                          <Building2 size={16} />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-[#1D1D1F] text-[15px]">L&T Construction</p>
-                          <p className="text-[13px] text-[#86868B]">Metro Line 3 (M-04) • Mason</p>
-                          <p className="text-[12px] text-gray-500 mt-1">10 Jan 2023 - 30 Jul 2024</p>
-                        </div>
-                      </div>
-                      <span className="bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-[12px] font-bold self-start md:self-auto tracking-wider">COMPLETED</span>
-                    </div>
-
+                      );
+                    }) : (
+                      <p className="p-8 text-center text-gray-500 text-sm">No binding history yet.</p>
+                    )}
                   </div>
                 </div>
 

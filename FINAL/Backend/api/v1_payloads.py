@@ -368,27 +368,22 @@ def _worker_wages_section(user):
 
 def _worker_attendance_section(user):
     rows = Attendance.objects.filter(worker=user).order_by("-attendance_date")[:20]
+    title = {"PRESENT": "Present", "ABSENT": "Absent", "LEAVE": "Leave",
+             "HOLIDAY": "Holiday", "EXPECTED": "Present", "LATE": "Late",
+             "HALF_DAY": "Half Day"}
     records = []
     for a in rows:
+        raw = _d(a.status)
         records.append({
             "date": _dts(a.attendance_date),
-            "presence": _d(a.status),
+            "presence": title.get(raw, raw),
             "shift": "",
             "site": a.site.site_name if a.site else "",
             "checkIn": _dts(a.check_in_time),
             "checkOut": _dts(a.check_out_time),
-            "status": _d(a.status),
+            "status": raw,
             "method": _d(a.capture_method),
         })
-    if not records:
-        today = timezone.localdate()
-        records = [
-            {"date": _dts(today - datetime.timedelta(days=d)),
-             "presence": "PRESENT" if d % 2 == 0 else "ABSENT", "shift": "",
-             "site": "", "checkIn": None, "checkOut": None,
-             "status": "PRESENT" if d % 2 == 0 else "ABSENT", "method": "QR"}
-            for d in range(6, -1, -1)
-        ]
     return {"source": "BSS Attendance", "records": records, "syncedAt": _dts(timezone.now())}
 
 
