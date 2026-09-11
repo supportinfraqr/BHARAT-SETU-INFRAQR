@@ -51,8 +51,14 @@ from bss_core.models import (
     WorkerSocialSecurity,
     WorkerWelfareSafety,
 )
-
 from . import aadhaar_client, ocr_client, v1_payloads as payloads
+
+
+def _bss_worker_id(user_id):
+    """Collision-free 15-char worker ID: 'BSS-W' + the User primary key
+    zero-padded to 10 digits. The PK is unique, so IDs never collide."""
+    return f"BSS-W{user_id:010d}"
+
 
 # Field-label -> model-attribute maps for the employer/contractor profile
 # "profile" PATCH (the FE sends {section, fields:[{label,value}]}).
@@ -506,7 +512,7 @@ def aadhaar_verify(request):
             photo_url = _save_aadhaar_photo(aadhaar, data.get("photo"))
             identity = WorkerIdentity.objects.create(
                 user=user,
-                bss_worker_id=f"W-{user.id:04d}",
+                bss_worker_id=_bss_worker_id(user.id),
                 name=data.get("name") or "",
                 gender=(data.get("gender") or "").upper() or "",
                 date_of_birth=_parse_dob(data.get("date_of_birth")),
@@ -576,7 +582,7 @@ def register_worker(request):
                                         is_verified=True, is_active=True)
         identity = WorkerIdentity.objects.create(
             user=user,
-            bss_worker_id=f"W-{user.id:04d}",
+            bss_worker_id=_bss_worker_id(user.id),
                 name="",
                 mobile_number=contact,
         )
@@ -778,7 +784,7 @@ def _persist_mutation(user, role_path, resource, method, body):
         identity = WorkerIdentity.objects.filter(user=user).first()
         if not identity:
             identity = WorkerIdentity.objects.create(
-                user=user, bss_worker_id=f"W-{user.id:04d}",
+                user=user, bss_worker_id=_bss_worker_id(user.id),
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
                 name=user.get_full_name() or "")
         place = body.get("placeOfBirth") or body.get("place_of_birth")
@@ -1026,7 +1032,7 @@ def _persist_mutation(user, role_path, resource, method, body):
         username = f"worker_{uuid.uuid4().hex[:8]}"
         w = User.objects.create_user(username=username, password="Bss@Worker123",
                                      role="worker", account_active=True, is_active=True)
-        WorkerIdentity.objects.create(user=w, bss_worker_id=f"W-{w.id:04d}",
+        WorkerIdentity.objects.create(user=w, bss_worker_id=_bss_worker_id(w.id),
                                       name=name, mobile_number=mobile)
         site_id = body.get("siteId")
         site = Site.objects.filter(pk=site_id).first() if site_id else None
@@ -1234,7 +1240,7 @@ def worker_verify_document(request):
         identity = WorkerIdentity.objects.filter(user=user).first()
         if identity is None:
             identity = WorkerIdentity.objects.create(
-                user=user, bss_worker_id=f"W-{user.id:04d}",
+                user=user, bss_worker_id=_bss_worker_id(user.id),
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
                 name=user.get_full_name() or "")
         if number:

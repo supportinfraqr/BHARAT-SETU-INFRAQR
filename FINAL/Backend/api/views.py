@@ -917,7 +917,7 @@ class WorkerQrActionViewSet(viewsets.GenericViewSet):
             return Response({"detail": "Only workers can have QR tokens."},
                             status=status.HTTP_403_FORBIDDEN)
         ident, _created = WorkerIdentity.objects.get_or_create(
-            user=request.user, defaults={"bss_worker_id": f"W-{request.user.id:04d}"})
+            user=request.user, defaults={"bss_worker_id": f"BSS-W{request.user.id:010d}"})
         import uuid as _uuid
         ident.qr_token = _uuid.uuid4().hex + _uuid.uuid4().hex[:8]
         ident.save(update_fields=["qr_token"])
