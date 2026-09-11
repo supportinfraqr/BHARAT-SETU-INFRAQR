@@ -51,7 +51,7 @@ export default function OriginalLoginPage() {
   const handleOtpLogin = async () => {
     setLoginError('');
     if (!['Worker', 'Contractor', 'Employer', 'Government', 'BSS Staff', 'BSS Admin'].includes(selectedRole)) return setLoginError('Select a valid portal role.');
-    if (!loginIdentifier.trim()) return setLoginError('Enter your registered mobile number or email address.');
+    if (!loginIdentifier.trim()) return setLoginError('Enter your registered mobile number.');
     try {
       if (!otpSent) {
         setIsAuthenticating(true);

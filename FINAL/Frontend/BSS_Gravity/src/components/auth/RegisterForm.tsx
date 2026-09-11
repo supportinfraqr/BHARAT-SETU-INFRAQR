@@ -39,7 +39,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const requestOtp = async () => {
     setError("");
     if (selectedRole !== "Worker") return setError("This delivery includes worker onboarding. Organisation roles require administrator approval.");
-    if (!/^(?:[6-9]\d{9}|[^\s@]+@[^\s@]+\.[^\s@]+)$/.test(contact.trim())) return setError("Enter a valid Indian mobile number or email address.");
+    if (!/^[6-9]\d{9}$/.test(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number.");
     setIsCreating(true);
     try {
       const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:'Worker', identifier:contact }) });
