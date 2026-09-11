@@ -639,12 +639,12 @@ def worker_link_aadhaar(request):
     identity.save()
 
     a, _ = WorkerAddressMobility.objects.get_or_create(user=user)
-    a.current_address = data.get("full_address") or a.current_address
-    a.current_state = addr.get("state") or a.current_state
-    a.current_district = addr.get("district") or a.current_district
-    a.current_city = addr.get("vtc") or addr.get("city") or a.current_city
+    a.permanent_address = data.get("full_address") or a.permanent_address
+    a.permanent_state = addr.get("state") or a.permanent_state
+    a.permanent_district = addr.get("district") or a.permanent_district
+    a.permanent_city = addr.get("vtc") or addr.get("city") or a.permanent_city
     if addr.get("pincode"):
-        a.current_pincode = str(addr.get("pincode"))
+        a.permanent_pincode = str(addr.get("pincode"))
     a.save()
 
     UserCredential.objects.get_or_create(
@@ -903,6 +903,27 @@ def _persist_mutation(user, role_path, resource, method, body):
                 user=user, bss_worker_id=_bss_worker_id(user.id),
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
                 name=user.get_full_name() or "")
+        if body.get("section") == "mobility":
+            values = body.get("values") or {}
+            if values.get("email") is not None:
+                identity.email = str(values.get("email")).strip()
+            if values.get("alternateMobile") is not None:
+                identity.alternate_mobile = str(values.get("alternateMobile"))
+            identity.save()
+            a, _ = WorkerAddressMobility.objects.get_or_create(user=user)
+            ca = values.get("currentAddress") or {}
+            if ca:
+                a.current_address = ca.get("line", a.current_address)
+                a.current_state = ca.get("state", a.current_state)
+                a.current_district = ca.get("district", a.current_district)
+                a.current_city = ca.get("city", a.current_city)
+                a.current_pincode = ca.get("pin", a.current_pincode)
+            if values.get("migrationType") is not None:
+                a.migration_type = values.get("migrationType")
+            if values.get("migrant") is not None:
+                a.migrant_worker = bool(values.get("migrant"))
+            a.save()
+            return identity.id
         place = body.get("placeOfBirth") or body.get("place_of_birth")
         if place is None:
             # FE gate posts value nested: saveWorker({identity:{...worker.identity, placeOfBirth}})
@@ -943,16 +964,16 @@ def _persist_mutation(user, role_path, resource, method, body):
                 setattr(identity, fld, v)
         identity.save()
 
-        # Address & mobility — permanent side + migrant are manual entry.
+        # Address & mobility — current side + migrant are manual entry (permanent is Aadhaar-seeded).
         addr_patch = body.get("address") or {}
         if addr_patch:
             a, _ = WorkerAddressMobility.objects.get_or_create(user=user)
             addr_map = {
-                "permanent": "permanent_address",
-                "permanentState": "permanent_state",
-                "permanentDistrict": "permanent_district",
-                "permanentCity": "permanent_city",
-                "permanentPin": "permanent_pincode",
+                "current": "current_address",
+                "currentState": "current_state",
+                "currentDistrict": "current_district",
+                "currentCity": "current_city",
+                "currentPin": "current_pincode",
                 "migrationType": "migration_type",
             }
             for fe_key, fld in addr_map.items():

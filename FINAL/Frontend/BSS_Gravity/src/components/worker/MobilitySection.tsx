@@ -36,7 +36,6 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
 ) {
   const [draft, setDraft] = useState(() => fromWorker(worker));
   const [reference, setReference] = useState<GeographyReference>({});
-  const [sameAsCurrent, setSameAsCurrent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -54,11 +53,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
   }, []);
 
   const updateAddress = (kind: 'currentAddress' | 'permanentAddress', value: MobilityAddress) => {
-    setDraft(current => {
-      const next = { ...current, [kind]: value };
-      if (kind === 'currentAddress' && sameAsCurrent) next.permanentAddress = { ...value };
-      return next;
-    });
+    setDraft(current => ({ ...current, [kind]: value }));
     setErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(kind))));
   };
 
@@ -137,10 +132,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
 
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6 border-t border-black/5">
       <AddressEditor title="Current Address" kind="currentAddress" prefix="Current" address={draft.currentAddress} reference={reference} error={errors['currentAddress.line'] || errors['currentAddress.location']} onChange={value => updateAddress('currentAddress', value)}/>
-      <div>
-        <div className="flex justify-between items-start gap-3 mb-4"><h3 className="text-[15px] font-semibold text-[#1D1D1F]">Permanent Address</h3><label className="flex items-center gap-2 text-xs text-[#68686d] cursor-pointer"><input type="checkbox" checked={sameAsCurrent} onChange={event => { const checked = event.target.checked; setSameAsCurrent(checked); if (checked) updateAddress('permanentAddress', { ...draft.currentAddress }); }}/><span>Same as current</span></label></div>
-        <AddressEditor kind="permanentAddress" prefix="Permanent" address={draft.permanentAddress} reference={reference} disabled={sameAsCurrent} error={errors['permanentAddress.line'] || errors['permanentAddress.location']} onChange={value => updateAddress('permanentAddress', value)}/>
-      </div>
+      <AddressEditor title="Permanent Address" kind="permanentAddress" prefix="Permanent" address={draft.permanentAddress} reference={reference} readOnly error={errors['permanentAddress.line'] || errors['permanentAddress.location']} onChange={value => updateAddress('permanentAddress', value)}/>
     </div>
 
     <div className="pt-6 border-t border-black/5">
@@ -163,7 +155,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
   </div>;
 });
 
-function AddressEditor({ title, kind, prefix = '', address, reference, disabled = false, error, onChange }: { title?: string; kind: string; prefix?: string; address: MobilityAddress; reference: GeographyReference; disabled?: boolean; error?: string; onChange: (value: MobilityAddress) => void }) {
+function AddressEditor({ title, kind, prefix = '', address, reference, disabled = false, readOnly = false, error, onChange }: { title?: string; kind: string; prefix?: string; address: MobilityAddress; reference: GeographyReference; disabled?: boolean; readOnly?: boolean; error?: string; onChange: (value: MobilityAddress) => void }) {
   const label = (name: string) => prefix ? `${prefix} ${name}` : name;
   const states = Object.keys(reference);
   const districts = Object.keys(reference[address.state] || {});
@@ -171,6 +163,7 @@ function AddressEditor({ title, kind, prefix = '', address, reference, disabled 
   const cities = [...new Set(places.map(place => place.city))];
   const pins = places.find(place => place.city === address.city)?.pins || [];
   const id = kind.replace('Address', '');
+  const frozen = `${inputClass} bg-[#F5F5F7] text-gray-500 cursor-not-allowed`;
   const selectState = (state: string) => { const district = Object.keys(reference[state] || {})[0] || ''; const place = reference[state]?.[district]?.[0]; onChange({ ...address, state, district, city: place?.city || '', pin: place?.pins[0] || '' }); };
   const selectDistrict = (district: string) => { const place = reference[address.state]?.[district]?.[0]; onChange({ ...address, district, city: place?.city || '', pin: place?.pins[0] || '' }); };
   const selectCity = (city: string) => { const place = places.find(entry => entry.city === city); onChange({ ...address, city, pin: place?.pins[0] || '' }); };
@@ -181,13 +174,13 @@ function AddressEditor({ title, kind, prefix = '', address, reference, disabled 
     if (response.ok && result.data) onChange({ ...address, ...result.data });
   };
   return <div className="space-y-4">
-    {title && <h3 className="text-[15px] font-semibold text-[#1D1D1F]">{title}</h3>}
-    <Field label="Address Line"><textarea rows={2} value={address.line} onChange={event => onChange({ ...address, line: event.target.value })} disabled={disabled} className={`${inputClass} resize-none`}/></Field>
+    {title && <h3 className="text-[15px] font-semibold text-[#1D1D1F]">{title}{readOnly && <span className="ml-2 text-[11px] font-bold uppercase tracking-wide text-[#0066CC]">· Aadhaar seeded</span>}</h3>}
+    <Field label="Address Line">{readOnly ? <textarea rows={2} readOnly value={address.line} placeholder="—" className={`${frozen} resize-none`}/> : <textarea rows={2} value={address.line} onChange={event => onChange({ ...address, line: event.target.value })} disabled={disabled} className={`${inputClass} resize-none`}/>}</Field>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <Field label={label('State')}><select value={address.state} onChange={event => selectState(event.target.value)} disabled={disabled || !states.length} className={inputClass}>{!states.length ? <option value="">Loading…</option> : <><option value="">Select state</option>{states.map(state => <option key={state}>{state}</option>)}</>}</select></Field>
-      <Field label={label('District')}><select value={address.district} onChange={event => selectDistrict(event.target.value)} disabled={disabled || !districts.length} className={inputClass}><option value="">Select district</option>{districts.map(district => <option key={district}>{district}</option>)}</select></Field>
-      <Field label={label('City')}><select value={address.city} onChange={event => selectCity(event.target.value)} disabled={disabled || !cities.length} className={inputClass}><option value="">Select city</option>{cities.map(city => <option key={city}>{city}</option>)}</select></Field>
-      <Field label={label('PIN Code')}><div className="relative"><input list={`${id}-pins`} inputMode="numeric" value={address.pin} onChange={event => onChange({ ...address, pin: event.target.value.replace(/\D/g, '').slice(0, 6) })} onBlur={resolvePin} disabled={disabled} className={`${inputClass} pr-10`}/><RefreshCw size={15} className="absolute right-3.5 top-3.5 text-gray-400"/><datalist id={`${id}-pins`}>{pins.map(pin => <option key={pin} value={pin}/>)}</datalist></div></Field>
+      <Field label={label('State')}>{readOnly ? <input readOnly value={address.state} placeholder="—" className={frozen}/> : <select value={address.state} onChange={event => selectState(event.target.value)} disabled={disabled || !states.length} className={inputClass}>{!states.length ? <option value="">Loading…</option> : <><option value="">Select state</option>{states.map(state => <option key={state}>{state}</option>)}</>}</select>}</Field>
+      <Field label={label('District')}>{readOnly ? <input readOnly value={address.district} placeholder="—" className={frozen}/> : <select value={address.district} onChange={event => selectDistrict(event.target.value)} disabled={disabled || !districts.length} className={inputClass}><option value="">Select district</option>{districts.map(district => <option key={district}>{district}</option>)}</select>}</Field>
+      <Field label={label('City')}>{readOnly ? <input readOnly value={address.city} placeholder="—" className={frozen}/> : <select value={address.city} onChange={event => selectCity(event.target.value)} disabled={disabled || !cities.length} className={inputClass}><option value="">Select city</option>{cities.map(city => <option key={city}>{city}</option>)}</select>}</Field>
+      <Field label={label('PIN Code')}>{readOnly ? <input readOnly value={address.pin} placeholder="—" className={frozen}/> : <div className="relative"><input list={`${id}-pins`} inputMode="numeric" value={address.pin} onChange={event => onChange({ ...address, pin: event.target.value.replace(/\D/g, '').slice(0, 6) })} onBlur={resolvePin} disabled={disabled} className={`${inputClass} pr-10`}/><RefreshCw size={15} className="absolute right-3.5 top-3.5 text-gray-400"/><datalist id={`${id}-pins`}>{pins.map(pin => <option key={pin} value={pin}/>)}</datalist></div>}</Field>
     </div>
     {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
   </div>;
