@@ -8,7 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 export default function WorkerOverview() {
-  const { worker, portal, updateWorker } = useWorker(); const { t } = useLanguage();
+  const { worker, portal, saveWorker } = useWorker(); const { t } = useLanguage();
   const { actionCount } = useNotifications();
   // "Available for work" — sourced from the backend portal payload (WorkerOther.available_for_work).
   const availableForWork = portal.availability === true;
@@ -57,7 +57,7 @@ export default function WorkerOverview() {
     {label:t('nav.settings'),detail:'Language, privacy and security',href:'/worker/Settings',icon:Settings},
   ];
   if (!worker.identity.placeOfBirth?.trim()) {
-    return <PlaceOfBirthGate name={worker.identity.name} onSave={(value) => { updateWorker({ identity: { ...worker.identity, placeOfBirth: value } }); }} />;
+    return <PlaceOfBirthGate name={worker.identity.name} onSave={async (value) => { await saveWorker({ identity: { ...worker.identity, placeOfBirth: value } }); }} />;
   }
   return <div className="space-y-5 pb-12">
     {availableForWork && <section className="bg-[#073B67] border border-[#073B67] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0"><BadgeCheck size={20}/></span><div className="flex-1"><p className="text-sm font-bold">Available for work — ON</p><p className="text-xs text-white/80 mt-0.5">Employers can see that you are available and shortlist you for matching jobs. Turn it off anytime in Rozgar Setu.</p></div><Link href="/worker/rozgar" className="h-9 px-3 rounded-lg bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-white/20 flex-shrink-0">Manage availability<ArrowRight size={13}/></Link></section>}
@@ -116,9 +116,23 @@ function Status({label,value,note,tone,icon:Icon}:{label:string;value:string;not
 function Attention({href,icon:Icon,title,text,tone}:{href:string;icon:typeof AlertCircle;title:string;text:string;tone:'red'|'orange'|'blue'}) { const colors={red:'bg-red-50 text-red-600',orange:'bg-orange-50 text-orange-600',blue:'bg-blue-50 text-blue-700'}; return <Link href={href} className="px-5 py-4 flex items-center gap-3 hover:bg-gray-50 group"><span className={`w-9 h-9 rounded-lg flex items-center justify-center ${colors[tone]}`}><Icon size={17}/></span><span className="flex-1 min-w-0"><strong className="block text-sm font-semibold text-gray-850">{title}</strong><small className="block text-xs text-gray-400 mt-0.5 truncate">{text}</small></span><ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500"/></Link> }
 
 
-function PlaceOfBirthGate({ name, onSave }: { name: string; onSave: (value: string) => void }) {
+function PlaceOfBirthGate({ name, onSave }: { name: string; onSave: (value: string) => Promise<void> | void }) {
   const [value, setValue] = useState('');
   const [touched, setTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async () => {
+    if (!value.trim()) { setTouched(true); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await onSave(value.trim());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save place of birth. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
   return <div className="min-h-[60vh] grid place-items-center p-4">
     <section className="bg-white border border-gray-200 rounded-2xl max-w-lg w-full overflow-hidden">
       <div className="p-6 sm:p-8">
@@ -129,7 +143,8 @@ function PlaceOfBirthGate({ name, onSave }: { name: string; onSave: (value: stri
           <textarea rows={2} value={value} onChange={event => { setValue(event.target.value); if (event.target.value.trim()) setTouched(false); }} placeholder="e.g. Rampur Village, Danapur, Patna, Bihar" className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"/>
         </label>
         {touched && !value.trim() && <p className="text-xs text-red-600 mt-1.5">Place of birth is required to open the dashboard.</p>}
-        <button onClick={() => { if (!value.trim()) { setTouched(true); return; } onSave(value.trim()); }} className="mt-5 w-full h-11 rounded-xl bg-[#0F172A] hover:bg-black text-white text-sm font-bold">Save & open dashboard</button>
+        {error && <p className="text-xs text-red-600 mt-1.5">{error}</p>}
+        <button onClick={submit} disabled={saving} className="mt-5 w-full h-11 rounded-xl bg-[#0F172A] hover:bg-black text-white text-sm font-bold disabled:opacity-60">{saving ? 'Saving…' : 'Save & open dashboard'}</button>
         <p className="text-[11px] text-gray-400 mt-3">This single declaration lets policy dashboards classify workers born in your state as local, and those born elsewhere as in-migrants.</p>
       </div>
     </section>
