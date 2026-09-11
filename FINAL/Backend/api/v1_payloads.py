@@ -655,7 +655,7 @@ def _worker_documents_display(user):
         {"name": "PAN Card", "mandatory": False, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
         {"name": "Bank Passbook / Cancelled Cheque", "mandatory": True, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
         {"name": "Medical Fitness Certificate", "mandatory": False, "owner": "Contractor", "status": "Pending", "date": None, "downloadUrl": ""},
-        {"name": "Safety Induction Badge", "mandatory": True, "owner": "Employer", "status": "Verified", "date": None, "downloadUrl": ""},
+        {"name": "Safety Induction Badge", "mandatory": True, "owner": "System", "status": "Verified", "date": None, "downloadUrl": ""},
     ]
 
 

@@ -16,6 +16,8 @@ export default function WorkerSkillsPage() {
     title: 'Advanced Scaffolding Safety',
     description: 'Learn the latest safety protocols for high rise scaffolding operations. This mandatory course ensures you comply with national safety standards and reduces on-site accident risks.',
     provider: 'NSDC - Skill India',
+    category: 'safety',
+    duration: '2h',
     progress: 60,
     image: '/images/scaffolding_course.jpg'
   };
@@ -117,6 +119,57 @@ export default function WorkerSkillsPage() {
       <div className="pt-4 space-y-3">
         <h2 className="text-base font-bold text-gray-900">Your learning</h2>
         <p className="text-xs text-gray-500">Recommended from your occupation and site requirements</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {rawCourses.map((c) => (
+            <Link key={c.id} href={`/worker/Skills/${c.id}`} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex group">
+              <div className="relative w-36 h-28 bg-slate-100 flex-shrink-0">
+                <Image 
+                  src={c.image || '/images/scaffolding_course.jpg'} 
+                  alt={c.title}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-4 flex flex-col justify-between flex-1 min-w-0">
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{c.category || 'SAFETY'}</span>
+                  <h3 className="text-sm font-extrabold text-gray-900 truncate mt-0.5 group-hover:text-blue-600 transition-colors">{c.title}</h3>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{c.provider || 'NSDC - Skill India'}</p>
+                </div>
+                <div className="flex items-center justify-between text-xs font-semibold text-gray-400 pt-2">
+                  <span>{c.duration || '2h'}</span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </div>
+            </Link>
+          ))}
+
+          {/* Hardcoded fallback card if only 1 course exists in array */}
+          {rawCourses.length === 1 && (
+            <Link href="/worker/Skills/catalog" className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex group">
+              <div className="relative w-36 h-28 bg-slate-100 flex-shrink-0">
+                <Image 
+                  src="/images/digital_literacy.jpg" 
+                  alt="Digital Financial Literacy"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-4 flex flex-col justify-between flex-1 min-w-0">
+                <div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">LIFE SKILLS</span>
+                  <h3 className="text-sm font-extrabold text-gray-900 truncate mt-0.5 group-hover:text-blue-600 transition-colors">Digital Financial Literacy</h3>
+                  <p className="text-xs text-gray-500 truncate mt-0.5">Bharat Shram Setu</p>
+                </div>
+                <div className="flex items-center justify-between text-xs font-semibold text-gray-400 pt-2">
+                  <span>1.5h</span>
+                  <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                </div>
+              </div>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Floating Voice Guide */}

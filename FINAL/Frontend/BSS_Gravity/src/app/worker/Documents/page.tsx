@@ -1,9 +1,9 @@
 "use client";import {useRef,useState} from 'react';import {Eye,Upload} from 'lucide-react';import EnterpriseDataTable,{type DataColumn} from '@/components/worker/EnterpriseDataTable';import {useWorker} from '@/contexts/WorkerContext';import type {WorkerDocument} from '@/types/portal';const DEFAULT_DOCUMENTS: WorkerDocument[] = [
-  { name: 'Aadhaar Card', mandatory: true, owner: 'Worker', status: 'Missing', date: undefined, downloadUrl: '' },
-  { name: 'PAN Card', mandatory: false, owner: 'Worker', status: 'Missing', date: undefined, downloadUrl: '' },
-  { name: 'Bank Passbook / Cancelled Cheque', mandatory: true, owner: 'Worker', status: 'Missing', date: undefined, downloadUrl: '' },
-  { name: 'Medical Fitness Certificate', mandatory: false, owner: 'Contractor', status: 'Pending', date: undefined, downloadUrl: '' },
-  { name: 'Safety Induction Badge', mandatory: true, owner: 'Employer', status: 'Verified', date: undefined, downloadUrl: '' },
+  { name: 'Aadhaar Card', mandatory: true, owner: 'Worker', status: 'Missing', date: null, downloadUrl: '' },
+  { name: 'PAN Card', mandatory: false, owner: 'Worker', status: 'Missing', date: null, downloadUrl: '' },
+  { name: 'Bank Passbook / Cancelled Cheque', mandatory: true, owner: 'Worker', status: 'Missing', date: null, downloadUrl: '' },
+  { name: 'Medical Fitness Certificate', mandatory: false, owner: 'Contractor', status: 'Pending', date: null, downloadUrl: '' },
+  { name: 'Safety Induction Badge', mandatory: true, owner: 'System', status: 'Verified', date: null, downloadUrl: '' },
 ];
 export default function DocumentsModule(){const {portal,worker}=useWorker();const [documents,setDocuments]=useState<WorkerDocument[]>(portal.documents?.length ? portal.documents : DEFAULT_DOCUMENTS),[selected,setSelected]=useState<WorkerDocument|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');const input=useRef<HTMLInputElement>(null);
  async function receive(file?:File){if(!file||!selected)return;setBusy(true);setError('');const data=new FormData();data.set('file',file);data.set('type',selected.name);data.set('site',worker.employment.site);data.set('period',new Date().toISOString().slice(0,7));try{const response=await fetch('/api/portal/uploads',{method:'POST',body:data});const result=await response.json() as {error?:string};if(!response.ok)throw new Error(result.error??'Document could not be uploaded.');setDocuments(current=>current.map(item=>item.name===selected.name?{...item,status:'Under Verification',date:new Date().toISOString().slice(0,10)}:item));setSelected(null)}catch(reason){setError(reason instanceof Error?reason.message:'Document could not be uploaded.')}finally{setBusy(false);if(input.current)input.current.value=''}}
