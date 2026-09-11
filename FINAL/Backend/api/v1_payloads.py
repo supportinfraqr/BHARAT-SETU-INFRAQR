@@ -1321,7 +1321,14 @@ def _contractor_binding_requests(user):
             "designation": _d(b.designation),
             "wage": float(b.offered_wage) if b.offered_wage else 0,
             "requestedOn": _dts(b.created_at),
-            "status": _d(b.binding_status),
+            "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
+                       "CANCELLED": "Cancelled", "EXPIRED": "Expired"}.get(
+                           str(b.binding_status).upper(), "Pending"),
+            "consentWorker": bool(b.consent_worker),
+            "consentContractor": bool(b.consent_contractor),
+            "unbindRequested": bool(b.unbind_requested_at),
+            "unbindConsentWorker": bool(b.unbind_consent_worker),
+            "unbindConsentContractor": bool(b.unbind_consent_contractor),
         })
     return rows
 

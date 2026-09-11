@@ -160,7 +160,10 @@ export type ContractorJobPosting = {
 };
 
 export type ContractorBindingRequest = {
-  id: string; type: 'Worker' | 'Employer'; entityName: string; bssId: string; site: string; employer: string; designation: string; wage: string; requestedOn: string; status: 'Pending' | 'Approved' | 'Rejected';
+  id: string; type: 'Worker' | 'Employer'; entityName: string; bssId: string; site: string; employer: string; designation: string; wage: string; requestedOn: string;
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired';
+  consentWorker?: boolean; consentContractor?: boolean;
+  unbindRequested?: boolean; unbindConsentWorker?: boolean; unbindConsentContractor?: boolean;
 };
 
 export type ContractorRegister = {
@@ -495,7 +498,7 @@ export type LeaveEncashmentRecord = { id:string; period:string; days:number; rat
 
 export type WorkerDocument = { name:string; mandatory:boolean; owner:'Worker'|'Contractor'|'System'; status:string; date:string|null; downloadUrl?:string };
 export type WorkerJobRequest = { id:string; employer:string; contractor:string; site:string; designation:string; wage:number; currency:string; payPeriod:string; duration:string; facilities:string[]; status:'Pending'|'Accepted'|'Rejected'|'Cancelled'|'Expired'; dateReceived:string };
-export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired' };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
+export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
 export type EmployerLabourCompliance = { ruleId: import('@/lib/labour-compliance').RuleId; scope: import('@/lib/labour-compliance').GovtScope; status: import('@/lib/labour-compliance').RuleStatus; note: string; verifiedAt: string };
 export type LearningCourse = { id:string; title:string; provider:string; duration:string; rating:number; progress:number; image:string; badge:string; category:string; description:string; modules:Array<{id:string;title:string;duration:string;completed:boolean}>; instructor:string; certification:string };
 export type WorkerPortalData = {

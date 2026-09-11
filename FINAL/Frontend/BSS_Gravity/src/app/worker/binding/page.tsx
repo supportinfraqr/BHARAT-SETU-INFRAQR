@@ -21,6 +21,7 @@ type BindingRequest = {
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled';
   consentWorker?: boolean;
   consentContractor?: boolean;
+  unbindRequested?: boolean;
   unbindConsentWorker?: boolean;
   unbindConsentContractor?: boolean;
 };
@@ -30,7 +31,7 @@ type BindingRequest = {
 export default function BindingRequestsPage() {
   const { worker, portal } = useWorker();
 
-  const apiRequests: BindingRequest[] = (portal.bindings ?? []).map((req: any) => ({
+  const apiRequests: BindingRequest[] = (portal.bindings ?? []).map(req => ({
     id: Number(req.id),
     ref: String(req.ref || `BIND-2026-${String(req.id).padStart(3, '0')}`),
     contractor: String(req.contractor || ''),
@@ -44,6 +45,7 @@ export default function BindingRequestsPage() {
     status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
     consentWorker: Boolean(req.consentWorker),
     consentContractor: Boolean(req.consentContractor),
+    unbindRequested: Boolean(req.unbindRequested),
     unbindConsentWorker: Boolean(req.unbindConsentWorker),
     unbindConsentContractor: Boolean(req.unbindConsentContractor),
   }));
@@ -125,7 +127,7 @@ export default function BindingRequestsPage() {
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Could not request unbinding.');
       const cancelled = result.data?.status === 'Cancelled';
-      setRequests(current => current.map(r => r.id === req.id ? { ...r, status: (cancelled ? 'Cancelled' : 'Accepted') as BindingRequest['status'] } : r));
+      setRequests(current => current.map(r => r.id === req.id ? { ...r, status: (cancelled ? 'Cancelled' : 'Accepted') as BindingRequest['status'], unbindRequested: true, unbindConsentWorker: true, unbindConsentContractor: cancelled ? true : r.unbindConsentContractor } : r));
       setNotice(cancelled ? 'Binding unbound — both parties consented.' : 'Unbinding requested — awaiting the contractor’s consent.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not request unbinding.');
@@ -188,12 +190,17 @@ export default function BindingRequestsPage() {
               <button onClick={() => void act(req.id, 'decline')} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 disabled:opacity-60"><XCircle size={15}/>Decline</button>
             </div>
           )}
-          {req.status === 'Accepted' && (
+          {req.status === 'Accepted' && (req.unbindRequested ? (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+              <p className="text-xs text-orange-700 font-semibold flex items-center gap-1.5"><XCircle size={14}/>{req.unbindConsentWorker ? 'Unbinding requested — awaiting the contractor’s consent.' : 'The contractor requested unbinding — awaiting your consent.'}</p>
+              {!req.unbindConsentWorker && <button onClick={() => void requestUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
+            </div>
+          ) : (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
               <p className="text-xs text-green-700 font-semibold flex items-center gap-1.5"><CheckCircle2 size={14}/>Binding active · employment started with {req.contractor} on approval of both parties.</p>
               <button onClick={() => void requestUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Request Unbind</button>
             </div>
-          )}
+          ))}
           {req.status === 'Cancelled' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding unbound — both parties consented.</p>}
         </article>
       ))}

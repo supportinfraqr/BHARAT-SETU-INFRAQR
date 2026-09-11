@@ -7,19 +7,22 @@ import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorBindingRequest } from '@/types/portal';
 
 export default function ContractorBindingRequestsPage() {
-  const { contractor, replaceContractor, mutate, employerScope } = useContractor();
+  const { contractor, replaceContractor, employerScope } = useContractor();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
-  async function decide(row: ContractorBindingRequest, status: 'Approved' | 'Rejected') {
+  async function consentUnbind(row: ContractorBindingRequest) {
     setBusy(true); setError(''); setNotice('');
     try {
-      await mutate('binding-requests', 'PATCH', { id: row.id, status });
-      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status } : item) });
-      setNotice(`${row.entityName} ${status.toLowerCase()}. Binding becomes active only after both parties accept.`);
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'unbind', side: 'contractor' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
+      if (!response.ok) throw new Error(result.error || 'Could not confirm unbinding.');
+      const cancelled = result.data?.status === 'Cancelled';
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: (cancelled ? 'Cancelled' : 'Accepted') as ContractorBindingRequest['status'], unbindRequested: true, unbindConsentContractor: true, unbindConsentWorker: cancelled ? true : item.unbindConsentWorker } : item) });
+      setNotice(cancelled ? `${row.entityName} unbound — both parties consented.` : `Unbinding confirmed — awaiting the worker's consent.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -31,8 +34,14 @@ export default function ContractorBindingRequestsPage() {
     { id:'employer', header:'Employer', value:r => r.employer },
     { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-gray-800">{r.designation}</p><p className="text-[10px] text-gray-400">{r.wage}</p></div> },
     { id:'requested', header:'Requested', value:r => r.requestedOn },
-    { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Approved' ? 'text-green-700' : r.status === 'Rejected' ? 'text-red-700' : 'text-orange-700'}>{r.status}</span> },
-    { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => r.status === 'Pending' ? <div className="flex gap-2"><button disabled={busy} onClick={() => decide(r, 'Approved')} className="text-green-700 font-semibold">Approve</button><button disabled={busy} onClick={() => decide(r, 'Rejected')} className="text-red-700 font-semibold">Reject</button></div> : <span className="text-gray-400">—</span> },
+    { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-green-700' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{r.status}</span> },
+    { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => {
+      if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => void consentUnbind(r)} className="text-red-700 font-semibold">Confirm unbind</button>;
+      if (r.status === 'Accepted' && r.unbindRequested) return <span className="text-orange-700">Awaiting worker</span>;
+      if (r.status === 'Pending' && !r.consentWorker) return <span className="text-gray-400">Awaiting worker</span>;
+      if (r.status === 'Accepted') return <span className="text-green-700">Active</span>;
+      return <span className="text-gray-400">—</span>;
+    } },
   ];
 
   const pending = rows.filter(r => r.status === 'Pending').length;
@@ -51,7 +60,7 @@ export default function ContractorBindingRequestsPage() {
       <Metric label="Pending" value={pending} icon={Clock3} tone="bg-orange-50 text-orange-700"/>
       <Metric label="Workers" value={rows.filter(r => r.type === 'Worker').length} icon={UserRound} tone="bg-blue-50 text-blue-700"/>
       <Metric label="Employers" value={rows.filter(r => r.type === 'Employer').length} icon={Building2} tone="bg-indigo-50 text-indigo-700"/>
-      <Metric label="Active bindings" value={rows.filter(r => r.status === 'Approved').length} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
+      <Metric label="Active bindings" value={rows.filter(r => r.status === 'Accepted').length} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
     </div>
 
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
