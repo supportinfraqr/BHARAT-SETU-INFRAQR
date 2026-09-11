@@ -441,8 +441,11 @@ def aadhaar_otp(request):
 
     try:
         result = aadhaar_client.generate_otp(aadhaar)
-    except aadhaar_client.SandboxError:
-        return Response({"error": "Aadhaar verification service is currently unavailable."},
+    except aadhaar_client.SandboxError as exc:
+        sb_status = getattr(exc, "status", 502)
+        if 400 <= sb_status < 500:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     ref_id = (result.get("data") or {}).get("reference_id")
@@ -504,10 +507,13 @@ def aadhaar_verify(request):
 
     try:
         result = aadhaar_client.verify_otp(reference_id, otp)
-    except aadhaar_client.SandboxError:
+    except aadhaar_client.SandboxError as exc:
         challenge.otp_attempts += 1
         challenge.save(update_fields=["otp_attempts", "updated_at"])
-        return Response({"error": "Aadhaar verification service is currently unavailable."},
+        sb_status = getattr(exc, "status", 502)
+        if 400 <= sb_status < 500:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     challenge.otp_attempts += 1
@@ -623,10 +629,13 @@ def worker_link_aadhaar(request):
 
     try:
         result = aadhaar_client.verify_otp(reference_id, otp)
-    except aadhaar_client.SandboxError:
+    except aadhaar_client.SandboxError as exc:
         challenge.otp_attempts += 1
         challenge.save(update_fields=["otp_attempts", "updated_at"])
-        return Response({"error": "Aadhaar verification service is currently unavailable."},
+        sb_status = getattr(exc, "status", 502)
+        if 400 <= sb_status < 500:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     challenge.otp_attempts += 1

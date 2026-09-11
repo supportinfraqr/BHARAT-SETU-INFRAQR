@@ -8,7 +8,24 @@ from django.conf import settings
 
 
 class SandboxError(Exception):
-    pass
+    def __init__(self, message, status=502):
+        super().__init__(message)
+        self.status = status
+
+
+def _error_message(resp) -> str:
+    """Best-effort human message from a Sandbox error response."""
+    try:
+        data = resp.json()
+    except Exception:
+        return (resp.text or "").strip()[:200] or f"HTTP {resp.status_code}"
+    if isinstance(data, dict):
+        msg = data.get("message")
+        if not msg and isinstance(data.get("data"), dict):
+            msg = data["data"].get("message")
+        if msg:
+            return str(msg)
+    return (resp.text or "").strip()[:200] or f"HTTP {resp.status_code}"
 
 
 def get_access_token() -> str:
@@ -55,7 +72,7 @@ def generate_otp(aadhaar_number: str) -> dict:
         timeout=20,
     )
     if resp.status_code != 200:
-        raise SandboxError(f"otp generation failed: {resp.status_code} {resp.text[:300]}")
+        raise SandboxError(_error_message(resp), resp.status_code)
     return resp.json()
 
 
@@ -74,5 +91,5 @@ def verify_otp(reference_id: str, otp: str) -> dict:
         timeout=30,
     )
     if resp.status_code != 200:
-        raise SandboxError(f"otp verify failed: {resp.status_code} {resp.text[:300]}")
+        raise SandboxError(_error_message(resp), resp.status_code)
     return resp.json()
