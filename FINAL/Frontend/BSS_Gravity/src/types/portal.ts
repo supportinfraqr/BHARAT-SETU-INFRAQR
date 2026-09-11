@@ -67,12 +67,11 @@ export type WorkerRecord = {
     medicalFitnessStatus?: string;
   };
   skills: {
-    qualificationCourse?: string;
-    boardUniversity?: string;
-    passingYear?: string;
+    educations?: Array<{ id?: number; qualificationCourse?: string; boardUniversity?: string; passingYear?: string }>;
     languages?: string[];
-    primary: { name: string; level?: string; experienceYears?: string };
-    secondary: string[];
+    items?: Array<{ id?: number; name?: string; experienceYears?: string; verified?: boolean; certification?: { name?: string; number?: string; authority?: string; expiry?: string } }>;
+    primary?: { name: string; level?: string; experienceYears?: string };
+    secondary?: string[];
     certification?: { name: string; number?: string; authority?: string; expiry?: string; verified: boolean };
   };
   socialSecurity: { epfoUan: string; esicIp: string; eShramLinked: boolean; bocwRegistered: boolean; lwfNo?: string; wcPolicyNo?: string; eShramNo?: string; stateWorkerId?: string; bocwRegNumber?: string };

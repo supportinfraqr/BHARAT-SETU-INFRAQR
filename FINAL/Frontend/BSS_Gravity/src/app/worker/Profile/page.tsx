@@ -96,17 +96,23 @@ export default function WorkerProfilePage() {
   const medicalStatusTone = medicalExaminationStatus === 'Completed' ? 'text-[#2F9E67]' : medicalExaminationStatus === 'Pending' ? 'text-[#F47A32]' : medicalExaminationStatus === 'Expired' ? 'text-[#FF3B30]' : 'text-gray-900';
 
   // Skills & Education — self-declared manual-entry fields (editable).
-  // Certification is verified via course completion and is NOT editable here.
+  // System-verified certifications are read-only (issued via course completion).
   const [skillsForm, setSkillsForm] = useState({
-    qualificationCourse: worker.skills?.qualificationCourse ?? '',
-    boardUniversity: worker.skills?.boardUniversity ?? '',
-    passingYear: worker.skills?.passingYear ?? '',
+    educations: (worker.skills?.educations?.length
+      ? worker.skills.educations.map(e => ({ qualificationCourse: e.qualificationCourse ?? '', boardUniversity: e.boardUniversity ?? '', passingYear: e.passingYear ?? '' }))
+      : [{ qualificationCourse: '', boardUniversity: '', passingYear: '' }]),
     languages: (worker.skills?.languages ?? []).join(', '),
-    primaryName: worker.skills?.primary?.name ?? '',
-    primaryExperience: worker.skills?.primary?.experienceYears ?? '',
-    secondary: (worker.skills?.secondary ?? []).join(', '),
+    items: (worker.skills?.items ?? [])
+      .filter(s => !s.verified)
+      .map(s => ({ name: s.name ?? '', experienceYears: s.experienceYears ?? '' })),
   });
-  const setSkill = (key: keyof typeof skillsForm, value: string) => setSkillsForm(current => ({ ...current, [key]: value }));
+  const setSkill = (key: 'languages', value: string) => setSkillsForm(current => ({ ...current, [key]: value }));
+  const addEducation = () => setSkillsForm(current => ({ ...current, educations: [...current.educations, { qualificationCourse: '', boardUniversity: '', passingYear: '' }] }));
+  const updateEducation = (index: number, key: 'qualificationCourse' | 'boardUniversity' | 'passingYear', value: string) => setSkillsForm(current => ({ ...current, educations: current.educations.map((e, i) => i === index ? { ...e, [key]: value } : e) }));
+  const removeEducation = (index: number) => setSkillsForm(current => ({ ...current, educations: current.educations.filter((_, i) => i !== index) }));
+  const addSkill = () => setSkillsForm(current => ({ ...current, items: [...current.items, { name: '', experienceYears: '' }] }));
+  const updateSkill = (index: number, key: 'name' | 'experienceYears', value: string) => setSkillsForm(current => ({ ...current, items: current.items.map((s, i) => i === index ? { ...s, [key]: value } : s) }));
+  const removeSkill = (index: number) => setSkillsForm(current => ({ ...current, items: current.items.filter((_, i) => i !== index) }));
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,12 +125,13 @@ export default function WorkerProfilePage() {
       try {
         await saveWorker({
           skills: {
-            qualificationCourse: skillsForm.qualificationCourse,
-            boardUniversity: skillsForm.boardUniversity,
-            passingYear: skillsForm.passingYear,
+            educations: skillsForm.educations
+              .filter(e => e.qualificationCourse.trim() || e.boardUniversity.trim() || e.passingYear.trim())
+              .map(e => ({ qualificationCourse: e.qualificationCourse, boardUniversity: e.boardUniversity, passingYear: e.passingYear })),
             languages: skillsForm.languages.split(',').map(s => s.trim()).filter(Boolean),
-            primary: { name: skillsForm.primaryName, experienceYears: skillsForm.primaryExperience },
-            secondary: skillsForm.secondary.split(',').map(s => s.trim()).filter(Boolean),
+            items: skillsForm.items
+              .filter(s => s.name.trim() || s.experienceYears.trim())
+              .map(s => ({ name: s.name, experienceYears: s.experienceYears })),
           },
         });
         setShowSuccess(true);
@@ -1120,67 +1127,71 @@ export default function WorkerProfilePage() {
           {/* TAB: SKILLS & EMPLOYABILITY */}
           {activeTab === 'skills' && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-[15px] font-semibold text-[#1D1D1F]">Education & Languages</h3>
-              </div>
-              <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Qualification / Course</p>
-                  <input type="text" value={skillsForm.qualificationCourse} onChange={e => setSkill('qualificationCourse', e.target.value)} placeholder="e.g. 12th Standard (HSC)" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+              <div className="bg-[#F5F5F7] rounded-[16px] p-5 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-[15px] font-semibold text-[#1D1D1F]">Education & Languages</h3>
+                  <button type="button" onClick={addEducation} className="text-[#0066CC] text-[13px] font-semibold hover:underline">+ Add Education</button>
                 </div>
+                {skillsForm.educations.map((edu, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-white rounded-[12px] p-4 border border-gray-200">
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Qualification / Course</p>
+                      <input type="text" value={edu.qualificationCourse} onChange={e => updateEducation(index, 'qualificationCourse', e.target.value)} placeholder="e.g. 12th Standard (HSC)" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Board / University</p>
+                      <input type="text" value={edu.boardUniversity} onChange={e => updateEducation(index, 'boardUniversity', e.target.value)} placeholder="e.g. CBSE" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Passing Year</p>
+                      <input type="text" inputMode="numeric" value={edu.passingYear} onChange={e => updateEducation(index, 'passingYear', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 2014" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    </div>
+                    <div className="flex md:justify-end">
+                      {skillsForm.educations.length > 1 && (
+                        <button type="button" onClick={() => removeEducation(index)} className="text-[#FF3B30] hover:bg-red-50 rounded-lg p-2" aria-label="Remove education"><Trash2 size={16}/></button>
+                      )}
+                    </div>
+                  </div>
+                ))}
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Board / University</p>
-                  <input type="text" value={skillsForm.boardUniversity} onChange={e => setSkill('boardUniversity', e.target.value)} placeholder="e.g. CBSE" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passing Year</p>
-                  <input type="text" inputMode="numeric" value={skillsForm.passingYear} onChange={e => setSkill('passingYear', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 2014" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Languages Known</p>
-                  <input type="text" value={skillsForm.languages} onChange={e => setSkill('languages', e.target.value)} placeholder="Comma separated, e.g. Hindi, English" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Languages Known</p>
+                  <input type="text" value={skillsForm.languages} onChange={e => setSkill('languages', e.target.value)} placeholder="Comma separated, e.g. Hindi, English" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                 </div>
               </div>
 
               <div className="pt-6 border-t border-black/5">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-[15px] font-semibold text-[#1D1D1F]">Certified Trades & Skills</h3>
-                  <button type="button" className="text-[#0066CC] text-[13px] font-semibold hover:underline">
+                  <h3 className="text-[15px] font-semibold text-[#1D1D1F]">Trades & Skills</h3>
+                  <button type="button" onClick={addSkill} className="text-[#0066CC] text-[13px] font-semibold hover:underline">
                     + Add Skill
                   </button>
                 </div>
-                <div className="grid grid-cols-1 gap-6">
-                  {/* Primary Skill */}
-                  <div className="bg-white rounded-[12px] shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b flex justify-between items-center bg-[#073B67] text-white">
-                      <div className="flex items-center gap-2">
-                        <Award size={18} className="text-[#F47A32]" />
-                        <h3 className="font-bold text-white">Primary Skill</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Verified certifications — issued via the BSS course system (read-only) */}
+                  {(worker.skills?.items ?? []).filter(s => s.verified).map((s, i) => (
+                    <div key={s.id ?? `v-${i}`} className="bg-white rounded-[12px] shadow-sm border border-gray-200 overflow-hidden">
+                      <div className="p-4 border-b flex justify-between items-center bg-[#073B67] text-white">
+                        <div className="flex items-center gap-2">
+                          <Award size={18} className="text-[#F47A32]" />
+                          <h3 className="font-bold text-white">{s.name || 'Certified Skill'}</h3>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#2F9E67] text-white">Verified</span>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${worker.skills?.certification?.verified ? 'bg-[#2F9E67] text-white' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {worker.skills?.certification?.verified ? 'Verified' : 'Self-Declared'}
-                      </span>
-                    </div>
-                    <div className="p-5 space-y-5">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-1">{worker.classification?.sector || '—'}</p>
+                      <div className="p-5 space-y-5">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
+                            <p className="text-sm font-semibold text-gray-800 mt-1">{worker.classification?.sector || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
+                            <p className="text-sm font-semibold text-gray-800 mt-1">{s.experienceYears || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
+                            <p className="text-sm font-semibold text-gray-800 mt-1">Third-Party Assessed</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation / Trade</p>
-                          <input type="text" value={skillsForm.primaryName} onChange={e => setSkill('primaryName', e.target.value)} placeholder="e.g. Bar Bender (Rebar)" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
-                          <input type="text" value={skillsForm.primaryExperience} onChange={e => setSkill('primaryExperience', e.target.value)} placeholder="e.g. 8 Years" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-1">{worker.skills?.certification?.verified ? 'Third-Party Assessed' : 'Self-Declared'}</p>
-                        </div>
-                      </div>
-                      {worker.skills?.certification?.verified && (
                         <div className="mt-4 pt-4 border-t border-gray-100">
                           <div className="flex items-center gap-2 mb-3">
                             <BadgeCheck size={16} className="text-[#2F9E67]" />
@@ -1189,58 +1200,56 @@ export default function WorkerProfilePage() {
                           <div className="bg-[#E8F5E9]/50 p-4 rounded-lg border border-[#2F9E67]/20 grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Certificate Name</p>
-                              <p className="text-sm font-bold text-gray-800">{worker.skills?.certification?.name || '—'}</p>
+                              <p className="text-sm font-bold text-gray-800">{s.certification?.name || '—'}</p>
                             </div>
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Issuing Authority</p>
-                              <p className="text-sm font-semibold text-gray-800">{worker.skills?.certification?.authority || '—'}</p>
+                              <p className="text-sm font-semibold text-gray-800">{s.certification?.authority || '—'}</p>
                             </div>
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cert. Number</p>
-                              <p className="text-xs font-mono font-semibold text-[#073B67]">{worker.skills?.certification?.number || '—'}</p>
+                              <p className="text-xs font-mono font-semibold text-[#073B67]">{s.certification?.number || '—'}</p>
                             </div>
                             <div className="col-span-2">
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Validity</p>
-                              <p className="text-xs font-semibold text-gray-800">{worker.skills?.certification?.expiry || '—'}</p>
+                              <p className="text-xs font-semibold text-gray-800">{s.certification?.expiry || '—'}</p>
                             </div>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Secondary Skill */}
-                  <div className="bg-white rounded-[12px] shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                      <div className="flex items-center gap-2">
-                        <Award size={18} className="text-gray-500" />
-                        <h3 className="font-bold text-gray-900">Secondary Skill</h3>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-yellow-100 text-yellow-800">
-                        Self-Declared
-                      </span>
                     </div>
-                    <div className="p-5">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-1">{worker.classification?.sector || '—'}</p>
+                  ))}
+
+                  {/* Self-declared skills (editable) */}
+                  {skillsForm.items.map((s, index) => (
+                    <div key={`s-${index}`} className="bg-white rounded-[12px] shadow-sm border border-gray-200 overflow-hidden">
+                      <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <Award size={18} className="text-gray-500" />
+                          <h3 className="font-bold text-gray-900">Self-Declared Skill</h3>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation / Trade</p>
-                          <input type="text" value={skillsForm.secondary} onChange={e => setSkill('secondary', e.target.value)} placeholder="Comma separated trades" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-1">—</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
-                          <p className="text-sm font-semibold text-gray-800 mt-1">Unassessed</p>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-yellow-100 text-yellow-800">Self-Declared</span>
+                      </div>
+                      <div className="p-5">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                          <div className="md:col-span-2">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Skill / Trade</p>
+                            <input type="text" value={s.name} onChange={e => updateSkill(index, 'name', e.target.value)} placeholder="e.g. Bar Bender (Rebar)" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Experience</p>
+                            <input type="text" value={s.experienceYears} onChange={e => updateSkill(index, 'experienceYears', e.target.value)} placeholder="e.g. 3 Years" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                          </div>
+                          <div className="flex md:justify-end">
+                            <button type="button" onClick={() => removeSkill(index)} className="text-[#FF3B30] hover:bg-red-50 rounded-lg p-2" aria-label="Remove skill"><Trash2 size={16}/></button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
+                  {skillsForm.items.length === 0 && (worker.skills?.items ?? []).filter(s => s.verified).length === 0 && (
+                    <p className="text-sm text-gray-400">No skills added yet. Use “+ Add Skill” to add a self-declared skill.</p>
+                  )}
                 </div>
               </div>
             </div>

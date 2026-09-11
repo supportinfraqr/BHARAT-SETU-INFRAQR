@@ -29,12 +29,14 @@ from bss_core.models import (
     WorkerClassification,
     WorkerContractorBinding,
     WorkerDocument,
+    WorkerEducation,
     WorkerEmployment,
     WorkerFamilyDependant,
     WorkerGatePass,
     WorkerGrievance,
     WorkerIdentity,
     WorkerOther,
+    WorkerSkill,
     WorkerSkillsEmployability,
     WorkerSocialSecurity,
     WorkerWages,
@@ -299,26 +301,54 @@ def _worker_compliance_section(user):
 
 def _worker_skills_section(user):
     sk = WorkerSkillsEmployability.objects.filter(user=user).first()
-    secondary = [s.strip() for s in (sk.secondary_skills or "").split(",") if s.strip()] if sk else []
     languages = [s.strip() for s in (sk.languages_known or "").split(",") if s.strip()] if sk else []
-    verified = bool(sk and sk.certification_verified)
+    educations = [
+        {
+            "id": e.id,
+            "qualificationCourse": _d(e.qualification_course),
+            "boardUniversity": _d(e.board_university),
+            "passingYear": _d(e.passing_year),
+        }
+        for e in WorkerEducation.objects.filter(user=user).order_by("id")
+    ]
+    skill_items = [
+        {
+            "id": s.id,
+            "name": _d(s.name),
+            "experienceYears": _d(s.experience_years),
+            "verified": bool(s.verified),
+            "certification": {
+                "name": _d(s.certification_name),
+                "number": _d(s.certification_number),
+                "authority": _d(s.certification_authority),
+                "expiry": _dts(s.certification_expiry) if s.certification_expiry else "",
+            },
+        }
+        for s in WorkerSkill.objects.filter(user=user).order_by("id")
+    ]
+    if not skill_items and sk and _d(sk.primary_skill):
+        skill_items = [{
+            "id": None,
+            "name": _d(sk.primary_skill),
+            "experienceYears": _d(sk.skill_experience_years),
+            "verified": bool(sk.certification_verified),
+            "certification": {
+                "name": _d(sk.certification_name),
+                "number": _d(sk.certification_number),
+                "authority": _d(sk.certification_authority),
+                "expiry": _dts(sk.certification_expiry) if sk.certification_expiry else "",
+            },
+        }]
+    first = skill_items[0] if skill_items else None
+    verified_item = next((s for s in skill_items if s["verified"]), None)
     return {
-        "qualificationCourse": _d(sk.qualification_course) if sk else "",
-        "boardUniversity": _d(sk.board_university) if sk else "",
-        "passingYear": _d(sk.passing_year) if sk else "",
+        "educations": educations,
         "languages": languages,
-        "primary": {
-            "name": _d(getattr(sk, "primary_skill", None)) if sk else "",
-            "experienceYears": _d(getattr(sk, "skill_experience_years", None)) if sk else "",
-        },
-        "secondary": secondary,
-        "certification": {
-            "name": _d(getattr(sk, "certification_name", None)) if sk else "",
-            "number": _d(getattr(sk, "certification_number", None)) if sk else "",
-            "authority": _d(getattr(sk, "certification_authority", None)) if sk else "",
-            "expiry": _dts(sk.certification_expiry) if sk and sk.certification_expiry else "",
-            "verified": verified,
-        },
+        "items": skill_items,
+        # Backward-compatible derived fields for dashboards / scan views.
+        "primary": {"name": first["name"] if first else "", "experienceYears": first["experienceYears"] if first else ""},
+        "secondary": [s["name"] for s in skill_items[1:]],
+        "certification": {**(verified_item["certification"] if verified_item else {"name": "", "number": "", "authority": "", "expiry": ""}), "verified": bool(verified_item)},
     }
 
 

@@ -292,6 +292,39 @@ class WorkerSkillsEmployability(models.Model):
         db_table = "worker_skills_employability"
 
 
+class WorkerEducation(models.Model):
+    """Multiple education/qualification records per worker (self-declared)."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="educations")
+    qualification_course = models.CharField(max_length=120, blank=True)
+    board_university = models.CharField(max_length=120, blank=True)
+    passing_year = models.CharField(max_length=10, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "worker_education"
+        ordering = ["id"]
+
+
+class WorkerSkill(models.Model):
+    """Multiple skills/trades per worker. verified=True marks a certification
+    issued through the BSS course-completion system (self-declared otherwise)."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="worker_skills")
+    name = models.CharField(max_length=80, blank=True)
+    experience_years = models.CharField(max_length=20, blank=True)
+    verified = models.BooleanField(default=False)
+    certification_name = models.CharField(max_length=120, blank=True)
+    certification_number = models.CharField(max_length=60, blank=True)
+    certification_authority = models.CharField(max_length=120, blank=True)
+    certification_expiry = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "worker_skill"
+        ordering = ["id"]
+
+
 class WorkerOther(models.Model):
     """Consent / registration audit + QR opt-in."""
 

@@ -42,11 +42,13 @@ from bss_core.models import (
     WorkerBanking,
     WorkerClassification,
     WorkerContractorBinding,
+    WorkerEducation,
     WorkerFamilyDependant,
     WorkerGatePass,
     WorkerIdentity,
     WorkerOther,
     UserPreference,
+    WorkerSkill,
     WorkerSkillsEmployability,
     WorkerSocialSecurity,
     WorkerWelfareSafety,
@@ -1086,21 +1088,30 @@ def _persist_mutation(user, role_path, resource, method, body):
         sk_patch = body.get("skills") or {}
         if sk_patch:
             sk, _ = WorkerSkillsEmployability.objects.get_or_create(user=user)
-            if sk_patch.get("qualificationCourse") is not None:
-                sk.qualification_course = sk_patch.get("qualificationCourse")
-            if sk_patch.get("boardUniversity") is not None:
-                sk.board_university = sk_patch.get("boardUniversity")
-            if sk_patch.get("passingYear") is not None:
-                sk.passing_year = sk_patch.get("passingYear")
+            educations = sk_patch.get("educations")
+            if educations is not None:
+                WorkerEducation.objects.filter(user=user).delete()
+                for edu in educations:
+                    WorkerEducation.objects.create(
+                        user=user,
+                        qualification_course=(edu.get("qualificationCourse") or "").strip(),
+                        board_university=(edu.get("boardUniversity") or "").strip(),
+                        passing_year=(edu.get("passingYear") or "").strip(),
+                    )
             if sk_patch.get("languages") is not None:
                 sk.languages_known = ", ".join(str(l).strip() for l in sk_patch.get("languages") if str(l).strip())
-            primary = sk_patch.get("primary") or {}
-            if primary.get("name") is not None:
-                sk.primary_skill = primary.get("name")
-            if primary.get("experienceYears") is not None:
-                sk.skill_experience_years = primary.get("experienceYears")
-            if sk_patch.get("secondary") is not None:
-                sk.secondary_skills = ", ".join(str(s).strip() for s in sk_patch.get("secondary") if str(s).strip())
+            items = sk_patch.get("items")
+            if items is not None:
+                # Replace the worker's self-declared skills; keep system-verified
+                # certifications intact (they are issued by course completion).
+                WorkerSkill.objects.filter(user=user, verified=False).delete()
+                for it in items:
+                    WorkerSkill.objects.create(
+                        user=user,
+                        name=(it.get("name") or "").strip(),
+                        experience_years=(it.get("experienceYears") or "").strip(),
+                        verified=False,
+                    )
             sk.save()
 
         # Family & dependants — manual entry (nominees).
