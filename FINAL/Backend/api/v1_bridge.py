@@ -62,6 +62,27 @@ def _bss_worker_id(user_id):
     return f"BSS-W{user_id:010d}"
 
 
+def _record_registration_consent(user, source="Self Registered via App",
+                                 registered_by="Worker Self-Service (BSS App)"):
+    """Stamp the registration + consent audit record on worker sign-up."""
+    obj, created = WorkerOther.objects.get_or_create(user=user)
+    today = timezone.now().date()
+    if created or not obj.registration_date:
+        obj.registration_date = today
+    if obj.consent_date is None:
+        obj.consent_date = today
+    if obj.consent_registration is None:
+        obj.consent_registration = True
+    if obj.consent_verification is None:
+        obj.consent_verification = True
+    if not obj.registration_source:
+        obj.registration_source = source
+    if not obj.registered_by:
+        obj.registered_by = registered_by
+    obj.save()
+    return obj
+
+
 # Field-label -> model-attribute maps for the employer/contractor profile
 # "profile" PATCH (the FE sends {section, fields:[{label,value}]}).
 _PROFILE_LABEL_MAP = {
@@ -522,6 +543,7 @@ def aadhaar_verify(request):
                 photo=photo_url,
             )
             WorkerOther.objects.get_or_create(user=user)
+            _record_registration_consent(user)
             UserCredential.objects.create(user=user, identity_type="aadhaar",
                                           identity_value=aadhaar,
                                           is_primary=False, verified=True)
@@ -705,6 +727,7 @@ def register_worker(request):
                 mobile_number=contact,
         )
         WorkerOther.objects.get_or_create(user=user)
+        _record_registration_consent(user)
         cred, _ = UserCredential.objects.get_or_create(
             identity_type="mobile", identity_value=contact,
             defaults={"user": user, "is_primary": True, "verified": True})
