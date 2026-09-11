@@ -36,6 +36,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
 ) {
   const [draft, setDraft] = useState(() => fromWorker(worker));
   const [reference, setReference] = useState<GeographyReference>({});
+  const [sameAsPermanent, setSameAsPermanent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -118,7 +119,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
   return <div className="space-y-8 animate-in fade-in">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
       <Field label="Mobile Number" icon={<Phone size={14}/>} required error={errors.mobile}>
-        <div className="flex"><span className="bg-[#F5F5F7] border border-black/10 border-r-0 rounded-l-xl px-4 py-3 text-sm font-semibold text-[#86868B]">+91</span><input type="tel" inputMode="numeric" value={draft.mobile} onChange={event => setDraft(current => ({ ...current, mobile: event.target.value.replace(/\D/g, '').slice(0, 10) }))} className={`${inputClass} rounded-l-none`} /></div>
+        <div className="flex"><span className="bg-[#F5F5F7] border border-black/10 border-r-0 rounded-l-xl px-4 py-3 text-sm font-semibold text-[#86868B]">+91</span><input type="tel" inputMode="numeric" readOnly value={draft.mobile} className={`${inputClass} rounded-l-none bg-[#F5F5F7] text-gray-500 cursor-not-allowed`} /></div>
       </Field>
       <Field label="Alternate Mobile Number" icon={<Phone size={14}/>} error={errors.alternateMobile}>
         <input type="tel" inputMode="numeric" value={draft.alternateMobile} onChange={event => setDraft(current => ({ ...current, alternateMobile: event.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="Optional" className={inputClass}/>
@@ -131,7 +132,10 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
     {loadError && <p role="alert" className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{loadError} Reload the page before editing an address.</p>}
 
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6 border-t border-black/5">
-      <AddressEditor title="Current Address" kind="currentAddress" prefix="Current" address={draft.currentAddress} reference={reference} error={errors['currentAddress.line'] || errors['currentAddress.location']} onChange={value => updateAddress('currentAddress', value)}/>
+      <div>
+        <div className="flex justify-between items-start gap-3 mb-4"><h3 className="text-[15px] font-semibold text-[#1D1D1F]">Current Address</h3><label className="flex items-center gap-2 text-xs text-[#68686d] cursor-pointer"><input type="checkbox" checked={sameAsPermanent} onChange={event => { const checked = event.target.checked; setSameAsPermanent(checked); if (checked) updateAddress('currentAddress', { ...draft.permanentAddress }); }}/><span>Same as permanent</span></label></div>
+        <AddressEditor kind="currentAddress" prefix="Current" address={draft.currentAddress} reference={reference} disabled={sameAsPermanent} error={errors['currentAddress.line'] || errors['currentAddress.location']} onChange={value => updateAddress('currentAddress', value)}/>
+      </div>
       <AddressEditor title="Permanent Address" kind="permanentAddress" prefix="Permanent" address={draft.permanentAddress} reference={reference} readOnly error={errors['permanentAddress.line'] || errors['permanentAddress.location']} onChange={value => updateAddress('permanentAddress', value)}/>
     </div>
 
