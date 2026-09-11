@@ -91,8 +91,8 @@ export default function WorkerProfilePage() {
   const [workerCategory, setWorkerCategory] = useState(worker.classification?.workerCategory || worker.identity.category || BssTaxonomies.WorkerCategory[0]);
 
   // Welfare & Safety — Medical examination values come from the Worker record.
-  const medicalExaminationStatus = worker.compliance.medicalExaminationStatus?.trim() || '';
-  const medicalFitnessStatus = worker.compliance.medicalFitnessStatus?.trim() || '';
+  const medicalExaminationStatus = worker.welfare?.medicalExaminationStatus?.trim() || '';
+  const medicalFitnessStatus = worker.welfare?.medicalFitnessStatus?.trim() || '';
   const medicalStatusTone = medicalExaminationStatus === 'Completed' ? 'text-[#2F9E67]' : medicalExaminationStatus === 'Pending' ? 'text-[#F47A32]' : medicalExaminationStatus === 'Expired' ? 'text-[#FF3B30]' : 'text-gray-900';
 
   const handleSave = async (e: React.FormEvent) => {
@@ -1239,42 +1239,42 @@ export default function WorkerProfilePage() {
               <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">PPE Required</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">Yes — per site safety policy</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.ppeRequired ? 'Yes — per site safety policy' : 'No'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Types of PPE Given</p>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {['Safety Helmet','Reflective Jacket','Safety Boots','Gloves'].map(item => <span key={item} className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">{item}</span>)}
+                    {(worker.welfare?.typesOfPpeGiven ? worker.welfare.typesOfPpeGiven.split(',').map(s => s.trim()).filter(Boolean) : []).map(item => <span key={item} className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">{item}</span>)}
+                    {(!worker.welfare?.typesOfPpeGiven?.trim()) && <span className="text-xs text-gray-400">Not recorded</span>}
                   </div>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Safety Training Completed</p>
-                  <p className="text-sm font-semibold text-[#2F9E67] mt-1">Yes</p>
+                  <p className={`text-sm font-semibold mt-1 ${worker.welfare?.safetyTrainingCompleted ? 'text-[#2F9E67]' : 'text-gray-400'}`}>{worker.welfare?.safetyTrainingCompleted ? 'Yes' : 'No'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Training Date</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">16 Aug 2024</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.trainingDate || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Trainer Name</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">Rajesh Kumar (Safety Officer)</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.trainerName || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Site Induction Status</p>
-                  <p className="text-sm font-semibold text-[#2F9E67] mt-1">Completed · 15 Aug 2024</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.siteInductionStatus || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Insurance Status</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">Active · New India Assurance</p>
-                  <p className="text-xs text-gray-500 mt-0.5">POL-9923841 · till 14 Aug 2025</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.insuranceStatus || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Accommodation Provided</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">Labour Camp A, Block 3, Room 42</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.accommodationProvided || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Police Verification</p>
-                  <p className="text-sm font-semibold text-[#F47A32] mt-1">Under Process · PV-2024-88912</p>
+                  <p className="text-sm font-semibold text-[#F47A32] mt-1">{worker.welfare?.policeVerification || 'Not recorded'}</p>
                 </div>
               </div>
 
@@ -1282,19 +1282,19 @@ export default function WorkerProfilePage() {
                 <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-4">Gate Passes</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-white rounded-[12px] border border-gray-200 overflow-hidden">
-                    <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><span className="text-sm font-bold text-gray-900">Temporary Gate Pass Status</span><span className="text-[10px] font-bold bg-orange-100 text-[#F47A32] px-2 py-0.5 rounded uppercase">Expired</span></div>
+                    <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><span className="text-sm font-bold text-gray-900">Temporary Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.tempGatePassStatus || '').toLowerCase() === 'active' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{worker.welfare?.tempGatePassStatus || '—'}</span></div>
                     <div className="p-4 space-y-2 text-xs">
-                      <div className="flex justify-between"><span className="text-gray-400">TGP No.</span><span className="font-mono font-semibold text-[#073B67]">TGP-8821</span></div>
-                      <div className="flex justify-between"><span className="text-gray-400">Temporary Gate Pass Start Date</span><span className="font-semibold text-gray-800">12 Aug 2024</span></div>
-                      <div className="flex justify-between"><span className="text-gray-400">Temporary Gate Pass End Date</span><span className="font-semibold text-gray-800">26 Aug 2024</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">TGP No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.tgpNo || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Temporary Gate Pass Start Date</span><span className="font-semibold text-gray-800">{worker.welfare?.tempGatePassStart || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Temporary Gate Pass End Date</span><span className="font-semibold text-gray-800">{worker.welfare?.tempGatePassEnd || '—'}</span></div>
                     </div>
                   </div>
                   <div className="bg-white rounded-[12px] border border-gray-200 overflow-hidden">
-                    <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><span className="text-sm font-bold text-gray-900">Permanent Gate Pass Status</span><span className="text-[10px] font-bold bg-green-100 text-[#2F9E67] px-2 py-0.5 rounded uppercase">Active</span></div>
+                    <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center"><span className="text-sm font-bold text-gray-900">Permanent Gate Pass Status</span><span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${(worker.welfare?.permanentGatePassStatus || '').toLowerCase() === 'active' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{worker.welfare?.permanentGatePassStatus || '—'}</span></div>
                     <div className="p-4 space-y-2 text-xs">
-                      <div className="flex justify-between"><span className="text-gray-400">PGP No.</span><span className="font-mono font-semibold text-[#073B67]">PGP-1092</span></div>
-                      <div className="flex justify-between"><span className="text-gray-400">Permanent Gate Pass Start Date</span><span className="font-semibold text-gray-800">27 Aug 2024</span></div>
-                      <div className="flex justify-between"><span className="text-gray-400">Permanent Gate Pass End Date</span><span className="font-semibold text-gray-800">27 Aug 2025</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">PGP No.</span><span className="font-mono font-semibold text-[#073B67]">{worker.welfare?.pgpNo || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Permanent Gate Pass Start Date</span><span className="font-semibold text-gray-800">{worker.welfare?.permanentGatePassStart || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-400">Permanent Gate Pass End Date</span><span className="font-semibold text-gray-800">{worker.welfare?.permanentGatePassEnd || '—'}</span></div>
                     </div>
                   </div>
                 </div>
@@ -1316,11 +1316,11 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Last Medical Examination</p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">12 Aug 2024 · Dr. Sharma</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.lastMedicalExamination || 'Not recorded'}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Next Medical Due</p>
-                    <p className="text-sm font-semibold text-[#F47A32] mt-1">12 Feb 2025 · 5 days remaining</p>
+                    <p className="text-sm font-semibold text-[#F47A32] mt-1">{worker.welfare?.nextMedicalDue || 'Not recorded'}</p>
                   </div>
                 </div>
               </div>

@@ -90,6 +90,14 @@ export type WorkerRecord = {
     workerCategory?: string; sector?: string; industry?: string; occupation?: string; skill?: string;
     currentEmploymentStatus?: string; totalWorkerExperience?: string; paymentFrequency?: string; paymentMode?: string;
   };
+  welfare?: {
+    ppeRequired?: boolean; typesOfPpeGiven?: string; safetyTrainingCompleted?: boolean;
+    siteInductionStatus?: string; insuranceStatus?: string; accommodationProvided?: string;
+    policeVerification?: string; trainingDate?: string; trainerName?: string;
+    tempGatePassStatus?: string; tgpNo?: string; tempGatePassStart?: string; tempGatePassEnd?: string;
+    permanentGatePassStatus?: string; pgpNo?: string; permanentGatePassStart?: string; permanentGatePassEnd?: string;
+    medicalExaminationStatus?: string; lastMedicalExamination?: string; medicalFitnessStatus?: string; nextMedicalDue?: string;
+  };
   other?: {
     registrationSource?: string; registeredBy?: string; registrationDate?: string;
     consentDate?: string; consentRegistration?: boolean; consentVerification?: boolean;
