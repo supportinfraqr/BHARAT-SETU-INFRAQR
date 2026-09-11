@@ -507,7 +507,7 @@ def aadhaar_verify(request):
             identity = WorkerIdentity.objects.create(
                 user=user,
                 bss_worker_id=f"W-{user.id:04d}",
-                name=data.get("name") or "Worker",
+                name=data.get("name") or "",
                 gender=(data.get("gender") or "").upper() or "",
                 date_of_birth=_parse_dob(data.get("date_of_birth")),
                 aadhaar=aadhaar,
@@ -577,8 +577,8 @@ def register_worker(request):
         identity = WorkerIdentity.objects.create(
             user=user,
             bss_worker_id=f"W-{user.id:04d}",
-            name="Worker",
-            mobile_number=contact,
+                name="",
+                mobile_number=contact,
         )
         WorkerOther.objects.get_or_create(user=user)
         cred, _ = UserCredential.objects.get_or_create(
@@ -780,7 +780,7 @@ def _persist_mutation(user, role_path, resource, method, body):
             identity = WorkerIdentity.objects.create(
                 user=user, bss_worker_id=f"W-{user.id:04d}",
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
-                name=user.get_full_name() or user.username)
+                name=user.get_full_name() or "")
         place = body.get("placeOfBirth") or body.get("place_of_birth")
         if place is None:
             # FE gate posts value nested: saveWorker({identity:{...worker.identity, placeOfBirth}})
@@ -1236,7 +1236,7 @@ def worker_verify_document(request):
             identity = WorkerIdentity.objects.create(
                 user=user, bss_worker_id=f"W-{user.id:04d}",
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
-                name=user.get_full_name() or user.username)
+                name=user.get_full_name() or "")
         if number:
             setattr(identity, "aadhaar" if doc_type == "aadhaar" else "pan", number)
         identity.save()
