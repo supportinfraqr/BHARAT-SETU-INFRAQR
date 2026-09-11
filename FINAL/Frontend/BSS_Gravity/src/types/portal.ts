@@ -94,6 +94,10 @@ export type WorkerRecord = {
     registrationSource?: string; registeredBy?: string; registrationDate?: string;
     consentDate?: string; consentRegistration?: boolean; consentVerification?: boolean;
   };
+  family?: {
+    familyMembersCount?: number; dependantsCount?: number;
+    nominees?: Array<{ id: number; name: string; dependant: string; relation: string; nomineeType: string; dob: string; age?: number; contact: string; address: string; documents: string[]; percent: number }>;
+  };
 };
 
 export type ContractorWorker = {

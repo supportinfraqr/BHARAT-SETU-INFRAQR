@@ -25,10 +25,14 @@ export default function WorkerProfilePage() {
 
   // ── Multiple nominees (dynamic rows) with individual share % ─────────────
   type Nominee = { id: number; name: string; dependant: string; nomineeType: string; relationship: string; dob: string; contact: string; address: string; documents: string[]; percent: number };
-  const [nominees, setNominees] = useState<Nominee[]>([
-    { id: 1, name: 'Sunita Kumar', dependant: 'Aarav Kumar', nomineeType: 'Nominee', relationship: 'Spouse', dob: '1995-06-20', contact: '9867543210', address: 'Village Rampur, Post Patna, Bihar 800001', documents: [], percent: 100 },
-  ]);
-  const [nextNomineeId, setNextNomineeId] = useState(2);
+  const [nominees, setNominees] = useState<Nominee[]>(() =>
+    (worker.family?.nominees ?? []).map(n => ({
+      id: n.id, name: n.name, dependant: n.dependant, nomineeType: n.nomineeType,
+      relationship: n.relation, dob: n.dob, contact: n.contact, address: n.address,
+      documents: n.documents ?? [], percent: n.percent ?? 100,
+    })),
+  );
+  const [nextNomineeId, setNextNomineeId] = useState(() => Math.max(0, ...(worker.family?.nominees ?? []).map(n => n.id)) + 1);
   const [docTargetId, setDocTargetId] = useState<number | null>(null);
   const nomineeFileRef = useRef<HTMLInputElement>(null);
   const totalPercent = nominees.reduce((sum, n) => sum + (Number.isFinite(n.percent) ? n.percent : 0), 0);
@@ -346,11 +350,11 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Family Members Count</label>
-                   <input type="number" defaultValue={4} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input type="number" defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependants Count</label>
-                   <input type="number" defaultValue={3} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input type="number" defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
               </div>
 
