@@ -74,6 +74,8 @@ type SpeechRecognitionLike = {
 
 const LANGUAGE_BCP47: Record<string, string> = {
   Hindi: 'hi-IN', English: 'en-IN', Marathi: 'mr-IN', Telugu: 'te-IN', Bhojpuri: 'hi-IN', Punjabi: 'pa-IN',
+  Bengali: 'bn-IN', Tamil: 'ta-IN', Gujarati: 'gu-IN', Kannada: 'kn-IN', Malayalam: 'ml-IN',
+  Odia: 'or-IN', Urdu: 'ur-IN', Assamese: 'as-IN',
 };
 
 const STATUS_INDEX: Record<GrievanceStatus, number> = { Submitted:0, 'Under Review':1, 'In Progress':2, Resolved:3 };
@@ -454,6 +456,14 @@ export default function GrievancePage() {
                     <option value="Telugu">Telugu</option>
                     <option value="Bhojpuri">Bhojpuri</option>
                     <option value="Punjabi">Punjabi</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Gujarati">Gujarati</option>
+                    <option value="Kannada">Kannada</option>
+                    <option value="Malayalam">Malayalam</option>
+                    <option value="Odia">Odia</option>
+                    <option value="Urdu">Urdu</option>
+                    <option value="Assamese">Assamese</option>
                   </select>
                 </div>
               </div>
