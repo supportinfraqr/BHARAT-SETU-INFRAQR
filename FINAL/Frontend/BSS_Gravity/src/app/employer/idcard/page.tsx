@@ -65,9 +65,40 @@ export default function EmployerIdentityCardPage() {
   }
 
   async function handleShare() {
-    const url = `${window.location.origin}/verify/${encodeURIComponent(entityId)}`;
-    if (navigator.share) await navigator.share({ title:'BSS Employer ID', text: entityId, url });
-    else { await navigator.clipboard.writeText(url); setNotice('Secure verification link copied.'); }
+    if (!frontRef.current || !backRef.current || isExporting) return;
+    setIsExporting(true); setError(''); setNotice('');
+    try {
+      await document.fonts.ready;
+      const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
+      const captureOptions = { width:400, height:252, pixelRatio:4, cacheBust:true, backgroundColor:'#0A192F', style:{ position:'relative', width:'400px', height:'252px', transform:'none', backfaceVisibility:'visible', WebkitBackfaceVisibility:'visible', opacity:'1', boxShadow:'none' } } as const;
+      const [frontImage, backImage] = await Promise.all([toPng(frontRef.current, captureOptions), toPng(backRef.current, captureOptions)]);
+      const cardWidth = 85.6, cardHeight = 53.98;
+      const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:[cardWidth, cardHeight], compress:true, precision:16 });
+      pdf.setProperties({ title:`BSS Employer ID Card - ${entityId}`, subject:'Employer organization identity card', author:'Bharat Shram Setu', creator:'Bharat Shram Setu Employer Portal' });
+      pdf.addImage(frontImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+      pdf.addPage([cardWidth, cardHeight], 'landscape');
+      pdf.addImage(backImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+      const blob = pdf.output('blob');
+      const fileName = `BSS-Employer-ID-${entityId}.pdf`;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+      const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(entityId)}`;
+      const shareText = `${employer.identity.company} · ${entityId}\nVerify: ${verifyUrl}`;
+      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title:'BSS Employer ID Card', text: shareText });
+        setNotice('BSS ID card shared.');
+      } else {
+        const url = URL.createObjectURL(blob);
+        const download = document.createElement('a'); download.href = url; download.download = fileName; download.rel = 'noopener';
+        document.body.appendChild(download); download.click(); download.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        if (navigator.share) await navigator.share({ title:'BSS Employer ID', text: shareText });
+        else await navigator.clipboard.writeText(verifyUrl);
+        setNotice('ID card downloaded — file sharing isn’t supported here, so the verification link was shared instead.');
+      }
+    } catch (reason) {
+      if (reason instanceof Error && reason.name === 'AbortError') return;
+      console.error('ID card share failed', reason); setError('The ID card could not be shared. Please try again.');
+    } finally { setIsExporting(false); }
   }
 
   return <div className="max-w-2xl mx-auto space-y-6">
@@ -77,7 +108,7 @@ export default function EmployerIdentityCardPage() {
 
     <OrganizationIdentityCard content={content} frontRef={frontRef} backRef={backRef} isFlipped={isFlipped} onToggleFlip={() => setIsFlipped(v => !v)} />
 
-    <div className="flex gap-3"><button onClick={handleDownload} disabled={isExporting} className="flex-1 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Download size={18}/>{isExporting ? 'Creating print PDF…' : 'View / Download Print-Ready PDF'}</button><button onClick={handleShare} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Share2 size={18}/>Share Digital ID</button></div>
+    <div className="flex gap-3"><button onClick={handleDownload} disabled={isExporting} className="flex-1 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Download size={18}/>{isExporting ? 'Creating print PDF…' : 'View / Download Print-Ready PDF'}</button><button onClick={handleShare} disabled={isExporting} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-wait px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Share2 size={18}/>{isExporting ? 'Preparing…' : 'Share Digital ID'}</button></div>
     <p className="text-center text-xs text-gray-500 mt-4">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-3">{notice}</p>}
