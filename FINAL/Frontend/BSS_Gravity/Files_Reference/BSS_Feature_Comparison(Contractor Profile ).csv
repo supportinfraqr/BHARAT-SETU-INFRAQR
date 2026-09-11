@@ -1,0 +1,86 @@
+Section,Field,Contractor Input / Value,Data Owner ,Data Owner,Mandatory
+1. Contractor Identity,BSS ID,Auto-generated,System,Yes,Yes
+1. Contractor Identity,Contractor Type,Bridge contractor,Contractor,Yes,Yes
+1. Contractor Identity,Legal Name,Text,Contractor,Yes,Yes
+1. Contractor Identity,Trade / Brand Name,Text,Contractor,No,Yes
+1. Contractor Identity,Entity Constitution,Dropdown,Contractor,Yes,Yes
+1. Contractor Identity,Authorised Person Name,Text,Contractor,Yes,Yes
+1. Contractor Identity,Designation,Text,Contractor,Yes,Yes
+1. Contractor Identity,Mobile Number,Mobile,Contractor,Yes,Yes
+1. Contractor Identity,Email ID,Email,Contractor,Yes,Yes
+1. Contractor Identity,CIN,Text,Contractor,Yes,Yes
+1. Contractor Identity,Company Name,Text,Contractor,Yes,Yes
+1. Contractor Identity,Listed on Stock Exchange,Dropdown,Contractor,Yes,No
+1. Contractor Identity,Company Status,Dropdown,Contractor,Yes,Yes
+1. Contractor Identity,ROC,Text,Contractor,Yes,Yes
+1. Contractor Identity,Registration Number,Text / Number,Contractor,Yes,Yes
+1. Contractor Identity,Company Category,Dropdown,Contractor,Yes,Yes
+1. Contractor Identity,Company Sub Category,Dropdown,Contractor,Yes,Yes
+1. Contractor Identity,Class of Company,Text,Contractor,Yes,Yes
+1. Contractor Identity,Date of Incorporation,Date,Contractor,Yes,Yes
+1. Contractor Identity,Age of Company,Auto-calculated,System,Yes,No
+1. Contractor Identity,Activity,Dropdown / Text,Contractor,Yes,Yes
+1. Contractor Identity,NIC Code,Text / Number,Contractor,Yes,Yes
+1. Contractor Identity,NIC Description,Text Area,System / Contractor,No,No
+1. Contractor Identity,Number of Members,Number,Contractor,Yes,No
+1. Contractor Identity,Date of Last Annual General Meeting,Date,Contractor,Yes,No
+1. Contractor Identity,Date of Last Filed Balance Sheet,Date,Contractor,Yes,No
+1. Contractor Identity,Authorised Share Capital,Currency / Number,Contractor,Yes,Yes
+1. Contractor Identity,Paid-up Share Capital,Currency / Number,Contractor,Yes,Yes
+1. Contractor Identity,DIN,Text / Number,Contractor,Contractor,Yes
+1. Contractor Identity,Director Name,Text,Contractor,Contractor,Yes
+1. Contractor Identity,Designation,Text,Contractor,Contractor,Yes
+1. Contractor Identity,Appointment Date,Date,Contractor,Contractor,Yes
+1. Contractor Identity,Cessation,Date,Contractor,Contractor,Yes
+1. Contractor Identity,Cessation Date,Date,Contractor,Contractor,If applicable
+2. Legal & Registration,PAN,Text,Contractor,Yes,If applicable
+2. Legal & Registration,GSTIN,Text,Contractor,Conditional,If applicable
+2. Legal & Registration,Udyam Registration Number,Text,Contractor,No,If applicable
+2. Legal & Registration,Labour Department Registration Number,Text,Contractor,Conditional,If applicable
+2. Legal & Registration,Contract Labour Licence Number,Text,Contractor,Conditional,If applicable
+2. Legal & Registration,BOCW / Other Labour Registration,Text,Contractor,Conditional,If applicable
+2. Legal & Registration,Licence Valid From,Date,Contractor/System,Conditional,If applicable
+2. Legal & Registration,Licence Valid To,Date,Contractor/System,Conditional,If applicable
+4. Registered Address,Registered Address,Long Text,Contractor,Yes,If applicable
+4. Registered Address,City / District,Text,Contractor,Yes,If applicable
+4. Registered Address,State / UT,Dropdown,Contractor,Yes,If applicable
+4. Registered Address,PIN Code,PIN,Contractor,Yes,If applicable
+4. Registered Address,Operating States,Long Text,Contractor,No,If applicable
+5. Contact Persons,Primary Contact Email,Text,Contractor,Yes,If applicable
+5. Contact Persons,Primary Contact Name,Text,Contractor,Yes,If applicable
+5. Contact Persons,Primary Contact Mobile,Mobile,Contractor,Yes,If applicable
+5. Contact Persons,Compliance Contact Name,Text,Contractor,Yes,If applicable
+5. Contact Persons,Compliance Contact Mobile,Mobile,Contractor,Yes,If applicable
+5. Contact Persons,Compliance Contact Email,Email,Contractor,Yes,If applicable
+6. Banking & Commercial,Bank Account Name,Text,Contractor,Yes,If applicable
+6. Banking & Commercial,Bank Name,Text,Contractor,Yes,If applicable
+6. Banking & Commercial,Account Number,Sensitive Number,Contractor,Yes,If applicable
+6. Banking & Commercial,IFSC Code,Text,Contractor,Yes,If applicable
+6. Banking & Commercial,Annual Turnover Band,Dropdown,Contractor,No,If applicable
+6. Banking & Commercial,Payment Verification Status,Dropdown,System,No,If applicable
+8. Principal Employer & Site,Principal Employer Name,Text,Contractor,Conditional,If applicable
+8. Principal Employer & Site,Principal Employer ID,ID,System,Conditional,If applicable
+8. Principal Employer & Site,Site / Establishment Name,Text,Contractor,Conditional,If applicable
+8. Principal Employer & Site,Site ID,ID,System,Conditional,If applicable
+8. Principal Employer & Site,Contract / Work Order Number,Text,Contractor,Conditional,If applicable
+8. Principal Employer & Site,Contract Start Date,Date,Contractor,Conditional,If applicable
+8. Principal Employer & Site,Contract End Date,Date,Contractor,Conditional,If applicable
+10. Documents,PAN Document,Upload,Contractor,Yes,If applicable
+10. Documents,GST Certificate,Upload,Contractor,Conditional,If applicable
+10. Documents,Contract Labour Licence,Upload,Contractor,Conditional,If applicable
+10. Documents,PF Registration Certificate,Upload,Contractor,Conditional,If applicable
+10. Documents,ESIC Registration Proof,Upload,Contractor,Conditional,If applicable
+10. Documents,Insurance / Workmen Compensation Proof,Upload,Contractor,Conditional,If applicable
+10. Documents,Bank Proof / Cancelled Cheque,Upload,Contractor,Yes,If applicable
+10. Documents,Other Certificates,Upload,Contractor,No,If applicable
+11. Worker Management,Worker Onboarding Method,Dropdown,Contractor,Yes,If applicable
+11. Worker Management,QR Scanner / Device ID,Text,System,Conditional,If applicable
+11. Worker Management,Attendance Method,Dropdown,Contractor,Yes,If applicable
+11. Worker Management,Payroll Method,Dropdown,Contractor,Yes,If applicable
+12. Verification & Consent,Contractor Risk Rating,Dropdown,System,No,If applicable
+12. Verification & Consent,Consent for Data Processing,Yes/No,Contractor,Yes,If applicable
+12. Verification & Consent,Consent Date,Date,System,Yes,If applicable
+12. Verification & Consent,Registration Source,Dropdown,System,Yes,If applicable
+12. Verification & Consent,Registered By,Text,System,Yes,If applicable
+12. Verification & Consent,Registration Date,Date,System,Yes,If applicable
+13. Public Contractor Profile,Verified Contractor Badge,Auto,System,No,If applicable

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSS - Data Un-hardcoding Implementation Plan</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 900px; margin: 40px auto; padding: 0 20px; background: #f9fafb; }
+        .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        h1 { color: #073b67; font-size: 24px; margin-top: 0; }
+        h2 { color: #1f2937; font-size: 18px; border-bottom: 2px solid #f3f4f6; padding-bottom: 8px; margin-top: 28px; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #073b67; }
+        .badge { display: inline-block; background: #e0f2fe; color: #0369a1; font-weight: 600; font-size: 11px; padding: 4px 8px; border-radius: 9999px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="badge">Architecture Plan</span>
+        <h1>BSS Data Un-hardcoding & Dynamic API Integration Plan</h1>
+        <p>This document details the exact plan to remove remaining hardcoded data on <code>/worker</code>, Contractor, and Employer pages, connecting them directly to Django REST backend APIs and Postgres database models.</p>
+        
+        <h2>1. Backend Enhancements (Django REST)</h2>
+        <ul>
+            <li><strong>Enrich <code>_worker_employment_section</code> in <code>v1_payloads.py</code>:</strong> Update payload builder to return full contractor (code, LIN, contact, email), principal employer (code, LIN, industry, email), and site details (code, location, medical officer contact) from database models instead of partial strings.</li>
+            <li><strong>Enrich <code>_worker_compliance_section</code>:</strong> Dynamically compute appointment letter status, active gate pass status, PPE records, and medical fitness days remaining.</li>
+        </ul>
+
+        <h2>2. Frontend Updates (Next.js / TypeScript)</h2>
+        <ul>
+            <li><strong>TypeScript Interfaces (<code>portal.ts</code>):</strong> Expand <code>WorkerEmployment</code> and <code>WorkerCompliance</code> interface definitions to support detailed relational objects.</li>
+            <li><strong>Worker Overview (<code>/worker/page.tsx</code>):</strong> Remove static <code>siteInfo</code>, <code>contractorInfo</code>, and <code>employerInfo</code> fallbacks and bind directly to <code>worker.employment</code>.</li>
+            <li><strong>Compliance Page (<code>/worker/Compliance</code>):</strong> Bind Health & Safety, Access & Security, and Historical Records exclusively to live API data.</li>
+            <li><strong>Contractor & Employer Portals:</strong> Synchronize Contractor worker lists (<code>/contractor/workers</code>) and Employer worker compliance oversight (<code>/employer/workers</code>) with backend payloads.</li>
+        </ul>
+
+        <h2>3. Verification Plan</h2>
+        <ul>
+            <li>Run <code>npx tsc --noEmit</code> to confirm 0 TypeScript errors.</li>
+            <li>Deploy to staging server (<code>15.206.193.173</code>) and restart Docker containers.</li>
+            <li>Inspect API responses on <code>https://bharat-shram-setu-staging.bharatshramsetu.com/worker</code> to verify 100% dynamic rendering from Postgres.</li>
+        </ul>
+    </div>
+</body>
+</html>

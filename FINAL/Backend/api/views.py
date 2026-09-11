@@ -34,6 +34,16 @@ from bss_core.models import (
     AttendanceDevice, Attendance, WorkerWages, WagePayment,
     WorkerGatePass, WorkerGrievance, DocumentAccessToken,
     DigiLockerProfile, DigiLockerDocument, DigiLockerSession,
+    UserPreference, Notification, AuditLog, ApprovalQueue,
+    PartyDirector, PartyStatutoryRegistration, PartyContact, PartyBank,
+    PartyContract, PartyDocument, PartyConsentDeclaration, PartyMaster,
+    RegisterDocumentMaster, ComplianceMaster, ComplianceDocument,
+    ComplianceReport, ComplianceReportItem, EmployerDocumentMapping,
+    EmployerRegisterMapping, EmployerActMapping, PtMaster, PtSlab,
+    LwfMaster, LicenseMaster, MinimumWage, MenuPermission,
+    PayrollConfig, EpfConfig, EsiConfig, PtConfig, LwfConfig, BonusConfig,
+    SalaryComponent, SalaryDeduction, SalaryBenefit, SalaryReimbursement,
+    FfsConfig, StaffPortalConfig, PayrollPeriod, GrievanceResponse,
 )
 from .serializers import (
     UserSerializer, RegisterSerializer,
@@ -52,6 +62,22 @@ from .serializers import (
     ConsentChallengeSerializer, SmsOtpSerializer, WorkerProfileCompositeSerializer,
     DigiLockerProfileSerializer, DigiLockerDocumentSerializer,
     DigiLockerStartSerializer, DigiLockerStatusSerializer, WorkerQrCardSerializer,
+    UserPreferenceSerializer, NotificationSerializer, AuditLogSerializer,
+    ApprovalQueueSerializer, GrievanceResponseSerializer, WorkerGrievanceExtSerializer,
+    PartyDirectorSerializer, PartyStatutoryRegistrationSerializer,
+    PartyContactSerializer, PartyBankSerializer, PartyContractSerializer,
+    PartyDocumentSerializer, PartyConsentDeclarationSerializer, PartyMasterSerializer,
+    RegisterDocumentMasterSerializer, ComplianceMasterSerializer,
+    ComplianceDocumentSerializer, ComplianceReportSerializer,
+    ComplianceReportItemSerializer, EmployerDocumentMappingSerializer,
+    EmployerRegisterMappingSerializer, EmployerActMappingSerializer,
+    PtMasterSerializer, PtSlabSerializer, LwfMasterSerializer, LicenseMasterSerializer,
+    MinimumWageSerializer, MenuPermissionSerializer,
+    PayrollConfigSerializer, EpfConfigSerializer, EsiConfigSerializer,
+    PtConfigSerializer, LwfConfigSerializer, BonusConfigSerializer,
+    SalaryComponentSerializer, SalaryDeductionSerializer, SalaryBenefitSerializer,
+    SalaryReimbursementSerializer, FfsConfigSerializer, StaffPortalConfigSerializer,
+    PayrollPeriodSerializer,
 )
 from . import digilocker_client as dl
 
@@ -190,11 +216,19 @@ class ConsentChallengeViewSet(viewsets.ModelViewSet):
             stage=stage, challenge_value=secret or "",
             secret_hash=_sha256(secret) if secret else "",
             secret_valid_until=valid_until, state="SENT")
-        # In production: send SMS/IVR via channel provider. Dev returns the secret.
+        if secret:
+            identity = WorkerIdentity.objects.filter(user=binding.worker).first()
+            mobile = (identity.mobile_number if identity and identity.mobile_number
+                      else binding.worker.username)
+            sms = SmsOtp.objects.create(
+                mobile=mobile, purpose="BINDING", otp_hash=_sha256(secret),
+                expires_at=valid_until, max_attempts=5)
+            from . import whatsapp_client
+
+            whatsapp_client.deliver_async(sms.pk, mobile, secret, 5)
         return Response({
             "id": challenge.id, "stage": challenge.stage,
             "secret_valid_until": challenge.secret_valid_until.isoformat(),
-            "dev_otp": secret,
         })
 
     @action(detail=True, methods=["post"])
@@ -230,10 +264,13 @@ class SmsOtpViewSet(viewsets.ModelViewSet):
         if not mobile:
             return Response({"detail": "mobile required."}, status=status.HTTP_400_BAD_REQUEST)
         otp = secrets.token_hex(3).upper()
-        SmsOtp.objects.create(mobile=mobile, purpose=purpose,
-                              otp_hash=_sha256(otp),
-                              expires_at=tz.now() + tz.timedelta(minutes=5))
-        return Response({"detail": "OTP sent", "dev_otp": otp})
+        record = SmsOtp.objects.create(mobile=mobile, purpose=purpose,
+                                       otp_hash=_sha256(otp),
+                                       expires_at=tz.now() + tz.timedelta(minutes=5))
+        from . import whatsapp_client
+
+        whatsapp_client.deliver_async(record.pk, mobile, otp, 5)
+        return Response({"detail": "OTP sent", "challengeId": f"otp-{record.pk}"})
 
 
 class ContractorJobViewSet(viewsets.ModelViewSet):
@@ -667,7 +704,7 @@ class QrAccessActionViewSet(viewsets.GenericViewSet):
         site = Site.objects.filter(site_qr_token=qr_token).first()
         if not site:
             return Response({"detail": "Unknown site QR."}, status=status.HTTP_404_NOT_FOUND)
-        role = request.user.role if request.user.is_authenticated else "public"
+        role = request.user.role if request.user.is_authenticated else "guest"
         return Response({"site": SiteSerializer(site).data, "role": role})
 
 
@@ -906,3 +943,269 @@ class WorkerQrActionViewSet(viewsets.GenericViewSet):
             "verified_documents": [code for code, _ in verified],
         }
         return WorkerQrCardSerializer(data).data
+
+
+# ---------------------------------------------------------------------------
+# Engagement & governance
+# ---------------------------------------------------------------------------
+class UserPreferenceViewSet(viewsets.ModelViewSet):
+    queryset = UserPreference.objects.select_related("user").all().order_by("id")
+    serializer_class = UserPreferenceSerializer
+    filterset_fields = ["user"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role in ("worker", "contractor", "employer"):
+            return qs.filter(user=user)
+        return qs
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.select_related("user").all().order_by("-created_at")
+    serializer_class = NotificationSerializer
+    filterset_fields = ["user", "type", "is_read"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role in ("worker", "contractor", "employer"):
+            return qs.filter(user=user)
+        return qs
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AuditLog.objects.select_related("actor").all().order_by("-created_at")
+    serializer_class = AuditLogSerializer
+    filterset_fields = ["actor", "action", "entity_type", "entity_id"]
+
+
+class ApprovalQueueViewSet(viewsets.ModelViewSet):
+    queryset = ApprovalQueue.objects.select_related("requested_by", "approver").all().order_by("-requested_at")
+    serializer_class = ApprovalQueueSerializer
+    filterset_fields = ["entity_type", "entity_id", "status", "approver"]
+
+
+class GrievanceResponseViewSet(viewsets.ModelViewSet):
+    queryset = GrievanceResponse.objects.select_related("grievance", "actor").all().order_by("id")
+    serializer_class = GrievanceResponseSerializer
+    filterset_fields = ["grievance"]
+
+
+# ---------------------------------------------------------------------------
+# Employer / Contractor registry
+# ---------------------------------------------------------------------------
+class PartyDirectorViewSet(viewsets.ModelViewSet):
+    queryset = PartyDirector.objects.all().order_by("id")
+    serializer_class = PartyDirectorSerializer
+    filterset_fields = ["party_type", "party_user"]
+
+
+class PartyStatutoryRegistrationViewSet(viewsets.ModelViewSet):
+    queryset = PartyStatutoryRegistration.objects.all().order_by("id")
+    serializer_class = PartyStatutoryRegistrationSerializer
+    filterset_fields = ["party_type", "party_user", "reg_kind"]
+
+
+class PartyContactViewSet(viewsets.ModelViewSet):
+    queryset = PartyContact.objects.all().order_by("id")
+    serializer_class = PartyContactSerializer
+    filterset_fields = ["party_type", "party_user", "kind"]
+
+
+class PartyBankViewSet(viewsets.ModelViewSet):
+    queryset = PartyBank.objects.all().order_by("id")
+    serializer_class = PartyBankSerializer
+    filterset_fields = ["party_type", "party_user"]
+
+
+class PartyContractViewSet(viewsets.ModelViewSet):
+    queryset = PartyContract.objects.select_related("site").all().order_by("id")
+    serializer_class = PartyContractSerializer
+    filterset_fields = ["party_type", "party_user", "site"]
+
+
+class PartyDocumentViewSet(viewsets.ModelViewSet):
+    queryset = PartyDocument.objects.all().order_by("id")
+    serializer_class = PartyDocumentSerializer
+    filterset_fields = ["party_type", "party_user", "doc_type", "verification_status"]
+
+
+class PartyConsentDeclarationViewSet(viewsets.ModelViewSet):
+    queryset = PartyConsentDeclaration.objects.all().order_by("id")
+    serializer_class = PartyConsentDeclarationSerializer
+    filterset_fields = ["party_type", "party_user", "declaration"]
+
+
+class PartyMasterViewSet(viewsets.ModelViewSet):
+    queryset = PartyMaster.objects.all().order_by("id")
+    serializer_class = PartyMasterSerializer
+    filterset_fields = ["party_type", "state", "is_active"]
+
+
+# ---------------------------------------------------------------------------
+# Compliance & statutory masters
+# ---------------------------------------------------------------------------
+class RegisterDocumentMasterViewSet(viewsets.ModelViewSet):
+    queryset = RegisterDocumentMaster.objects.all().order_by("id")
+    serializer_class = RegisterDocumentMasterSerializer
+    filterset_fields = ["kind", "state", "is_mandatory"]
+
+
+class ComplianceMasterViewSet(viewsets.ModelViewSet):
+    queryset = ComplianceMaster.objects.all().order_by("id")
+    serializer_class = ComplianceMasterSerializer
+    filterset_fields = ["act", "form_number"]
+
+
+class ComplianceDocumentViewSet(viewsets.ModelViewSet):
+    queryset = ComplianceDocument.objects.select_related("employer", "master").all().order_by("id")
+    serializer_class = ComplianceDocumentSerializer
+    filterset_fields = ["employer", "financial_year", "status", "site"]
+
+
+class ComplianceReportViewSet(viewsets.ModelViewSet):
+    queryset = ComplianceReport.objects.select_related("employer").all().order_by("-id")
+    serializer_class = ComplianceReportSerializer
+    filterset_fields = ["employer", "financial_year"]
+
+
+class ComplianceReportItemViewSet(viewsets.ModelViewSet):
+    queryset = ComplianceReportItem.objects.all().order_by("id")
+    serializer_class = ComplianceReportItemSerializer
+    filterset_fields = ["report"]
+
+
+class EmployerDocumentMappingViewSet(viewsets.ModelViewSet):
+    queryset = EmployerDocumentMapping.objects.all().order_by("id")
+    serializer_class = EmployerDocumentMappingSerializer
+    filterset_fields = ["employer", "register_doc"]
+
+
+class EmployerRegisterMappingViewSet(viewsets.ModelViewSet):
+    queryset = EmployerRegisterMapping.objects.all().order_by("id")
+    serializer_class = EmployerRegisterMappingSerializer
+    filterset_fields = ["employer", "register_doc"]
+
+
+class EmployerActMappingViewSet(viewsets.ModelViewSet):
+    queryset = EmployerActMapping.objects.all().order_by("id")
+    serializer_class = EmployerActMappingSerializer
+    filterset_fields = ["employer", "act"]
+
+
+class PtMasterViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PtMaster.objects.prefetch_related("slabs").all().order_by("id")
+    serializer_class = PtMasterSerializer
+    filterset_fields = ["state"]
+
+
+class PtSlabViewSet(viewsets.ModelViewSet):
+    queryset = PtSlab.objects.all().order_by("id")
+    serializer_class = PtSlabSerializer
+    filterset_fields = ["pt_master"]
+
+
+class LwfMasterViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = LwfMaster.objects.all().order_by("id")
+    serializer_class = LwfMasterSerializer
+    filterset_fields = ["state"]
+
+
+class LicenseMasterViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = LicenseMaster.objects.all().order_by("id")
+    serializer_class = LicenseMasterSerializer
+    filterset_fields = ["state"]
+
+
+class MinimumWageViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MinimumWage.objects.all().order_by("id")
+    serializer_class = MinimumWageSerializer
+    filterset_fields = ["state", "industry"]
+
+
+class MenuPermissionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MenuPermission.objects.all().order_by("id")
+    serializer_class = MenuPermissionSerializer
+    filterset_fields = ["role", "menu_code"]
+
+
+# ---------------------------------------------------------------------------
+# Payroll configuration cluster
+# ---------------------------------------------------------------------------
+class PayrollConfigViewSet(viewsets.ModelViewSet):
+    queryset = PayrollConfig.objects.select_related("employer").all().order_by("id")
+    serializer_class = PayrollConfigSerializer
+    filterset_fields = ["employer"]
+
+
+class EpfConfigViewSet(viewsets.ModelViewSet):
+    queryset = EpfConfig.objects.all().order_by("id")
+    serializer_class = EpfConfigSerializer
+    filterset_fields = ["config"]
+
+
+class EsiConfigViewSet(viewsets.ModelViewSet):
+    queryset = EsiConfig.objects.all().order_by("id")
+    serializer_class = EsiConfigSerializer
+    filterset_fields = ["config"]
+
+
+class PtConfigViewSet(viewsets.ModelViewSet):
+    queryset = PtConfig.objects.all().order_by("id")
+    serializer_class = PtConfigSerializer
+    filterset_fields = ["config"]
+
+
+class LwfConfigViewSet(viewsets.ModelViewSet):
+    queryset = LwfConfig.objects.all().order_by("id")
+    serializer_class = LwfConfigSerializer
+    filterset_fields = ["config"]
+
+
+class BonusConfigViewSet(viewsets.ModelViewSet):
+    queryset = BonusConfig.objects.all().order_by("id")
+    serializer_class = BonusConfigSerializer
+    filterset_fields = ["config"]
+
+
+class SalaryComponentViewSet(viewsets.ModelViewSet):
+    queryset = SalaryComponent.objects.all().order_by("id")
+    serializer_class = SalaryComponentSerializer
+    filterset_fields = ["config"]
+
+
+class SalaryDeductionViewSet(viewsets.ModelViewSet):
+    queryset = SalaryDeduction.objects.all().order_by("id")
+    serializer_class = SalaryDeductionSerializer
+    filterset_fields = ["config"]
+
+
+class SalaryBenefitViewSet(viewsets.ModelViewSet):
+    queryset = SalaryBenefit.objects.all().order_by("id")
+    serializer_class = SalaryBenefitSerializer
+    filterset_fields = ["config"]
+
+
+class SalaryReimbursementViewSet(viewsets.ModelViewSet):
+    queryset = SalaryReimbursement.objects.all().order_by("id")
+    serializer_class = SalaryReimbursementSerializer
+    filterset_fields = ["config"]
+
+
+class FfsConfigViewSet(viewsets.ModelViewSet):
+    queryset = FfsConfig.objects.all().order_by("id")
+    serializer_class = FfsConfigSerializer
+    filterset_fields = ["config"]
+
+
+class StaffPortalConfigViewSet(viewsets.ModelViewSet):
+    queryset = StaffPortalConfig.objects.all().order_by("id")
+    serializer_class = StaffPortalConfigSerializer
+    filterset_fields = ["config"]
+
+
+class PayrollPeriodViewSet(viewsets.ModelViewSet):
+    queryset = PayrollPeriod.objects.all().order_by("id")
+    serializer_class = PayrollPeriodSerializer
+    filterset_fields = ["config", "status"]

@@ -10,7 +10,9 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
 from bss_core.models import (
-    Site, WorkerContractorBinding, ContractorJob, RozgarRequest,
+    Site, SiteDocument, SiteGate, SiteLicense, SiteOrder,
+    SiteBocwRegistration, SiteClraRegistration,
+    WorkerContractorBinding, ContractorJob, RozgarRequest,
     ConsentChallenge, SmsOtp,
     WorkerIdentity, WorkerAddressMobility, WorkerFamilyDependant,
     WorkerSocialSecurity, WorkerWelfareSafety, WorkerBanking,
@@ -20,6 +22,16 @@ from bss_core.models import (
     AttendanceDevice, Attendance, WorkerWages, WagePayment,
     WorkerGatePass, WorkerGrievance, DocumentAccessToken,
     DigiLockerProfile, DigiLockerDocument, DigiLockerSession,
+    UserPreference, Notification, AuditLog, ApprovalQueue,
+    PartyDirector, PartyStatutoryRegistration, PartyContact, PartyBank,
+    PartyContract, PartyDocument, PartyConsentDeclaration, PartyMaster,
+    RegisterDocumentMaster, ComplianceMaster, ComplianceDocument,
+    ComplianceReport, ComplianceReportItem, EmployerDocumentMapping,
+    EmployerRegisterMapping, EmployerActMapping, PtMaster, PtSlab,
+    LwfMaster, LicenseMaster, MinimumWage, MenuPermission,
+    PayrollConfig, EpfConfig, EsiConfig, PtConfig, LwfConfig, BonusConfig,
+    SalaryComponent, SalaryDeduction, SalaryBenefit, SalaryReimbursement,
+    FfsConfig, StaffPortalConfig, PayrollPeriod, GrievanceResponse,
 )
 
 User = get_user_model()
@@ -106,9 +118,7 @@ class SiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Site
-        fields = ("id", "site_name", "site_code", "employer", "employer_name",
-                  "latitude", "longitude", "site_qr_token", "location", "city",
-                  "district", "state", "pincode", "created_at", "updated_at")
+        fields = "__all__"
         read_only_fields = ("site_qr_token", "created_at", "updated_at")
 
     def get_employer_name(self, obj):
@@ -117,18 +127,55 @@ class SiteSerializer(serializers.ModelSerializer):
         return obj.employer.username
 
 
+class SiteGateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteGate
+        fields = "__all__"
+
+
+class SiteLicenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteLicense
+        fields = "__all__"
+
+
+class SiteOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteOrder
+        fields = "__all__"
+
+
+class SiteDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteDocument
+        fields = "__all__"
+
+
+class SiteClraRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteClraRegistration
+        fields = "__all__"
+
+
+class SiteBocwRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteBocwRegistration
+        fields = "__all__"
+
+
 class WorkerContractorBindingSerializer(serializers.ModelSerializer):
     worker_name = serializers.SerializerMethodField()
     contractor_name = serializers.SerializerMethodField()
     site_name = serializers.CharField(source="site.site_name", read_only=True)
     employer = serializers.SerializerMethodField()
+    employer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkerContractorBinding
         fields = ("id", "worker", "contractor", "site", "worker_name", "contractor_name",
-                  "site_name", "employer", "binding_status", "consent_worker",
-                  "consent_contractor", "consent_method", "accepted_at",
-                  "created_at", "updated_at")
+                  "site_name", "employer", "employer_name", "binding_status",
+                  "consent_worker", "consent_contractor", "consent_method",
+                  "accepted_at", "created_at", "updated_at")
 
     def get_worker_name(self, obj):
         return obj.worker.worker_identity.name if hasattr(obj.worker, "worker_identity") else obj.worker.username
@@ -142,6 +189,14 @@ class WorkerContractorBindingSerializer(serializers.ModelSerializer):
         if obj.site_id:
             return obj.site.employer_id
         return None
+
+    def get_employer_name(self, obj):
+        if obj.site_id and obj.site.employer_id:
+            emp_profile = getattr(obj.site.employer, "employer_profile", None)
+            if emp_profile:
+                return emp_profile.employer_name
+            return getattr(obj.site.employer, "username", "") or ""
+        return ""
 
 
 class ContractorJobSerializer(serializers.ModelSerializer):
@@ -455,3 +510,273 @@ class WorkerQrCardSerializer(serializers.Serializer):
 
     def get_verified_documents(self, obj):
         return obj.get("verified_documents") or []
+
+
+# ---------------------------------------------------------------------------
+# Engagement & governance
+# ---------------------------------------------------------------------------
+class UserPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserPreference
+        fields = "__all__"
+        read_only_fields = ("created_at", "updated_at")
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = "__all__"
+        read_only_fields = ("id", "created_at")
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditLog
+        fields = "__all__"
+        read_only_fields = ("id", "created_at")
+
+
+class ApprovalQueueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ApprovalQueue
+        fields = "__all__"
+        read_only_fields = ("id", "requested_at", "decided_at")
+
+
+class GrievanceResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GrievanceResponse
+        fields = "__all__"
+        read_only_fields = ("id", "created_at")
+
+
+class WorkerGrievanceExtSerializer(serializers.ModelSerializer):
+    responses = GrievanceResponseSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = WorkerGrievance
+        fields = "__all__"
+        read_only_fields = ("ticket_no", "created_at", "updated_at")
+
+
+# ---------------------------------------------------------------------------
+# Employer / Contractor registry
+# ---------------------------------------------------------------------------
+class PartyDirectorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyDirector
+        fields = "__all__"
+
+
+class PartyStatutoryRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyStatutoryRegistration
+        fields = "__all__"
+
+
+class PartyContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyContact
+        fields = "__all__"
+
+
+class PartyBankSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyBank
+        fields = "__all__"
+
+
+class PartyContractSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyContract
+        fields = "__all__"
+
+
+class PartyDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyDocument
+        fields = "__all__"
+
+
+class PartyConsentDeclarationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyConsentDeclaration
+        fields = "__all__"
+
+
+class PartyMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PartyMaster
+        fields = "__all__"
+
+
+# ---------------------------------------------------------------------------
+# Compliance & statutory masters
+# ---------------------------------------------------------------------------
+class RegisterDocumentMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegisterDocumentMaster
+        fields = "__all__"
+
+
+class ComplianceMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ComplianceMaster
+        fields = "__all__"
+
+
+class ComplianceDocumentSerializer(serializers.ModelSerializer):
+    days_left = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ComplianceDocument
+        fields = "__all__"
+
+
+class ComplianceReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ComplianceReport
+        fields = "__all__"
+
+
+class ComplianceReportItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ComplianceReportItem
+        fields = "__all__"
+
+
+class EmployerDocumentMappingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployerDocumentMapping
+        fields = "__all__"
+
+
+class EmployerRegisterMappingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployerRegisterMapping
+        fields = "__all__"
+
+
+class EmployerActMappingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployerActMapping
+        fields = "__all__"
+
+
+class PtMasterSerializer(serializers.ModelSerializer):
+    slabs = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = PtMaster
+        fields = "__all__"
+
+
+class PtSlabSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PtSlab
+        fields = "__all__"
+
+
+class LwfMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LwfMaster
+        fields = "__all__"
+
+
+class LicenseMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LicenseMaster
+        fields = "__all__"
+
+
+class MinimumWageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MinimumWage
+        fields = "__all__"
+
+
+class MenuPermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MenuPermission
+        fields = "__all__"
+
+
+# ---------------------------------------------------------------------------
+# Payroll configuration cluster
+# ---------------------------------------------------------------------------
+class PayrollConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PayrollConfig
+        fields = "__all__"
+
+
+class EpfConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EpfConfig
+        fields = "__all__"
+
+
+class EsiConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EsiConfig
+        fields = "__all__"
+
+
+class PtConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PtConfig
+        fields = "__all__"
+
+
+class LwfConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LwfConfig
+        fields = "__all__"
+
+
+class BonusConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BonusConfig
+        fields = "__all__"
+
+
+class SalaryComponentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalaryComponent
+        fields = "__all__"
+
+
+class SalaryDeductionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalaryDeduction
+        fields = "__all__"
+
+
+class SalaryBenefitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalaryBenefit
+        fields = "__all__"
+
+
+class SalaryReimbursementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalaryReimbursement
+        fields = "__all__"
+
+
+class FfsConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FfsConfig
+        fields = "__all__"
+
+
+class StaffPortalConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StaffPortalConfig
+        fields = "__all__"
+
+
+class PayrollPeriodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PayrollPeriod
+        fields = "__all__"

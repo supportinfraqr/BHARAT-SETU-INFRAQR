@@ -48,4 +48,52 @@ router.register(r"qr", views.QrAccessActionViewSet, basename="qr-scan")
 router.register(r"digilocker", views.DigiLockerViewSet, basename="digilocker")
 router.register(r"qr/worker", views.WorkerQrActionViewSet, basename="qr-worker")
 
+# Engagement & governance
+router.register(r"preferences", views.UserPreferenceViewSet, basename="preferences")
+router.register(r"notifications", views.NotificationViewSet, basename="notifications")
+router.register(r"audit-logs", views.AuditLogViewSet, basename="audit-logs")
+router.register(r"approvals", views.ApprovalQueueViewSet, basename="approvals")
+router.register(r"grievance-responses", views.GrievanceResponseViewSet, basename="grievance-responses")
+
+# Employer / Contractor registry
+router.register(r"parties/directors", views.PartyDirectorViewSet, basename="party-directors")
+router.register(r"parties/statutory", views.PartyStatutoryRegistrationViewSet, basename="party-statutory")
+router.register(r"parties/contacts", views.PartyContactViewSet, basename="party-contacts")
+router.register(r"parties/banks", views.PartyBankViewSet, basename="party-banks")
+router.register(r"parties/contracts", views.PartyContractViewSet, basename="party-contracts")
+router.register(r"parties/documents", views.PartyDocumentViewSet, basename="party-documents")
+router.register(r"parties/consents", views.PartyConsentDeclarationViewSet, basename="party-consents")
+router.register(r"parties/master", views.PartyMasterViewSet, basename="party-master")
+
+# Compliance & statutory masters
+router.register(r"register-docs-master", views.RegisterDocumentMasterViewSet, basename="register-docs-master")
+router.register(r"compliance-master", views.ComplianceMasterViewSet, basename="compliance-master")
+router.register(r"compliance-docs", views.ComplianceDocumentViewSet, basename="compliance-docs")
+router.register(r"compliance-reports", views.ComplianceReportViewSet, basename="compliance-reports")
+router.register(r"compliance-report-items", views.ComplianceReportItemViewSet, basename="compliance-report-items")
+router.register(r"employer-doc-mappings", views.EmployerDocumentMappingViewSet, basename="employer-doc-mappings")
+router.register(r"employer-register-mappings", views.EmployerRegisterMappingViewSet, basename="employer-register-mappings")
+router.register(r"employer-act-mappings", views.EmployerActMappingViewSet, basename="employer-act-mappings")
+router.register(r"pt-masters", views.PtMasterViewSet, basename="pt-masters")
+router.register(r"pt-slabs", views.PtSlabViewSet, basename="pt-slabs")
+router.register(r"lwf-masters", views.LwfMasterViewSet, basename="lwf-masters")
+router.register(r"license-masters", views.LicenseMasterViewSet, basename="license-masters")
+router.register(r"minimum-wages", views.MinimumWageViewSet, basename="minimum-wages")
+router.register(r"menu-permissions", views.MenuPermissionViewSet, basename="menu-permissions")
+
+# Payroll configuration cluster
+router.register(r"payroll/config", views.PayrollConfigViewSet, basename="payroll-config")
+router.register(r"payroll/epf", views.EpfConfigViewSet, basename="payroll-epf")
+router.register(r"payroll/esi", views.EsiConfigViewSet, basename="payroll-esi")
+router.register(r"payroll/pt", views.PtConfigViewSet, basename="payroll-pt")
+router.register(r"payroll/lwf", views.LwfConfigViewSet, basename="payroll-lwf")
+router.register(r"payroll/bonus", views.BonusConfigViewSet, basename="payroll-bonus")
+router.register(r"payroll/components", views.SalaryComponentViewSet, basename="payroll-components")
+router.register(r"payroll/deductions", views.SalaryDeductionViewSet, basename="payroll-deductions")
+router.register(r"payroll/benefits", views.SalaryBenefitViewSet, basename="payroll-benefits")
+router.register(r"payroll/reimbursements", views.SalaryReimbursementViewSet, basename="payroll-reimbursements")
+router.register(r"payroll/ffs", views.FfsConfigViewSet, basename="payroll-ffs")
+router.register(r"payroll/portal", views.StaffPortalConfigViewSet, basename="payroll-portal")
+router.register(r"payroll/periods", views.PayrollPeriodViewSet, basename="payroll-periods")
+
 urlpatterns = router.urls

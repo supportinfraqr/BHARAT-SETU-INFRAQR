@@ -55,6 +55,10 @@ class SmsOtp(models.Model):
     attempts = models.SmallIntegerField(default=0)
     max_attempts = models.SmallIntegerField(default=5)
     verified = models.BooleanField(default=False)
+    delivery_channel = models.CharField(max_length=20, default="none")
+    delivery_status = models.CharField(max_length=20, default="pending")
+    delivery_error = models.TextField(blank=True, default="")
+    delivered_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -38,6 +38,9 @@ class WorkerIdentity(models.Model):
     aadhaar = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    place_of_birth = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "worker_identity"
@@ -295,6 +298,7 @@ class WorkerOther(models.Model):
     consent_verification = models.BooleanField(null=True, blank=True)
     consent_date = models.DateField(null=True, blank=True)
     qr_opt_in = models.BooleanField(default=False)
+    available_for_work = models.BooleanField(default=False)
     registration_source = models.CharField(max_length=80, blank=True)
     registered_by = models.CharField(max_length=120, blank=True)
     registration_date = models.DateField(null=True, blank=True)
@@ -326,7 +330,11 @@ class WorkerDocumentMaster(models.Model):
 
 
 class WorkerDocument(models.Model):
-    STATUS = [("UPLOADED", "Uploaded"), ("VERIFIED", "Verified"), ("REJECTED", "Rejected")]
+    """Worker/contractor document with expiry, mandatory flag, ownership & auto-gen."""
+    STATUS = [("UPLOADED", "Uploaded"), ("VERIFIED", "Verified"), ("REJECTED", "Rejected"),
+              ("MISSING", "Missing"), ("UNDER_VERIFICATION", "Under Verification"),
+              ("EXPIRED", "Expired")]
+    OWNER = [("worker", "Worker"), ("contractor", "Contractor"), ("system", "System")]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="documents")
     document = models.ForeignKey(WorkerDocumentMaster, on_delete=models.CASCADE,
@@ -336,6 +344,10 @@ class WorkerDocument(models.Model):
     file_size = models.BigIntegerField(null=True, blank=True)
     mime_type = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="UPLOADED")
+    expiry_date = models.DateField(null=True, blank=True)
+    is_mandatory = models.BooleanField(default=False)
+    owner_role = models.CharField(max_length=20, choices=OWNER, default="worker")
+    auto_generated = models.BooleanField(default=False)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -346,6 +358,7 @@ class WorkerDocument(models.Model):
         indexes = [
             models.Index(fields=["user"], name="idx_worker_docs_user"),
             models.Index(fields=["document"], name="idx_worker_docs_doc"),
+            models.Index(fields=["expiry_date"], name="idx_worker_docs_expiry"),
         ]
 
     def __str__(self):

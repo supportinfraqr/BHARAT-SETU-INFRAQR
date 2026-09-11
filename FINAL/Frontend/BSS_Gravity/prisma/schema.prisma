@@ -1,0 +1,749 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------
+// User & Authentication
+// ---------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  subject      String   @unique // BSS ID (Worker, Contractor, Employer, Staff, IT, Gov)
+  role         String   // Worker, Contractor, Employer, IT Help Desk, BSS Staff, Government
+  contact      String?  // Mobile number or Email
+  mpinHash     String?
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ---------------------------------------------------------
+// Worker Domain
+// ---------------------------------------------------------
+model WorkerProfile {
+  id                     String    @id @default(cuid())
+  bssId                  String    @unique
+  name                   String
+  category               String    @default("Construction Worker")
+  dob                    String?
+  gender                 String?
+  photoUrl               String?   @default("/worker-profile.png")
+  aadhaar                String?
+  pan                    String?
+  aadhaarVerified        Boolean   @default(false)
+  panVerified            Boolean   @default(false)
+
+  // Employment Details
+  employmentStatus       String    @default("Active")
+  employerName           String?
+  contractorName         String?
+  siteName               String?
+  department             String?
+  designation            String?
+  doj                    String?
+  shift                  String?   @default("General")
+
+  // Compliance
+  siteInduction          Boolean   @default(false)
+  ppeIssued              String    @default("[]") // JSON string array
+  policeVerification     String    @default("Under Process")
+  permanentGatePass      String    @default("Pending Approval")
+  medicalFitnessDaysLeft Int       @default(0)
+
+  // Skills & Social Security
+  skillsJson             String    @default("{}") // JSON for primary, secondary, cert
+  epfoUan                String?
+  esicIp                 String?
+  eShramLinked           Boolean   @default(false)
+  bocwRegistered         Boolean   @default(false)
+
+  // Contact & Address
+  mobile                 String?
+  alternateMobile        String?
+  email                  String?
+  preferredLanguage      String    @default("Hindi")
+  preferredChannel       String    @default("SMS")
+
+  currentAddress         String?
+  currentState           String?
+  currentDistrict        String?
+  currentCity            String?
+  currentPin             String?
+
+  permanentAddress       String?
+  permanentState         String?
+  permanentDistrict      String?
+  permanentCity          String?
+  permanentPin           String?
+
+  migrant                Boolean   @default(false)
+  migrationType          String    @default("Non-Migrant / Local")
+
+  // Personal & Banking
+  personalJson           String    @default("{}") // Marital, BloodGroup, Parents, etc.
+  bankingJson            String    @default("{}") // BankName, Account, IFSC, verified
+  preferencesJson        String    @default("{}") // Photo, data sharing, accessibility
+
+  availability           Boolean   @default(false)
+  gratuityJson           String    @default("{}")
+
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // Relationships
+  documents              WorkerDocument[]
+  wages                  WageRecord[]
+  attendance             AttendanceRecord[]
+  pfRecords              ProvidentFundRecord[]
+  bonuses                BonusRecord[]
+  leaveEncashments       LeaveEncashmentRecord[]
+  leaves                 LeaveRecord[]
+  grievances             Grievance[]
+  jobRequests            JobRequest[]
+  cardOrders             CardOrder[]
+  courseProgress         WorkerCourseProgress[]
+}
+
+model WorkerDocument {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  name           String
+  mandatory      Boolean       @default(false)
+  owner          String        @default("Worker") // Worker, Contractor, System
+  status         String        @default("Missing") // Verified, Missing, Under Verification, Expired, Rejected
+  date           String?
+  downloadUrl    String?
+  storagePath    String?
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([workerBssId])
+}
+
+model WageRecord {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  period         String
+  paidOn         String
+  employer       String
+  contractor     String
+  site           String
+  basis          String        @default("Monthly")
+  gross          Float
+  deductions     Float
+  net            Float
+  status         String        @default("Credited") // Credited, Processing, Failed
+  reference      String?
+  receiptUrl     String?
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@index([workerBssId])
+}
+
+model AttendanceRecord {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  date           String
+  presence       String        // Present, Absent, Leave, Holiday, Weekly Off
+  shift          String?       @default("General")
+  site           String
+  checkIn        String?
+  checkOut       String?
+  status         String        @default("On time") // On time, Late, Half Day, Recorded
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@index([workerBssId, date])
+}
+
+model ProvidentFundRecord {
+  id                   String        @id @default(cuid())
+  workerBssId          String
+  period               String
+  employeeContribution Float
+  employerContribution Float
+  creditedOn           String
+  worker               WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt            DateTime      @default(now())
+
+  @@index([workerBssId])
+}
+
+model BonusRecord {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  period         String
+  reason         String
+  amount         Float
+  paidOn         String
+  status         String        @default("Credited")
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@index([workerBssId])
+}
+
+model LeaveEncashmentRecord {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  period         String
+  days           Int
+  rate           Float
+  amount         Float
+  paidOn         String
+  status         String        @default("Credited")
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@index([workerBssId])
+}
+
+model LeaveRecord {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  type           String
+  fromDate       String
+  toDate         String
+  reason         String
+  attachmentId   String?
+  submitted      String
+  status         String        @default("Pending") // Pending, Approved, Rejected, Cancelled
+  approver       String?
+  comment        String?
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([workerBssId])
+}
+
+model Grievance {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  category       String
+  subject        String
+  description    String
+  status         String        @default("Submitted") // Submitted, Under Review, In Progress, Resolved
+  attachmentId   String?
+  submittedAt    DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+
+  @@index([workerBssId])
+}
+
+model JobRequest {
+  id             String        @id @default(cuid())
+  workerBssId    String
+  employer       String
+  contractor     String
+  site           String
+  designation    String
+  wage           Float
+  currency       String        @default("INR")
+  payPeriod      String        @default("month")
+  duration       String
+  facilities     String        @default("[]") // JSON string array
+  status         String        @default("Pending") // Pending, Accepted, Rejected, Expired
+  dateReceived   String
+  worker         WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@index([workerBssId])
+}
+
+model CardOrder {
+  id               String        @id @default(cuid())
+  requestId        String        @unique
+  workerBssId      String
+  provider         String        // razorpay, payu
+  amount           Float         @default(19900)
+  deliveryAddress  String        // JSON object
+  addressConfirmed Boolean       @default(false)
+  status           String        @default("awaiting_payment") // awaiting_payment, paid, processing, dispatched
+  checkoutUrl      String?
+  createdAt        DateTime      @default(now())
+  worker           WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+
+  @@index([workerBssId])
+}
+
+model WorkerCourseProgress {
+  id               String        @id @default(cuid())
+  workerBssId      String
+  courseId         String
+  progress         Int           @default(0)
+  completedModules String        @default("[]") // JSON string array
+  worker           WorkerProfile @relation(fields: [workerBssId], references: [bssId], onDelete: Cascade)
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([workerBssId, courseId])
+  @@index([workerBssId])
+}
+
+// ---------------------------------------------------------
+// Contractor Domain
+// ---------------------------------------------------------
+model ContractorProfile {
+  id              String   @id @default(cuid())
+  bssId           String   @unique
+  name            String
+  company         String
+  incorpDate      String?
+  entity          String   @default("Private Limited Company")
+  verified        Boolean  @default(true)
+  rating          Float    @default(4.8)
+  contact         String?
+  email           String?
+  profileSections String   @default("{}") // JSON string
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ContractorEmployerBinding {
+  id              String   @id @default(cuid())
+  contractorBssId String
+  employerId      String
+  employerName    String
+  sites           String   @default("[]") // JSON string array
+  status          String   @default("Active")
+  boundSince      String
+  createdAt       DateTime @default(now())
+
+  @@index([contractorBssId])
+  @@index([employerId])
+}
+
+model ContractorWorkerAssignment {
+  id              String   @id @default(cuid())
+  contractorBssId String
+  workerBssId     String
+  name            String
+  mobile          String
+  site            String
+  siteId          String?
+  employer        String
+  employerId      String?
+  designation     String
+  doj             String
+  compliance      String   @default("Compliant") // Compliant, Expiring, Non-compliant
+  status          String   @default("Active")    // Active, Inactive
+  verified        Boolean  @default(true)
+  attendance      Int      @default(95)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorBssId])
+  @@index([workerBssId])
+}
+
+model ComplianceRecord {
+  id              String   @id @default(cuid())
+  contractorBssId String?
+  item            String
+  category        String
+  reference       String
+  employer        String
+  site            String
+  worker          String?
+  issueDate       String
+  expiryDate      String
+  verification    String   @default("Pending") // Verified, Pending, Rejected
+  status          String   @default("Active")  // Active, Expiring, Expired
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorBssId])
+  @@index([site])
+}
+
+model ComplianceReport {
+  id              String   @id @default(cuid())
+  contractorBssId String?
+  site            String
+  employer        String
+  period          String
+  type            String
+  status          String   @default("Compliant") // Compliant, Pending, Non-compliant
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorBssId])
+}
+
+model GatePass {
+  id          String   @id @default(cuid())
+  workerName  String
+  workerId    String
+  contractor  String?
+  employer    String
+  site        String
+  siteId      String?
+  type        String   // Permanent, Temporary
+  requestedAt DateTime @default(now())
+  validFrom   String
+  validTo     String
+  status      String   @default("Pending") // Pending, Approved, Rejected
+  updatedAt   DateTime @updatedAt
+
+  @@index([workerId])
+  @@index([site])
+}
+
+model ContractorBenefitRecord {
+  id              String   @id @default(cuid())
+  contractorBssId String
+  type            String   // bonus, leaveEncashment
+  worker          String
+  workerId        String
+  employer        String
+  period          String
+  amount          Float
+  days            Int?
+  reason          String?
+  paidOn          String
+  fileName        String?
+  fileUrl         String?
+  status          String   @default("Pending verification")
+  source          String   @default("contractor")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorBssId])
+}
+
+model SalaryRecord {
+  id              String   @id @default(cuid())
+  contractorBssId String
+  worker          String
+  workerId        String
+  employer        String
+  site            String
+  period          String
+  gross           Float
+  deductions      Float
+  net             Float
+  paidOn          String
+  fileName        String?
+  fileUrl         String?
+  status          String   @default("Pending verification")
+  source          String   @default("contractor")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorBssId])
+}
+
+model RozgarApplication {
+  id              String   @id @default(cuid())
+  contractorBssId String?
+  workerName      String
+  workerId        String
+  employer        String
+  trade           String
+  experience      String
+  expectedWage    Float
+  location        String
+  status          String   @default("Pending") // Pending, Shortlisted, Hired, Rejected
+  dateApplied     String
+  matchScore      Int      @default(80)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractorBssId])
+  @@index([workerId])
+}
+
+model JobPosting {
+  id              String   @id @default(cuid())
+  contractorBssId String
+  title           String
+  trade           String
+  site            String
+  vacancies       Int
+  wage            Float
+  createdAt       DateTime @default(now())
+
+  @@index([contractorBssId])
+}
+
+// ---------------------------------------------------------
+// Employer Domain
+// ---------------------------------------------------------
+model EmployerProfile {
+  id              String   @id @default(cuid())
+  bssId           String   @unique
+  name            String
+  company         String
+  entity          String   @default("Public Limited Company")
+  verified        Boolean  @default(true)
+  contact         String?
+  email           String?
+  address         String?
+  canAccessAdmin  Boolean  @default(true)
+  govtScope       String   @default("central")
+  profileSections String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Site {
+  id            String   @id @default(cuid())
+  employerBssId String
+  code          String   @unique
+  name          String
+  location      String
+  state         String
+  startDate     String
+  endDate       String
+  status        String   @default("Active") // Active, Planned, Completed
+  contractorIds String   @default("[]")     // JSON string array
+  workers       Int      @default(0)
+  compliance    Int      @default(90)
+  detailsJson   String   @default("{}")     // Operational, contacts, facilities
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([employerBssId])
+}
+
+model EmployerApproval {
+  id            String   @id @default(cuid())
+  employerBssId String
+  entityType    String   // Contractor, Worker
+  entityId      String
+  name          String
+  bssId         String
+  contractor    String?
+  site          String
+  submittedAt   DateTime @default(now())
+  checks        String   @default("[]") // JSON string array
+  status        String   @default("Pending") // Pending, Approved, Rejected
+  updatedAt     DateTime @updatedAt
+
+  @@index([employerBssId])
+}
+
+model EmployerComplianceReport {
+  id            String   @id @default(cuid())
+  employerBssId String?
+  contractorId  String
+  contractor    String
+  siteId        String
+  site          String
+  period        String
+  pf            String   @default("Filed") // Filed, Pending, Overdue
+  esic          String   @default("Filed")
+  wage          String   @default("Filed")
+  safety        String   @default("Compliant") // Compliant, Review, Non-compliant
+  score         Int      @default(95)
+  status        String   @default("Compliant") // Compliant, Pending, Non-compliant
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([employerBssId])
+}
+
+model EmployerUser {
+  id            String   @id @default(cuid())
+  employerBssId String
+  name          String
+  contact       String
+  role          String   // Admin, Site Manager, Compliance Officer, Viewer
+  scope         String   // All sites, or specific site name
+  status        String   @default("Active")
+  lastLogin     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([employerBssId])
+}
+
+model EmployerPermissionRole {
+  id          String   @id @default(cuid())
+  role        String   @unique
+  description String
+  modulesJson String   @default("[]") // JSON string array
+  createdAt   DateTime @default(now())
+}
+
+model EmployerAudit {
+  id            String   @id @default(cuid())
+  employerBssId String
+  timestamp     DateTime @default(now())
+  actor         String
+  action        String
+  entity        String
+  status        String   @default("Success") // Success, Failed, Pending
+
+  @@index([employerBssId])
+}
+
+model EmployerRoute {
+  id            String   @id @default(cuid())
+  employerBssId String
+  name          String
+  reference     String
+  vehicle       String
+  route         String
+  workers       Int      @default(0)
+  shifts        String
+  status        String   @default("Active") // Active, Suspended
+  createdAt     DateTime @default(now())
+
+  @@index([employerBssId])
+}
+
+model EmployerWorkerDocument {
+  id            String   @id @default(cuid())
+  employerBssId String?
+  worker        String
+  workerId      String
+  contractor    String
+  site          String
+  document      String
+  status        String   @default("Verified") // Verified, Pending, Expiring, Missing, Rejected
+  expiry        String?
+  createdAt     DateTime @default(now())
+
+  @@index([employerBssId])
+  @@index([workerId])
+}
+
+// ---------------------------------------------------------
+// IT Help Desk & Operations Domain (Requirement R4)
+// ---------------------------------------------------------
+model OperationsService {
+  id            String   @id // identity, portal, benefits, otp, voice, notifications
+  name          String
+  host          String
+  status        String   @default("Operational") // Operational, Degraded, Outage, Maintenance
+  latencyMs     Int      @default(30)
+  uptime        Float    @default(99.9)
+  lastCheckedAt DateTime @default(now())
+}
+
+model OperationsTicket {
+  id        String   @id // INC-2026-081, etc.
+  title     String
+  service   String
+  priority  String   @default("P3") // P1, P2, P3, P4
+  status    String   @default("Open") // Open, In progress, Monitoring, Resolved, Escalated
+  assignee  String?
+  openedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OperationsLog {
+  id            String   @id @default(cuid())
+  timestamp     DateTime @default(now())
+  level         String   @default("info") // info, warning, error, audit
+  source        String
+  message       String
+  correlationId String
+}
+
+// ---------------------------------------------------------
+// BSS Staff Domain (Requirement R4)
+// ---------------------------------------------------------
+model SupportCase {
+  id        String   @id // BC-1039, DOC-2048, DSP-201, WRK-881
+  type      String   // Binding, Document, Dispute, Worker record
+  subject   String
+  party     String
+  owner     String
+  priority  String   @default("Normal") // Urgent, High, Normal, Low
+  status    String   @default("Open")   // Open, In progress, Waiting for evidence, Resolved, Escalated
+  assignee  String?
+  summary   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------
+// Cross-Cutting & Storage (Requirement R2)
+// ---------------------------------------------------------
+model DocumentSubmission {
+  id               String   @id @default(cuid())
+  submittedByRole  String   // Worker, Contractor, Employer
+  submittedByBssId String
+  type             String   // PF Challan, ESIC Return, Wage Register, Medical Certificate, etc.
+  employer         String
+  site             String
+  period           String
+  fileName         String
+  fileSize         Int
+  mimeType         String
+  storagePath      String
+  checksum         String
+  status           String   @default("Pending verification") // Pending verification, Verified, Returned
+  submittedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([submittedByBssId])
+  @@index([status])
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  recipientRole  String   // Worker, Contractor, Employer, IT Help Desk, BSS Staff, Government
+  recipientBssId String?
+  entityId       String?
+  category       String   // Jobs, Documents, Compliance, Leave, Payments, Benefits, Grievances, Cards, Announcements, Approvals
+  title          String
+  message        String
+  href           String
+  actionLabel    String   @default("View")
+  priority       String   @default("normal") // critical, high, normal, low
+  requiresAction Boolean  @default(false)
+  read           Boolean  @default(false)
+  resolved       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([recipientRole, recipientBssId])
+}
+
+model EcsBinding {
+  id           String    @id @default(cuid())
+  employerId   String
+  contractorId String
+  siteId       String
+  workerId     String
+  tuple        String    @unique // employerId|contractorId|siteId|workerId
+  state        String    @default("unbound") // unbound, pending, bound, rejected
+  consentJson  String    @default("{\"employer\":false,\"contractor\":false,\"worker\":false}")
+  requestedBy  String    // employer, contractor, worker
+  requestedAt  DateTime  @default(now())
+  boundAt      DateTime?
+}
+
+// ---------------------------------------------------------
+// Government Analytics Domain
+// ---------------------------------------------------------
+model GovernmentWorker {
+  id            String  @id // GW-001 ... GW-108
+  state         String
+  district      String
+  city          String
+  age           Int
+  gender        String  // Male, Female, Transgender
+  category      String
+  occupation    String
+  site          String
+  siteType      String
+  employer      String
+  contractor    String
+  migrant       Boolean @default(false)
+  stateOfOrigin String
+  attendance    Int
+  compliance    String  // Compliant, Pending, Non-compliant
+  epfoLinked    Boolean @default(false)
+  esicLinked    Boolean @default(false)
+  wage          Float
+}

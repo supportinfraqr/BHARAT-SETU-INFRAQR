@@ -3,7 +3,6 @@ from django.contrib import admin
 from .models import (
     AppRole, User, UserCredential,
     ContractorProfile, EmployerProfile, GovernmentProfile, BssStaffProfile,
-    ItTaskForceProfile,
     Site, WorkerContractorBinding, ContractorJob, RozgarRequest,
     ConsentChallenge, SmsOtp,
     WorkerIdentity, WorkerAddressMobility, WorkerFamilyDependant,
@@ -25,7 +24,7 @@ class UserAdmin(admin.ModelAdmin):
 
 for model in [
     AppRole, UserCredential, ContractorProfile, EmployerProfile,
-    GovernmentProfile, BssStaffProfile, ItTaskForceProfile,
+    GovernmentProfile, BssStaffProfile,
     Site, WorkerContractorBinding, ContractorJob, RozgarRequest,
     ConsentChallenge, SmsOtp,
     WorkerIdentity, WorkerAddressMobility, WorkerFamilyDependant,

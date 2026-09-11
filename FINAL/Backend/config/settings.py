@@ -10,6 +10,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +21,15 @@ def env_bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
 
 
-SECRET_KEY = os.environ.get("BSS_SECRET_KEY", "django-insecure-dev-secret-change-me")
+def env_required(name: str) -> str:
+    """Return an env var value or fail fast; secrets must never be defaulted in code."""
+    value = os.environ.get(name)
+    if not value:
+        raise ImproperlyConfigured(f"Missing required environment variable: {name}")
+    return value
+
+
+SECRET_KEY = env_required("BSS_SECRET_KEY")
 
 DEBUG = env_bool("BSS_DEBUG", True)
 
@@ -85,13 +94,38 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("BSS_PG_DB", "bss_final"),
         "USER": os.environ.get("BSS_PG_USER", "bss"),
-        "PASSWORD": os.environ.get("BSS_PG_PASSWORD", "Bss2026!pg"),
+        "PASSWORD": env_required("BSS_PG_PASSWORD"),
         "HOST": os.environ.get("BSS_PG_HOST", "127.0.0.1"),
         "PORT": os.environ.get("BSS_PG_PORT", "5432"),
         "CONN_MAX_AGE": int(os.environ.get("BSS_PG_CONN_MAX_AGE", "60")),
         "OPTIONS": {"connect_timeout": int(os.environ.get("BSS_PG_CONNECT_TIMEOUT", "5"))},
     }
 }
+
+
+# ---------------------------------------------------------------------------
+# Redis cache + sessions (BSS_REDIS_URL; falls back to local-memory when unset)
+# ---------------------------------------------------------------------------
+REDIS_URL = os.environ.get("BSS_REDIS_URL") or ""
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "KEY_PREFIX": "bss",
+            "TIMEOUT": int(os.environ.get("BSS_CACHE_TIMEOUT_SEC", "300")),
+        }
+    }
+    SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+    SESSION_CACHE_ALIAS = "default"
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "bss-local",
+            "KEY_PREFIX": "bss",
+        }
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -139,20 +173,19 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = os.environ.get("BSS_STATIC_ROOT", str(BASE_DIR / "staticfiles"))
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = os.environ.get("BSS_MEDIA_ROOT", str(BASE_DIR / "media"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # ---------------------------------------------------------------------------
-# DigiLocker OAuth2 (backend-only). Values from the EesassinErp integration;
-# override via env. DO NOT commit real secrets outside .env.
+# DigiLocker OAuth2 (backend-only). Credentials come from env only.
 # ---------------------------------------------------------------------------
-DIGILOCKER_CLIENT_ID = os.environ.get("DIGILOCKER_CLIENT_ID", "MS53AA158D")
-DIGILOCKER_CLIENT_SECRET = os.environ.get("DIGILOCKER_CLIENT_SECRET", "727f64249a2d50ac2019")
+DIGILOCKER_CLIENT_ID = env_required("DIGILOCKER_CLIENT_ID")
+DIGILOCKER_CLIENT_SECRET = env_required("DIGILOCKER_CLIENT_SECRET")
 DIGILOCKER_REDIRECT_URI = os.environ.get(
     "DIGILOCKER_REDIRECT_URI", "http://localhost:8000/api/digilocker/callback/")
 DIGILOCKER_AUTHORIZE_URL = os.environ.get(
@@ -173,3 +206,18 @@ DIGILOCKER_SCOPE = os.environ.get(
     "DIGILOCKER_SCOPE", "files.issueddocs+userdetails+address+picture+avs")
 DIGILOCKER_SESSION_TTL_MIN = int(os.environ.get("DIGILOCKER_SESSION_TTL_MIN", "10"))
 DIGILOCKER_DOC_DIR = os.environ.get("DIGILOCKER_DOC_DIR", str(BASE_DIR / "media/digilocker"))
+
+
+# ---------------------------------------------------------------------------
+# Aadhaar oKYC (Sandbox.co.in, backend-only). Ported from the EesassinErp
+# integration; credentials come from BSS_AADHAAR_* env vars (.env / compose).
+# NEVER commit real keys.
+# ---------------------------------------------------------------------------
+AADHAAR_BASE_URL = os.environ.get("BSS_AADHAAR_BASE_URL", "https://api.sandbox.co.in")
+OCR_URL = os.environ.get("BSS_OCR_URL", "http://13.202.27.216:8080/ocr")
+AADHAAR_API_KEY = os.environ.get("BSS_AADHAAR_API_KEY", "")
+AADHAAR_API_SECRET = os.environ.get("BSS_AADHAAR_API_SECRET", "")
+AADHAAR_API_VERSION = os.environ.get("BSS_AADHAAR_API_VERSION", "1.0")
+AADHAAR_OTP_TTL_MIN = int(os.environ.get("BSS_AADHAAR_OTP_TTL_MIN", "10"))
+AADHAAR_MAX_ATTEMPTS = int(os.environ.get("BSS_AADHAAR_MAX_ATTEMPTS", "5"))
+AADHAAR_PHOTO_DIR = os.environ.get("BSS_AADHAAR_PHOTO_DIR", str(BASE_DIR / "media/aadhaar"))

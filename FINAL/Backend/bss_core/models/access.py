@@ -35,7 +35,8 @@ class RbacPermission(models.Model):
 
 
 class QrRoleAccess(models.Model):
-    """QR-scanner scope per role (public, worker, contractor, employer)."""
+    """QR-scanner scope per role (guest, worker, contractor, employer, government,
+    bss_staff, bss_admin)."""
 
     SCOPE = [("unbound", "Unbound"), ("bound", "Bound")]
 

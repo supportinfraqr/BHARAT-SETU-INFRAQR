@@ -23,6 +23,333 @@ class Site(models.Model):
     district = models.CharField(max_length=60, blank=True)
     state = models.CharField(max_length=60, blank=True)
     pincode = models.CharField(max_length=10, blank=True)
+    site_type = models.CharField(max_length=60, blank=True)
+    site_category = models.CharField(max_length=60, blank=True)
+    shift_model = models.CharField(max_length=40, blank=True)
+    working_days = models.CharField(max_length=40, blank=True)
+    gate_timing = models.CharField(max_length=40, blank=True)
+    workforce_model = models.CharField(max_length=60, blank=True)
+    compliance_client = models.CharField(max_length=120, blank=True)
+    statutory_applicability = models.CharField(max_length=255, blank=True)
+    reporting_period = models.CharField(max_length=40, blank=True)
+    preferred_calendar = models.CharField(max_length=40, blank=True)
+    project_head = models.CharField(max_length=120, blank=True)
+    site_hr = models.CharField(max_length=120, blank=True)
+    safety_officer = models.CharField(max_length=120, blank=True)
+    attendance_enabled = models.BooleanField(default=True)
+    attendance_method = models.CharField(max_length=40, blank=True)
+    attendance_device_count = models.SmallIntegerField(default=0)
+    attendance_coverage = models.CharField(max_length=40, blank=True)
+    attendance_daily_sync = models.BooleanField(default=False)
+    billing_contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                           related_name="billing_sites",
+                                           limit_choices_to={"role": "contractor"})
+    accommodation_camp = models.BooleanField(default=False)
+    canteen_facility = models.BooleanField(default=False)
+    tool_store = models.BooleanField(default=False)
+    welfare_room = models.BooleanField(default=False)
+    medical_room = models.BooleanField(default=False)
+
+    # --- Basic Site Identification (Site Detail sheet) ---
+    site_display_name = models.CharField(max_length=120, blank=True)
+    internal_location_code = models.CharField(max_length=40, blank=True)
+    parent_company = models.CharField(max_length=120, blank=True)
+    business_unit = models.CharField(max_length=120, blank=True)
+    division = models.CharField(max_length=120, blank=True)
+    department = models.CharField(max_length=120, blank=True)
+    cost_centre = models.CharField(max_length=120, blank=True)
+    profit_centre = models.CharField(max_length=120, blank=True)
+    project_code = models.CharField(max_length=120, blank=True)
+    erp_site_code = models.CharField(max_length=120, blank=True)
+    site_status = models.CharField(max_length=40, blank=True)
+    site_start_date = models.DateField(null=True, blank=True)
+    expected_end_date = models.DateField(null=True, blank=True)
+    actual_start_date = models.DateField(null=True, blank=True)
+    actual_completion_date = models.DateField(null=True, blank=True)
+
+    # --- Site Classification ---
+    primary_industry = models.CharField(max_length=120, blank=True)
+    sub_industry = models.CharField(max_length=120, blank=True)
+    site_nature = models.CharField(max_length=160, blank=True)  # Permanent/Temporary/Project/Mobile/...
+
+    # --- Location & Jurisdiction ---
+    country = models.CharField(max_length=60, blank=True)
+    tehsil_taluka = models.CharField(max_length=60, blank=True)
+    village = models.CharField(max_length=60, blank=True)
+    landmark = models.CharField(max_length=120, blank=True)
+    geo_fence_radius = models.IntegerField(null=True, blank=True)
+    site_boundary_coordinates = models.TextField(blank=True)
+    labour_jurisdiction = models.CharField(max_length=120, blank=True)
+    labour_office = models.CharField(max_length=120, blank=True)
+    pf_office = models.CharField(max_length=120, blank=True)
+    esic_office = models.CharField(max_length=120, blank=True)
+    police_station = models.CharField(max_length=120, blank=True)
+    fire_department = models.CharField(max_length=120, blank=True)
+
+    # --- Principal Employer Details ---
+    legal_entity_name = models.CharField(max_length=120, blank=True)
+    employer_trade_name = models.CharField(max_length=120, blank=True)
+    employer_code = models.CharField(max_length=40, blank=True)
+    employer_cin = models.CharField(max_length=40, blank=True)
+    employer_pan = models.CharField(max_length=20, blank=True)
+    employer_gstin = models.CharField(max_length=20, blank=True)
+    employer_lin = models.CharField(max_length=40, blank=True)
+    epfo_establishment_code = models.CharField(max_length=40, blank=True)
+    esic_employer_code = models.CharField(max_length=40, blank=True)
+    factory_registration_number = models.CharField(max_length=60, blank=True)
+    labour_registration_number = models.CharField(max_length=60, blank=True)
+    authorized_signatory = models.CharField(max_length=120, blank=True)
+    authorization_letter = models.CharField(max_length=255, blank=True)
+
+    # --- Site Management Team ---
+    site_head = models.CharField(max_length=120, blank=True)
+    hr_head = models.CharField(max_length=120, blank=True)
+    admin_head = models.CharField(max_length=120, blank=True)
+    ehs_head = models.CharField(max_length=120, blank=True)
+    security_head = models.CharField(max_length=120, blank=True)
+    compliance_officer = models.CharField(max_length=120, blank=True)
+    payroll_spoc = models.CharField(max_length=120, blank=True)
+    contractor_management_spoc = models.CharField(max_length=120, blank=True)
+    medical_officer = models.CharField(max_length=120, blank=True)
+    emergency_coordinator = models.CharField(max_length=120, blank=True)
+    fire_safety_officer = models.CharField(max_length=120, blank=True)
+
+    # --- Workforce Configuration ---
+    direct_employees = models.IntegerField(null=True, blank=True)
+    contract_workers = models.IntegerField(null=True, blank=True)
+    apprentices = models.IntegerField(null=True, blank=True)
+    trainees = models.IntegerField(null=True, blank=True)
+    interns = models.IntegerField(null=True, blank=True)
+    consultants = models.IntegerField(null=True, blank=True)
+    temporary_workers = models.IntegerField(null=True, blank=True)
+    casual_workers = models.IntegerField(null=True, blank=True)
+    daily_wage_workers = models.IntegerField(null=True, blank=True)
+    migrant_workers = models.IntegerField(null=True, blank=True)
+    interstate_migrant_workers = models.IntegerField(null=True, blank=True)
+    foreign_workers = models.IntegerField(null=True, blank=True)
+    gig_workers = models.IntegerField(null=True, blank=True)
+    women_workers = models.IntegerField(null=True, blank=True)
+    night_shift_workers = models.IntegerField(null=True, blank=True)
+    minimum_workforce = models.IntegerField(null=True, blank=True)
+    average_workforce = models.IntegerField(null=True, blank=True)
+    maximum_workforce = models.IntegerField(null=True, blank=True)
+
+    # --- Contractor & Vendor Configuration ---
+    contractors_deployed = models.BooleanField(null=True, blank=True)
+    expected_active_contractors = models.IntegerField(null=True, blank=True)
+    maximum_contractors = models.IntegerField(null=True, blank=True)
+    labour_contractors = models.IntegerField(null=True, blank=True)
+    service_contractors = models.IntegerField(null=True, blank=True)
+    manpower_suppliers = models.IntegerField(null=True, blank=True)
+    subcontractors_allowed = models.BooleanField(null=True, blank=True)
+    contractor_prequalification = models.BooleanField(null=True, blank=True)
+    compliance_audit_required = models.BooleanField(null=True, blank=True)
+    worker_approval_required = models.BooleanField(null=True, blank=True)
+    document_verification_required = models.BooleanField(null=True, blank=True)
+    site_induction_mandatory = models.BooleanField(null=True, blank=True)
+    medical_fitness_mandatory = models.BooleanField(null=True, blank=True)
+    training_mandatory = models.BooleanField(null=True, blank=True)
+    insurance_verification_required = models.BooleanField(null=True, blank=True)
+    monthly_compliance_submission = models.BooleanField(null=True, blank=True)
+
+    # --- Project & Construction Details ---
+    project_name = models.CharField(max_length=120, blank=True)
+    project_owner = models.CharField(max_length=120, blank=True)
+    pmc_consultant = models.CharField(max_length=120, blank=True)
+    epc_contractor = models.CharField(max_length=120, blank=True)
+    main_contractor = models.CharField(max_length=120, blank=True)
+    project_value = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
+    estimated_labour_cost = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
+    work_order_number = models.CharField(max_length=80, blank=True)
+    work_order_date = models.DateField(null=True, blank=True)
+    contract_start_date = models.DateField(null=True, blank=True)
+    contract_end_date = models.DateField(null=True, blank=True)
+    nature_of_work = models.CharField(max_length=255, blank=True)
+    built_up_area = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    number_of_floors = models.IntegerField(null=True, blank=True)
+    building_height = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    excavation_depth = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # --- Industry Specific Details ---
+    manufacturing_process = models.TextField(blank=True)
+    product_manufactured = models.CharField(max_length=120, blank=True)
+    production_capacity = models.CharField(max_length=80, blank=True)
+    hazardous_process = models.BooleanField(null=True, blank=True)
+    factory_occupier = models.CharField(max_length=120, blank=True)
+    factory_manager = models.CharField(max_length=120, blank=True)
+    mine_type = models.CharField(max_length=80, blank=True)
+    mineral = models.CharField(max_length=80, blank=True)
+    mine_lease_number = models.CharField(max_length=80, blank=True)
+    warehouse_area = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    storage_capacity = models.CharField(max_length=80, blank=True)
+    hazardous_goods = models.BooleanField(null=True, blank=True)
+    power_plant_capacity_mw = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    oil_gas_facility_type = models.CharField(max_length=80, blank=True)
+    hospital_beds = models.IntegerField(null=True, blank=True)
+    office_seating_capacity = models.IntegerField(null=True, blank=True)
+
+    # --- Shift & Working Hours ---
+    shift_applicable = models.BooleanField(null=True, blank=True)
+    general_shift_start = models.TimeField(null=True, blank=True)
+    general_shift_end = models.TimeField(null=True, blank=True)
+    morning_shift = models.CharField(max_length=40, blank=True)
+    evening_shift = models.CharField(max_length=40, blank=True)
+    night_shift = models.CharField(max_length=40, blank=True)
+    weekly_off_pattern = models.CharField(max_length=40, blank=True)
+    holiday_calendar = models.CharField(max_length=255, blank=True)
+    overtime_allowed = models.BooleanField(null=True, blank=True)
+    ot_approval_required = models.BooleanField(null=True, blank=True)
+    maximum_ot_hours = models.IntegerField(null=True, blank=True)
+
+    # --- Gate & Access (single-value counts; individual gates in SiteGate) ---
+    number_of_gates = models.IntegerField(null=True, blank=True)
+
+    # --- Attendance Configuration ---
+    geo_fencing = models.BooleanField(null=True, blank=True)
+    grace_period = models.IntegerField(null=True, blank=True)
+    late_coming_rule = models.CharField(max_length=80, blank=True)
+    early_exit_rule = models.CharField(max_length=80, blank=True)
+    missing_punch_rule = models.CharField(max_length=80, blank=True)
+    half_day_rule = models.CharField(max_length=80, blank=True)
+    ot_attendance_rule = models.CharField(max_length=80, blank=True)
+
+    # --- Gate Pass Configuration ---
+    temporary_gate_pass = models.BooleanField(null=True, blank=True)
+    permanent_gate_pass = models.BooleanField(null=True, blank=True)
+    project_gate_pass = models.BooleanField(null=True, blank=True)
+    contractor_based_pass = models.BooleanField(null=True, blank=True)
+    gatepass_worker_verification_required = models.BooleanField(null=True, blank=True)
+    gatepass_site_induction_required = models.BooleanField(null=True, blank=True)
+    gatepass_medical_fitness_required = models.BooleanField(null=True, blank=True)
+    gatepass_safety_training_required = models.BooleanField(null=True, blank=True)
+    ppe_required_before_entry = models.BooleanField(null=True, blank=True)
+    pass_validity = models.CharField(max_length=40, blank=True)
+
+    # --- Safety & EHS ---
+    risk_category = models.CharField(max_length=80, blank=True)
+    work_at_height = models.BooleanField(null=True, blank=True)
+    confined_space = models.BooleanField(null=True, blank=True)
+    hot_work = models.BooleanField(null=True, blank=True)
+    electrical_work = models.BooleanField(null=True, blank=True)
+    excavation = models.BooleanField(null=True, blank=True)
+    lifting_operations = models.BooleanField(null=True, blank=True)
+    chemical_handling = models.BooleanField(null=True, blank=True)
+    hazardous_material = models.BooleanField(null=True, blank=True)
+    ppe_requirements = models.CharField(max_length=255, blank=True)
+    permit_to_work_required = models.BooleanField(null=True, blank=True)
+
+    # --- Training & Induction ---
+    safety_induction = models.BooleanField(null=True, blank=True)
+    fire_safety = models.BooleanField(null=True, blank=True)
+    emergency_response_training = models.BooleanField(null=True, blank=True)
+    ppe_training = models.BooleanField(null=True, blank=True)
+    job_specific_training = models.BooleanField(null=True, blank=True)
+    training_validity = models.IntegerField(null=True, blank=True)
+    refresher_period = models.IntegerField(null=True, blank=True)
+    assessment_required = models.BooleanField(null=True, blank=True)
+    minimum_passing_score = models.IntegerField(null=True, blank=True)
+    digital_certificate = models.BooleanField(null=True, blank=True)
+
+    # --- Medical & Welfare (remaining) ---
+    pre_employment_medical = models.BooleanField(null=True, blank=True)
+    periodic_medical = models.BooleanField(null=True, blank=True)
+    ambulance = models.BooleanField(null=True, blank=True)
+    first_aid_facility = models.BooleanField(null=True, blank=True)
+    drinking_water = models.BooleanField(null=True, blank=True)
+    rest_area = models.BooleanField(null=True, blank=True)
+    toilets = models.BooleanField(null=True, blank=True)
+    separate_toilets = models.BooleanField(null=True, blank=True)
+    changing_room = models.BooleanField(null=True, blank=True)
+    creche = models.BooleanField(null=True, blank=True)
+    transport = models.BooleanField(null=True, blank=True)
+
+    # --- Labour Compliance ---
+    applicable_state = models.CharField(max_length=60, blank=True)
+    scheduled_employment = models.CharField(max_length=120, blank=True)
+    minimum_wage_zone = models.CharField(max_length=80, blank=True)
+    epfo_applicable = models.BooleanField(null=True, blank=True)
+    esic_applicable = models.BooleanField(null=True, blank=True)
+    clra_applicable = models.BooleanField(null=True, blank=True)
+    bocw_applicable = models.BooleanField(null=True, blank=True)
+    factory_compliance_applicable = models.BooleanField(null=True, blank=True)
+    shops_establishment_applicable = models.BooleanField(null=True, blank=True)
+    interstate_migrant_compliance = models.BooleanField(null=True, blank=True)
+    compliance_frequency = models.CharField(max_length=80, blank=True)
+
+    # --- Documents & Licences (flags) ---
+    document_expiry_tracking = models.BooleanField(null=True, blank=True)
+    renewal_reminder = models.BooleanField(null=True, blank=True)
+
+    # --- Emergency Management ---
+    emergency_control_room = models.CharField(max_length=120, blank=True)
+    emergency_contact = models.CharField(max_length=20, blank=True)
+    nearest_hospital = models.CharField(max_length=120, blank=True)
+    ambulance_provider = models.CharField(max_length=120, blank=True)
+    muster_points = models.CharField(max_length=255, blank=True)
+    evacuation_plan = models.CharField(max_length=255, blank=True)
+    fire_emergency = models.BooleanField(null=True, blank=True)
+    medical_emergency = models.BooleanField(null=True, blank=True)
+    industrial_accident = models.BooleanField(null=True, blank=True)
+    chemical_gas_leak = models.BooleanField(null=True, blank=True)
+    natural_disaster = models.BooleanField(null=True, blank=True)
+
+    # --- BSS Module Activation ---
+    module_worker_onboarding = models.BooleanField(null=True, blank=True)
+    module_contractor_management = models.BooleanField(null=True, blank=True)
+    module_universal_worker_id = models.BooleanField(null=True, blank=True)
+    module_worker_qr_card = models.BooleanField(null=True, blank=True)
+    module_contractor_qr_scanner = models.BooleanField(null=True, blank=True)
+    module_attendance = models.BooleanField(null=True, blank=True)
+    module_gate_pass = models.BooleanField(null=True, blank=True)
+    module_dynamic_qr = models.BooleanField(null=True, blank=True)
+    module_face_verification = models.BooleanField(null=True, blank=True)
+    module_document_management = models.BooleanField(null=True, blank=True)
+    module_compliance_management = models.BooleanField(null=True, blank=True)
+    module_payroll_integration = models.BooleanField(null=True, blank=True)
+    module_wage_validation = models.BooleanField(null=True, blank=True)
+    module_skill_training = models.BooleanField(null=True, blank=True)
+    module_medical_management = models.BooleanField(null=True, blank=True)
+    module_grievance_management = models.BooleanField(null=True, blank=True)
+    module_safety_ehs = models.BooleanField(null=True, blank=True)
+    module_audit_management = models.BooleanField(null=True, blank=True)
+    module_reports_analytics = models.BooleanField(null=True, blank=True)
+
+    # --- Site Contacts (remaining) ---
+    plant_head = models.CharField(max_length=120, blank=True)
+
+    # --- Creation extras ---
+    site_creation_type = models.CharField(max_length=80, blank=True)
+    required_automation = models.CharField(max_length=255, blank=True)
+    assign_color = models.CharField(max_length=20, blank=True)
+
+    # --- Contractor Controls ---
+    contractor_types_allowed = models.CharField(max_length=255, blank=True)
+    maximum_contractors_allowed = models.IntegerField(null=True, blank=True)
+    maximum_workers_at_site = models.IntegerField(null=True, blank=True)
+
+    # --- Safety & Security ---
+    ppe_mandatory = models.BooleanField(null=True, blank=True)
+    types_of_ppe = models.CharField(max_length=255, blank=True)
+    safety_training_required = models.BooleanField(null=True, blank=True)
+    police_verification_required = models.BooleanField(null=True, blank=True)
+    id_card_issuance_required = models.BooleanField(null=True, blank=True)
+
+    # --- Site Documents ---
+    nearest_labour_office = models.CharField(max_length=120, blank=True)
+    site_document_submission_day = models.CharField(max_length=40, blank=True)
+    site_document_reminder_days = models.IntegerField(null=True, blank=True)
+    contractor_upload_restriction = models.BooleanField(null=True, blank=True)
+
+    # --- Approval & Go-Live ---
+    created_by = models.CharField(max_length=120, blank=True)
+    site_admin_review = models.CharField(max_length=40, blank=True)
+    hr_review = models.CharField(max_length=40, blank=True)
+    compliance_review = models.CharField(max_length=40, blank=True)
+    ehs_review = models.CharField(max_length=40, blank=True)
+    principal_employer_approval = models.CharField(max_length=40, blank=True)
+    bss_activation = models.CharField(max_length=40, blank=True)
+    go_live_date = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -37,6 +364,123 @@ class Site(models.Model):
 
     def __str__(self):
         return f"{self.site_code} ({self.site_name})"
+
+
+class SiteGate(models.Model):
+    """Individual gate at a site (Site Detail sheet — Gate & Access Configuration)."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="gates")
+    name = models.CharField(max_length=80, blank=True)
+    gate_type = models.CharField(max_length=40, blank=True)
+    location = models.CharField(max_length=120, blank=True)
+    direction = models.CharField(max_length=40, blank=True)  # Entry/Exit/Both
+    operating_hours = models.CharField(max_length=40, blank=True)
+    qr_access = models.BooleanField(null=True, blank=True)
+    dynamic_qr = models.BooleanField(null=True, blank=True)
+    rfid = models.BooleanField(null=True, blank=True)
+    biometric = models.BooleanField(null=True, blank=True)
+    face_recognition = models.BooleanField(null=True, blank=True)
+    smart_card = models.BooleanField(null=True, blank=True)
+    mobile_access = models.BooleanField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "site_gate"
+
+    def __str__(self):
+        return f"{self.name or 'Gate'} ({self.site_id})"
+
+
+class SiteLicense(models.Model):
+    """Licence held at a site (Site Detail sheet — License Details)."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="licenses")
+    license_name = models.CharField(max_length=120, blank=True)
+    license_status = models.CharField(max_length=40, blank=True)
+    license_date = models.DateField(null=True, blank=True)
+    license_number = models.CharField(max_length=80, blank=True)
+    validity_start_date = models.DateField(null=True, blank=True)
+    validity_end_date = models.DateField(null=True, blank=True)
+    license_cost = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    security_deposit_amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    license_copy = models.CharField(max_length=255, blank=True)
+    amendment_copy = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "site_license"
+
+    def __str__(self):
+        return f"{self.license_name or 'Licence'} ({self.site_id})"
+
+
+class SiteOrder(models.Model):
+    """Work order against a site (Site Detail sheet — Order Details)."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="orders")
+    order_number = models.CharField(max_length=80, blank=True)
+    order_qty = models.CharField(max_length=40, blank=True)  # no. of manpower
+    order_value = models.DecimalField(max_digits=16, decimal_places=2, null=True, blank=True)
+    validity_from = models.DateField(null=True, blank=True)
+    validity_to = models.DateField(null=True, blank=True)
+    order_copy = models.CharField(max_length=255, blank=True)
+    supervisor_name = models.CharField(max_length=120, blank=True)
+    supervisor_number = models.CharField(max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "site_order"
+
+    def __str__(self):
+        return f"{self.order_number or 'Order'} ({self.site_id})"
+
+
+class SiteDocument(models.Model):
+    """Site-level document / licence upload (Site Detail sheet — Documents & Licences)."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="documents")
+    doc_type = models.CharField(max_length=80, blank=True)
+    file_path = models.CharField(max_length=255, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "site_document"
+
+    def __str__(self):
+        return f"{self.doc_type or 'Document'} ({self.site_id})"
+
+
+class SiteClraRegistration(models.Model):
+    """Contract Labour (Regulation & Abolition) Act registration for a site."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="clra_registrations")
+    clra_registration_no = models.CharField(max_length=80, blank=True)
+    pe_registration_number = models.CharField(max_length=80, blank=True)
+    issuing_authority = models.CharField(max_length=120, blank=True)
+    maximum_contract_workers = models.IntegerField(null=True, blank=True)
+    validity_from = models.DateField(null=True, blank=True)
+    validity_to = models.DateField(null=True, blank=True)
+    rc_copy = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "site_clra_registration"
+
+    def __str__(self):
+        return f"CLRA {self.clra_registration_no or ''} ({self.site_id})"
+
+
+class SiteBocwRegistration(models.Model):
+    """BOCW (Building & Other Construction Workers) registration for a site."""
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="bocw_registrations")
+    bocw_registration_no = models.CharField(max_length=80, blank=True)
+    issuing_authority = models.CharField(max_length=120, blank=True)
+    maximum_workers = models.IntegerField(null=True, blank=True)
+    validity_from = models.DateField(null=True, blank=True)
+    validity_to = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "site_bocw_registration"
+
+    def __str__(self):
+        return f"BOCW {self.bocw_registration_no or ''} ({self.site_id})"
 
 
 class WorkerContractorBinding(models.Model):

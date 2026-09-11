@@ -1,5 +1,5 @@
 """Core identity & profile models mirroring FINAL/Db schema (app_role, users,
-user_credentials, contractor/employer/government/bss_staff/it profiles)."""
+user_credentials, contractor/employer/government/bss_staff profiles)."""
 
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
@@ -21,7 +21,7 @@ class AppRole(models.Model):
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, username, password=None, role="public", **extra):
+    def create_user(self, username, password=None, role="worker", **extra):
         user = self.model(username=username, role=role, **extra)
         if password:
             user.set_password(password)
@@ -29,7 +29,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, password=None, **extra):
-        return self.create_user(username, password=password, role="bss_super_admin",
+        return self.create_user(username, password=password, role="bss_admin",
                                 account_active=True, is_verified=True, is_staff=True,
                                 is_superuser=True, **extra)
 
@@ -42,19 +42,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     the role field scopes what the user can see/do (RBAC)."""
 
     ROLE_CHOICES = [
-        ("public", "Public"),
         ("worker", "Worker"),
         ("contractor", "Contractor"),
         ("employer", "Employer"),
-        ("government_inspector", "Government Inspector"),
-        ("government_admin", "Government Admin"),
+        ("government", "Government"),
         ("bss_staff", "BSS Staff"),
-        ("it_task_force", "IT Task Force"),
-        ("bss_super_admin", "BSS Super Admin"),
+        ("bss_admin", "BSS Admin"),
     ]
 
     username = models.CharField("Login", max_length=150, unique=True)
-    role = models.CharField(max_length=40, choices=ROLE_CHOICES, default="public", db_index=True)
+    role = models.CharField(max_length=40, choices=ROLE_CHOICES, default="worker", db_index=True)
     account_active = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -99,6 +96,39 @@ class ContractorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="contractor_profile")
     contractor_name = models.CharField(max_length=120, blank=True)
     contractor_code = models.CharField(max_length=40, blank=True)
+    trade_name = models.CharField(max_length=120, blank=True)
+    constitution = models.CharField(max_length=80, blank=True)
+    entity_type = models.CharField(max_length=80, blank=True)
+    cin = models.CharField(max_length=40, blank=True)
+    roc = models.CharField(max_length=80, blank=True)
+    registration_number = models.CharField(max_length=80, blank=True)
+    nic_code = models.CharField(max_length=20, blank=True)
+    category_name = models.CharField(max_length=80, blank=True)
+    sub_category = models.CharField(max_length=80, blank=True)
+    entity_class = models.CharField(max_length=80, blank=True)
+    activity = models.CharField(max_length=160, blank=True)
+    company_age = models.CharField(max_length=20, blank=True)
+    members_count = models.IntegerField(null=True, blank=True)
+    authorized_capital = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    paid_up_capital = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    incorporation_date = models.DateField(null=True, blank=True)
+    agm_date = models.DateField(null=True, blank=True)
+    balance_sheet_date = models.DateField(null=True, blank=True)
+    udyam_no = models.CharField(max_length=40, blank=True)
+    labour_dept_reg_no = models.CharField(max_length=80, blank=True)
+    clra_licence_no = models.CharField(max_length=80, blank=True)
+    bocw_reg_no = models.CharField(max_length=80, blank=True)
+    licence_valid_from = models.DateField(null=True, blank=True)
+    licence_valid_to = models.DateField(null=True, blank=True)
+    operating_states = models.CharField(max_length=255, blank=True)
+    onboarding_method = models.CharField(max_length=40, blank=True)
+    attendance_method = models.CharField(max_length=40, blank=True)
+    payroll_method = models.CharField(max_length=40, blank=True)
+    consent_date = models.DateField(null=True, blank=True)
+    registration_source = models.CharField(max_length=80, blank=True)
+    registered_by = models.CharField(max_length=120, blank=True)
+    risk_rating = models.CharField(max_length=20, blank=True)
+    is_verified_badge = models.BooleanField(default=False)
     contact_person = models.CharField(max_length=120, blank=True)
     mobile = models.CharField(max_length=20, blank=True)
     email = models.EmailField(max_length=120, blank=True)
@@ -120,10 +150,65 @@ class ContractorProfile(models.Model):
 
 class EmployerProfile(models.Model):
     APPROVAL = [("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")]
+    FREQ = [("WEEKLY", "Weekly"), ("MONTHLY", "Monthly"), ("FORTNIGHTLY", "Fortnightly")]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employer_profile")
     employer_name = models.CharField(max_length=120, blank=True)
     employer_code = models.CharField(max_length=40, blank=True)
+    employer_category = models.CharField(max_length=80, blank=True)
+    trade_name = models.CharField(max_length=120, blank=True)
+    ownership = models.CharField(max_length=80, blank=True)
+    cin = models.CharField(max_length=40, blank=True)
+    roc = models.CharField(max_length=80, blank=True)
+    registration_number = models.CharField(max_length=80, blank=True)
+    entity_class = models.CharField(max_length=80, blank=True)
+    nic_code = models.CharField(max_length=20, blank=True)
+    members_count = models.IntegerField(null=True, blank=True)
+    authorized_capital = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    paid_up_capital = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    incorporation_date = models.DateField(null=True, blank=True)
+    agm_date = models.DateField(null=True, blank=True)
+    balance_sheet_date = models.DateField(null=True, blank=True)
+    corporate_website = models.CharField(max_length=160, blank=True)
+    verification_status = models.CharField(max_length=20, default="PENDING")
+    verification_date = models.DateField(null=True, blank=True)
+    verification_source = models.CharField(max_length=80, blank=True)
+    pan_verification_status = models.CharField(max_length=20, default="PENDING")
+    gst_verification_status = models.CharField(max_length=20, default="PENDING")
+    workforce_model = models.CharField(max_length=60, blank=True)
+    total_headcount = models.IntegerField(null=True, blank=True)
+    payroll_frequency = models.CharField(max_length=20, choices=FREQ, default="MONTHLY")
+    wage_period = models.CharField(max_length=40, blank=True)
+    attendance_method = models.CharField(max_length=40, blank=True)
+    onboarding_method = models.CharField(max_length=40, blank=True)
+    min_wage_mapping = models.CharField(max_length=80, blank=True)
+    pf_coverage = models.BooleanField(default=True)
+    esic_coverage = models.BooleanField(default=True)
+    gratuity_coverage = models.BooleanField(default=True)
+    lwf_coverage = models.BooleanField(default=False)
+    medical_insurance = models.BooleanField(default=False)
+    accident_insurance = models.BooleanField(default=False)
+    oth_enabled = models.BooleanField(default=False)
+    medical_exam_enabled = models.BooleanField(default=False)
+    first_aid_enabled = models.BooleanField(default=True)
+    ppe_provision = models.BooleanField(default=True)
+    safety_training_enabled = models.BooleanField(default=True)
+    site_induction_enabled = models.BooleanField(default=True)
+    emergency_plan_enabled = models.BooleanField(default=True)
+    fire_certificate = models.BooleanField(default=False)
+    canteen_facility = models.BooleanField(default=False)
+    creche_facility = models.BooleanField(default=False)
+    transport_facility = models.BooleanField(default=False)
+    accommodation_facility = models.BooleanField(default=False)
+    grievance_mechanism = models.BooleanField(default=True)
+    grievance_officer_name = models.CharField(max_length=120, blank=True)
+    posh_icc = models.BooleanField(default=False)
+    standing_orders = models.BooleanField(default=False)
+    communication_channel = models.CharField(max_length=80, blank=True)
+    default_approval_sla_days = models.SmallIntegerField(default=3)
+    compliance_reminder_window_days = models.SmallIntegerField(default=7)
+    preferred_reporting_period = models.CharField(max_length=40, blank=True)
+    escalation_contact = models.CharField(max_length=120, blank=True)
     contact_person = models.CharField(max_length=120, blank=True)
     mobile = models.CharField(max_length=20, blank=True)
     email = models.EmailField(max_length=120, blank=True)
@@ -172,22 +257,6 @@ class BssStaffProfile(models.Model):
 
     class Meta:
         db_table = "bss_staff_profile"
-
-    def __str__(self):
-        return self.full_name or str(self.user_id)
-
-
-class ItTaskForceProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="it_profile")
-    employee_code = models.CharField(max_length=40, blank=True)
-    full_name = models.CharField(max_length=120, blank=True)
-    department = models.CharField(max_length=80, blank=True)
-    designation = models.CharField(max_length=80, blank=True)
-    mobile = models.CharField(max_length=20, blank=True)
-    email = models.EmailField(max_length=120, blank=True)
-
-    class Meta:
-        db_table = "it_profile"
 
     def __str__(self):
         return self.full_name or str(self.user_id)

@@ -1,0 +1,161 @@
+﻿section,field,required,owner,Post-Audit Status,Evidence
+A. Employer Identity & Legal Details,BSS Employer ID,System,System genetrated,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Registration Status,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Employer Category,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Legal Entity Name,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Trade / Brand Name,No,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Organisation Type,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Ownership Type,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,CIN / LLPIN / Registration No.,Conditional,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Company Name,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Listed on Stock Exchange,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Company Status,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,ROC,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Registration Number,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Company Category,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Company Sub Category,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Class of Company,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Date of Incorporation,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Age of Company,If applicable,System,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Activity,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,NIC Code,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,NIC Description,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Number of Members,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Date of Last Annual General Meeting,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Date of Last Filed Balance Sheet,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Authorised Share Capital,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Paid-up Share Capital,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,DIN,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Director Name,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Designation,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Appointment Date,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Cessation,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Cessation Date,If applicable,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Date of Incorporation / Constitution,Conditional,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,PAN,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,GSTIN,Conditional,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,TAN,Conditional,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Registered Office Address,Yes,Employer,PRESENT & VERIFIED,demodata
+A. Employer Identity & Legal Details,Corporate Website,No,Employer,PRESENT & VERIFIED,demodata
+B. Business & Industry Classification,Industry / Sector,Yes,Employer,PRESENT & VERIFIED,demodata
+B. Business & Industry Classification,Industry,Yes,Employer,PRESENT & VERIFIED,demodata
+B. Business & Industry Classification,NIC Code,Conditional,Employer,PRESENT & VERIFIED,demodata
+B. Business & Industry Classification,Nature of Business / Activity,Yes,Employer,PRESENT & VERIFIED,demodata
+B. Business & Industry Classification,Major Products / Services,No,Employer,PRESENT & VERIFIED,demodata
+B. Business & Industry Classification,Operational Footprint,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Authorised Signatory Name,Yes,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Designation,Yes,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Official Email,Yes,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Official Mobile,Yes,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,HR / Workforce Head,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,HR Email,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Compliance Officer,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Compliance Email,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Medical Officer,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Medical Email,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Saftey officer,No,Employer,PRESENT & VERIFIED,demodata
+C. Authorised Contacts,Saftey Email,No,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,Registered Address Line 1,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,Registered Address Line 2,No,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,City,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,District,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,State,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,PIN Code,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,Country,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,Correspondence Address Same as Registered,Yes,Employer,PRESENT & VERIFIED,demodata
+D. Registered & Correspondence Address,Correspondence Address,Conditional,Employer,PRESENT & VERIFIED,demodata
+E. Verification & KYC,Identity Verification Status,Yes,Employer,PRESENT & VERIFIED,demodata
+E. Verification & KYC,Verification Date,No,Employer,PRESENT & VERIFIED,demodata
+E. Verification & KYC,Verification Source,No,Employer,PRESENT & VERIFIED,demodata
+E. Verification & KYC,PAN Verification Status,No,Employer,PRESENT & VERIFIED,demodata
+E. Verification & KYC,GST Verification Status,No,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",EPFO Establishment ID,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",ESIC Employer Code,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",Shops & Establishment Registration,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",Factory Licence,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",Contract Labour Registration,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",BOCW Registration,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",Professional Tax Registration,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",LWF Registration,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",Apprenticeship Establishment ID,Conditional,Employer,PRESENT & VERIFIED,demodata
+"F. Labour, Statutory & Regulatory Registrations",Other Regulatory Registration(s),No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Workforce Model,Yes,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Total Direct Workers,No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Total Contract Workers,No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Total Fixed-Term / Temporary,No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Total Apprentices / Trainees,No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Total Gig / Platform Workers,No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Total Workers – Current,No,Employer,PRESENT & VERIFIED,demodata
+G. Workforce Profile,Worker Categories Engaged,Yes,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Employment Types Used,Yes,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Payroll Frequency,Yes,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Wage Period,Yes,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Attendance Method,Yes,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Worker Onboarding Method,Yes,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Minimum Wage Mapping,Conditional,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Overtime Applicable,Conditional,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Bonus Applicable,Conditional,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Gratuity Applicable,Conditional,Employer,PRESENT & VERIFIED,demodata
+"H. Employment, Payroll & Wage Practices",Salary / Wage Structure Available,Yes,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,PF Coverage,Conditional,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,ESIC Coverage,Conditional,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,Gratuity Coverage,Conditional,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,LWF Coverage,Conditional,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,Group Medical Insurance,No,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,Accident Insurance,No,Employer,PRESENT & VERIFIED,demodata
+I. Social Security & Worker Benefits,Other Worker Benefits,No,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Occupational Health Facility,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Medical Examination Process,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",First Aid Facility,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",PPE Management,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Safety Training,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Site Induction,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Emergency Response Plan,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Fire Safety Certificate,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Canteen Facility,No,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Creche Facility,Conditional,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Transport Facility,No,Employer,PRESENT & VERIFIED,demodata
+"J. Safety, Health & Welfare",Accommodation / Camp Facility,No,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Contractor Engagement,Yes,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Number of Active Contractors,No,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Contractor Verification Required,Yes,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Contractor Onboarding via BSS QR,Yes,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Contractor Compliance Monitoring,Yes,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Contractor Worker Deployment Tracking,Yes,Employer,PRESENT & VERIFIED,demodata
+K. Contractor Management,Contractor Attendance Integration,No,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",Number of Establishments,No,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",Number of Active Sites,No,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",Site Registration in BSS,Yes,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",Site QR Generated,Yes,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",QR Worker Onboarding Enabled,Yes,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",QR Attendance Enabled,Yes,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",Gate Pass / Access Control,No,Employer,PRESENT & VERIFIED,demodata
+"L. Establishments, Sites & Workplace QR",Emergency QR / SOS,No,Employer,PRESENT & VERIFIED,demodata
+"M. Worker Relations, Grievance & Governance",Worker Grievance Mechanism,Yes,Employer,PRESENT & VERIFIED,demodata
+"M. Worker Relations, Grievance & Governance",Grievance Officer,Conditional,Employer,PRESENT & VERIFIED,demodata
+"M. Worker Relations, Grievance & Governance",Internal Complaints Committee / POSH,Conditional,Employer,PRESENT & VERIFIED,demodata
+"M. Worker Relations, Grievance & Governance",Standing Orders / Service Rules,Conditional,Employer,PRESENT & VERIFIED,demodata
+"M. Worker Relations, Grievance & Governance",Worker Communication Channel,No,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Privacy Policy,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Consent Management,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Role-Based Access Control,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Audit Trail,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Encryption at Rest,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Encryption in Transit,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",MFA for Admin Users,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Incident Response Process,Yes,Employer,PRESENT & VERIFIED,demodata
+"N. Data Privacy, Security & BSS Governance",Data Retention Policy,Yes,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,BSS API Integration Required,Yes,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,API Setu Integration,Conditional,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,DigiLocker Integration,Conditional,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,HRMS Integration,No,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,Payroll Integration,No,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,Attendance Integration,No,Employer,PRESENT & VERIFIED,demodata
+O. Digital Integration,SSO Integration,No,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Information Accurate,Yes,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Authorised Representative Confirmation,Yes,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Terms & Conditions Accepted,Yes,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Privacy Policy Accepted,Yes,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Consent for Verification,Conditional,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Registration Date,System,Employer,PRESENT & VERIFIED,demodata
+P. Declaration & Authorisation,Last Updated,System,Employer,PRESENT & VERIFIED,demodata

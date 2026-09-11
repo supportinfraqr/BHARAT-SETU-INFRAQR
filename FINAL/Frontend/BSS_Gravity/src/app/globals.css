@@ -1,0 +1,522 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bss-navy: #073B67;
+  --color-bss-deep-navy: #062D4F;
+  --color-bss-interactive-blue: #155E95;
+  --color-bss-orange: #F47A32;
+  --color-bss-soft-orange: #FFF4EC;
+  --color-bss-green: #2F9E67;
+  --color-bss-soft-green: #EDF8F2;
+  
+  --color-bss-bg: #F6F8FB;
+  --color-bss-card: #FFFFFF;
+  --color-bss-surface: #F1F5F8;
+  --color-bss-blue-tint: #EEF5FA;
+  
+  --color-bss-text-primary: #15212B;
+  --color-bss-text-secondary: #5D6975;
+  --color-bss-text-muted: #87929C;
+  
+  --color-bss-border: #E2E8EE;
+  
+  --color-bss-success: #2F9E67;
+  --color-bss-warning: #F47A32;
+  --color-bss-error: #D64545;
+  --color-bss-info: #155E95;
+  
+  --font-sans: "Noto Sans", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif;
+}
+
+:root {
+  --background: #F6F8FB;
+  --foreground: #15212B;
+  --bss-header-height: 3.5rem;
+}
+
+html {
+  min-width: 320px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--bss-header-height) + 1rem);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+button,
+a,
+select,
+label,
+summary,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+[role="checkbox"],
+[role="switch"],
+[onclick],
+.cursor-pointer {
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"],
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(21, 94, 149, 0.28);
+  outline-offset: 2px;
+}
+
+html.bss-large-text { font-size: 18px; }
+html.bss-high-contrast { --foreground: #000; --color-bss-text-secondary: #26313a; --color-bss-border: #aab4bd; }
+html.bss-high-contrast body { color: #000; }
+html.bss-high-contrast .border-gray-200 { border-color: #aab4bd; }
+html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* 3D Flip Utilities */
+.perspective-1000 {
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+.preserve-3d {
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+/* Keep 3D content GPU-composited so WebKit doesn't flatten/blur the flip. */
+.bss-flip-card {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+.bss-flip-card > [data-bss-face] {
+  will-change: transform, opacity;
+  transition: opacity 0.4s ease;
+}
+.rotate-y-180 {
+  -webkit-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+/* iOS safe-area helpers for full-bleed (viewport-fit=cover) layouts. */
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+.pb-safe-lg {
+  padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem));
+}
+
+/* Shared portal shell. Desktop navigation deliberately starts above iPad widths. */
+.bss-shell {
+  min-height: 100dvh;
+  /* Cool, airy blue-white wash instead of flat gray — reads premium on any portal. */
+  background: linear-gradient(180deg, #FBFDFF 0%, #F3F7FB 100%);
+  background-attachment: fixed;
+}
+
+.bss-shell-header {
+  padding-top: env(safe-area-inset-top);
+}
+
+.bss-shell-bar {
+  min-height: var(--bss-header-height);
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.bss-mobile-trigger {
+  display: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+}
+
+.bss-mobile-trigger:hover {
+  background: #f1f5f9;
+}
+
+.bss-mobile-menu {
+  top: calc(var(--bss-header-height) + env(safe-area-inset-top));
+  max-height: calc(100dvh - var(--bss-header-height) - env(safe-area-inset-top));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+.bss-mobile-menu a,
+.bss-mobile-menu button {
+  min-height: 2.75rem;
+}
+
+.bss-app-main {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 1180px) {
+  .bss-desktop-nav {
+    display: none !important;
+  }
+
+  .bss-mobile-trigger {
+    display: inline-flex !important;
+  }
+}
+
+@media (min-width: 1181px) {
+  .bss-desktop-nav {
+    display: flex !important;
+  }
+
+  .bss-mobile-trigger {
+    display: none !important;
+  }
+
+  .bss-mobile-menu {
+    display: none !important;
+  }
+}
+
+/* Dashboard primitives keep tiles aligned across every role. */
+.bss-kpi-grid,
+.bss-equal-grid {
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+}
+
+.bss-kpi-grid > *,
+.bss-equal-grid > * {
+  height: 100%;
+  min-width: 0;
+}
+
+.bss-kpi-card {
+  min-height: 7.5rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.bss-kpi-card strong {
+  display: block;
+  margin-top: auto;
+  padding-top: 0.625rem;
+  color: #0f172a;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.bss-kpi-card p {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.bss-kpi-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  display: grid;
+  place-items: center;
+}
+
+.bss-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bss-eyebrow {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bss-page-title {
+  color: #020617;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.bss-page-description {
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-top: 0.35rem;
+}
+
+.bss-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  color: #15803d;
+  background: #f0fdf4;
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bss-panel {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+}
+
+.bss-panel-header {
+  min-height: 4.25rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bss-panel-header h2 {
+  color: #0f172a;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.bss-panel-header p {
+  color: #94a3b8;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  margin-top: 0.15rem;
+}
+
+.bss-primary-action,
+.bss-secondary-action,
+.bss-compact-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.625rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bss-primary-action,
+.bss-secondary-action {
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.bss-primary-action {
+  background: #0f172a;
+  color: #fff;
+}
+
+.bss-secondary-action,
+.bss-compact-action {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+}
+
+.bss-compact-action {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.bss-primary-action:disabled,
+.bss-secondary-action:disabled,
+.bss-compact-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bss-input,
+.bss-select {
+  width: 100%;
+  height: 2.75rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 0.625rem;
+  background: #fff;
+  color: #1e293b;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.bss-alert {
+  border: 1px solid;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.bss-alert-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.bss-alert-success {
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.bss-scroll-region {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+[role="dialog"] {
+  max-height: calc(100dvh - max(2rem, env(safe-area-inset-top)) - max(2rem, env(safe-area-inset-bottom)));
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 639px) {
+  .bss-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bss-page-header > .bss-primary-action,
+  .bss-page-header > .bss-secondary-action {
+    width: 100%;
+  }
+
+  .bss-panel-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 0.9rem 1rem;
+  }
+
+  .bss-kpi-card {
+    min-height: 6.75rem;
+  }
+
+  [role="dialog"] {
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-radius: 1rem 1rem 0 0 !important;
+    margin-top: auto;
+  }
+}
+
+@media (max-width: 374px) {
+  .bss-kpi-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .bss-app-main {
+    padding-top: 1rem !important;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  }
+
+  .bss-mobile-menu {
+    padding-top: 0.5rem;
+  }
+
+  [role="dialog"] {
+    max-height: calc(100dvh - 1rem);
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   UX polish — route content fade (subtle, 180ms) + motion
+   accessibility. The app shell/header stays stable; only the
+   changing content region fades in on navigation.
+───────────────────────────────────────────────────────────── */
+.bss-content-fade {
+  animation: bssContentIn 0.18s ease-out both;
+}
+@keyframes bssContentIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Restrained micro-interactions for enterprise controls */
+.bss-interactive {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.bss-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Respect reduced-motion preferences — remove transitions/animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .bss-content-fade { animation: none !important; }
+}
+/* Every interactive control on the worker portal gets the hand cursor — the
+   page is 65% toggles/selects/revoke-buttons and browsers stopped defaulting
+   them to `cursor:pointer` years ago, so they all felt dead. */
+button:not([disabled]),
+a,
+label,
+select,
+input[type="range"],
+[role="button"] {
+  cursor: pointer;
+}

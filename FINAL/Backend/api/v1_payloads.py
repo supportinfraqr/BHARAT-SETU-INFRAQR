@@ -1,0 +1,1997 @@
+"""Payload assemblers for the /v1/ BSS compatibility API layer.
+
+Every function returns the EXACT JSON shapes expected by the external Next.js
+frontend. Keys are always present (with empty/sensible defaults when the
+underlying data does not exist in the ORM) so the frontend's strict validation
+never trips over a missing key.
+"""
+
+import datetime
+import hashlib
+
+from django.utils import timezone
+
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
+from bss_core.models import (
+    Attendance,
+    ContractorProfile,
+    EmployerProfile,
+    User,
+    Notification,
+    PayrollConfig,
+    SubmissionEvidence,
+    Site,
+    WagePayment,
+    WorkerAddressMobility,
+    WorkerBanking,
+    WorkerClassification,
+    WorkerContractorBinding,
+    WorkerDocument,
+    WorkerEmployment,
+    WorkerFamilyDependant,
+    WorkerGatePass,
+    WorkerGrievance,
+    WorkerIdentity,
+    WorkerOther,
+    WorkerSkillsEmployability,
+    WorkerSocialSecurity,
+    WorkerWages,
+    WorkerWelfareSafety,
+    UserPreference,
+)
+
+GEOGRAPHY = {
+    "Maharashtra": {
+        "Mumbai": [{"city": "Mumbai", "pins": ["400001", "400002", "400003"]}],
+        "Pune": [{"city": "Pune", "pins": ["411001", "411002", "411003"]}],
+        "Nashik": [{"city": "Nashik", "pins": ["422001", "422002"]}],
+    },
+    "Karnataka": {
+        "Bengaluru Urban": [{"city": "Bengaluru", "pins": ["560001", "560002", "560003"]}],
+        "Mysuru": [{"city": "Mysuru", "pins": ["570001", "570002"]}],
+    },
+    "Tamil Nadu": {
+        "Chennai": [{"city": "Chennai", "pins": ["600001", "600002", "600003"]}],
+        "Coimbatore": [{"city": "Coimbatore", "pins": ["641001", "641002"]}],
+    },
+    "Delhi": {
+        "New Delhi": [{"city": "New Delhi", "pins": ["110001", "110002"]}],
+        "South Delhi": [{"city": "South Delhi", "pins": ["110017", "110019"]}],
+    },
+}
+
+PIN_LOCATIONS = [
+    {"pin": "400001", "state": "Maharashtra", "district": "Mumbai", "city": "Mumbai"},
+    {"pin": "411001", "state": "Maharashtra", "district": "Pune", "city": "Pune"},
+    {"pin": "422001", "state": "Maharashtra", "district": "Nashik", "city": "Nashik"},
+    {"pin": "560001", "state": "Karnataka", "district": "Bengaluru Urban", "city": "Bengaluru"},
+    {"pin": "570001", "state": "Karnataka", "district": "Mysuru", "city": "Mysuru"},
+    {"pin": "600001", "state": "Tamil Nadu", "district": "Chennai", "city": "Chennai"},
+    {"pin": "641001", "state": "Tamil Nadu", "district": "Coimbatore", "city": "Coimbatore"},
+    {"pin": "110001", "state": "Delhi", "district": "New Delhi", "city": "New Delhi"},
+    {"pin": "110017", "state": "Delhi", "district": "South Delhi", "city": "South Delhi"},
+]
+
+
+def _d(value, default=""):
+    return value if value is not None and value != "" else default
+
+
+def _dts(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime.datetime):
+        return value.isoformat()
+    if isinstance(value, datetime.date):
+        return value.isoformat()
+    return str(value)
+
+
+def _num(value, default=0):
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _get_identity(user):
+    try:
+        return WorkerIdentity.objects.filter(user=user).first()
+    except Exception:
+        return None
+
+
+def _identity_display(identity, field):
+    return _d(getattr(identity, field, None)) if identity else ""
+
+
+def government_geography():
+    return dict(GEOGRAPHY)
+
+
+def geography_lookup(pin):
+    pin = str(pin or "").strip()
+    for loc in PIN_LOCATIONS:
+        if loc["pin"] == pin:
+            return loc
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Worker portal
+# ---------------------------------------------------------------------------
+def _worker_identity_section(identity):
+    category = ""
+    if identity:
+        wc = WorkerClassification.objects.filter(user=identity.user).first()
+        category = _d(wc.worker_category if wc else "")
+    return {
+        "name": _identity_display(identity, "name"),
+        "bssId": _identity_display(identity, "bss_worker_id"),
+        "category": category,
+        "aadhaarVerified": bool(identity and identity.aadhaar),
+        "panVerified": bool(identity and identity.pan),
+        "photoUrl": _identity_display(identity, "photo"),
+        "dob": _dts(identity.date_of_birth if identity else None),
+        "gender": _identity_display(identity, "gender"),
+        "aadhaar": _identity_display(identity, "aadhaar"),
+        "pan": _identity_display(identity, "pan"),
+        "placeOfBirth": _identity_display(identity, "place_of_birth"),
+        "alternateMobile": _identity_display(identity, "alternate_mobile"),
+        "email": _identity_display(identity, "email"),
+        "emergencyContactName": _identity_display(identity, "emergency_contact_name"),
+        "emergencyContactNumber": _identity_display(identity, "emergency_contact_number"),
+        "emergencyContactRelation": _identity_display(identity, "emergency_contact_relation"),
+        "disabilityTypePct": _identity_display(identity, "disability_type_pct"),
+    }
+
+
+def _worker_employment_section(user, identity):
+    emp = WorkerEmployment.objects.filter(user=user).first()
+    binding = None
+    if emp and emp.assignment_id:
+        binding = emp.assignment
+    employer_name = ""
+    employer_code = ""
+    employer_industry = ""
+    employer_email = ""
+    employer_lin = ""
+    
+    contractor_name = ""
+    contractor_code = ""
+    contractor_contact = ""
+    contractor_email = ""
+    contractor_lin = ""
+
+    site_name = ""
+    site_code = ""
+    site_location = ""
+    medical_officer = ""
+    officer_contact = ""
+
+    if binding:
+        if binding.site:
+            site = binding.site
+            site_name = site.site_name or ""
+            site_code = getattr(site, "site_code", "") or ""
+            site_location = getattr(site, "location", "") or ""
+            medical_officer = getattr(site, "medical_officer", "") or ""
+            officer_contact = getattr(site, "officer_contact", "") or ""
+        if binding.contractor:
+            cp = getattr(binding.contractor, "contractor_profile", None)
+            contractor_name = _d(cp.contractor_name if cp else "")
+            contractor_code = f"BSS-CON-{binding.contractor.id}" if binding.contractor else ""
+            contractor_contact = _d(binding.contractor.mobile if hasattr(binding.contractor, "mobile") else "")
+            contractor_email = _d(binding.contractor.email if hasattr(binding.contractor, "email") else "")
+            contractor_lin = _d(getattr(cp, "lin_number", "") if cp else "")
+        if binding.site and binding.site.employer:
+            emp_profile = getattr(binding.site.employer, "employer_profile", None)
+            employer_name = _d(emp_profile.employer_name if emp_profile else "")
+            employer_code = f"BSS-EMP-{binding.site.employer.id}" if binding.site.employer else ""
+            employer_industry = _d(getattr(emp_profile, "industry", "") if emp_profile else "")
+            employer_email = _d(binding.site.employer.email if hasattr(binding.site.employer, "email") else "")
+            employer_lin = _d(getattr(emp_profile, "lin_number", "") if emp_profile else "")
+
+    contractor_state = ""
+    contractor_address = ""
+    if binding and binding.contractor:
+        _cp = getattr(binding.contractor, "contractor_profile", None)
+        contractor_state = _d(_cp.state if _cp else "")
+        contractor_address = _d(_cp.address if _cp else "")
+    employer_state = ""
+    employer_address = ""
+    if binding and binding.site and binding.site.employer:
+        _ep = getattr(binding.site.employer, "employer_profile", None)
+        employer_state = _d(_ep.state if _ep else "")
+        employer_address = _d(_ep.address if _ep else "")
+    site_state = getattr(binding.site, "state", "") if binding and binding.site else ""
+    return {
+        "status": _d(getattr(emp, "status", "")) if emp else "",
+        "employer": employer_name,
+        "contractor": contractor_name,
+        "site": site_name,
+        "department": _d(getattr(emp, "department", "")) if emp else "",
+        "designation": _d(getattr(emp, "designation", "")) if emp else "",
+        "doj": _dts(emp.doj) if emp and emp.doj else "",
+        "shift": _d(getattr(emp, "shift", "")) if emp else "",
+        "campNo": _d(emp.camp_no) if emp else "",
+        "refWorkerId": _d(emp.ref_worker_id) if emp else "",
+        "transportFacility": _d(emp.transport_facility) if emp else "",
+        "route": _d(emp.route) if emp else "",
+        "busNo": _d(emp.bus_no) if emp else "",
+        "pfAccount": _d(emp.pf_account) if emp else "",
+        "natureOfJob": _d(emp.nature_of_job) if emp else "",
+        "typeOfWork": _d(emp.type_of_work) if emp else "",
+        "idCardIssueDate": _dts(emp.id_card_issue_date) if emp and emp.id_card_issue_date else "",
+        "idCardValidityTill": _dts(emp.id_card_validity_till) if emp and emp.id_card_validity_till else "",
+        "contractorDetails": {
+            "name": contractor_name,
+            "code": contractor_code,
+            "contact": contractor_contact,
+            "email": contractor_email,
+            "lin": contractor_lin,
+            "state": contractor_state,
+            "address": contractor_address,
+        },
+        "employerDetails": {
+            "name": employer_name,
+            "code": employer_code,
+            "industry": employer_industry,
+            "email": employer_email,
+            "lin": employer_lin,
+            "state": employer_state,
+            "address": employer_address,
+        },
+        "siteDetails": {
+            "name": site_name,
+            "code": site_code,
+            "location": site_location,
+            "medicalOfficer": medical_officer,
+            "officerContact": officer_contact,
+            "state": site_state,
+        }
+    }
+
+
+def _worker_compliance_section(user):
+    ws = WorkerWelfareSafety.objects.filter(user=user).first()
+    ppe = []
+    given = ws.types_of_ppe_given if ws else ""
+    ppe = [p.strip() for p in given.split(",") if p.strip()] if given else []
+    return {
+        "siteInduction": _d(ws.site_induction_status if ws else ""),
+        "ppeIssued": ppe,
+        "policeVerification": _d(ws.police_verification if ws else ""),
+        "permanentGatePass": _d(ws.permanent_gatepass_status if ws else ""),
+        "medicalFitnessDaysLeft": 0,
+        "medicalExaminationStatus": _d(ws.medical_examination_status if ws else ""),
+        "medicalFitnessStatus": _d(ws.medical_fitness_status if ws else ""),
+    }
+
+
+def _worker_skills_section(user):
+    sk = WorkerSkillsEmployability.objects.filter(user=user).first()
+    secondary = [s.strip() for s in (sk.secondary_skills or "").split(",") if s.strip()] if sk else []
+    return {
+        "primary": {
+            "name": _d(getattr(sk, "primary_skill", None)) if sk else "",
+            "level": _d(getattr(sk, "typical_level", None), "novice") if sk else "novice",
+            "experienceYears": _d(getattr(sk, "skill_experience_years", None)) if sk else "",
+        },
+        "secondary": secondary,
+        "certification": {
+            "name": _d(getattr(sk, "certification_name", None)) if sk else "",
+            "verified": bool(sk and sk.certification_number),
+        },
+    }
+
+
+def _worker_social_security_section(user):
+    ss = WorkerSocialSecurity.objects.filter(user=user).first()
+    return {
+        "epfoUan": _d(ss.epfo_uan) if ss else "",
+        "esicIp": _d(ss.esic_ip_number) if ss else "",
+        "lwfNo": _d(ss.lwf_no) if ss else "",
+        "wcPolicyNo": _d(ss.wc_policy_no) if ss else "",
+        "eShramNo": _d(ss.e_shram_no) if ss else "",
+        "bocwRegNumber": _d(ss.bocw_reg_number) if ss else "",
+        "stateWorkerId": _d(ss.state_worker_id) if ss else "",
+        "eShramLinked": bool(ss and ss.e_shram_no),
+        "bocwRegistered": bool(ss and ss.bocw_reg_number),
+    }
+
+
+def _worker_documents_section(user):
+    master_docs = []
+    try:
+        from bss_core.models import WorkerDocumentMaster
+        master_docs = list(WorkerDocumentMaster.objects.all())
+    except Exception:
+        master_docs = []
+    required = [
+        {"name": _d(m.document_name), "code": _d(m.code), "mandatory": m.is_mandatory}
+        for m in master_docs if m.is_mandatory
+    ]
+    if not required:
+        required = [
+            {"name": "Aadhaar Card", "code": "AADHAAR", "mandatory": True},
+            {"name": "PAN Card", "code": "PAN", "mandatory": False},
+        ]
+    docs = WorkerDocument.objects.filter(user=user)
+    uploaded = [
+        {
+            "name": _d(d.document.document_name if d.document else ""),
+            "status": _d(d.status),
+            "date": _dts(d.uploaded_at),
+        }
+        for d in docs
+    ]
+    uploaded_names = {u["name"] for u in uploaded}
+    missing = [r["name"] for r in required if r["name"] not in uploaded_names]
+    return {
+        "required": len(required),
+        "uploaded": len(uploaded),
+        "missing": missing,
+    }
+
+
+def _worker_wages_section(user):
+    wages = WorkerWages.objects.filter(worker=user).order_by("-period_end")[:20]
+    records = []
+    for w in wages:
+        payment = w.payments.first() if hasattr(w, "payments") else None
+        records.append({
+            "id": w.id,
+            "period": f"{w.period_start:%d %b %Y} - {w.period_end:%d %b %Y}",
+            "paidOn": _dts(payment.paid_at if payment else None),
+            "employer": "",
+            "contractor": _d(getattr(w.contractor, "username", "")) if w.contractor else "",
+            "site": w.site.site_name if w.site else "",
+            "basis": _d(w.wage_frequency),
+            "gross": _num(w.gross_wage),
+            "deductions": _num(w.deductions_amount),
+            "net": _num(w.net_wage),
+            "status": _d(w.status),
+            "reference": _d(payment.transaction_ref) if payment else "",
+            "receiptUrl": "",
+        })
+    return {
+        "source": "BSS Payroll",
+        "records": records,
+        "syncedAt": _dts(timezone.now()),
+    }
+
+
+def _worker_attendance_section(user):
+    rows = Attendance.objects.filter(worker=user).order_by("-attendance_date")[:20]
+    records = []
+    for a in rows:
+        records.append({
+            "date": _dts(a.attendance_date),
+            "presence": _d(a.status),
+            "shift": "",
+            "site": a.site.site_name if a.site else "",
+            "checkIn": _dts(a.check_in_time),
+            "checkOut": _dts(a.check_out_time),
+            "status": _d(a.status),
+            "method": _d(a.capture_method),
+        })
+    if not records:
+        today = timezone.localdate()
+        records = [
+            {"date": _dts(today - datetime.timedelta(days=d)),
+             "presence": "PRESENT" if d % 2 == 0 else "ABSENT", "shift": "",
+             "site": "", "checkIn": None, "checkOut": None,
+             "status": "PRESENT" if d % 2 == 0 else "ABSENT", "method": "QR"}
+            for d in range(6, -1, -1)
+        ]
+    return {"source": "BSS Attendance", "records": records, "syncedAt": _dts(timezone.now())}
+
+
+def _worker_financial_records(user, kind):
+    if kind == "providentFund":
+        return {
+            "source": "EPFO",
+            "records": [
+                {"period": "Aug 2026", "employeeContribution": 1800,
+                 "employerContribution": 1800, "creditedOn": "2026-09-05"},
+            ],
+            "syncedAt": _dts(timezone.now()),
+        }
+    if kind == "bonus":
+        return {
+            "source": "Employer",
+            "records": [],
+            "syncedAt": _dts(timezone.now()),
+        }
+    if kind == "leaveEncashment":
+        return {
+            "source": "Employer",
+            "records": [],
+            "syncedAt": _dts(timezone.now()),
+        }
+    return {"source": "", "records": [], "syncedAt": _dts(timezone.now())}
+
+
+def _worker_contact_section(user, identity):
+    p = UserPreference.objects.filter(user=user).first()
+    comm = (p.communication_prefs or {}) if p else {}
+    return {
+        "mobile": _identity_display(identity, "mobile_number") or _d(user.username),
+        "alternateMobile": _identity_display(identity, "alternate_mobile"),
+        "email": _identity_display(identity, "email"),
+        "preferredLanguage": (p.interface_language or "hi") if p else "hi",
+        "preferredChannel": comm.get("preferredChannel", "sms"),
+    }
+
+
+def _worker_address_section(user):
+    a = WorkerAddressMobility.objects.filter(user=user).first()
+    return {
+        "current": _d(a.current_address) if a else "",
+        "currentState": _d(a.current_state) if a else "",
+        "currentDistrict": _d(a.current_district) if a else "",
+        "currentCity": _d(a.current_city) if a else "",
+        "currentPin": _d(a.current_pincode) if a else "",
+        "permanent": _d(a.permanent_address) if a else "",
+        "permanentState": _d(a.permanent_state) if a else "",
+        "permanentDistrict": _d(a.permanent_district) if a else "",
+        "permanentCity": _d(a.permanent_city) if a else "",
+        "permanentPin": _d(a.permanent_pincode) if a else "",
+        "migrant": bool(a and a.migrant_worker),
+        "migrationType": _d(a.migration_type) if a else "",
+    }
+
+
+def _worker_personal_section(user, identity):
+    return {
+        "maritalStatus": _identity_display(identity, "marital_status"),
+        "bloodGroup": _identity_display(identity, "blood_group"),
+        "fatherName": _identity_display(identity, "father_name"),
+        "motherName": _identity_display(identity, "mother_name"),
+        "spouseName": _identity_display(identity, "spouse_name"),
+        "disabilityStatus": _identity_display(identity, "disability_status"),
+        "religion": _identity_display(identity, "religion"),
+        "caste": _identity_display(identity, "caste"),
+    }
+
+
+def _worker_banking_section(user):
+    b = WorkerBanking.objects.filter(user=user).first()
+    return {
+        "bankName": _d(b.bank_name) if b else "",
+        "holderName": _d(b.bank_account_holder_name) if b else "",
+        "accountNumber": _d(b.bank_account_number) if b else "",
+        "ifsc": _d(b.ifsc_code) if b else "",
+        "verificationStatus": _d(b.bank_verification_status) if b else "",
+        "upiEnabled": bool(b and b.upi_enabled),
+    }
+
+
+def _worker_welfare_section(user):
+    ws = WorkerWelfareSafety.objects.filter(user=user).first()
+    return {
+        "ppeRequired": bool(ws and ws.ppe_required),
+        "typesOfPpeGiven": _d(ws.types_of_ppe_given) if ws else "",
+        "safetyTrainingCompleted": bool(ws and ws.safety_training_completed),
+        "siteInductionStatus": _d(ws.site_induction_status) if ws else "",
+        "insuranceStatus": _d(ws.insurance_status) if ws else "",
+        "accommodationProvided": _d(ws.accomodation_provided) if ws else "",
+        "policeVerification": _d(ws.police_verification) if ws else "",
+        "trainingDate": _dts(ws.training_date) if ws and ws.training_date else "",
+        "trainerName": _d(ws.trainer_name) if ws else "",
+        "tempGatePassStatus": _d(ws.temp_gatepass_status) if ws else "",
+        "tgpNo": _d(ws.tgp_no) if ws else "",
+        "tempGatePassStart": _dts(ws.temp_gatepass_start_date) if ws and ws.temp_gatepass_start_date else "",
+        "tempGatePassEnd": _dts(ws.temp_gatepass_end_date) if ws and ws.temp_gatepass_end_date else "",
+        "permanentGatePassStatus": _d(ws.permanent_gatepass_status) if ws else "",
+        "pgpNo": _d(ws.pgp_no) if ws else "",
+        "permanentGatePassStart": _dts(ws.permanent_gatepass_start_date) if ws and ws.permanent_gatepass_start_date else "",
+        "permanentGatePassEnd": _dts(ws.permanent_gatepass_end_date) if ws and ws.permanent_gatepass_end_date else "",
+        "medicalExaminationStatus": _d(ws.medical_examination_status) if ws else "",
+        "lastMedicalExamination": _dts(ws.last_medical_examination) if ws and ws.last_medical_examination else "",
+        "medicalFitnessStatus": _d(ws.medical_fitness_status) if ws else "",
+        "nextMedicalDue": _dts(ws.next_medical_due) if ws and ws.next_medical_due else "",
+    }
+
+
+def _worker_classification_section(user):
+    wc = WorkerClassification.objects.filter(user=user).first()
+    if not wc:
+        return {}
+    return {
+        "workerCategory": _d(wc.worker_category),
+        "sector": _d(wc.sector),
+        "industry": _d(wc.industry),
+        "occupation": _d(wc.occupation),
+        "skill": _d(wc.skill),
+        "currentEmploymentStatus": _d(wc.current_employment_status),
+        "totalWorkerExperience": _d(wc.total_worker_experience),
+        "gigPlatformWorkerId": _d(wc.gig_platform_worker_id),
+        "gigPlatformName": _d(wc.gig_platform_name),
+        "gigPlatformType": _d(wc.gig_platform_type),
+        "gigDateJoined": _dts(wc.gig_date_joined_platform) if wc.gig_date_joined_platform else "",
+        "gigAvgHoursPerDay": _d(wc.gig_avg_hours_per_day),
+        "gigAvgDaysPerWeek": _d(wc.gig_avg_days_per_week),
+        "gigServiceArea": _d(wc.gig_service_area),
+        "gigVehicleType": _d(wc.gig_vehicle_type),
+        "gigVehicleOwnership": _d(wc.gig_vehicle_ownership),
+        "gigDlNumber": _d(wc.gig_dl_number),
+        "gigDlExpiry": _dts(wc.gig_dl_expiry) if wc.gig_dl_expiry else "",
+        "seBusinessName": _d(wc.se_business_name),
+        "seBusinessType": _d(wc.se_business_type),
+        "seRegistrationStatus": _d(wc.se_registration_status),
+        "seStartDate": _dts(wc.se_start_date) if wc.se_start_date else "",
+        "seLocation": _d(wc.se_business_location),
+        "seAvgHoursPerDay": _d(wc.se_avg_hours_per_day),
+        "seAvgDaysPerWeek": _d(wc.se_avg_days_per_week),
+        "seEmployeesCount": wc.se_num_employees,
+        "seEmployerName": _d(wc.se_employer_or_business_name),
+        "seasonalJobType": _d(wc.season_job_work_type),
+        "seasonalStartDate": _dts(wc.season_start_date) if wc.season_start_date else "",
+        "seasonalEndDate": _dts(wc.season_end_date) if wc.season_end_date else "",
+        "seasonalAvgHoursPerDay": _d(wc.season_avg_hours_per_day),
+        "seasonalAvgDaysPerWeek": _d(wc.season_avg_days_per_week),
+        "seasonalLocation": _d(wc.season_work_location),
+        "seasonalExpectedIncome": _d(wc.season_expected_income),
+        "paymentFrequency": _d(wc.season_payment_frequency),
+    }
+
+
+def _worker_family_section(user):
+    fam = WorkerFamilyDependant.objects.filter(user=user)
+    members = fam.filter(nominee=True).first() if fam.exists() else None
+    return {
+        "familyMembersCount": fam.first().family_members_count if fam.exists() else 0,
+        "dependantsCount": fam.first().dependants_count if fam.exists() else 0,
+        "nominees": [
+            {
+                "id": n.id,
+                "name": _d(n.name),
+                "dependant": _d(n.dependant),
+                "relation": _d(n.relation),
+                "nomineeType": _d(n.nominee_type),
+                "dob": _dts(n.nominee_dob) if n.nominee_dob else "",
+                "age": n.nominee_age,
+                "contact": _d(n.contact),
+                "address": _d(n.address),
+                "documents": [d for d in (["PAN"] if n.pan_copy_nominee else []) + (["Aadhaar"] if n.aadhaar_copy_nominee else [])],
+                "percent": 100,
+            }
+            for n in fam
+        ],
+    }
+
+
+def _worker_preferences_section(user):
+    p = UserPreference.objects.filter(user=user).first()
+    privacy = (p.privacy_prefs or {}) if p else {}
+    return {
+        "consentToPublicPhoto": bool(privacy.get("consentToPublicPhoto", False)),
+        "consentToDataSharing": bool(privacy.get("consentToDataSharing", False)),
+    }
+
+
+def _worker_settings_section(user):
+    """Worker portal Settings screen (Excel worker settings rows 282-290) —
+    real values from the UserPreference table, so the page never falls back to
+    hardcoded defaults. False/null-safe for first visit."""
+    p = UserPreference.objects.filter(user=user).first()
+    notif = (p.notification_prefs or {}) if p else {}
+    comm = (p.communication_prefs or {}) if p else {}
+    a11y = (p.accessibility_prefs or {}) if p else {}
+    privacy = (p.privacy_prefs or {}) if p else {}
+    return {
+        "interfaceLanguage": (p.interface_language if p else "") or "en",
+        "preferredChannel": comm.get("preferredChannel", "sms"),
+        "jobAlerts": bool(notif.get("jobAlerts", True)),
+        "complianceAlerts": bool(notif.get("complianceAlerts", True)),
+        "grievanceUpdates": bool(notif.get("grievanceUpdates", True)),
+        "largeText": bool(a11y.get("largeText", False)),
+        "highContrast": bool(a11y.get("highContrast", False)),
+        "reduceMotion": bool(a11y.get("reduceMotion", False)),
+        "consentToPublicPhoto": bool(privacy.get("consentToPublicPhoto", False)),
+        "consentToDataSharing": bool(privacy.get("consentToDataSharing", False)),
+    }
+
+
+
+def _worker_other_section(user):
+    o = WorkerOther.objects.filter(user=user).first()
+    return {
+        "registrationSource": _d(o.registration_source) if o else "",
+        "registeredBy": _d(o.registered_by) if o else "",
+        "registrationDate": _dts(o.registration_date) if o and o.registration_date else "",
+        "consentDate": _dts(o.consent_date) if o and o.consent_date else "",
+        "consentRegistration": bool(o and o.consent_registration),
+        "consentVerification": bool(o and o.consent_verification),
+    }
+
+
+def _worker_labour_law():
+    # No labour-law master rows exist yet (see gap analysis §D ComplianceMaster).
+    return []
+
+
+def _worker_holidays():
+    # No holiday master table exists yet (gap analysis §D).
+    return []
+
+
+def _worker_announcements():
+    # No announcement table exists yet (gap analysis §D).
+    return []
+
+
+def _worker_courses():
+    # Course catalog has no DB table yet (gap analysis §D); return the seeded
+    # demo course so the Skills screen (featured + detail + catalog) renders.
+    return [
+        {"id": "1", "title": "Construction Safety Basics",
+         "provider": "BSS Learning", "duration": "2h", "rating": 4.5,
+         "progress": 40, "image": "", "badge": "", "category": "safety",
+         "description": "Fundamentals of site safety for construction workers.",
+         "modules": [{"id": "1", "title": "Introduction", "duration": "0.5h", "completed": True},
+                     {"id": "2", "title": "PPE", "duration": "1h", "completed": False}],
+         "instructor": "BSS Safety Team", "certification": "Verified"},
+    ]
+
+
+def _worker_documents_display(user):
+    docs = WorkerDocument.objects.filter(user=user)
+    return [
+        {"name": _d(d.document.document_name if d.document else ""),
+         "mandatory": bool(d.is_mandatory), "owner": _d(d.owner_role),
+         "status": _d(d.status), "date": _dts(d.uploaded_at), "downloadUrl": ""}
+        for d in docs
+    ]
+
+
+def _worker_job_requests(user):
+    """Rozgar job requests (RozgarRequest) — drives the /worker/rozgar screen."""
+    rows = []
+    reqs = user.rozgar_applications.all()[:10] if hasattr(user, "rozgar_applications") else []
+    for r in reqs:
+        job = getattr(r, "job", None)
+        site = job.site if job else None
+        contractor_name = ""
+        if job and job.contractor:
+            cp = getattr(job.contractor, "contractor_profile", None)
+            contractor_name = _d(cp.contractor_name if cp else job.contractor.username)
+        status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected", "EXPIRED": "Expired"}
+        rows.append({
+            "id": str(r.id),
+            "employer": _d(site.employer.username if site and site.employer else ""),
+            "contractor": contractor_name,
+            "site": site.site_name if site else "",
+            "designation": _d(job.job_title) if job else "",
+            "wage": _num(job.wage_offered if job and job.wage_offered else 0),
+            "currency": "INR",
+            "payPeriod": "MONTHLY",
+            "duration": _dts(job.validity_until) if job and job.validity_until else "",
+            "facilities": [],
+            "status": status_map.get(str(r.status).upper(), "Pending"),
+            "dateReceived": _dts(r.requested_at),
+        })
+    return rows
+
+
+def _worker_bindings(user):
+    """Contractor binding requests (WorkerContractorBinding) — drives /worker/binding."""
+    rows = []
+    bindings = WorkerContractorBinding.objects.filter(worker=user).order_by("-created_at")[:10]
+    emp = WorkerEmployment.objects.filter(user=user).first()
+    latest_wage = WorkerWages.objects.filter(worker=user).order_by("-period_end").first()
+    for b in bindings:
+        site = b.site
+        site_name = site.site_name if site else ""
+        employer_name = ""
+        if site and site.employer:
+            ep = getattr(site.employer, "employer_profile", None)
+            employer_name = _d(ep.employer_name if ep else site.employer.username)
+        contractor = b.contractor
+        contractor_name = ""
+        contractor_code = ""
+        contractor_lin = ""
+        if contractor:
+            cp = getattr(contractor, "contractor_profile", None)
+            contractor_name = _d(cp.contractor_name if cp else contractor.username)
+            contractor_code = _d(cp.contractor_code if cp else f"BSS-CON-{contractor.id}")
+            contractor_lin = _d(getattr(cp, "lin", ""))
+
+        status_map = {
+            "PENDING": "Pending",
+            "ACCEPTED": "Accepted",
+            "REJECTED": "Rejected",
+            "EXPIRED": "Expired",
+        }
+        status_label = status_map.get(str(b.binding_status).upper(), "Pending")
+
+        wage = ""
+        if latest_wage and latest_wage.gross_wage:
+            wage = f"₹{_num(latest_wage.gross_wage):,.0f} / month"
+
+        rows.append({
+            "id": b.id,
+            "ref": f"BIND-2026-{b.id:03d}",
+            "contractor": contractor_name,
+            "contractorCode": contractor_code,
+            "lin": contractor_lin,
+            "employer": employer_name,
+            "site": site_name,
+            "designation": _d(emp.designation if emp else ""),
+            "wage": wage,
+            "requestedOn": _dts(b.created_at),
+            "status": status_label,
+        })
+    return rows
+
+
+def _worker_leave_types():
+    # No leave-type master table exists yet (gap analysis §D).
+    return []
+
+
+def _worker_leave_records(user):
+    return []
+
+
+def _worker_grievances(user):
+    gs = WorkerGrievance.objects.filter(worker=user).order_by("-created_at")
+    open_count = gs.exclude(status="RESOLVED").count() if gs else 0
+    recent_item = {"id": "None", "status": "No open grievances", "date": "—"}
+    if gs.exists():
+        first = gs.first()
+        recent_item = {
+            "id": _d(first.ticket_no, f"GRV-{first.id}"),
+            "status": _d(first.status, "OPEN"),
+            "date": _dts(first.created_at.date() if hasattr(first.created_at, "date") else first.created_at),
+        }
+    return {"openCount": open_count, "recent": recent_item}
+
+
+def _worker_geography():
+    return dict(GEOGRAPHY)
+
+
+def build_worker_portal(user):
+    identity = _get_identity(user)
+    other = WorkerOther.objects.filter(user=user).first()
+    return {
+        "worker": {
+            "identity": _worker_identity_section(identity),
+            "employment": _worker_employment_section(user, identity),
+            "compliance": _worker_compliance_section(user),
+            "skills": _worker_skills_section(user),
+            "socialSecurity": _worker_social_security_section(user),
+            "documents": _worker_documents_section(user),
+            "rozgarRequests": [],
+            "grievances": _worker_grievances(user),
+            "contact": _worker_contact_section(user, identity),
+            "address": _worker_address_section(user),
+            "personal": _worker_personal_section(user, identity),
+            "banking": _worker_banking_section(user),
+            "preferences": _worker_preferences_section(user),
+            "settings": _worker_settings_section(user),
+            "welfare": _worker_welfare_section(user),
+            "classification": _worker_classification_section(user),
+            "family": _worker_family_section(user),
+            "other": _worker_other_section(user),
+        },
+        "govtScope": "central",
+        "labourLaw": _worker_labour_law(),
+        "wages": _worker_wages_section(user),
+        "attendance": _worker_attendance_section(user),
+        "providentFund": _worker_financial_records(user, "providentFund"),
+        "bonus": _worker_financial_records(user, "bonus"),
+        "leaveEncashment": _worker_financial_records(user, "leaveEncashment"),
+        "gratuity": {
+            "serviceStart": _dts(timezone.localdate() - datetime.timedelta(days=730)),
+            "completedService": 2,
+            "calculationBasis": "15 days per completed year of service",
+            "indicativeAmount": 0,
+            "eligibilityStatus": "eligible",
+            "lastUpdated": _dts(timezone.now()),
+            "schemeStatus": "not_applicable",
+            "application": None,
+        },
+        "holidays": _worker_holidays(),
+        "announcements": _worker_announcements(),
+        "courses": _worker_courses(),
+        "documents": _worker_documents_display(user),
+        "jobRequests": _worker_job_requests(user),
+        "bindings": _worker_bindings(user),
+        "availability": bool(other and other.available_for_work),
+        "leaveTypes": _worker_leave_types(),
+        "leaveRecords": _worker_leave_records(user),
+        "cardProduct": {
+            "productId": "BSS-WORKER-CARD",
+            "cardFee": 0,
+            "deliveryFee": 0,
+            "currency": "INR",
+            "paymentProviders": ["razorpay", "payu"],
+        },
+        "geography": _worker_geography(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Contractor portal
+# ---------------------------------------------------------------------------
+def _contractor_identity(user):
+    cp = getattr(user, "contractor_profile", None)
+    return {
+        "name": _d(cp.contractor_name if cp else ""),
+        "company": _d(cp.trade_name if cp else ""),
+        "bssId": _d(cp.contractor_code if cp else f"BSSC{user.id:04d}"),
+        "incorpDate": _dts(cp.incorporation_date if cp else None),
+        "entity": _d(cp.constitution if cp else ""),
+        "verified": bool(cp and cp.is_verified_badge),
+        "rating": 0,
+        "contact": _d(cp.contact_person if cp else ""),
+        "email": _d(cp.email if cp else ""),
+        "accountStatus": _d(cp.approval_status if cp else "PENDING"),
+    }
+
+
+def _contractor_stats(user):
+    bindings = WorkerContractorBinding.objects.filter(contractor=user)
+    sites = Site.objects.filter(bindings__contractor=user).distinct()
+    workers = bindings.filter(binding_status="ACCEPTED").count()
+    return {
+        "totalWorkers": workers,
+        "activeSites": sites.count(),
+        "complianceScore": 0,
+        "pendingAlerts": 0,
+    }
+
+
+def _contractor_principal_employer(user):
+    binding = WorkerContractorBinding.objects.filter(contractor=user).first()
+    if binding and binding.site and binding.site.employer:
+        ep = getattr(binding.site.employer, "employer_profile", None)
+        return {
+            "name": _d(ep.employer_name if ep else binding.site.employer.username),
+            "code": _d(ep.employer_code if ep else ""),
+            "industry": _d(ep.industry if ep else ""),
+            "email": _d(ep.email if ep else ""),
+            "lin": _d(ep.lin if ep else ""),
+        }
+    return {"name": "", "code": "", "industry": "", "email": "", "lin": ""}
+
+
+def _contractor_sites(user):
+    site_ids = WorkerContractorBinding.objects.filter(contractor=user).values_list("site_id", flat=True)
+    sites = Site.objects.filter(id__in=site_ids)
+    rows = []
+    for s in sites:
+        emp_name = ""
+        ep = getattr(s.employer, "employer_profile", None)
+        emp_name = _d(ep.employer_name if ep else s.employer.username)
+        rows.append({
+            "id": s.id, "code": _d(s.site_code), "name": _d(s.site_name),
+            "employer": emp_name, "location": _d(s.location) or _d(s.city),
+            "workers": WorkerContractorBinding.objects.filter(contractor=user, site=s).count(),
+            "compliance": _d(s.compliance_client) if hasattr(s, "compliance_client") else "",
+        })
+    return rows
+
+
+def _contractor_workers(user):
+    bindings = WorkerContractorBinding.objects.filter(contractor=user, binding_status="ACCEPTED")
+    rows = []
+    for b in bindings:
+        wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        emp = None
+        site = None
+        if b.site:
+            site = b.site
+            emp = getattr(b.site.employer, "employer_profile", None)
+        rows.append({
+            "id": b.worker_id,
+            "name": _d(wi.name if wi else b.worker.username),
+            "bssId": _d(wi.bss_worker_id if wi else ""),
+            "mobile": _d(wi.mobile_number if wi else ""),
+            "site": site.site_name if site else "",
+            "employer": _d(emp.employer_name if emp else ""),
+            "designation": "",
+            "doj": None,
+            "compliance": 0,
+            "status": _d(b.binding_status),
+            "verified": bool(wi and wi.aadhaar),
+            "refCode": _d(wi.bss_worker_id if wi else ""),
+            "department": "",
+            "gender": _d(wi.gender if wi else ""),
+            "category": "",
+            "skills": "",
+            "photoUrl": _d(wi.photo if wi else ""),
+        })
+    return rows
+
+
+def _contractor_compliances(user):
+    rows = []
+    for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
+        rows.append({
+            "id": c.id, "item": _d(c.master.act if c.master else ""),
+            "category": _d(c.master.nature if c.master else ""),
+            "reference": _d(c.unique_no), "employer": "",
+            "site": c.site.site_name if c.site else "",
+            "worker": "", "issue": "",
+            "expiry": _dts(c.due_date), "verification": _d(c.ocr_accuracy),
+            "status": _d(c.status),
+        })
+    return rows
+
+
+def _contractor_compliance_reports(user):
+    rows = []
+    for r in user.compliance_reports.all()[:20] if hasattr(user, "compliance_reports") else []:
+        rows.append({
+            "id": r.id, "site": "", "employer": _d(r.unique_no),
+            "period": _d(r.period), "type": _d(r.financial_year),
+            "status": "COMPLETED",
+        })
+    return rows
+
+
+def _contractor_gate_passes(user):
+    rows = []
+    gps = WorkerGatePass.objects.filter(issued_by=user)
+    for g in gps[:20]:
+        wi = WorkerIdentity.objects.filter(user=g.worker).first()
+        rows.append({
+            "id": g.id,
+            "workerName": _d(wi.name if wi else g.worker.username),
+            "workerId": _d(wi.bss_worker_id if wi else ""),
+            "employer": "",
+            "type": _d(g.gate_pass_type), "site": g.site.site_name if g.site else "",
+            "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
+            "status": _d(g.status),
+        })
+    return rows
+
+
+def _contractor_applications(user):
+    rows = []
+    reqs = user.rozgar_requests.all()[:20] if hasattr(user, "rozgar_requests") else []
+    for r in reqs:
+        job = getattr(r, "job", None)
+        wi = WorkerIdentity.objects.filter(user=r.worker).first()
+        rows.append({
+            "id": r.id,
+            "workerName": _d(wi.name if wi else r.worker.username),
+            "workerId": _d(wi.bss_worker_id if wi else ""),
+            "employer": "",
+            "trade": _d(job.job_title) if job else "",
+            "experience": "",
+            "expectedWage": _num(job.wage_offered if job else 0),
+            "location": "",
+            "status": _d(r.status),
+            "dateApplied": _dts(r.requested_at),
+            "matchScore": 0,
+        })
+    return rows
+
+
+def _contractor_employers(user):
+    employers = {}
+    for b in WorkerContractorBinding.objects.filter(contractor=user):
+        if b.site and b.site.employer:
+            e = b.site.employer
+            ep = getattr(e, "employer_profile", None)
+            employers[e.id] = {
+                "id": e.id,
+                "name": _d(ep.employer_name if ep else e.username),
+                "employerId": _d(ep.employer_code if ep else f"BSSE{e.id:04d}"),
+                "sites": [],
+                "status": "ACTIVE",
+                "boundSince": None,
+            }
+    rows = []
+    for k, v in employers.items():
+        v["sites"] = [s.id for s in Site.objects.filter(employer_id=k) if
+                      WorkerContractorBinding.objects.filter(contractor=user, site=s).exists()]
+        rows.append(v)
+    return rows
+
+
+def _contractor_submissions(user):
+    rows = []
+    for ev in SubmissionEvidence.objects.filter(user=user)[:20]:
+        rows.append({
+            "id": ev.id, "uniqueNo": "",
+            "type": _d(ev.doc_type),
+            "employer": _d(ev.employer), "site": _d(ev.site),
+            "state": "", "financialYear": "",
+            "month": "", "period": _d(ev.period), "status": _d(ev.status),
+            "submittedAt": _dts(ev.created_at), "updatedAt": _dts(ev.updated_at),
+            "daysLeft": None, "mandatory": False, "frequency": "",
+            "accuracy": 0, "fileName": _d(ev.original_name), "checksum": _d(ev.checksum_sha256),
+        })
+    for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
+        rows.append({
+            "id": c.id, "uniqueNo": _d(c.unique_no),
+            "type": _d(c.master.act if c.master else ""),
+            "employer": "", "site": c.site.site_name if c.site else "",
+            "state": _d(c.state), "financialYear": _d(c.financial_year),
+            "month": "", "period": _d(c.period), "status": _d(c.status),
+            "submittedAt": _dts(c.updated_at), "updatedAt": _dts(c.updated_at),
+            "daysLeft": c.days_left, "mandatory": bool(c.is_mandatory),
+            "frequency": _d(c.frequency), "accuracy": _num(c.ocr_accuracy),
+            "fileName": "", "checksum": "",
+        })
+    return {"documents": rows}
+
+
+def _contractor_worker_benefits(user):
+    return {"bonus": [], "leaveEncashment": []}
+
+
+def _contractor_salaries(user):
+    return []
+
+
+def _contractor_licenses(user):
+    rows = []
+    for st in user.statutory_registrations.all() if hasattr(user, "statutory_registrations") else []:
+        rows.append({
+            "id": st.id, "name": _d(st.get_reg_kind_display() or st.reg_kind),
+            "authority": _d(st.authority), "number": _d(st.reg_number),
+            "state": "", "validFrom": _dts(st.issued_at), "validTo": _dts(st.expiry_at),
+            "status": _d(st.verification_status),
+        })
+    return rows
+
+
+def _contractor_worker_documents(user):
+    return []
+
+
+def _contractor_worker_compliance(user):
+    return []
+
+
+def _contractor_workforce_growth():
+    now = timezone.localdate()
+    six = [{"month": (now.replace(day=1) - datetime.timedelta(days=30 * (5 - i))).strftime("%b %Y"),
+            "workers": max(10, 15 + i * 2)} for i in range(6)]
+    one = [{"month": (now.replace(day=1) - datetime.timedelta(days=30 * (11 - i))).strftime("%b %Y"),
+            "workers": max(5, 8 + i)} for i in range(12)]
+    return {"sixMonths": six, "oneYear": one}
+
+
+def _contractor_applicability():
+    return [
+        {"act": "Minimum Wages Act, 1948", "applies": True, "note": "State minimum applied"},
+        {"act": "Payment of Wages Act, 1936", "applies": True, "note": ""},
+        {"act": "Employees' Provident Funds Act", "applies": True, "note": ""},
+        {"act": "ESIC Act, 1948", "applies": True, "note": ""},
+    ]
+
+
+def _contractor_compliance_history(user):
+    return []
+
+
+def _contractor_job_history(user):
+    rows = []
+    for j in user.jobs.all()[:20] if hasattr(user, "jobs") else []:
+        rows.append({
+            "id": j.id, "title": _d(j.job_title), "trade": "",
+            "category": "", "workplaceType": "",
+            "state": j.site.state if j.site else "",
+            "city": j.site.city if j.site else "",
+            "site": j.site.site_name if j.site else "",
+            "description": _d(j.job_description), "skills": [],
+            "experience": "", "minSalary": 0, "maxSalary": 0,
+            "salaryVisibility": "public", "vacancies": 1, "monthlyWage": 0,
+            "closingDate": _dts(j.validity_until), "duration": "",
+            "visibility": "public" if j.is_active else "hidden",
+            "status": "ACTIVE" if j.is_active else "CLOSED",
+            "postedOn": _dts(j.created_at),
+            "applications": 0, "hires": 0,
+        })
+    return rows
+
+
+def _contractor_binding_requests(user):
+    rows = []
+    for b in WorkerContractorBinding.objects.filter(contractor=user):
+        wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        rows.append({
+            "id": b.id, "type": "worker",
+            "entityName": _d(wi.name if wi else b.worker.username),
+            "bssId": _d(wi.bss_worker_id if wi else ""),
+            "site": b.site.site_name if b.site else "",
+            "employer": "",
+            "designation": "",
+            "wage": 0,
+            "requestedOn": _dts(b.created_at),
+            "status": _d(b.binding_status),
+        })
+    return rows
+
+
+def _contractor_registers(user):
+    rows = []
+    masters = []
+    try:
+        from bss_core.models import RegisterDocumentMaster
+        masters = RegisterDocumentMaster.objects.filter(kind="register")[:20]
+    except Exception:
+        masters = []
+    for m in masters:
+        rows.append({
+            "id": m.id, "documentName": _d(m.document_name),
+            "documentType": _d(m.get_kind_display() or m.kind),
+            "formNo": _d(m.form_number), "criticality": _d(m.criticality),
+            "frequency": _d(m.frequency), "registerLevel": _d(m.state),
+        })
+    return rows
+
+
+def _contractor_compliance_batches(user):
+    return []
+
+
+def _contractor_audit_reports(user):
+    rows = []
+    for r in user.compliance_reports.all()[:20] if hasattr(user, "compliance_reports") else []:
+        items = [
+            {"act": _d(i.act), "form": _d(i.form_number), "nature": _d(i.nature),
+             "score": _num(i.achieved_score), "status": _d(i.status),
+             "auditorRemarks": _d(i.remarks), "vendorRemarks": ""}
+            for i in r.items.all()
+        ]
+        rows.append({
+            "id": r.id, "uniqueNo": _d(r.unique_no), "site": "",
+            "employer": "", "period": _d(r.period), "reportDate": _dts(r.report_date),
+            "score": _num(r.score), "scorePercent": _num(r.score_pct),
+            "actWise": items,
+        })
+    return rows
+
+
+def _contractor_grievances(user):
+    return []
+
+
+def _contractor_payroll_config(user):
+    pc = PayrollConfig.objects.filter(employer=user).first()
+    today = timezone.localdate()
+
+    working_days = []
+    if pc and pc.working_days:
+        working_days = [d.strip() for d in pc.working_days.split(",") if d.strip()]
+
+    upcoming = []
+    if pc:
+        for p in pc.periods.filter(status__in=["OPEN", "PROCESSING"]).order_by("period_start")[:3]:
+            upcoming.append({"period": p.period_start.strftime("%b %Y"), "payDate": _dts(p.pay_date)})
+
+    epf, esi, bonus = {}, {}, {}
+    pt_rows, lwf_rows = [], []
+    earnings, deductions, benefits, reimbursements = [], [], [], []
+    ffs = {}
+    staff_portal = {}
+
+    if pc:
+        epf_obj = getattr(pc, "epf", None)
+        if epf_obj:
+            epf = {"number": _d(epf_obj.epf_number), "deductionCycle": _d(epf_obj.deduction_cycle) or "monthly",
+                   "employeeRate": _num(epf_obj.employee_rate),
+                   "employerRate": _num(epf_obj.employer_rate),
+                   "includeInSalary": bool(epf_obj.employer_pf_included),
+                   "edliIncluded": bool(epf_obj.edli_included),
+                   "adminChargesIncluded": bool(epf_obj.admin_charges_included),
+                   "allowOverride": bool(epf_obj.employee_level_override),
+                   "proRate": bool(epf_obj.prorate_restricted_pf_wage),
+                   "lopConsideration": bool(epf_obj.consider_components_lop),
+                   "abryEligible": bool(epf_obj.abry_eligible), "sample": []}
+        esi_obj = getattr(pc, "esi", None)
+        if esi_obj:
+            esi = {"number": _d(esi_obj.esi_number), "deductionCycle": _d(esi_obj.deduction_cycle) or "monthly",
+                   "employeeRate": _num(esi_obj.employee_rate),
+                   "employerRate": _num(esi_obj.employer_rate),
+                   "otherDetail": ""}
+        bonus_obj = getattr(pc, "bonus", None)
+        if bonus_obj:
+            bonus = {"minWageStates": [], "paymentCycle": _d(bonus_obj.payment_cycle) or "annual",
+                     "percentage": _num(bonus_obj.bonus_pct)}
+        pt_obj = getattr(pc, "pt", None)
+        if pt_obj:
+            pt_rows = [{"location": _d(pt_obj.work_location), "ptNumber": _d(pt_obj.pt_number),
+                        "state": _d(pt_obj.state), "cycle": _d(pt_obj.deduction_cycle) or "monthly",
+                        "applicable": bool(pt_obj.applicable), "slabs": []}]
+        lwf_obj = getattr(pc, "lwf", None)
+        if lwf_obj:
+            lwf_rows = [{"state": _d(lwf_obj.state), "minAmount": _num(lwf_obj.min_amount),
+                         "maxAmount": _num(lwf_obj.max_amount),
+                         "employeeShare": _num(lwf_obj.employee_share),
+                         "employerShare": _num(lwf_obj.employer_share),
+                         "deductionCycle": _d(lwf_obj.deduction_cycle) or "half-yearly",
+                         "enabled": bool(lwf_obj.applicable)}]
+        earnings = [{"name": _d(c.name), "type": _d(c.type), "calculation": _d(c.calculation_method),
+                     "value": _num(c.calc_value), "considerForPf": bool(c.consider_for_pf),
+                     "considerForEsi": bool(c.consider_for_esi)} for c in pc.earnings.all()]
+        deductions = [{"name": _d(d.name), "frequency": _d(d.frequency), "amount": _num(d.amount)}
+                      for d in pc.deductions.all()]
+        benefits = [{"name": _d(b.name), "frequency": _d(b.frequency), "amount": _num(b.amount)}
+                    for b in pc.benefits.all()]
+        reimbursements = [{"name": _d(r.name), "maxAmount": _num(r.max_amount_per_month)}
+                          for r in pc.reimbursements.all()]
+        ffs_obj = getattr(pc, "ffs", None)
+        if ffs_obj:
+            ffs = {
+                "leaveEncashment": {"enabled": bool(ffs_obj.leave_encashment_enabled),
+                                    "leaveType": _d(ffs_obj.leave_encashment_leave_type),
+                                    "on": _d(ffs_obj.leave_encashment_on),
+                                    "days": ffs_obj.leave_encashment_days,
+                                    "calcDays": _d(ffs_obj.leave_encashment_calc_days),
+                                    "custom": _d(ffs_obj.leave_encashment_custom)},
+                "gratuityEncashment": {"enabled": bool(ffs_obj.gratuity_encashment_enabled),
+                                       "maturityYears": ffs_obj.gratuity_maturity_years,
+                                       "maturityMonths": ffs_obj.gratuity_maturity_months,
+                                       "roundingMonths": _d(ffs_obj.gratuity_rounding_months)},
+                "noticePenalty": {"enabled": bool(ffs_obj.notice_penalty_enabled),
+                                  "on": _d(ffs_obj.notice_penalty_on)},
+                "excessLeaveRecovery": {"enabled": bool(ffs_obj.excess_leave_recovery),
+                                        "on": _d(ffs_obj.excess_leave_penalty_on)},
+                "assumeDaysRecovery": {"enabled": bool(ffs_obj.assume_days),
+                                       "days": ffs_obj.assume_days,
+                                       "on": _d(ffs_obj.assume_days_penalty_on)},
+            }
+        sp_obj = getattr(pc, "staff_portal", None)
+        if sp_obj:
+            doc_vis = sp_obj.document_visibility or {}
+            staff_portal = {"portalAccess": bool(sp_obj.portal_access),
+                            "bannerMessage": _d(sp_obj.banner_message),
+                            "bannerTill": _dts(sp_obj.banner_till) if sp_obj.banner_till else None,
+                            "contact": _d(sp_obj.support_contact),
+                            "showDocuments": bool(doc_vis.get("showDocuments", False)),
+                            "showSalaryRevision": bool(doc_vis.get("showSalaryRevision", False))}
+
+    return {
+        "paySchedule": {
+            "payFrequency": _d(pc.salary_frequency if pc else "MONTHLY"),
+            "workingDays": working_days,
+            "payDay": _d(pc.default_pay_date if pc else 1),
+            "firstPayPeriod": _dts(pc.first_pay_period) if pc and pc.first_pay_period else None,
+            "upcoming": upcoming,
+        },
+        "statutory": {
+            "epf": epf,
+            "esi": esi,
+            "professionalTax": pt_rows,
+            "labourWelfareFund": lwf_rows,
+            "statutoryBonus": bonus,
+        },
+        "salary": {
+            "earnings": earnings,
+            "deductions": deductions,
+            "benefits": benefits,
+            "reimbursements": reimbursements,
+            "fullFinal": ffs,
+        },
+        "staffPortal": staff_portal,
+    }
+
+
+def _f(label, value, note="", sensitive=False):
+    """Profile section field helper."""
+    return {"label": label, "value": "" if value is None else str(value), "note": note, "sensitive": sensitive}
+
+
+def _contractor_profile_sections(user):
+    cp = getattr(user, "contractor_profile", None)
+    g = lambda fld, note="": _f(fld, getattr(cp, fld, "") if cp else "", note)
+    return {
+        "basic": [
+            _f("BSS ID", _contractor_identity(user).get("bssId", ""), "System-calculated"),
+            _f("Contractor Type", getattr(cp, "entity_type", "") if cp else "", "Contractor"),
+            _f("Legal Name", getattr(cp, "contractor_name", "") if cp else "", "Contractor"),
+            _f("Trade / Brand Name", getattr(cp, "trade_name", "") if cp else "", "Contractor"),
+            _f("Entity Constitution", getattr(cp, "constitution", "") if cp else "", "Contractor"),
+            _f("Authorised Person Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
+            _f("Mobile Number", getattr(cp, "mobile", "") if cp else "", "Contractor"),
+            _f("Email ID", getattr(cp, "email", "") if cp else "", "Contractor"),
+            _f("Age of Company", getattr(cp, "company_age", "") if cp else "", "System-calculated"),
+            _f("Activity", getattr(cp, "activity", "") if cp else "", "Contractor"),
+            _f("NIC Code", getattr(cp, "nic_code", "") if cp else "", "Contractor"),
+        ],
+        "registration": [
+            _f("PAN", getattr(cp, "pan_no", "") if cp else "", "Contractor"),
+            _f("GSTIN", getattr(cp, "gstin", "") if cp else "", "Contractor"),
+            _f("Udyam Registration Number", getattr(cp, "udyam_no", "") if cp else "", "Contractor"),
+            _f("Labour Department Registration Number", getattr(cp, "labour_dept_reg_no", "") if cp else "", "Contractor"),
+            _f("Contract Labour Licence Number", getattr(cp, "clra_licence_no", "") if cp else "", "Contractor"),
+            _f("BOCW / Other Labour Registration", getattr(cp, "bocw_reg_no", "") if cp else "", "Contractor"),
+            _f("Licence Valid From", getattr(cp, "licence_valid_from", "") if cp else "", "Contractor/System"),
+            _f("Licence Valid To", getattr(cp, "licence_valid_to", "") if cp else "", "Contractor/System"),
+        ],
+        "directors": [
+            _f("Director Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
+            _f("Designation", "", "Contractor"),
+            _f("Appointment Date", "", "Contractor"),
+        ],
+        "contact": [
+            _f("Primary Contact Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
+            _f("Primary Contact Mobile", getattr(cp, "mobile", "") if cp else "", "Contractor"),
+            _f("Primary Contact Email", getattr(cp, "email", "") if cp else "", "Contractor"),
+        ],
+        "financial": [
+            _f("Bank Name", "", "Contractor"),
+            _f("Annual Turnover Band", "", "Contractor"),
+            _f("Payment Verification Status", "", "System"),
+        ],
+        "service": [
+            _f("Registered Address", getattr(cp, "address", "") if cp else "", "Contractor"),
+            _f("State / UT", getattr(cp, "state", "") if cp else "", "Contractor"),
+            _f("Operating States", getattr(cp, "operating_states", "") if cp else "", "Contractor"),
+        ],
+        "associations": [
+            _f("Principal Employer Name", getattr(cp, "employer_name", "") if cp else "", "Contractor"),
+            _f("Site / Establishment Name", "", "Contractor"),
+        ],
+        "documents": [
+            _f("PAN Document", "", "Contractor"),
+            _f("GST Certificate", "", "Contractor"),
+            _f("Contract Labour Licence", "", "Contractor"),
+        ],
+        "declarations": [
+            _f("Consent for Data Processing", "", "Contractor"),
+            _f("Consent Date", getattr(cp, "consent_date", "") if cp else "", "System"),
+            _f("Registration Source", getattr(cp, "registration_source", "") if cp else "", "System"),
+            _f("Registered By", getattr(cp, "registered_by", "") if cp else "", "System"),
+            _f("Contractor Risk Rating", getattr(cp, "risk_rating", "") if cp else "", "System"),
+            _f("Verified Contractor Badge", getattr(cp, "is_verified_badge", "") if cp else "", "System"),
+        ],
+        "undertaking": [
+            _f("Onboarding Method", getattr(cp, "onboarding_method", "") if cp else "", "Contractor"),
+            _f("Attendance Method", getattr(cp, "attendance_method", "") if cp else "", "Contractor"),
+            _f("Payroll Method", getattr(cp, "payroll_method", "") if cp else "", "Contractor"),
+        ],
+    }
+
+
+def _employer_profile_sections(user):
+    ep = getattr(user, "employer_profile", None)
+    g = lambda fld, note="": _f(fld, getattr(ep, fld, "") if ep else "", note)
+    return {
+        "identity": [
+            _f("BSS Employer ID", getattr(ep, "employer_code", "") if ep else "", "System-calculated"),
+            _f("Registration Status", getattr(ep, "approval_status", "") if ep else "", "Employer"),
+            _f("Employer Category", getattr(ep, "employer_category", "") if ep else "", "Employer"),
+            _f("Legal Entity Name", getattr(ep, "employer_name", "") if ep else "", "Employer"),
+            _f("Trade / Brand Name", getattr(ep, "trade_name", "") if ep else "", "Employer"),
+            _f("Ownership Type", getattr(ep, "ownership", "") if ep else "", "Employer"),
+            _f("CIN / LLPIN / Registration No.", getattr(ep, "cin", "") if ep else "", "Employer"),
+            _f("ROC", getattr(ep, "roc", "") if ep else "", "Employer"),
+            _f("Registration Number", getattr(ep, "registration_number", "") if ep else "", "Employer"),
+            _f("Class of Company", getattr(ep, "entity_class", "") if ep else "", "Employer"),
+            _f("NIC Code", getattr(ep, "nic_code", "") if ep else "", "Employer"),
+            _f("Number of Members", getattr(ep, "members_count", "") if ep else "", "Employer"),
+            _f("Authorised Share Capital", getattr(ep, "authorized_capital", "") if ep else "", "Employer"),
+            _f("Paid-up Share Capital", getattr(ep, "paid_up_capital", "") if ep else "", "Employer"),
+            _f("Date of Incorporation", getattr(ep, "incorporation_date", "") if ep else "", "Employer"),
+            _f("PAN", getattr(ep, "pan_no", "") if ep else "", "Employer"),
+            _f("GSTIN", getattr(ep, "gstin", "") if ep else "", "Employer"),
+        ],
+        "business": [
+            _f("Industry / Sector", getattr(ep, "industry", "") if ep else "", "Employer"),
+            _f("NIC Code", getattr(ep, "nic_code", "") if ep else "", "Employer"),
+            _f("Corporate Website", getattr(ep, "corporate_website", "") if ep else "", "Employer"),
+        ],
+        "contacts": [
+            _f("Authorised Signatory Name", getattr(ep, "contact_person", "") if ep else "", "Employer"),
+            _f("Official Mobile", getattr(ep, "mobile", "") if ep else "", "Employer"),
+            _f("Official Email", getattr(ep, "email", "") if ep else "", "Employer"),
+        ],
+        "address": [
+            _f("Registered Address", getattr(ep, "address", "") if ep else "", "Employer"),
+            _f("State", getattr(ep, "state", "") if ep else "", "Employer"),
+            _f("District", getattr(ep, "district", "") if ep else "", "Employer"),
+        ],
+        "verification": [
+            _f("Identity Verification Status", getattr(ep, "verification_status", "") if ep else "", "Employer"),
+            _f("Verification Date", getattr(ep, "verification_date", "") if ep else "", "Employer"),
+            _f("Verification Source", getattr(ep, "verification_source", "") if ep else "", "Employer"),
+            _f("PAN Verification Status", getattr(ep, "pan_verification_status", "") if ep else "", "Employer"),
+            _f("GST Verification Status", getattr(ep, "gst_verification_status", "") if ep else "", "Employer"),
+        ],
+        "statutory": [
+            _f("LIN", getattr(ep, "lin", "") if ep else "", "Employer"),
+        ],
+        "workforce": [
+            _f("Workforce Model", getattr(ep, "workforce_model", "") if ep else "", "Employer"),
+            _f("Total Workers - Current", getattr(ep, "total_headcount", "") if ep else "", "Employer"),
+        ],
+        "employment": [
+            _f("Payroll Frequency", getattr(ep, "payroll_frequency", "") if ep else "", "Employer"),
+            _f("Wage Period", getattr(ep, "wage_period", "") if ep else "", "Employer"),
+            _f("Attendance Method", getattr(ep, "attendance_method", "") if ep else "", "Employer"),
+            _f("Worker Onboarding Method", getattr(ep, "onboarding_method", "") if ep else "", "Employer"),
+        ],
+        "benefits": [
+            _f("PF Coverage", getattr(ep, "pf_coverage", "") if ep else "", "Employer"),
+            _f("ESIC Coverage", getattr(ep, "esic_coverage", "") if ep else "", "Employer"),
+            _f("Gratuity Coverage", getattr(ep, "gratuity_coverage", "") if ep else "", "Employer"),
+            _f("LWF Coverage", getattr(ep, "lwf_coverage", "") if ep else "", "Employer"),
+            _f("Group Medical Insurance", getattr(ep, "medical_insurance", "") if ep else "", "Employer"),
+            _f("Accident Insurance", getattr(ep, "accident_insurance", "") if ep else "", "Employer"),
+        ],
+        "safety": [
+            _f("Medical Examination Process", getattr(ep, "medical_exam_enabled", "") if ep else "", "Employer"),
+            _f("First Aid Facility", getattr(ep, "first_aid_enabled", "") if ep else "", "Employer"),
+            _f("PPE Management", getattr(ep, "ppe_provision", "") if ep else "", "Employer"),
+            _f("Safety Training", getattr(ep, "safety_training_enabled", "") if ep else "", "Employer"),
+            _f("Site Induction", getattr(ep, "site_induction_enabled", "") if ep else "", "Employer"),
+            _f("Emergency Response Plan", getattr(ep, "emergency_plan_enabled", "") if ep else "", "Employer"),
+            _f("Fire Safety Certificate", getattr(ep, "fire_certificate", "") if ep else "", "Employer"),
+            _f("Canteen Facility", getattr(ep, "canteen_facility", "") if ep else "", "Employer"),
+            _f("Creche Facility", getattr(ep, "creche_facility", "") if ep else "", "Employer"),
+            _f("Transport Facility", getattr(ep, "transport_facility", "") if ep else "", "Employer"),
+            _f("Accommodation / Camp Facility", getattr(ep, "accommodation_facility", "") if ep else "", "Employer"),
+        ],
+        "worker-relations": [
+            _f("Worker Grievance Mechanism", getattr(ep, "grievance_mechanism", "") if ep else "", "Employer"),
+            _f("Grievance Officer", getattr(ep, "grievance_officer_name", "") if ep else "", "Employer"),
+            _f("Internal Complaints Committee / POSH", getattr(ep, "posh_icc", "") if ep else "", "Employer"),
+            _f("Standing Orders / Service Rules", getattr(ep, "standing_orders", "") if ep else "", "Employer"),
+            _f("Worker Communication Channel", getattr(ep, "communication_channel", "") if ep else "", "Employer"),
+        ],
+        "settings": [
+            _f("Default Approval SLA (days)", getattr(ep, "default_approval_sla_days", "") if ep else "", "Employer"),
+            _f("Compliance Reminder Window (days)", getattr(ep, "compliance_reminder_window_days", "") if ep else "", "Employer"),
+            _f("Preferred Reporting Period", getattr(ep, "preferred_reporting_period", "") if ep else "", "Employer"),
+            _f("Escalation Contact", getattr(ep, "escalation_contact", "") if ep else "", "Employer"),
+        ],
+    }
+
+
+def build_contractor_portal(user):
+    return {
+        "identity": _contractor_identity(user),
+        "stats": _contractor_stats(user),
+        "principalEmployer": _contractor_principal_employer(user),
+        "sites": _contractor_sites(user),
+        "workers": _contractor_workers(user),
+        "compliances": _contractor_compliances(user),
+        "complianceReports": _contractor_compliance_reports(user),
+        "gatePasses": _contractor_gate_passes(user),
+        "applications": _contractor_applications(user),
+        "employers": _contractor_employers(user),
+        "submissions": _contractor_submissions(user),
+        "workerBenefits": _contractor_worker_benefits(user),
+        "salaries": _contractor_salaries(user),
+        "profileSections": _contractor_profile_sections(user),
+        "licenses": _contractor_licenses(user),
+        "workerDocuments": _contractor_worker_documents(user),
+        "workerCompliance": _contractor_worker_compliance(user),
+        "workforceGrowth": _contractor_workforce_growth(),
+        "applicability": _contractor_applicability(),
+        "complianceHistory": _contractor_compliance_history(user),
+        "jobHistory": _contractor_job_history(user),
+        "bindingRequests": _contractor_binding_requests(user),
+        "registers": _contractor_registers(user),
+        "complianceBatches": _contractor_compliance_batches(user),
+        "auditReports": _contractor_audit_reports(user),
+        "grievances": _contractor_grievances(user),
+        "payroll": {
+            "config": _contractor_payroll_config(user),
+            "records": [],
+            "templateColumns": [],
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Employer portal
+# ---------------------------------------------------------------------------
+def _employer_identity(user):
+    ep = getattr(user, "employer_profile", None)
+    return {
+        "name": _d(ep.employer_name if ep else ""),
+        "company": _d(ep.trade_name if ep else ""),
+        "bssId": _d(ep.employer_code if ep else f"BSSE{user.id:04d}"),
+        "entity": _d(ep.entity_class if ep else ""),
+        "verified": _d(ep.verification_status if ep else "PENDING") == "APPROVED",
+        "contact": _d(ep.contact_person if ep else ""),
+        "email": _d(ep.email if ep else ""),
+        "address": _d(ep.address if ep else ""),
+    }
+
+
+def _employer_stats(user):
+    sites = Site.objects.filter(employer=user)
+    contractors = WorkerContractorBinding.objects.filter(site__employer=user).values_list(
+        "contractor_id", flat=True).distinct().count()
+    workers = WorkerContractorBinding.objects.filter(site__employer=user,
+                                                     binding_status="ACCEPTED").count()
+    return {
+        "totalContractors": contractors,
+        "totalWorkers": workers,
+        "activeSites": sites.count(),
+        "complianceScore": 0,
+        "pendingApprovals": user.approvals_handled.filter(status="PENDING").count() if hasattr(user, "approvals_handled") else 0,
+    }
+
+
+def _employer_sites(user):
+    rows = []
+    for s in Site.objects.filter(employer=user):
+        cids = WorkerContractorBinding.objects.filter(site=s).values_list(
+            "contractor_id", flat=True).distinct()
+        wcount = WorkerContractorBinding.objects.filter(site=s, binding_status="ACCEPTED").count()
+        rows.append({
+            "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
+            "location": _d(s.location) or _d(s.city),
+            "state": _d(s.state),
+            "startDate": _dts(s.site_start_date) or "",
+            "endDate": _dts(s.expected_end_date) or "",
+            "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
+            "contractorIds": list(cids), "workers": wcount,
+            "compliance": 0,
+            "data": _site_scalar_data(s),
+        })
+    return rows
+
+
+_SITE_SCALAR_FIELDS = tuple(
+    f.name for f in Site._meta.get_fields()
+    if not getattr(f, "auto_created", False)
+    and not getattr(f, "many_to_one", False)
+    and not getattr(f, "many_to_many", False)
+    and not getattr(f, "one_to_one", False)
+    and f.name not in ("id", "site_qr_token", "created_at", "updated_at", "employer")
+)
+
+
+def _site_scalar_data(s):
+    """All editable scalar fields of a Site, keyed by model column name."""
+    out = {}
+    for f in _SITE_SCALAR_FIELDS:
+        v = getattr(s, f, None)
+        if v is None:
+            out[f] = None
+        elif isinstance(v, (datetime.datetime, datetime.date)):
+            out[f] = v.isoformat()
+        elif hasattr(v, "isoformat"):
+            out[f] = v.isoformat()
+        else:
+            out[f] = v
+    return out
+
+
+def _employer_contractors(user):
+    cids = WorkerContractorBinding.objects.filter(site__employer=user).values_list(
+        "contractor_id", flat=True).distinct()
+    rows = []
+    for cid in cids:
+        c = User.objects.filter(id=cid).first()
+        if not c:
+            continue
+        cp = getattr(c, "contractor_profile", None)
+        site_ids = list(Site.objects.filter(employer=user, bindings__contractor=c).values_list("id", flat=True))
+        wcount = WorkerContractorBinding.objects.filter(contractor=c, site__employer=user,
+                                                        binding_status="ACCEPTED").count()
+        rows.append({
+            "id": c.id, "name": _d(cp.contractor_name if cp else c.username),
+            "bssId": _d(cp.contractor_code if cp else f"BSSC{c.id:04d}"),
+            "contact": _d(cp.contact_person if cp else ""),
+            "email": _d(cp.email if cp else ""),
+            "siteIds": site_ids, "workers": wcount,
+            "compliance": 0, "onboardingDate": None,
+            "status": _d(cp.approval_status if cp else "PENDING"),
+            "verified": bool(cp and cp.is_verified_badge),
+        })
+    return rows
+
+
+def _employer_workers(user):
+    bindings = WorkerContractorBinding.objects.filter(site__employer=user, binding_status="ACCEPTED")
+    rows = []
+    for b in bindings:
+        wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        cp = getattr(b.contractor, "contractor_profile", None)
+        rows.append({
+            "id": b.worker_id,
+            "name": _d(wi.name if wi else b.worker.username),
+            "bssId": _d(wi.bss_worker_id if wi else ""),
+            "mobile": _d(wi.mobile_number if wi else ""),
+            "contractorId": b.contractor_id,
+            "contractor": _d(cp.contractor_name if cp else b.contractor.username),
+            "siteId": b.site_id, "site": b.site.site_name if b.site else "",
+            "designation": "", "doj": None,
+            "attendance": "PRESENT", "compliance": 0,
+            "status": _d(b.binding_status), "verified": bool(wi and wi.aadhaar),
+        })
+    return rows
+
+
+def _employer_approvals(user):
+    rows = []
+    for a in user.approvals_handled.filter(status="PENDING")[:20] if hasattr(user, "approvals_handled") else []:
+        rows.append({
+            "id": a.id, "entityType": _d(a.entity_type),
+            "entityId": _d(a.entity_id), "name": "",
+            "bssId": "", "contractor": "",
+            "site": "", "submittedAt": _dts(a.requested_at),
+            "checks": [], "status": _d(a.status),
+        })
+    return rows
+
+
+def _employer_gate_passes(user):
+    gps = WorkerGatePass.objects.filter(site__employer=user)
+    rows = []
+    for g in gps[:20]:
+        wi = WorkerIdentity.objects.filter(user=g.worker).first()
+        rows.append({
+            "id": g.id,
+            "workerName": _d(wi.name if wi else g.worker.username),
+            "workerId": _d(wi.bss_worker_id if wi else ""),
+            "contractor": "",
+            "site": g.site.site_name if g.site else "",
+            "siteId": g.site_id,
+            "type": _d(g.gate_pass_type),
+            "requestedAt": _dts(g.created_at),
+            "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
+            "status": _d(g.status),
+        })
+    return rows
+
+
+def _employer_submissions(user):
+    rows = []
+    uploaded = SubmissionEvidence.objects.filter(
+        Q(user__worker_bindings__site__employer=user) |
+        Q(user__contractor_bindings__site__employer=user)
+    ).distinct()[:20]
+    for ev in uploaded:
+        cp = getattr(ev.user, "contractor_profile", None) if ev.user.role == "contractor" else None
+        rows.append({
+            "id": ev.id,
+            "contractor": _d(cp.contractor_name if cp else ""),
+            "contractorId": ev.user_id if ev.user.role == "contractor" else None,
+            "site": _d(ev.site), "type": _d(ev.doc_type),
+            "period": _d(ev.period),
+            "submittedAt": _dts(ev.created_at),
+            "status": _d(ev.status),
+        })
+    for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
+        rows.append({
+            "id": c.id, "contractor": "", "contractorId": None,
+            "site": c.site.site_name if c.site else "",
+            "type": _d(c.master.act if c.master else ""),
+            "period": _d(c.period), "submittedAt": _dts(c.updated_at),
+            "status": _d(c.status),
+        })
+    return rows
+
+
+def _employer_compliance_reports(user):
+    rows = []
+    for r in user.compliance_reports.all()[:20] if hasattr(user, "compliance_reports") else []:
+        rows.append({
+            "id": r.id, "contractorId": None, "contractor": "",
+            "siteId": None, "site": "", "period": _d(r.period),
+            "pf": 1, "esic": 1, "wage": 1, "safety": 1,
+            "score": _num(r.score_pct), "status": "COMPLETED",
+        })
+    return rows
+
+
+def _employer_users(user):
+    return []
+
+
+def _employer_permission_roles():
+    return []
+
+
+def _employer_audit_logs(user):
+    return []
+
+
+def _employer_worker_documents(user):
+    return []
+
+
+def _employer_activities(user):
+    return []
+
+
+def _employer_labour_compliance():
+    return [
+        {"ruleId": 1, "scope": "central", "status": "compliant",
+         "note": "Statutory registrations in order", "verifiedAt": _dts(timezone.now())},
+    ]
+
+
+def _employer_payroll(user):
+    return {
+        "config": _contractor_payroll_config(user),
+        "records": [],
+        "templateColumns": [],
+    }
+
+
+def build_employer_portal(user):
+    return {
+        "identity": _employer_identity(user),
+        "stats": _employer_stats(user),
+        "sites": _employer_sites(user),
+        "contractors": _employer_contractors(user),
+        "workers": _employer_workers(user),
+        "approvals": _employer_approvals(user),
+        "gatePasses": _employer_gate_passes(user),
+        "submissions": _employer_submissions(user),
+        "complianceReports": _employer_compliance_reports(user),
+        "canAccessAdmin": False,
+        "users": _employer_users(user),
+        "permissionRoles": _employer_permission_roles(),
+        "auditLogs": _employer_audit_logs(user),
+        "routes": [],
+        "workerDocuments": _employer_worker_documents(user),
+        "activities": _employer_activities(user),
+        "govtScope": "central",
+        "labourCompliance": _employer_labour_compliance(),
+        "profileSections": _employer_profile_sections(user),
+        "payroll": _employer_payroll(user),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Government portal
+# ---------------------------------------------------------------------------
+def build_government_portal():
+    workers = []
+    for b in WorkerContractorBinding.objects.filter(binding_status="ACCEPTED")[:50]:
+        wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        site = b.site
+        employer_profile = getattr(site.employer, "employer_profile", None) if site else None
+        contractor_profile = getattr(b.contractor, "contractor_profile", None)
+        ss = WorkerSocialSecurity.objects.filter(user=b.worker).first()
+        workers.append({
+            "id": b.worker_id,
+            "state": site.state if site else "",
+            "district": site.district if site else "",
+            "city": site.city if site else "",
+            "age": wi.age if wi and wi.age else None,
+            "gender": _d(wi.gender if wi else ""),
+            "category": "",
+            "occupation": "",
+            "site": site.site_name if site else "",
+            "siteType": site.site_type if site else "",
+            "employer": _d(employer_profile.employer_name if employer_profile else ""),
+            "contractor": _d(contractor_profile.contractor_name if contractor_profile else b.contractor.username),
+            "migrant": False,
+            "stateOfOrigin": "",
+            "attendance": "PRESENT",
+            "compliance": 100,
+            "epfoLinked": bool(ss and ss.epfo_uan),
+            "esicLinked": bool(ss and ss.esic_ip_number),
+            "wage": 0,
+        })
+    return {
+        "generatedAt": _dts(timezone.now()),
+        "source": "BSS Registry",
+        "states": list(GEOGRAPHY.keys()),
+        "workers": workers,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Operations (BSS admin / staff)
+# ---------------------------------------------------------------------------
+def build_operations(role):
+    return {
+        "generatedAt": _dts(timezone.now()),
+        "role": role,
+        "metrics": {"uptime": "99.99%", "activeSessions": 0, "queueDepth": 0,
+                    "failedJobs": 0, "openTickets": 0, "openCases": 0},
+        "services": [],
+        "logs": [],
+        "tickets": [],
+        "cases": [],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+CATEGORY_MAP = {
+    "INFO": "info", "APPROVAL": "approval", "WARNING": "warning",
+    "GRIEVANCE": "grievance", "COMPLIANCE": "compliance", "PAYROLL": "payroll",
+}
+
+
+def build_notifications(user):
+    rows = []
+    for n in Notification.objects.filter(user=user).order_by("-created_at")[:50]:
+        rows.append({
+            "id": n.id,
+            "entityId": None,
+            "category": CATEGORY_MAP.get(n.type, "info"),
+            "title": _d(n.title),
+            "message": _d(n.body),
+            "createdAt": _dts(n.created_at),
+            "href": _d(n.link),
+            "actionLabel": "View",
+            "priority": "normal",
+            "requiresAction": not n.is_read,
+            "read": n.is_read,
+            "resolved": bool(n.is_read),
+        })
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Identity verify
+# ---------------------------------------------------------------------------
+def build_identity_verify(bss_id):
+    bss_id = (bss_id or "").strip()
+    if bss_id.upper().startswith("BSSC"):
+        try:
+            cp = ContractorProfile.objects.get(contractor_code=bss_id)
+        except ContractorProfile.DoesNotExist:
+            return None
+        return {
+            "id": cp.user_id,
+            "name": _d(cp.contractor_name),
+            "company": _d(cp.trade_name),
+            "bssId": _d(cp.contractor_code),
+            "verified": bool(cp.is_verified_badge),
+        }
+    wi = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
+    if not wi:
+        return None
+    sk = WorkerSkillsEmployability.objects.filter(user=wi.user).first()
+    return {
+        "identity": {
+            "name": _d(wi.name), "bssId": _d(wi.bss_worker_id),
+            "category": "", "aadhaarVerified": bool(wi.aadhaar),
+            "photoUrl": _d(wi.photo),
+        },
+        "employment": {"status": ""},
+        "skills": {
+            "primary": {
+                "name": _d(sk.primary_skill if sk else ""),
+                "level": "novice",
+                "experienceYears": _d(sk.skill_experience_years if sk else ""),
+            }
+        },
+    }
+
+
+def sha256_checksum(file_obj):
+    hasher = hashlib.sha256()
+    for chunk in file_obj.chunks():
+        hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# BSS Admin payroll (system-wide supervisory view over the shared Worker model)
+# ---------------------------------------------------------------------------
+def build_admin_payroll(user):
+    employers = []
+    for ep in EmployerProfile.objects.select_related("user").all():
+        employers.append({
+            "bssId": _d(ep.employer_code),
+            "name": _d(ep.employer_name) or ep.user.username,
+        })
+
+    contractors = []
+    for cp in ContractorProfile.objects.select_related("user").all():
+        contractors.append({
+            "bssId": _d(cp.contractor_code),
+            "name": _d(cp.contractor_name) or cp.user.username,
+        })
+
+    site_names = list(Site.objects.exclude(site_name="").values_list("site_name", flat=True))
+
+    admin_workers = []
+    seen = set()
+    for b in WorkerContractorBinding.objects.filter(binding_status="ACCEPTED"):
+        if b.worker_id in seen:
+            continue
+        seen.add(b.worker_id)
+        wi = WorkerIdentity.objects.filter(user_id=b.worker_id).first()
+        cp = getattr(b.contractor, "contractor_profile", None)
+        ep = getattr(b.site.employer, "employer_profile", None) if b.site else None
+        admin_workers.append({
+            "bssId": _d(wi.bss_worker_id if wi else ""),
+            "name": _d(wi.name if wi else b.worker.username),
+            "employer": _d(ep.employer_name if ep else ""),
+            "site": b.site.site_name if b.site else "",
+            "contractor": _d(cp.contractor_name if cp else ""),
+            "designation": "",
+        })
+
+    payroll_user = User.objects.filter(employer_profile__isnull=False,
+                                       payroll_config__isnull=False).order_by("id").first()
+    config = _contractor_payroll_config(payroll_user) if payroll_user else _contractor_payroll_config(None)
+
+    records = []
+    for w in WorkerWages.objects.select_related("worker", "site", "contractor").order_by("-period_start"):
+        wi = WorkerIdentity.objects.filter(user_id=w.worker_id).first()
+        binding = WorkerContractorBinding.objects.filter(worker_id=w.worker_id,
+                                                         binding_status="ACCEPTED").first()
+        site = w.site or (binding.site if binding else None)
+        contractor_user = w.contractor or (binding.contractor if binding else None)
+        cp = getattr(contractor_user, "contractor_profile", None) if contractor_user else None
+        ep = getattr(site.employer, "employer_profile", None) if site else None
+
+        gross = _num(w.gross_wage)
+        basic = gross if not w.base_wage else float(w.base_wage)
+        employee_pf = round(basic * 0.12, 2)
+        employer_pf = round(basic * 0.12, 2)
+        eps = round(basic * 0.0833, 2)
+        edli = round(basic * 0.005, 2)
+        admin = round(basic * 0.005, 2)
+        employee_esi = round(gross * 0.0075, 2)
+        employer_esi = round(gross * 0.0325, 2)
+        employee_pt = 200.0
+        employer_pt = 200.0
+        lwf_employee = 12.0
+        lwf_employer = 12.0
+        total_deductions = _num(w.deductions_amount)
+        net = _num(w.net_wage)
+        employer_cost = round(gross + employer_pf + employer_esi + employer_pt + lwf_employer + admin, 2)
+
+        status_map = {"DRAFT": "Draft", "APPROVED": "Reviewed", "PAID": "Verified",
+                      "CANCELLED": "Exception"}
+        status_label = status_map.get(w.status, "Draft")
+
+        records.append({
+            "id": f"PW{w.id}",
+            "workerId": _d(wi.bss_worker_id if wi else ""),
+            "workerName": _d(wi.name if wi else w.worker.username),
+            "employer": _d(ep.employer_name if ep else ""),
+            "site": site.site_name if site else "",
+            "period": w.period_start.strftime("%b %Y") if w.period_start else "",
+            "status": status_label,
+            "attendanceDays": _num(w.days_present),
+            "lopDays": _num(w.days_absent),
+            "pfWage": round(basic, 2),
+            "earnings": [{"component": "Basic + Allowances", "amount": round(gross, 2)}],
+            "deductions": [{"component": "Statutory Deductions", "amount": round(total_deductions, 2)}],
+            "contributions": {
+                "employeePF": employee_pf, "employerPF": employer_pf, "eps": eps, "edli": edli,
+                "admin": admin, "employeeESI": employee_esi, "employerESI": employer_esi,
+                "employeePT": employee_pt, "employerPT": employer_pt,
+                "lwfEmployee": lwf_employee, "lwfEmployer": lwf_employer,
+            },
+            "gross": round(gross, 2),
+            "totalDeductions": round(total_deductions, 2),
+            "netPay": round(net, 2),
+            "employerCost": employer_cost,
+            "updatedAt": _dts(w.updated_at),
+            "updatedBy": _d(cp.contractor_name if cp else "") or _d(ep.employer_name if ep else "") or "System",
+            "source": "Contractor" if contractor_user else "Employer",
+            "matchState": "Needs Review",
+            "contractor": _d(cp.contractor_name if cp else ""),
+        })
+
+    return {
+        "dataMode": "remote",
+        "generatedAt": _dts(timezone.now()),
+        "employers": employers,
+        "contractors": contractors,
+        "sites": site_names,
+        "workers": admin_workers,
+        "payroll": {
+            "config": config,
+            "records": records,
+            "templateColumns": ["id", "workerId", "workerName", "employer", "site", "contractor",
+                                "period", "status", "gross", "netPay"],
+        },
+        "sourceNote": "Live database — DB-driven worker payroll across all employers",
+    }

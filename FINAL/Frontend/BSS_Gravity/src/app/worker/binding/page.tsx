@@ -1,0 +1,152 @@
+"use client";
+
+import React, { useState } from 'react';
+import { Building2, CheckCircle2, Handshake, Home, Link2, MapPin, QrCode, XCircle } from 'lucide-react';
+import Link from 'next/link';
+import { useWorker } from '@/contexts/WorkerContext';
+import RebindAuthModal from '@/components/worker/RebindAuthModal';
+import { recordBindingApproval, formatApprovalDate } from '@/lib/workerDocumentWorkflow';
+
+type BindingRequest = {
+  id: number;
+  ref: string;
+  contractor: string;
+  contractorCode: string;
+  lin: string;
+  employer: string;
+  site: string;
+  designation: string;
+  wage: string;
+  requestedOn: string;
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired';
+};
+
+
+
+export default function BindingRequestsPage() {
+  const { worker, portal } = useWorker();
+
+  const apiRequests: BindingRequest[] = (portal.bindings ?? []).map((req: any) => ({
+    id: Number(req.id),
+    ref: String(req.ref || `BIND-2026-${String(req.id).padStart(3, '0')}`),
+    contractor: String(req.contractor || ''),
+    contractorCode: String(req.contractorCode || ''),
+    lin: String(req.lin || ''),
+    employer: String(req.employer || ''),
+    site: String(req.site || ''),
+    designation: String(req.designation || ''),
+    wage: String(req.wage || ''),
+    requestedOn: String(req.requestedOn || '—'),
+    status: (['Pending', 'Accepted', 'Rejected', 'Expired'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
+  }));
+
+  const [requests, setRequests] = useState<BindingRequest[]>(apiRequests.length > 0 ? apiRequests : []);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const boundContractor = (worker.employment.status === 'Active' && worker.employment.contractor?.trim()) ? worker.employment.contractor : null;
+  const [authRequestId, setAuthRequestId] = useState<number | null>(null);
+  const authRequest = requests.find(r => r.id === authRequestId) ?? null;
+
+  const act = async (id: number, action: 'accept' | 'decline') => {
+    setBusyId(id);
+    setError('');
+    try {
+      const response = await fetch('/api/worker/bindings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Could not update binding request.');
+      const status: BindingRequest['status'] = action === 'accept' ? 'Accepted' : 'Rejected';
+      setRequests(current => current.map(r => r.id === id ? { ...r, status } : r));
+      const req = requests.find(r => r.id === id);
+      if (action === 'accept' && req) {
+        recordBindingApproval({ contractor: req.contractor, approvedOn: formatApprovalDate(new Date()) });
+      }
+      setNotice(action === 'accept' ? `Binding approved — you are now bound to ${req?.contractor || 'the contractor'}.` : `You declined the binding request from ${req?.contractor || 'the contractor'}.`);
+      setTimeout(() => setNotice(''), 6000);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not update binding request.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const requestAccept = (req: BindingRequest) => {
+    if (boundContractor && req.status === 'Pending') { setAuthRequestId(req.id); return; }
+    void act(req.id, 'accept');
+  };
+
+  const badge = (status: string) => {
+    const map: Record<string, string> = { Pending:'bg-orange-100 text-orange-700', Accepted:'bg-green-100 text-green-700', Rejected:'bg-red-100 text-red-700', Expired:'bg-gray-100 text-gray-500' };
+    return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status]}`}>{status}</span>;
+  };
+
+  return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
+      <div>
+        <h1 className="text-2xl font-bold text-[#062D4F]">Binding Requests</h1>
+        <p className="text-sm text-gray-500 mt-1">Connect a worker with a contractor. Both parties must approve before binding is complete.</p>
+      </div>
+      <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm" title="Go to Dashboard"><Home size={18}/></Link>
+    </div>
+
+    {notice && <p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
+    {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
+
+    {/* How binding works */}
+    <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+      <span className="w-11 h-11 rounded-xl bg-white border border-blue-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Handshake size={20}/></span>
+      <div className="flex-1"><h2 className="text-sm font-semibold text-gray-900">How binding works</h2><p className="text-xs text-gray-500 mt-0.5">You can start a binding request by scanning a Contractor QR code. The contractor must approve it, and you must accept — only then are you bound and can start work at the site.</p></div>
+      <Link href="/worker/scan" className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold flex items-center gap-2 hover:bg-[#062D4F] flex-shrink-0"><QrCode size={16}/>Scan contractor QR</Link>
+    </section>
+
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {[{l:'Pending',v:requests.filter(r=>r.status==='Pending').length,t:'text-orange-600'},{l:'Active binding',v:requests.filter(r=>r.status==='Accepted').length,t:'text-green-700'},{l:'Declined',v:requests.filter(r=>r.status==='Rejected').length,t:'text-red-600'},{l:'Total requests',v:requests.length,t:'text-gray-800'}].map(s=><div key={s.l} className="bg-white border border-gray-200 rounded-xl p-4"><strong className={`block text-xl ${s.t}`}>{s.v}</strong><span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{s.l}</span></div>)}
+    </div>
+
+    <div className="space-y-4">
+      {requests.map(req => (
+        <article key={req.id} className="bg-white border border-gray-200 rounded-2xl p-5">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="flex gap-3 min-w-0">
+              <span className="w-11 h-11 rounded-xl bg-gray-50 border border-gray-100 text-[#073B67] flex items-center justify-center flex-shrink-0"><Building2 size={20}/></span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-bold text-gray-950">{req.contractor}</h3>{badge(req.status)}</div>
+                <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
+              </div>
+            </div>
+            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {req.requestedOn}</p><p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p></div>
+          </div>
+
+          <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div><dt className="text-gray-400">Principal employer</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.employer}</dd></div>
+            <div><dt className="text-gray-400">Site</dt><dd className="font-semibold text-gray-800 mt-0.5 flex items-center gap-1"><MapPin size={11} className="text-gray-400"/>{req.site}</dd></div>
+            <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.designation}</dd></div>
+            <div><dt className="text-gray-400">Offered wage</dt><dd className="font-semibold text-green-700 mt-0.5">{req.wage}</dd></div>
+          </dl>
+
+          {req.status === 'Pending' && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+              <button onClick={() => requestAccept(req)} disabled={busyId===req.id} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-60"><Link2 size={15}/>{busyId===req.id?'Approving…':'Accept & Bind'}</button>
+              <button onClick={() => void act(req.id, 'decline')} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 disabled:opacity-60"><XCircle size={15}/>Decline</button>
+            </div>
+          )}
+          {req.status === 'Accepted' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-green-700 font-semibold flex items-center gap-1.5"><CheckCircle2 size={14}/>Binding active · employment started with {req.contractor} on approval of both parties.</p>}
+        </article>
+      ))}
+    </div>
+
+    {authRequest && boundContractor && (
+      <RebindAuthModal
+        currentContractor={boundContractor}
+        targetContractor={authRequest.contractor}
+        contextLabel={`Binding request ${authRequest.id} · ${authRequest.contractor} · ${authRequest.site}`}
+        onCancel={() => setAuthRequestId(null)}
+        onAuthenticated={() => { setAuthRequestId(null); void act(authRequest.id, 'accept'); }}
+      />
+    )}
+  </div>;
+}

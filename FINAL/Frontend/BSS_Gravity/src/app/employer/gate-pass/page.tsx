@@ -1,0 +1,105 @@
+"use client";
+
+import { useMemo, useState } from 'react';
+import { Check, CheckCircle2, Clock3, ShieldCheck, X, XCircle } from 'lucide-react';
+import { useEmployer } from '@/contexts/EmployerContext';
+import type { EmployerGatePass, EmployerPortalData } from '@/types/portal';
+import { useEmployerDocView } from '@/components/documentEngine/portalAdapters';
+import { DocumentGeneratorModal } from '@/components/documentEngine/DocumentFlow';
+import type { DocumentType } from '@/lib/documentEngine/types';
+import type { WorkerLike } from '@/lib/documentEngine/workerDataService';
+
+type Eligibility = { medical: boolean; healthSafety: boolean; compliance: boolean };
+
+function eligibilityFor(employer: EmployerPortalData, workerId: string): Eligibility {
+  const docs = employer.workerDocuments.filter(d => d.workerId === workerId);
+  const verified = (names: string[]) => docs.some(d => names.includes(d.document) && d.status === 'Verified');
+  const worker = employer.workers.find(item => item.bssId === workerId);
+  return {
+    medical: Boolean(verified(['Medical Certificate', 'Medical Fitness']) || worker?.compliance === 'Compliant'),
+    healthSafety: Boolean(verified(['Safety Induction', 'Safety Kit', 'Safety Training', 'PPE'])),
+    compliance: Boolean(worker?.compliance === 'Compliant' || (worker?.verified && verified(['Aadhaar', 'Bank Verification', 'UAN', 'ESIC IP']))),
+  };
+}
+const eligibleSummary = (eligible: number, total: number) => total === 0 ? 'no workers selected' : `${eligible} of ${total} selected workers are fully eligible (Medical · Health & Safety · Compliance)`;
+
+export default function EmployerGatePassPage() {
+  const { employer, replaceEmployer, mutate } = useEmployer();
+  const docCtx = useEmployerDocView();
+  const [issue, setIssue] = useState<{ type: DocumentType; worker: WorkerLike } | null>(null);
+  const [site, setSite] = useState('all');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [confirm, setConfirm] = useState<{ status: 'Approved' | 'Rejected' } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const rows = site === 'all' ? employer.gatePasses : employer.gatePasses.filter(item => item.siteId === site);
+  const pending = rows.filter(item => item.status === 'Pending');
+  const allVisibleSelected = pending.length > 0 && pending.every(item => selected.includes(item.id));
+
+  const counts = useMemo(() => ({
+    total: employer.gatePasses.length,
+    pending: employer.gatePasses.filter(i => i.status === 'Pending').length,
+    approved: employer.gatePasses.filter(i => i.status === 'Approved').length,
+    rejected: employer.gatePasses.filter(i => i.status === 'Rejected').length,
+  }), [employer.gatePasses]);
+
+  function toggle(id: string) { setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]); }
+  function toggleAll() { setSelected(current => allVisibleSelected ? current.filter(id => !pending.some(row => row.id === id)) : Array.from(new Set([...current, ...pending.map(row => row.id)]))); }
+
+  async function decide(status: 'Approved' | 'Rejected') {
+    if (!selected.length) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await mutate('gate-passes', 'PATCH', { ids: selected, status });
+      replaceEmployer({ ...employer, gatePasses: employer.gatePasses.map(item => selected.includes(item.id) ? { ...item, status } : item) });
+      setNotice(`${selected.length} gate pass request${selected.length === 1 ? '' : 's'} ${status.toLowerCase()}.`);
+      setSelected([]);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The gate pass selection could not be updated.'); }
+    finally { setBusy(false); setConfirm(null); }
+  }
+
+  const confirmText = (status: 'Approved' | 'Rejected') => {
+    const target = employer.gatePasses.filter(item => selected.includes(item.id));
+    if (target.length === 1) return `${status} ${target[0].type} Gate Pass for ${target[0].workerName} at ${target[0].site}?`;
+    return `${status} ${target.length} selected gate pass requests?`;
+  };
+
+  return <div className="space-y-6 pb-24">
+    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Workforce gate access</p><h1 className="text-2xl font-bold mt-1">Gate Pass Approval</h1><p className="text-sm text-gray-500 mt-1">Review and approve permanent or temporary site access for connected workers.</p></header>
+
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <Metric label="Total requests" value={counts.total} icon={ShieldCheck} tone="bg-blue-50 text-blue-700"/>
+      <Metric label="Pending" value={counts.pending} icon={Clock3} tone="bg-orange-50 text-orange-700"/>
+      <Metric label="Approved" value={counts.approved} icon={CheckCircle2} tone="bg-green-50 text-green-700"/>
+      <Metric label="Rejected" value={counts.rejected} icon={XCircle} tone="bg-red-50 text-red-700"/>
+    </div>
+
+    {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
+    {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
+
+    <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <header className="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3"><div><h2 className="text-sm font-semibold text-gray-900">Gate pass requests</h2><p className="text-[11px] text-gray-400 mt-0.5">{rows.length} records in this view</p></div><label className="flex items-center gap-2 text-xs font-semibold text-gray-700">Site<select value={site} onChange={e => { setSite(e.target.value); setSelected([]); }} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white"><option value="all">All sites</option>{employer.sites.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></header>
+      <div className="overflow-x-auto"><table className="w-full min-w-[960px] text-left text-xs">
+        <thead className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500"><tr><th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all visible requests" checked={allVisibleSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300"/></th><th className="px-4 py-3">Worker</th><th className="px-4 py-3">Contractor</th><th className="px-4 py-3">Site</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Requested</th><th className="px-4 py-3">Validity</th><th className="px-4 py-3">Eligibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Issue</th></tr></thead>
+        <tbody className="divide-y divide-gray-100">{rows.map(row => { const elig = eligibilityFor(employer, row.workerId); return <tr key={row.id} className={selected.includes(row.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}><td className="px-4 py-3"><input type="checkbox" aria-label={`Select ${row.workerName}`} checked={selected.includes(row.id)} disabled={row.status !== 'Pending'} onChange={() => toggle(row.id)} className="w-4 h-4 rounded border-gray-300 disabled:opacity-30"/></td><td className="px-4 py-3"><strong className="text-gray-900">{row.workerName}</strong><p className="font-mono text-[10px] text-gray-400 mt-0.5">{row.workerId}</p></td><td className="px-4 py-3 text-gray-600">{row.contractor}</td><td className="px-4 py-3 text-gray-600">{row.site}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.type === 'Permanent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{row.type}</span></td><td className="px-4 py-3 text-gray-500">{row.requestedAt.slice(0, 10)}</td><td className="px-4 py-3 text-gray-500">{row.validFrom} → {row.validTo}</td><td className="px-4 py-3"><div className="flex gap-1 items-center"><Dot label="M" ok={elig.medical} title="Medical examination on record"/><Dot label="H&S" ok={elig.healthSafety} title="Health &amp; Safety (site induction / safety kit / training)"/><Dot label="C" ok={elig.compliance} title="Compliance status of the worker"/></div></td><td className="px-4 py-3"><Status value={row.status}/></td></tr>; })}{!rows.length && <tr><td colSpan={9} className="py-12 text-center text-gray-400">No gate pass requests in this view.</td></tr>}</tbody>
+      </table></div>
+    </section>
+
+    {selected.length > 0 && <div className="fixed bottom-5 left-4 right-4 z-40"><div className="max-w-[760px] mx-auto bg-white border border-gray-200 shadow-2xl rounded-2xl p-3 pb-safe flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="w-9 h-9 rounded-full bg-blue-50 text-blue-700 grid place-items-center font-bold">{selected.length}</span><div><p className="text-sm font-semibold">{selected.length} selected</p><p className="text-[11px] text-gray-500">A confirmation dialog will be shown before updating.</p></div></div><div className="flex gap-2"><button disabled={busy} onClick={() => setConfirm({ status:'Rejected' })} className="h-9 px-4 border border-gray-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><X size={14}/>Reject Selected</button><button disabled={busy} onClick={() => setConfirm({ status:'Approved' })} className="h-9 px-4 bg-[#073B67] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><Check size={14}/>Approve Selected</button></div></div></div>}
+
+    {confirm && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl overflow-hidden">
+      <header className="p-5 border-b border-gray-100 flex justify-between"><h2 className="font-semibold">{confirm.status === 'Approved' ? 'Approve gate pass' : 'Reject gate pass'}</h2><button onClick={() => setConfirm(null)} aria-label="Close"><X/></button></header>
+      <div className="p-5"><p className="text-sm text-gray-700">{confirmText(confirm.status)}</p><p className={`text-[11px] mt-2 ${eligibleSummary(employer.gatePasses.filter(item => selected.includes(item.id) && Object.values(eligibilityFor(employer, item.workerId)).every(Boolean)).length, selected.length).startsWith('0 of') ? 'text-amber-700' : 'text-green-700'}`}><ShieldCheck size={12} className="inline mr-1 -mt-0.5"/>{eligibleSummary(employer.gatePasses.filter(item => selected.includes(item.id) && Object.values(eligibilityFor(employer, item.workerId)).every(Boolean)).length, selected.length)}.</p><p className="text-[11px] text-gray-400 mt-2">This decision is recorded against each selected request and synchronized through the Employer API.</p>{error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}</div>
+      <footer className="p-5 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setConfirm(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={() => decide(confirm.status)} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-semibold disabled:opacity-50">{busy ? 'Updating…' : confirm.status === 'Approved' ? 'Approve selected' : 'Reject selected'}</button></footer>
+    </section></div>}
+  {issue && <DocumentGeneratorModal owner={docCtx.owner} view={docCtx.view} workers={[issue.worker]} type={issue.type} initialWorkerId={issue.worker.bssId} onClose={() => setIssue(null)}/>}
+  </div>;
+}
+
+function Status({ value }: { value: EmployerGatePass['status'] }) { const tone = value === 'Approved' ? 'bg-green-50 text-green-700' : value === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'; return <span className={`px-2 py-1 rounded text-[10px] font-semibold ${tone}`}>{value}</span>; }
+function Dot({ label, ok, title }: { label:string; ok:boolean; title:string }) { return <span title={title} className={`inline-flex items-center justify-center min-w-6 h-5 px-1 rounded text-[9px] font-bold ${ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{label}{ok ? '✓' : '✗'}</span>; }
+function Metric({ label, value, icon:Icon, tone }: { label:string; value:number; icon:typeof Clock3; tone:string }) { return <div className="bg-white border border-gray-200 rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16}/></span><strong className="block text-2xl mt-2">{value}</strong><p className="text-xs text-gray-500">{label}</p></div>; }

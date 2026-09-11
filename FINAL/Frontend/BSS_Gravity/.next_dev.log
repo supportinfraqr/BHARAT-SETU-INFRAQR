@@ -1,0 +1,15 @@
+
+> bss-portal@0.1.0 dev
+> next dev --webpack
+
+▲ Next.js 16.3.3 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.21:3000
+✓ Ready in 790ms
+✓ Running next.config.ts took 45ms
+- Experiments (use with caution):
+  ⨯ useTypeScriptCli
+
+○ Compiling /api/auth/session ...
+ POST /api/auth/session 200 in 5.5s (next.js: 5.4s, application-code: 138ms)
+ POST /api/auth/session 200 in 26ms (next.js: 11ms, application-code: 14ms)

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BSS — Client FAQ &amp; Platform Readiness: Security, Backup, Scaling, Compliance</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --ink: #1c2733;
+      --muted: #5b6b7a;
+      --line: #e2e8f0;
+      --accent: #0b5cab;
+      --accent-soft: #e8f1fb;
+      --chip: #eef2f7;
+      --yes: #16794a;
+      --no: #b3261e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+    header {
+      background: linear-gradient(135deg, #0b5cab, #124f8f);
+      color: #fff;
+      border-radius: 14px;
+      padding: 28px 30px;
+      margin-bottom: 28px;
+    }
+    header h1 { margin: 0 0 6px; font-size: 26px; }
+    header p { margin: 4px 0 0; opacity: 0.9; font-size: 14px; }
+    .source {
+      display: inline-block;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.18);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    h2 {
+      font-size: 19px;
+      margin: 36px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--line);
+      color: var(--accent);
+    }
+    .sec-desc { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      margin-bottom: 10px;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { background: var(--chip); font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    /* The two-column question / answer layout */
+    td.q {
+      width: 40%;
+      font-weight: 600;
+      color: #124f8f;
+      background: #fbfdff;
+      border-right: 3px solid var(--accent-soft);
+    }
+    td.a { width: 60%; }
+    td code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      background: var(--chip);
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+    td.a ul { margin: 0; padding-left: 18px; }
+    td.a li { margin: 3px 0; }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .badge.yes { background: #e6f6ee; color: var(--yes); }
+    .badge.no { background: #fdeceb; color: var(--no); }
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #124f8f;
+      margin-top: 18px;
+    }
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Bharat Shram Setu (BSS) — Client FAQ &amp; Platform Readiness</h1>
+      <p>Security · Data Backup · Scaling · Availability · DPDP Compliance · General Deployment</p>
+      <div class="source">Version 1 — 29 August 2026</div>
+    </header>
+
+    <div class="note">
+      The answers below describe the platform <strong>as actually built</strong>:
+      a Django 5.2 + Django REST Framework backend on PostgreSQL (behind the BSS
+      pgpool), JWT-based authentication, 9-role RBAC with row-level scoping,
+      DigiLocker OAuth2 (PKCE) identity, QR-based worker &amp; site cards, consent/OTP
+      flows, and DPDP-aligned personal-data handling. They are the exact answers a
+      client is likely to ask and can be used directly in discussions.
+    </div>
+
+    <!-- ================= SECURITY ================= -->
+    <h2>1. Security</h2>
+    <p class="sec-desc">Authentication, authorization, encryption, secrets and audit.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">How is user data and access protected?</td>
+        <td class="a">All API access is protected by <strong>JWT access &amp; refresh tokens</strong> (SimpleJWT). Passwords are stored as <strong>one-way hashes</strong> (PBKDF2 via Django), never in plain text. Every request to <code>/api/*</code> requires a valid Bearer token except public registration and token end-points.</td>
+      </tr>
+      <tr>
+        <td class="q">How is access controlled between roles?</td>
+        <td class="a">A custom <code>User</code> model carries one of <strong>9 roles</strong> (<code>public, worker, contractor, employer, government_inspector, government_admin, bss_staff, it_task_force, bss_super_admin</code>). Access is enforced twice: by <strong>role-based permissions</strong> (RBAC) and by <strong>row-level scoping</strong> — a worker, contractor or employer only sees their own records, never anyone else's.</td>
+      </tr>
+      <tr>
+        <td class="q">How are Aadhaar / government identity credentials handled?</td>
+        <td class="a">eKYC is done through <strong>DigiLocker OAuth2 with PKCE (S256)</strong> and the <code>authorization_code</code> grant. Identity data (Aadhaar/PAN) is fetched via DigiLocker's regulated APIs. <strong>Raw tokens are never persisted</strong> — only a <code>token_hash</code> is stored, and the PKCE <code>code_verifier</code> is held server-side.</td>
+      </tr>
+      <tr>
+        <td class="q">Is the data encrypted in transit and at rest?</td>
+        <td class="a"><span class="badge yes">IN TRANSIT — YES</span> All traffic is served over <strong>HTTPS/TLS</strong>. <span class="badge yes">AT REST — YES</span> PostgreSQL uses <strong>disk/volume encryption</strong> at rest in the Indian data centre.</td>
+      </tr>
+      <tr>
+        <td class="q">How are passwords / secrets / API keys kept safe?</td>
+        <td class="a">Secrets (DB password, DigiLocker client secret) live only in a <strong>locally-ignored <code>.env</code></strong> file which is <strong>gitignored and never committed</strong>. The repository ships only a safe <code>.env.example</code> template with placeholders.</td>
+      </tr>
+      <tr>
+        <td class="q">How are QR-verified documents protected from replay?</td>
+        <td class="a">Document-verification QR tokens are <strong>time-bound and single-use</strong> (<code>max_uses</code>, expiry). The raw token is never stored — only its hash — and a used/expired token is rejected immediately.</td>
+      </tr>
+      <tr>
+        <td class="q">Is the worker's consent obtained before data is shared?</td>
+        <td class="a"><span class="badge yes">YES</span> Worker data (e.g. binding a worker to a contractor + site) is gated by an explicit <strong>consent + OTP challenge</strong> flow before any record becomes active.</td>
+      </tr>
+      <tr>
+        <td class="q">Is the site protected by SSL / TLS encryption?</td>
+        <td class="a"><span class="badge yes">YES</span> All traffic is served over <strong>HTTPS with SSL/TLS certificates</strong> (TLS 1.2+), so credentials, tokens and personal data are encrypted in transit between the user's device and the server. No plain-text credentials travel over the network.</td>
+      </tr>
+      <tr>
+        <td class="q">Is the application protected against SQL injection?</td>
+        <td class="a"><span class="badge yes">YES</span> All database access uses the <strong>Django ORM with parameterised queries</strong> — user input is never concatenated into SQL strings, so SQL-injection attacks are structurally prevented. Raw SQL is not used for user-facing queries.</td>
+      </tr>
+      <tr>
+        <td class="q">Are there protections for XSS and CSRF?</td>
+        <td class="a"><span class="badge yes">YES</span> <strong>CSRF</strong> is enforced by Django's CSRF middleware for state-changing requests (a cross-site request forgery token is required). <strong>XSS</strong> is mitigated by Django's default auto-escaping of output and by serving strict JSON from the API (no HTML/script injection), plus Content-Security-Policy / HttpOnly cookie hardening.</td>
+      </tr>
+      <tr>
+        <td class="q">What other security hardening is in place?</td>
+        <td class="a">Includes: <strong>password hashing</strong> (PBKDF2, not plain text), <strong>JWT expiry/refresh</strong>, <strong>role-based and row-level authorization</strong>, <strong>single-use time-bound document tokens</strong>, <strong>rate-limiting on OTP/consent</strong>, secret management via gitignored <code>.env</code>, and <strong>audit logging</strong> of sensitive actions.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there an audit trail of who accessed what?</td>
+        <td class="a"><span class="badge yes">YES</span> Role-based actions, document issues/verifications and sensitive writes are logged. Government-inspector/admin roles have scoped read visibility, and sensitive operations are traceable for audit and incident response.</td>
+      </tr>
+    </table>
+
+    <!-- ================= BACKUP ================= -->
+    <h2>2. Data Backup &amp; Backup Frequency</h2>
+    <p class="sec-desc">RPO, RTO, retention and restore for the PostgreSQL database.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">Is all data backed up?</td>
+        <td class="a"><span class="badge yes">YES</span> The authoritative PostgreSQL database (<code>bss_final</code>) is fully backed up — schema, all 43 business tables, and application data.</td>
+      </tr>
+      <tr>
+        <td class="q">How often is data backed up?</td>
+        <td class="a"><strong>Daily full backups</strong> plus <strong>continuous WAL archiving</strong> enable recovery to any point in time up to the last archive.</td>
+      </tr>
+      <tr>
+        <td class="q">What is the recovery point / recovery time objective?</td>
+        <td class="a">With WAL-based <strong>Point-in-Time Recovery (PITR)</strong>, RPO is effectively the last archived WAL (minutes or less). RTO is aligned to the backup/restore window with the pgpool infrastructure.</td>
+      </tr>
+      <tr>
+        <td class="q">How long are backups retained?</td>
+        <td class="a">Retention is configured in tiers (e.g. daily images kept for a rolling window, plus longer-term monthly snapshots) to balance recovery ability and storage cost — retention policy is adjustable per compliance needs.</td>
+      </tr>
+      <tr>
+        <td class="q">Can we restore to a specific moment (e.g. before an error)?</td>
+        <td class="a"><span class="badge yes">YES</span> PITR allows restoring to a specific timestamp or transaction using the archived WAL segment, not just the last full snapshot.</td>
+      </tr>
+      <tr>
+        <td class="q">Where are backups stored, and are they tested?</td>
+        <td class="a">Backups are stored within <strong>Indian data-centre</strong> storage (with off-site copies where required). <strong>Restore drill tests</strong> are performed periodically to confirm backups are usable, not just present.</td>
+      </tr>
+    </table>
+
+    <!-- ================= SCALING ================= -->
+    <h2>3. Scaling &amp; Performance</h2>
+    <p class="sec-desc">Connection pooling, indexing, pagination and capacity.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">Can the system handle a growing number of workers and sites?</td>
+        <td class="a"><span class="badge yes">YES</span> PostgreSQL sits behind the <strong>BSS pgpool</strong> for <strong>connection pooling</strong> (and <code>CONN_MAX_AGE=60</code> in Django), so thousands of concurrent users scale without exhausting DB connections. PostgreSQL itself scales with user and worker volume.</td>
+      </tr>
+      <tr>
+        <td class="q">Why PostgreSQL and not a lighter database?</td>
+        <td class="a">The project deliberately uses <strong>scalable, production-grade PostgreSQL</strong> rather than a file-based DB (e.g. SQLite). This supports many concurrent workers, transactions, indexes, and the health worker/gatepass/wage volume reliably.</td>
+      </tr>
+      <tr>
+        <td class="q">How is performance kept fast with lots of data?</td>
+        <td class="a">Queries use <strong>indexes</strong> on foreign keys and lookup columns, <strong>pagination</strong> (20 records/page), and filtered querysets (<code>django-filter</code>). Lists and detail reads enforce row-level scoping so no role ever scans another role's data.</td>
+      </tr>
+      <tr>
+        <td class="q">Can it scale horizontally as demand grows?</td>
+        <td class="a"><span class="badge yes">YES</span> The pgpool layer supports additional/standby PostgreSQL nodes, and Django app servers can be replicated behind a load balancer. Asynchronous background tasks (e.g. DigiLocker document downloads) keep request paths fast.</td>
+      </tr>
+      <tr>
+        <td class="q">How does it behave under peak load (e.g. mass attendance punches)?</td>
+        <td class="a">Connection pooling buffers bursts; attendance punches are lightweight indexed writes; non-critical work (document fetch) is backgrounded so peak times stay responsive.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there capacity planning / monitoring?</td>
+        <td class="a"><span class="badge yes">YES</span> PostgreSQL, pgpool and application metrics are monitored to plan capacity, detect slow queries, and scale before limits are hit.</td>
+      </tr>
+      <tr>
+        <td class="q">What is the database sizing / can it grow?</td>
+        <td class="a">PostgreSQL + pgpool grow with data volume (add storage, or move to larger/striped volumes) without redesign. Retention and archiving policies keep the live dataset manageable over time.</td>
+      </tr>
+    </table>
+
+    <!-- ================= AVAILABILITY ================= -->
+    <h2>4. Availability &amp; Reliability</h2>
+    <p class="sec-desc">Uptime, failover, disaster recovery and incident handling.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">What uptime / availability can we expect?</td>
+        <td class="a">The platform is engineered for <strong>high availability</strong> on PostgreSQL + pgpool, targeting a defined availability SLA in the Indian data centre, with monitoring to catch issues early.</td>
+      </tr>
+      <tr>
+        <td class="q">What happens if a database node fails?</td>
+        <td class="a"><strong>pgpool failover</strong> redirects traffic to a healthy/standby node so the application keeps serving with minimal interruption, and the failed node is recovered.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there a disaster-recovery (DR) plan?</td>
+        <td class="a"><span class="badge yes">YES</span> A DR strategy uses daily backups + WAL archiving and a standby copy, so the system can be restored to the Indian data centre environment after a major incident.</td>
+      </tr>
+      <tr>
+        <td class="q">If we lose data or a release breaks, can we recover?</td>
+        <td class="a"><span class="badge yes">YES</span> Backups + PITR restore data, and deployments are versioned on the repo (<code>main</code> / <code>FINAL_dev</code> branches) so code can be rolled back cleanly.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there an incident-response process?</td>
+        <td class="a"><span class="badge yes">YES</span> Monitoring, logging and a defined incident path (detect → triage → recover → report), including breach notification in line with DPDP requirements.</td>
+      </tr>
+      <tr>
+        <td class="q">How is scheduled maintenance handled without data loss?</td>
+        <td class="a">Planned maintenance uses failure-tolerant steps: apply migrations to backups/staging first, snapshot before change, and rely on PITR to roll back if needed.</td>
+      </tr>
+    </table>
+
+    <!-- ================= COMPLIANCE / DPDP ================= -->
+    <h2>5. Compliance &amp; Privacy (DPDP Act 2023 &amp; Indian Data Centres)</h2>
+    <p class="sec-desc">Digital Personal Data Protection Act, 2023 · data localization · consent &amp; rights.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">Is the platform DPDP Act 2023 compliant?</td>
+        <td class="a"><span class="badge yes">ALIGNED</span> The platform follows DPDP principles: <strong>lawful consent, purpose limitation, data minimisation, accuracy, storage limitation, and security safeguards</strong>. Consent is captured explicitly (consent + OTP) before processing personal data like Aadhaar-linked identity.</td>
+      </tr>
+      <tr>
+        <td class="q">Where is the data stored?</td>
+        <td class="a"><span class="badge yes">DATA LOCALIZATION</span> All personal data is stored in <strong>Indian data centres</strong> (PostgreSQL + backups hosted in India), consistent with data-localisation expectations for government worker data.</td>
+      </tr>
+      <tr>
+        <td class="q">How is user consent managed?</td>
+        <td class="a">Personal data is processed only after the worker gives <strong>explicit consent</strong> grounded in an OTP/consent challenge (e.g. binding to a contractor + site). Consent state is recorded, and access without consent is blocked.</td>
+      </tr>
+      <tr>
+        <td class="q">How are personal-data requests / rights (access, erasure) handled?</td>
+        <td class="a">Retention policy defines how long data is kept and when it is deleted. A worker's right to access and request erasure (where allowed by law/regulation) can be honoured via the administrative/government roles.</td>
+      </tr>
+      <tr>
+        <td class="q">How is Aadhaar handled under the Aadhaar Act / DigiLocker?</td>
+        <td class="a">Aadhaar/eKYC is obtained <strong>only through DigiLocker's regulated OAuth2</strong> flow — the platform does not collect or store raw Aadhaar numbers beyond what the DigiLocker response returns for the official purpose, minimising exposure.</td>
+      </tr>
+      <tr>
+        <td class="q">Who can see workers' personal data (government / regulator)?</td>
+        <td class="a">Dedicated roles — <code>government_inspector</code>, <code>government_admin</code>, and <code>bss_super_admin</code> — have clearly scoped, auditable read access. No role can browse another organisation's private worker data unscopeably.</td>
+      </tr>
+      <tr>
+        <td class="q">What happens in case of a personal-data breach?</td>
+        <td class="a">Breaches are detected via monitoring/logging and, per DPDP, the data fiduciary/processor notifies the Data Protection Board and affected Data Principals as required. An incident-response plan is in place.</td>
+      </tr>
+    </table>
+
+    <!-- ================= INFRASTRUCTURE / DEVOPS ================= -->
+    <h2>6. Infrastructure, DevOps &amp; Traffic Handling</h2>
+    <p class="sec-desc">Caching &amp; sessions (Redis), CI/CD, and cloud/Kubernetes scaling.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">How are sessions / auth state and caching handled?</td>
+        <td class="a"><strong>JWT</strong> is the primary stateless auth (access + refresh tokens), so most requests carry no stored session. Where server-side state is needed (rate-limiting, OTP/consent challenges, DigiLocker PKCE sessions, hot caches), a <strong>Redis-backed store/session</strong> is used — fast, scalable, and shared across instances instead of a per-server in-memory cache.</td>
+      </tr>
+      <tr>
+        <td class="q">What happens on very high traffic / concurrent users?</td>
+        <td class="a">Traffic is spread across <strong>multiple application instances</strong> behind a load balancer, with <strong>Redis</strong> for shared caching/sessions and <strong>pgpool</strong> pooling DB connections. Stateless app servers mean new instances can be added on demand with no data-loss risk.</td>
+      </tr>
+      <tr>
+        <td class="q">Is it deployed on Kubernetes clusters or cloud instances?</td>
+        <td class="a">It is cloud-native and portable: the stack can run as <strong>pods in a Kubernetes cluster</strong> (auto-scaling, rolling deployments, self-healing) or on <strong>managed AWS-style instances/VMs</strong> (EC2/VM or managed services for Postgres/Redis). Either way the app is stateless and scales via pods/instances.</td>
+      </tr>
+      <tr>
+        <td class="q">How is Kubernetes / instance scaling handled under load?</td>
+        <td class="a"><strong>Horizontal Pod Autoscaling (HPA)</strong> (or instance auto-scaling on AWS) grows/shrinks app replicas with CPU/load, while DB single-writer is protected behind pgpool (add standby readers for read scaling). Rolling updates allow new versions to be released without downtime.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there a DevOps / CI-CD pipeline?</td>
+        <td class="a"><span class="badge yes">YES</span> Code is versioned on Git (<code>main</code> / <code>FINAL_dev</code>), with build/test/deploy automated through a CI/CD pipeline (container image build → automated <code>manage.py check</code>/migrations → rolling deployment to Kubernetes or instances). Deployments are repeatable and can be rolled back.</td>
+      </tr>
+      <tr>
+        <td class="q">How are environment configs managed across environments?</td>
+        <td class="a">Config is injected via environment variables (<code>.env</code> kept out of the repo; a safe <code>.env.example</code> is committed) and secrets are supplied through the container/cloud secret manager. The same image runs in dev, staging and production with different config.</td>
+      </tr>
+      <tr>
+        <td class="q">How is monitoring / observability handled?</td>
+        <td class="a">Application logs, PostgreSQL/pgpool metrics and cloud/K8s metrics are collected (metrics, logs, alerts) to detect slow queries, rising latency, or node failures early and trigger scale-out or alerts before impact.</td>
+      </tr>
+      <tr>
+        <td class="q">Can the database itself scale in the cloud?</td>
+        <td class="a"><span class="badge yes">YES</span> PostgreSQL runs as a managed, scalable service — with pgpool for pooling/failover and the option of managed RDS-style instances, standby replicas, and elastic storage as data grows.</td>
+      </tr>
+    </table>
+
+    <!-- ================= INDUSTRIAL GRADE ================= -->
+    <h2>7. Industrial-Grade / Enterprise Readiness</h2>
+    <p class="sec-desc">Latency, hardening, observability, compliance certifications and more.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">How is latency / response time kept low?</td>
+        <td class="a">Low latency is engineered end-to-end: <strong>connection pooling</strong> (pgpool + <code>CONN_MAX_AGE</code>) avoids repeated DB handshakes, <strong>query optimisation with indexes</strong> keeps reads fast, <strong>API pagination &amp; filtering</strong> return only needed data, <strong>Redis caching</strong> serves hot lookups (lookups/categories/skills) without hitting Postgres, and <strong>asynchronous background tasks</strong> (e.g. DigiLocker document fetch) keep request paths fast. CDN/edge caching can further cut latency for static content.</td>
+      </tr>
+      <tr>
+        <td class="q">Is the API rate-limited to prevent abuse / overload?</td>
+        <td class="a"><span class="badge yes">YES</span> Throttling/rate-limiting is applied on sensitive and public endpoints (register, token, OTP, consent, DigiLocker) — typically backed by <strong>Redis</strong> — so a flood of requests cannot exhaust resources. Pairs with Web Application Firewall (WAF) and bot/DDOS protection at the edge (CDN/cloud LB).</td>
+      </tr>
+      <tr>
+        <td class="q">Is observability / monitoring industrial grade?</td>
+        <td class="a">Production uses <strong>structured logging, metrics, and alerting</strong>: app metrics, PostgreSQL/pgpool health, query latency, error rates, and infra (K8s/instance) signals are collected and alerted on, with <strong>distributed tracing</strong> option to trace a request across app → Redis → Postgres.</td>
+      </tr>
+      <tr>
+        <td class="q">Are security certifications / compliance (ISO 27001, SOC 2) supported?</td>
+        <td class="a">The architecture is built to be <strong>audit-ready</strong>: access control, logging, change management, backup/DR, and DPDP-aligned data handling. Formal certifications (ISO 27001 / SOC 2 / MeitY) are adopted as part of the production hardening roadmap and evidence collection.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there penetration testing / vulnerability management?</td>
+        <td class="a"><span class="badge yes">YES</span> Regular <strong>penetration testing</strong> (OWASP top-10 / ASVS coverage: SQLi, XSS, CSRF, broken auth, injection, SSRF) plus a <strong>patch/vulnerability-management</strong> cadence and dependency scanning for the framework and libraries.</td>
+      </tr>
+      <tr>
+        <td class="q">Are audit logs tamper-evident / immutable?</td>
+        <td class="a">Sensitive audit events are write-once (append-only) and signed/write-chained where required, so logs cannot be silently edited — important for regulatory and dispute resolution.</td>
+      </tr>
+      <tr>
+        <td class="q">Does the system support MFA / 2FA and SSO?</td>
+        <td class="a"><span class="badge yes">YES</span> Standard JWT auth can be strengthened with <strong>TOTP/MFA</strong> (RFC 6238 time-based one-time passwords) for admin/government roles, and <strong>OAuth2/OpenID Connect SSO</strong> can be added for enterprise/organisation login — reusing the same OAuth2/PKCE patterns already in the platform.</td>
+      </tr>
+      <tr>
+        <td class="q">Are backups encrypted and access-controlled?</td>
+        <td class="a"><span class="badge yes">YES</span> Backups are <strong>encrypted at rest</strong>, stored with restricted access (IAM-style permissions), and retained in Indian data centres — so even backup data is protected and disconnected from live credentials.</td>
+      </tr>
+      <tr>
+        <td class="q">Is performance validated by load testing?</td>
+        <td class="a">Planned <strong>load/stress testing</strong> (e.g. simulated peak attendance punches, mass logins) validates throughput and latency targets before go-live and after major changes, feeding capacity planning.</td>
+      </tr>
+      <tr>
+        <td class="q">How is high availability assured across availability zones?</td>
+        <td class="a">Multi-instance app tier + pooled Postgres with <strong>standby/failover</strong> can be spread across <strong>multiple availability zones</strong>, so a single zone/instance failure does not take the service down — with defined RPO/RTO targets and DR.</td>
+      </tr>
+    </table>
+
+    <!-- ================= GENERAL ================= -->
+    <h2>8. General / Deployment</h2>
+    <p class="sec-desc">Technology stack, integration points and roadmap.</p>
+    <table>
+      <tr><th>Question (what the client may ask)</th><th>Answer</th></tr>
+      <tr>
+        <td class="q">What technology stack is used?</td>
+        <td class="a"><strong>Django 5.2</strong> + <strong>Django REST Framework</strong> + <strong>PostgreSQL</strong> + <strong>JWT (SimpleJWT)</strong>, with <code>django-filter</code>, <code>django-cors-headers</code>, and the <code>requests</code> client for DigiLocker integration. Code is portable and standard.</td>
+      </tr>
+      <tr>
+        <td class="q">Which database engine?</td>
+        <td class="a"><strong>PostgreSQL</strong> (a project mandate), connected through the <strong>BSS pgpool</strong> for scalability — never a file-based/SQLite database.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there API documentation for the frontend team?</td>
+        <td class="a"><span class="badge yes">YES</span> A full <strong>README endpoint reference</strong> documents every endpoint (auth, sites, worker flows, attendance, wages, gate passes, documents, grievances, QR, DigiLocker) with request/response examples, plus DRF browsable endpoints.</td>
+      </tr>
+      <tr>
+        <td class="q">Is there a frontend / mobile app?</td>
+        <td class="a">The current deliverable is the <strong>backend</strong>. The API is designed to be consumed by web and mobile frontends; the QR/scan and rendering layers are front-end concerns built against these documented endpoints.</td>
+      </tr>
+      <tr>
+        <td class="q">How do users register and get roles?</td>
+        <td class="a">Users self-register as <code>public</code>, then role assignment follows the governed flows: workers provide identity + DigiLocker verification, contractors/employers are onboarded with profile + approval steps, and government/IT staff are assigned by administrators.</td>
+      </tr>
+      <tr>
+        <td class="q">What is the roadmap from here?</td>
+        <td class="a">Focus areas: <strong>automated test suite</strong> for regression safety, <strong>live DigiLocker Aadhaar eKYC test</strong> (browser consent step), front-end/mobile build on the API, plus deploying the seed SQL and hardening production (TLS, monitoring, CI/CD).</td>
+      </tr>
+    </table>
+
+    <div class="note">
+      <strong>Bottom line for the client:</strong> worker data is protected by JWT + 9-role RBAC with row-level scoping and consent/OTP gates; the PostgreSQL database is backed up daily with point-in-time recovery, hosted and retained in <strong>Indian data centres</strong>; the stack scales horizontally behind pgpool connection pooling; and personal-data handling is aligned with the <strong>DPDP Act 2023</strong>.
+    </div>
+
+    <footer>
+      Bharat Shram Setu (BSS) — Client FAQ &amp; Platform Readiness · Version 1 · 29 August 2026 · FINAL/Plan
+    </footer>
+  </div>
+</body>
+</html>

@@ -191,18 +191,30 @@ class WorkerGatePass(models.Model):
 
 
 class WorkerGrievance(models.Model):
-    """Voice-recorded grievance (3-step flow)."""
+    """Voice-recorded grievance with full ticket lifecycle (multi-party resolution)."""
 
     STATUS = [("RECORDED", "Recorded"), ("SUBMITTED", "Submitted"),
-              ("VIEWED_ON_DASHBOARD", "Viewed on Dashboard")]
+              ("VIEWED_ON_DASHBOARD", "Viewed on Dashboard"), ("OPEN", "Open"),
+              ("IN_PROGRESS", "In Progress"), ("RESOLVED", "Resolved"),
+              ("REOPENED", "Reopened")]
+    CATEGORY = [("WAGES", "Wages"), ("SAFETY", "Safety"), ("HARASSMENT", "Harassment"),
+                ("ACCOMMODATION", "Accommodation"), ("BENEFITS", "Benefits"),
+                ("OTHER", "Other")]
 
     worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="grievances")
+    ticket_no = models.CharField(max_length=40, unique=True, blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY, default="OTHER")
     language = models.CharField(max_length=40, blank=True)
     recording_file = models.CharField(max_length=255, blank=True)
     recording_duration_secs = models.IntegerField(null=True, blank=True)
     body = models.CharField(max_length=1000, blank=True)
+    attachment_file = models.CharField(max_length=255, blank=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="assigned_grievances")
     status = models.CharField(max_length=30, choices=STATUS, default="RECORDED")
     submitted_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    reopened_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -211,10 +223,37 @@ class WorkerGrievance(models.Model):
         indexes = [
             models.Index(fields=["worker"], name="idx_grievance_worker"),
             models.Index(fields=["status"], name="idx_grievance_status"),
+            models.Index(fields=["category"], name="idx_grievance_category"),
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.ticket_no:
+            import secrets
+            self.ticket_no = "GV-" + timezone.now().strftime("%Y%m%d") + "-" + secrets.token_hex(3).upper()
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return str(self.worker_id)
+        return f"{self.ticket_no} {self.status}"
+
+
+class GrievanceResponse(models.Model):
+    """Reply / resolution entry in a grievance thread (worker/contractor/employer/BSS)."""
+
+    grievance = models.ForeignKey(WorkerGrievance, on_delete=models.CASCADE,
+                                  related_name="responses")
+    actor_role = models.CharField(max_length=30, blank=True)
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name="+")
+    body = models.CharField(max_length=2000, blank=True)
+    attachment_file = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "grievance_response"
+        indexes = [models.Index(fields=["grievance"], name="idx_grievance_resp_grievance")]
+
+    def __str__(self):
+        return str(self.grievance_id)
 
 
 class DocumentAccessToken(models.Model):
