@@ -219,18 +219,18 @@ export default function WorkerProfilePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Date of Birth</label>
-                   <input type="date" defaultValue="1990-08-15" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Date of Birth</label>
+                    <input type="date" defaultValue={worker.identity.dob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Age</label>
                    <input type="number" defaultValue={36} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Gender</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                     {BssTaxonomies.Gender.map(g => <option key={g} value={g}>{g}</option>)}
-                   </select>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Gender</label>
+                    <select defaultValue={worker.identity.gender} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
+                      {BssTaxonomies.Gender.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Place of Birth <span className="text-[#FF3B30]">*</span></label>
@@ -238,10 +238,10 @@ export default function WorkerProfilePage() {
                    <p className="text-[10px] text-[#86868B] mt-1">Used with your Aadhaar-verified work address to map migrant flows for state policy.</p>
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                     {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
-                   </select>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
+                    <select defaultValue={worker.personal.maritalStatus} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
+                      {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
@@ -276,8 +276,8 @@ export default function WorkerProfilePage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Father Name</label>
-                   <input type="text" defaultValue="Mohan Kumar" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Father Name</label>
+                    <input type="text" defaultValue={worker.personal.fatherName} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Mother Name</label>
@@ -319,11 +319,11 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Alternate Mobile Number</p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1">{worker.contact.alternateMobile || 'Not provided'}</p>
+                    <input type="tel" defaultValue={worker.contact.alternateMobile} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email ID</p>
-                    <p className="text-sm font-semibold text-gray-900 mt-1 break-all">{worker.contact.email || 'Not provided'}</p>
+                    <input type="email" defaultValue={worker.contact.email} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                 </div>
               </div>
