@@ -1246,6 +1246,8 @@ def _persist_mutation(user, role_path, resource, method, body):
             if body.get(k) is not None:
                 privacy[k] = bool(body.get(k))
         p.privacy_prefs = privacy
+        if body.get("bindingEnabled") is not None:
+            p.binding_enabled = bool(body.get("bindingEnabled"))
         comm = dict(p.communication_prefs or {})
         if body.get("preferredChannel") is not None:
             comm["preferredChannel"] = str(body.get("preferredChannel"))
@@ -1599,6 +1601,165 @@ def worker_grievance_audio(request, grievance_id):
     response["Content-Type"] = "audio/webm"
     response["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+def _binding_enabled(user):
+    p = UserPreference.objects.filter(user=user).first()
+    return bool(p.binding_enabled) if p else True
+
+
+def _verify_binding_otp(mobile, credential):
+    otp = SmsOtp.objects.filter(mobile=mobile, purpose="BINDING").order_by("-created_at").first()
+    if otp is None or otp.is_expired or otp.attempts >= otp.max_attempts:
+        return False
+    if not check_password(str(credential), otp.otp_hash):
+        otp.attempts += 1
+        otp.save(update_fields=["attempts"])
+        return False
+    otp.verified = True
+    otp.save(update_fields=["verified"])
+    return True
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_bindings(request):
+    """Binding register (E·C·S·W). GET: the caller's bindings, role-scoped.
+    POST: a contractor initiates a binding to a worker at a site (PENDING)."""
+    from bss_core.models import WorkerContractorBinding
+    user = request.user
+    if request.method == "GET":
+        if user.role == "contractor":
+            qs = WorkerContractorBinding.objects.filter(contractor=user)
+        elif user.role == "employer":
+            qs = WorkerContractorBinding.objects.filter(site__employer=user)
+        else:
+            qs = WorkerContractorBinding.objects.filter(worker=user)
+        return Response({"data": [payloads._binding_row(b) for b in qs.order_by("-created_at")[:50]]},
+                        status=status.HTTP_200_OK)
+
+    if user.role != "contractor":
+        return Response({"error": "Only contractors can initiate bindings."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if not _binding_enabled(user):
+        return Response({"error": "Enable binding in your settings before sending binding requests."},
+                        status=status.HTTP_403_FORBIDDEN)
+    worker = User.objects.filter(pk=request.data.get("worker")).first()
+    site = Site.objects.filter(pk=request.data.get("site")).first()
+    if not worker or worker.role != "worker" or not site:
+        return Response({"error": "A valid worker and site are required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if site.employer_id and not _binding_enabled(site.employer):
+        return Response({"error": "The principal employer has disabled binding."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if not _binding_enabled(worker):
+        return Response({"error": "This worker has disabled binding requests in their settings."},
+                        status=status.HTTP_403_FORBIDDEN)
+    b, _ = WorkerContractorBinding.objects.get_or_create(worker=worker, contractor=user, site=site)
+    if b.binding_status == "ACCEPTED":
+        return Response({"error": "Already bound to this worker at this site."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    b.binding_status = "PENDING"
+    b.consent_worker = False
+    b.consent_contractor = False
+    b.save(update_fields=["binding_status", "consent_worker", "consent_contractor"])
+    return Response({"data": payloads._binding_row(b)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def binding_otp(request, binding_id):
+    """Send a binding OTP to a party's mobile (default: the worker) so a
+    non-smartphone party can dictate it to the other to complete the binding."""
+    from bss_core.models import WorkerContractorBinding
+    b = WorkerContractorBinding.objects.filter(pk=binding_id).first()
+    if b is None:
+        return Response({"error": "Binding not found."}, status=status.HTTP_404_NOT_FOUND)
+    if request.user not in (b.worker, b.contractor):
+        return Response({"error": "Not your binding."}, status=status.HTTP_403_FORBIDDEN)
+    target = str(request.data.get("target") or "worker").lower()
+    person = b.contractor if target == "contractor" else b.worker
+    if not _binding_enabled(person):
+        return Response({"error": "Binding is disabled in that party's settings."},
+                        status=status.HTTP_403_FORBIDDEN)
+    mobile = _user_mobile(person)
+    _issue_otp(mobile, purpose="BINDING", ttl_minutes=5)
+    masked = ("*" * max(0, len(mobile) - 4)) + mobile[-4:]
+    return Response({"sent": True, "expiresIn": 300, "target": target, "mobile": masked},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def binding_consent(request, binding_id):
+    """Two-sided consent for binding or unbinding.
+
+    body: {action:'bind'|'unbind', side:'worker'|'contractor', stage:'APP'|'OTP', otp?}
+    - APP stage: only the party themselves may consent (side must be the caller).
+    - OTP stage: the OTP is verified against `side`'s mobile; either party may
+      enter it (a non-smartphone party dictates it to the other).
+    A binding becomes ACCEPTED only when both sides consent; it becomes CANCELLED
+    (unbound) only when both sides consent to unbinding. Both parties must have
+    binding enabled in their settings.
+    """
+    from bss_core.models import WorkerContractorBinding
+    b = WorkerContractorBinding.objects.filter(pk=binding_id).first()
+    if b is None:
+        return Response({"error": "Binding not found."}, status=status.HTTP_404_NOT_FOUND)
+    user = request.user
+    if user not in (b.worker, b.contractor):
+        return Response({"error": "Not your binding."}, status=status.HTTP_403_FORBIDDEN)
+    side = str(request.data.get("side") or ("worker" if user == b.worker else "contractor")).lower()
+    if side not in ("worker", "contractor"):
+        return Response({"error": "side must be worker or contractor."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not _binding_enabled(b.worker) or not _binding_enabled(b.contractor):
+        return Response({"error": "Binding is disabled in one party's settings."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    action = str(request.data.get("action") or "bind").lower()
+    stage = str(request.data.get("stage") or "APP").upper()
+    method = "app"
+    if stage == "OTP":
+        person = b.worker if side == "worker" else b.contractor
+        otp_value = str(request.data.get("otp") or "").strip()
+        if not otp_value or not _verify_binding_otp(_user_mobile(person), otp_value):
+            return Response({"error": "Invalid or expired OTP."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        method = "sms_otp"
+    elif side != ("worker" if user == b.worker else "contractor"):
+        return Response({"error": "Only a party can consent for themselves in-app."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    if action == "decline":
+        b.binding_status = "REJECTED"
+        b.save(update_fields=["binding_status"])
+        return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
+    if action == "unbind":
+        if side == "worker":
+            b.unbind_consent_worker = True
+        else:
+            b.unbind_consent_contractor = True
+        if not b.unbind_requested_at:
+            b.unbind_requested_at = timezone.now()
+        if b.unbind_consent_worker and b.unbind_consent_contractor:
+            b.binding_status = "CANCELLED"
+            b.unbound_at = timezone.now()
+        b.save()
+    else:
+        if side == "worker":
+            b.consent_worker = True
+        else:
+            b.consent_contractor = True
+        b.consent_method = method
+        if b.consent_worker and b.consent_contractor:
+            b.binding_status = "ACCEPTED"
+            b.accepted_at = timezone.now()
+        b.save()
+    return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

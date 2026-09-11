@@ -87,7 +87,7 @@ export type WorkerRecord = {
     interfaceLanguage: string; preferredChannel: string;
     jobAlerts: boolean; complianceAlerts: boolean; grievanceUpdates: boolean;
     largeText: boolean; highContrast: boolean; reduceMotion: boolean;
-    consentToPublicPhoto: boolean; consentToDataSharing: boolean;
+    consentToPublicPhoto: boolean; consentToDataSharing: boolean; bindingEnabled?: boolean;
   };
   classification: {
     workerCategory?: string; sector?: string; industry?: string; occupation?: string; skill?: string;

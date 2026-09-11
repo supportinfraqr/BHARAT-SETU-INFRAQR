@@ -16,6 +16,7 @@ class UserPreference(models.Model):
     accessibility_prefs = models.JSONField(default=dict, blank=True)
     privacy_prefs = models.JSONField(default=dict, blank=True)
     qr_share_enabled = models.BooleanField(default=True)
+    binding_enabled = models.BooleanField(default=True)
     mpin_configured = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

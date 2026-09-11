@@ -668,6 +668,7 @@ def _worker_settings_section(user):
         "reduceMotion": bool(a11y.get("reduceMotion", False)),
         "consentToPublicPhoto": bool(privacy.get("consentToPublicPhoto", False)),
         "consentToDataSharing": bool(privacy.get("consentToDataSharing", False)),
+        "bindingEnabled": bool(p.binding_enabled) if p else True,
     }
 
 
@@ -804,55 +805,58 @@ def _worker_job_requests(user):
     return rows
 
 
+def _binding_row(b):
+    """Canonical binding payload (E·C·S·W), shared by worker/contractor/employer views."""
+    site = b.site
+    employer_name = ""
+    if site and site.employer:
+        ep = getattr(site.employer, "employer_profile", None)
+        employer_name = _d(ep.employer_name if ep else site.employer.username)
+    contractor = b.contractor
+    contractor_name = ""
+    contractor_code = ""
+    contractor_lin = ""
+    if contractor:
+        cp = getattr(contractor, "contractor_profile", None)
+        contractor_name = _d(cp.contractor_name if cp else contractor.username)
+        contractor_code = _d(cp.contractor_code if cp else _bss_contractor_code(contractor.id))
+        contractor_lin = _d(getattr(cp, "lin", ""))
+    wi = WorkerIdentity.objects.filter(user=b.worker).first()
+    worker_name = _d(wi.name if wi else b.worker.username)
+    worker_bss = _d(wi.bss_worker_id if wi else _bss_worker_code(b.worker_id))
+    emp = WorkerEmployment.objects.filter(user=b.worker).first()
+    latest_wage = WorkerWages.objects.filter(worker=b.worker).order_by("-period_end").first()
+    wage = f"₹{_num(latest_wage.gross_wage):,.0f} / month" if latest_wage and latest_wage.gross_wage else ""
+    status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
+                  "CANCELLED": "Cancelled", "EXPIRED": "Expired"}
+    return {
+        "id": b.id,
+        "ref": f"BIND-2026-{b.id:03d}",
+        "worker": worker_name,
+        "workerBssId": worker_bss,
+        "contractor": contractor_name,
+        "contractorCode": contractor_code,
+        "lin": contractor_lin,
+        "employer": employer_name,
+        "site": site.site_name if site else "",
+        "siteId": b.site_id,
+        "designation": _d(emp.designation if emp else ""),
+        "wage": wage,
+        "requestedOn": _dts(b.created_at),
+        "status": status_map.get(str(b.binding_status).upper(), "Pending"),
+        "consentWorker": bool(b.consent_worker),
+        "consentContractor": bool(b.consent_contractor),
+        "consentMethod": _d(b.consent_method),
+        "unbindConsentWorker": bool(b.unbind_consent_worker),
+        "unbindConsentContractor": bool(b.unbind_consent_contractor),
+        "unbindRequested": bool(b.unbind_requested_at),
+    }
+
+
 def _worker_bindings(user):
     """Contractor binding requests (WorkerContractorBinding) — drives /worker/binding."""
-    rows = []
     bindings = WorkerContractorBinding.objects.filter(worker=user).order_by("-created_at")[:10]
-    emp = WorkerEmployment.objects.filter(user=user).first()
-    latest_wage = WorkerWages.objects.filter(worker=user).order_by("-period_end").first()
-    for b in bindings:
-        site = b.site
-        site_name = site.site_name if site else ""
-        employer_name = ""
-        if site and site.employer:
-            ep = getattr(site.employer, "employer_profile", None)
-            employer_name = _d(ep.employer_name if ep else site.employer.username)
-        contractor = b.contractor
-        contractor_name = ""
-        contractor_code = ""
-        contractor_lin = ""
-        if contractor:
-            cp = getattr(contractor, "contractor_profile", None)
-            contractor_name = _d(cp.contractor_name if cp else contractor.username)
-            contractor_code = _d(cp.contractor_code if cp else _bss_contractor_code(contractor.id))
-            contractor_lin = _d(getattr(cp, "lin", ""))
-
-        status_map = {
-            "PENDING": "Pending",
-            "ACCEPTED": "Accepted",
-            "REJECTED": "Rejected",
-            "EXPIRED": "Expired",
-        }
-        status_label = status_map.get(str(b.binding_status).upper(), "Pending")
-
-        wage = ""
-        if latest_wage and latest_wage.gross_wage:
-            wage = f"₹{_num(latest_wage.gross_wage):,.0f} / month"
-
-        rows.append({
-            "id": b.id,
-            "ref": f"BIND-2026-{b.id:03d}",
-            "contractor": contractor_name,
-            "contractorCode": contractor_code,
-            "lin": contractor_lin,
-            "employer": employer_name,
-            "site": site_name,
-            "designation": _d(emp.designation if emp else ""),
-            "wage": wage,
-            "requestedOn": _dts(b.created_at),
-            "status": status_label,
-        })
-    return rows
+    return [_binding_row(b) for b in bindings]
 
 
 def _worker_leave_types():

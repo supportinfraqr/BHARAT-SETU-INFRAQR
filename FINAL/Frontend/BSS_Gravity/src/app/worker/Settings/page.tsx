@@ -20,6 +20,7 @@ type SettingsState = {
   preferredChannel: string;
   consentToPublicPhoto: boolean;
   consentToDataSharing: boolean;
+  bindingEnabled: boolean;
 };
 
 const initialFromPortal = (w: WorkerRecord): SettingsState => ({
@@ -32,6 +33,7 @@ const initialFromPortal = (w: WorkerRecord): SettingsState => ({
   preferredChannel: w.contact?.preferredChannel || w.settings?.preferredChannel || 'SMS',
   consentToPublicPhoto: !!(w.preferences?.consentToPublicPhoto ?? w.settings?.consentToPublicPhoto),
   consentToDataSharing: !!(w.preferences?.consentToDataSharing ?? w.settings?.consentToDataSharing),
+  bindingEnabled: w.settings?.bindingEnabled ?? true,
 });
 
 export default function SettingsPage() {
@@ -194,6 +196,7 @@ export default function SettingsPage() {
         >
           <Toggle label="Show photo on public verification" detail="Authorised roles remain unaffected" checked={prefs.consentToPublicPhoto} onChange={v => void updateSetting('consentToPublicPhoto', v)} />
           <Toggle label="Allow role-based data sharing" detail="Workbook permissions are always enforced" checked={prefs.consentToDataSharing} onChange={v => void updateSetting('consentToDataSharing', v)} />
+          <Toggle label="Allow binding & unbinding" detail="Contractors can send binding requests; both parties must still consent" checked={prefs.bindingEnabled} onChange={v => void updateSetting('bindingEnabled', v)} />
           <a href="/data-sharing" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
         </SettingSection>
       </div>

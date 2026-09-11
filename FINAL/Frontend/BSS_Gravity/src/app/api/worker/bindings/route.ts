@@ -13,8 +13,8 @@ export async function GET() {
       return NextResponse.json({ data: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
     }
     const config = getRuntimeConfig();
-    const data = await upstreamRequest(config.apiBaseUrl, '/v1/bindings/', session);
-    return NextResponse.json({ data }, { headers: { 'Cache-Control': 'private, no-store' } });
+    const result = await upstreamRequest<{ data?: unknown[] }>(config.apiBaseUrl, '/v1/bindings/', session);
+    return NextResponse.json({ data: result?.data ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return apiError(error, 'Contractor binding requests could not be loaded.');
   }
@@ -29,26 +29,44 @@ export async function POST(request: Request) {
     const body = await readJsonObject(request);
     const bindingId = Number(body.id ?? body.bindingId);
     const action = String(body.action ?? '').toLowerCase();
-
     if (!Number.isInteger(bindingId) || bindingId <= 0) {
       return NextResponse.json({ error: 'Binding ID is required.' }, { status: 400 });
     }
-    if (action === 'accept' || action === 'decline') {
-      const config = getRuntimeConfig();
-      if (action === 'accept') {
-        const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/consent`, session, {
-          method: 'POST',
-          body: JSON.stringify({ stage: 'APP' }),
-        });
-        return NextResponse.json(result);
-      }
-      const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/`, session, {
-        method: 'PATCH',
-        body: JSON.stringify({ binding_status: 'REJECTED' }),
+    const config = getRuntimeConfig();
+
+    // Send a binding OTP to a party (for non-smartphone parties who dictate it).
+    if (action === 'send-otp') {
+      const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/otp`, session, {
+        method: 'POST',
+        body: JSON.stringify({ target: body.target === 'contractor' ? 'contractor' : 'worker' }),
       });
       return NextResponse.json(result);
     }
-    return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
+
+    const consent: Record<string, unknown> = { stage: 'APP' };
+    if (action === 'accept') {
+      consent.action = 'bind';
+    } else if (action === 'decline') {
+      consent.action = 'decline';
+    } else if (action === 'accept-otp') {
+      consent.action = 'bind';
+      consent.stage = 'OTP';
+      consent.otp = String(body.otp ?? '');
+      consent.side = body.side === 'contractor' ? 'contractor' : 'worker';
+    } else if (action === 'unbind') {
+      consent.action = 'unbind';
+      consent.stage = body.otp ? 'OTP' : 'APP';
+      if (body.otp) consent.otp = String(body.otp);
+      if (body.side === 'contractor' || body.side === 'worker') consent.side = body.side;
+    } else {
+      return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
+    }
+
+    const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/consent`, session, {
+      method: 'POST',
+      body: JSON.stringify(consent),
+    });
+    return NextResponse.json(result);
   } catch (error) {
     return apiError(error, 'The binding request could not be updated.');
   }

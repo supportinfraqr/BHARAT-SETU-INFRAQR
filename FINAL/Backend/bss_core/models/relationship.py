@@ -501,6 +501,11 @@ class WorkerContractorBinding(models.Model):
     consent_contractor = models.BooleanField(default=False)
     consent_method = models.CharField(max_length=20, choices=CONSENT_METHOD, null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
+    # Two-sided unbinding: a binding is cancelled only when both sides consent.
+    unbind_requested_at = models.DateTimeField(null=True, blank=True)
+    unbind_consent_worker = models.BooleanField(default=False)
+    unbind_consent_contractor = models.BooleanField(default=False)
+    unbound_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
