@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
-import { mockWorker } from '@/data/mockWorkerData';
 import { BssTaxonomies } from '@/data/taxonomies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
@@ -40,6 +39,14 @@ export default function WorkerProfilePage() {
     const ref = new Date('2026-09-05T00:00:00');
     let age = ref.getFullYear() - born.getFullYear();
     const m = ref.getMonth() - born.getMonth(); if (m < 0 || (m === 0 && ref.getDate() < born.getDate())) age -= 1;
+    return String(Math.max(0, age));
+  };
+  const ageFromDoB = (dob: string) => {
+    if (!dob) return '';
+    const born = new Date(dob + 'T00:00:00'); if (Number.isNaN(born.getTime())) return '';
+    const now = new Date();
+    let age = now.getFullYear() - born.getFullYear();
+    const m = now.getMonth() - born.getMonth(); if (m < 0 || (m === 0 && now.getDate() < born.getDate())) age -= 1;
     return String(Math.max(0, age));
   };
   const updateNominee = (id: number, patch: Partial<Nominee>) => setNominees(current => current.map(n => n.id === id ? { ...n, ...patch } : n));
@@ -199,7 +206,7 @@ export default function WorkerProfilePage() {
             <div className="space-y-8 animate-in fade-in">
               <div className="flex flex-col md:flex-row gap-8 items-start">
                  <div className="w-28 h-28 rounded-full border border-black/10 overflow-hidden flex-shrink-0 relative group">
-                    <img src={mockWorker.identity.photoUrl} alt="Worker" className="w-full h-full object-cover" />
+                    <img src={worker.identity.photoUrl} alt="Worker" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer backdrop-blur-sm transition-all">
                       <span className="text-white text-[11px] font-semibold uppercase tracking-wider">Change Photo</span>
                     </div>
@@ -208,11 +215,11 @@ export default function WorkerProfilePage() {
                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 w-full">
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">BSS Worker ID</label>
-                      <input type="text" defaultValue={mockWorker.identity.bssId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                      <input type="text" defaultValue={worker.identity.bssId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Name as per Aadhaar <span className="text-[#FF3B30]">*</span></label>
-                      <input type="text" defaultValue={mockWorker.identity.name} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                      <input type="text" defaultValue={worker.identity.name} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                     </div>
                  </div>
               </div>
@@ -224,7 +231,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Age</label>
-                   <input type="number" defaultValue={36} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                   <input type="number" defaultValue={ageFromDoB(worker.identity.dob)} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Gender</label>
@@ -244,33 +251,33 @@ export default function WorkerProfilePage() {
                     </select>
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                     {BssTaxonomies.BloodGroup.map(b => <option key={b} value={b}>{b}</option>)}
-                   </select>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
+                    <select defaultValue={worker.personal.bloodGroup} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                      {BssTaxonomies.BloodGroup.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Religion</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                     {BssTaxonomies.Religion.map(r => <option key={r} value={r}>{r}</option>)}
-                   </select>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Religion</label>
+                    <select defaultValue={worker.personal.religion} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                      {BssTaxonomies.Religion.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Caste</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                     {BssTaxonomies.SocialCategory.map(s => <option key={s} value={s}>{s}</option>)}
-                   </select>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Caste</label>
+                    <select defaultValue={worker.personal.caste} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                      {BssTaxonomies.SocialCategory.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
-                     <option>No</option>
-                     <option>Yes</option>
-                   </select>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
+                    <select defaultValue={worker.personal.disabilityStatus} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                   <input type="text" placeholder="If applicable" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
+                    <input type="text" defaultValue={worker.identity.disabilityTypePct} placeholder="If applicable" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
               </div>
               
@@ -280,12 +287,12 @@ export default function WorkerProfilePage() {
                     <input type="text" defaultValue={worker.personal.fatherName} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Mother Name</label>
-                   <input type="text" defaultValue="Sita Devi" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Mother Name</label>
+                    <input type="text" defaultValue={worker.personal.motherName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Spouse Name</label>
-                   <input type="text" defaultValue="Sunita Kumar" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Spouse Name</label>
+                    <input type="text" defaultValue={worker.personal.spouseName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
               </div>
 
@@ -294,18 +301,18 @@ export default function WorkerProfilePage() {
                 <p className="text-[13px] text-[#86868B] mb-4">Used by the site medical officer and safety team in case of an emergency.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Name</label>
-                    <input type="text" defaultValue="Sunita Kumar" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Name</label>
+                     <input type="text" defaultValue={worker.identity.emergencyContactName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Number</label>
-                    <input type="tel" maxLength={10} defaultValue="9867543210" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Number</label>
+                     <input type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Relationship</label>
-                    <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
-                      {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Relationship</label>
+                     <select defaultValue={worker.identity.emergencyContactRelation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                       {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
+                     </select>
                   </div>
                 </div>
               </div>
@@ -457,11 +464,11 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">EPFO UAN</label>
-                   <input type="text" defaultValue={mockWorker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input type="text" defaultValue={worker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">ESIC IP Number</label>
-                   <input type="text" defaultValue={mockWorker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">LWF Number (Labour Welfare Fund)</label>
