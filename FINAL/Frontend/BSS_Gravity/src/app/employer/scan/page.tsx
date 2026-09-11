@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
 
 type Payload = { v: number; type: 'BSS_WORKER' | 'BSS_CONTRACTOR' | 'BSS_EMPLOYER'; bssId: string; issuer: string };
-
 type ScannedEntity = {
   kind: 'worker' | 'contractor';
   bssId: string;
@@ -27,6 +26,7 @@ export default function EmployerScanPage() {
   const [state, setState] = useState<'idle' | 'scanning' | 'identified' | 'confirmed' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [entity, setEntity] = useState<ScannedEntity | null>(null);
+  const [scanned, setScanned] = useState<Payload | null>(null);
   const [notice, setNotice] = useState('');
 
   useEffect(() => () => controls.current?.stop(), []);
@@ -35,6 +35,7 @@ export default function EmployerScanPage() {
     try {
       const p = JSON.parse(text) as Payload;
       if (!['BSS_WORKER', 'BSS_CONTRACTOR', 'BSS_EMPLOYER'].includes(p.type) || p.v !== 1 || p.issuer !== 'Bharat Shram Setu') throw new Error('Unsupported QR credential');
+      setScanned(p);
       const isContractor = p.type === 'BSS_CONTRACTOR' || p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC');
       const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W');
       if (isContractor) {
@@ -81,8 +82,26 @@ export default function EmployerScanPage() {
     }
   };
 
-  const confirmBinding = () => {
+  const confirmBinding = async () => {
     if (!entity) return;
+    if (entity.kind === 'contractor' && scanned?.type === 'BSS_CONTRACTOR') {
+      try {
+        const response = await fetch('/api/engagements/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'BSS_CONTRACTOR', bssId: scanned.bssId }),
+        });
+        const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
+        if (!response.ok) throw new Error(result.error || 'Engagement request could not be created.');
+        setState('confirmed');
+        setNotice(`Engagement request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Engagements.`);
+        setMessage('Engagement request sent');
+      } catch (e) {
+        setState('error');
+        setMessage(e instanceof Error ? e.message : 'Engagement request could not be created.');
+      }
+      return;
+    }
     setState('confirmed');
     setNotice(entity.kind === 'worker'
       ? `Binding approved for ${entity.name} — the worker is now bound at ${entity.site} under ${entity.contractor}.`
@@ -107,7 +126,7 @@ export default function EmployerScanPage() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setEntity(null); setNotice(''); setMessage(''); setState('idle'); };
+  const reset = () => { controls.current?.stop(); setEntity(null); setScanned(null); setNotice(''); setMessage(''); setState('idle'); };
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">

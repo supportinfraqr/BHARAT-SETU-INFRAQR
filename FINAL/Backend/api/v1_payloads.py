@@ -16,7 +16,9 @@ from django.db.models import Q
 
 from bss_core.models import (
     Attendance,
+    ContractorEmployerBinding,
     ContractorProfile,
+    ContractorSiteAllotment,
     EmployerProfile,
     User,
     Notification,
@@ -859,6 +861,50 @@ def _worker_bindings(user):
     return [_binding_row(b) for b in bindings]
 
 
+def _engagement_row(b):
+    """Contractor<->employer engagement with its site allotments (E·C·S·W)."""
+    cp = getattr(b.contractor, "contractor_profile", None)
+    ep = getattr(b.employer, "employer_profile", None)
+    status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted",
+                  "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
+    allot_status = {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected"}
+    allotments = [
+        {
+            "id": a.id,
+            "siteId": a.site_id,
+            "site": a.site.site_name if a.site else "",
+            "siteCode": a.site.site_code if a.site else "",
+            "status": allot_status.get(str(a.status).upper(), "Pending"),
+            "source": _d(a.source),
+        }
+        for a in b.allotments.all()
+    ]
+    return {
+        "id": b.id,
+        "ref": f"CEB-2026-{b.id:03d}",
+        "contractor": _d(cp.contractor_name if cp else b.contractor.username),
+        "contractorCode": _d(cp.contractor_code if cp else _bss_contractor_code(b.contractor_id)),
+        "employer": _d(ep.employer_name if ep else b.employer.username),
+        "employerCode": _d(ep.employer_code if ep else _bss_employer_code(b.employer_id)),
+        "status": status_map.get(str(b.binding_status).upper(), "Pending"),
+        "consentContractor": bool(b.consent_contractor),
+        "consentEmployer": bool(b.consent_employer),
+        "source": _d(b.source),
+        "requestedOn": _dts(b.created_at),
+        "allotments": allotments,
+    }
+
+
+def _employer_engagements(user):
+    qs = ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at")[:50]
+    return [_engagement_row(b) for b in qs]
+
+
+def _contractor_engagements(user):
+    qs = ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at")[:50]
+    return [_engagement_row(b) for b in qs]
+
+
 def _worker_leave_types():
     # No leave-type master table exists yet (gap analysis §D).
     return []
@@ -993,7 +1039,9 @@ def _contractor_principal_employer(user):
 
 
 def _contractor_sites(user):
-    site_ids = WorkerContractorBinding.objects.filter(contractor=user).values_list("site_id", flat=True)
+    site_ids = set(WorkerContractorBinding.objects.filter(contractor=user).values_list("site_id", flat=True))
+    site_ids.update(ContractorSiteAllotment.objects.filter(
+        binding__contractor=user, status="APPROVED").values_list("site_id", flat=True))
     sites = Site.objects.filter(id__in=site_ids)
     rows = []
     for s in sites:
@@ -1108,6 +1156,7 @@ def _contractor_applications(user):
 
 def _contractor_employers(user):
     employers = {}
+    # Derived from worker bindings' sites.
     for b in WorkerContractorBinding.objects.filter(contractor=user):
         if b.site and b.site.employer:
             e = b.site.employer
@@ -1120,10 +1169,26 @@ def _contractor_employers(user):
                 "status": "ACTIVE",
                 "boundSince": None,
             }
+    # Direct contractor<->employer engagements (accepted).
+    for eng in ContractorEmployerBinding.objects.filter(contractor=user, binding_status="ACCEPTED"):
+        e = eng.employer
+        ep = getattr(e, "employer_profile", None)
+        employers[e.id] = {
+            "id": e.id,
+            "name": _d(ep.employer_name if ep else e.username),
+            "employerId": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
+            "sites": [],
+            "status": "ACTIVE",
+            "boundSince": _dts(eng.accepted_at) if eng.accepted_at else None,
+        }
     rows = []
     for k, v in employers.items():
+        allotted = set(ContractorSiteAllotment.objects.filter(
+            binding__contractor=user, binding__employer_id=k, status="APPROVED"
+        ).values_list("site_id", flat=True))
         v["sites"] = [s.id for s in Site.objects.filter(employer_id=k) if
-                      WorkerContractorBinding.objects.filter(contractor=user, site=s).exists()]
+                      WorkerContractorBinding.objects.filter(contractor=user, site=s).exists()
+                      or s.id in allotted]
         rows.append(v)
     return rows
 
@@ -1589,6 +1654,7 @@ def build_contractor_portal(user):
         "principalEmployer": _contractor_principal_employer(user),
         "sites": _contractor_sites(user),
         "workers": _contractor_workers(user),
+        "engagements": _contractor_engagements(user),
         "compliances": _contractor_compliances(user),
         "complianceReports": _contractor_compliance_reports(user),
         "gatePasses": _contractor_gate_passes(user),
@@ -1665,6 +1731,7 @@ def _employer_sites(user):
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "contractorIds": list(cids), "workers": wcount,
             "compliance": 0,
+            "qrToken": _d(s.site_qr_token),
             "data": _site_scalar_data(s),
         })
     return rows
@@ -1891,6 +1958,7 @@ def build_employer_portal(user):
         "contractors": _employer_contractors(user),
         "workers": _employer_workers(user),
         "approvals": _employer_approvals(user),
+        "engagements": _employer_engagements(user),
         "gatePasses": _employer_gate_passes(user),
         "submissions": _employer_submissions(user),
         "complianceReports": _employer_compliance_reports(user),

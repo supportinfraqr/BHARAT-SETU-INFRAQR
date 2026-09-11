@@ -34,11 +34,11 @@ export async function POST(request: Request) {
     }
     const config = getRuntimeConfig();
 
-    // Send a binding OTP to a party (for non-smartphone parties who dictate it).
+    // Send a binding OTP to the worker (non-smartphone workers dictate it to the contractor).
     if (action === 'send-otp') {
       const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/otp`, session, {
         method: 'POST',
-        body: JSON.stringify({ target: body.target === 'contractor' ? 'contractor' : 'worker' }),
+        body: JSON.stringify({ target: 'worker' }),
       });
       return NextResponse.json(result);
     }

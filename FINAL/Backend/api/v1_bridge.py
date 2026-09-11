@@ -42,6 +42,8 @@ from bss_core.models import (
     WorkerAddressMobility,
     WorkerBanking,
     WorkerClassification,
+    ContractorEmployerBinding,
+    ContractorSiteAllotment,
     WorkerContractorBinding,
     WorkerEducation,
     WorkerFamilyDependant,
@@ -1272,6 +1274,10 @@ def _persist_mutation(user, role_path, resource, method, body):
         site_id = body.get("siteId")
         site = Site.objects.filter(pk=site_id).first() if site_id else None
         if user.role == "contractor" and site:
+            if not _contractor_engaged_at_site(user, site.id):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    "You are not engaged at this site. Ask the employer to allot this site to you first.")
             WorkerContractorBinding.objects.create(worker=w, contractor=user, site=site,
                                                    binding_status="ACCEPTED")
         return w.id
@@ -1671,23 +1677,22 @@ def worker_bindings(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def binding_otp(request, binding_id):
-    """Send a binding OTP to a party's mobile (default: the worker) so a
-    non-smartphone party can dictate it to the other to complete the binding."""
+    """Send a binding OTP to the WORKER's mobile so a non-smartphone worker can
+    dictate it to the contractor to complete the binding. OTP support exists
+    only for worker<->contractor bindings, and only the worker receives it."""
     from bss_core.models import WorkerContractorBinding
     b = WorkerContractorBinding.objects.filter(pk=binding_id).first()
     if b is None:
         return Response({"error": "Binding not found."}, status=status.HTTP_404_NOT_FOUND)
     if request.user not in (b.worker, b.contractor):
         return Response({"error": "Not your binding."}, status=status.HTTP_403_FORBIDDEN)
-    target = str(request.data.get("target") or "worker").lower()
-    person = b.contractor if target == "contractor" else b.worker
-    if not _binding_enabled(person):
-        return Response({"error": "Binding is disabled in that party's settings."},
+    if not _binding_enabled(b.worker):
+        return Response({"error": "Binding is disabled in the worker's settings."},
                         status=status.HTTP_403_FORBIDDEN)
-    mobile = _user_mobile(person)
+    mobile = _user_mobile(b.worker)
     _issue_otp(mobile, purpose="BINDING", ttl_minutes=5)
     masked = ("*" * max(0, len(mobile) - 4)) + mobile[-4:]
-    return Response({"sent": True, "expiresIn": 300, "target": target, "mobile": masked},
+    return Response({"sent": True, "expiresIn": 300, "target": "worker", "mobile": masked},
                     status=status.HTTP_200_OK)
 
 
@@ -1724,9 +1729,11 @@ def binding_consent(request, binding_id):
     stage = str(request.data.get("stage") or "APP").upper()
     method = "app"
     if stage == "OTP":
-        person = b.worker if side == "worker" else b.contractor
+        if side != "worker":
+            return Response({"error": "Only the worker can consent by OTP."},
+                            status=status.HTTP_400_BAD_REQUEST)
         otp_value = str(request.data.get("otp") or "").strip()
-        if not otp_value or not _verify_binding_otp(_user_mobile(person), otp_value):
+        if not otp_value or not _verify_binding_otp(_user_mobile(b.worker), otp_value):
             return Response({"error": "Invalid or expired OTP."},
                             status=status.HTTP_400_BAD_REQUEST)
         method = "sms_otp"
@@ -1760,6 +1767,158 @@ def binding_consent(request, binding_id):
             b.accepted_at = timezone.now()
         b.save()
     return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
+
+
+def _contractor_engaged_at_site(contractor, site_id):
+    return ContractorSiteAllotment.objects.filter(
+        binding__contractor=contractor, binding__binding_status="ACCEPTED",
+        site_id=site_id, status="APPROVED").exists()
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def engagement_scan(request):
+    """Create/append a contractor<->employer engagement from a scanned QR.
+
+    body: {type:'BSS_EMPLOYER'|'BSS_CONTRACTOR'|'BSS_SITE', bssId?, siteToken?}
+    - employer/contractor QR -> binding request (PENDING), source *_qr.
+    - site QR -> binding request (PENDING) + a PENDING site allotment (appended).
+    """
+    user = request.user
+    body = request.data or {}
+    qr_type = str(body.get("type") or "").upper()
+    site = None
+    contractor = None
+    employer = None
+    source = "site_qr"
+
+    if qr_type == "BSS_SITE":
+        site = Site.objects.filter(site_qr_token=str(body.get("siteToken") or "")).first()
+        if site is None:
+            return Response({"error": "Unknown site QR."}, status=status.HTTP_404_NOT_FOUND)
+        if user.role != "contractor":
+            return Response({"error": "Only contractors can scan a site QR."},
+                            status=status.HTTP_403_FORBIDDEN)
+        contractor, employer, source = user, site.employer, "site_qr"
+    elif qr_type == "BSS_EMPLOYER":
+        ep = EmployerProfile.objects.filter(employer_code=str(body.get("bssId") or "")).first()
+        if ep is None:
+            return Response({"error": "Unknown employer."}, status=status.HTTP_404_NOT_FOUND)
+        if user.role != "contractor":
+            return Response({"error": "Only contractors can request employer engagement."},
+                            status=status.HTTP_403_FORBIDDEN)
+        contractor, employer, source = user, ep.user, "employer_qr"
+    elif qr_type == "BSS_CONTRACTOR":
+        cp = ContractorProfile.objects.filter(contractor_code=str(body.get("bssId") or "")).first()
+        if cp is None:
+            return Response({"error": "Unknown contractor."}, status=status.HTTP_404_NOT_FOUND)
+        if user.role != "employer":
+            return Response({"error": "Only employers can scan a contractor QR."},
+                            status=status.HTTP_403_FORBIDDEN)
+        contractor, employer, source = cp.user, user, "contractor_qr"
+    else:
+        return Response({"error": "Unsupported QR."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if employer is None:
+        return Response({"error": "This site has no principal employer."}, status=status.HTTP_400_BAD_REQUEST)
+    if not _binding_enabled(contractor) or not _binding_enabled(employer):
+        return Response({"error": "Binding is disabled in one party's settings."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    binding, _ = ContractorEmployerBinding.objects.get_or_create(
+        contractor=contractor, employer=employer)
+    if binding.binding_status in ("CANCELLED", "REJECTED"):
+        binding.binding_status = "PENDING"
+        binding.consent_contractor = False
+        binding.consent_employer = False
+    binding.source = source
+    if user == contractor:
+        binding.consent_contractor = True
+    else:
+        binding.consent_employer = True
+    if binding.consent_contractor and binding.consent_employer:
+        binding.binding_status = "ACCEPTED"
+        binding.accepted_at = timezone.now()
+    binding.save()
+
+    if site is not None:
+        ContractorSiteAllotment.objects.get_or_create(
+            binding=binding, site=site, defaults={"status": "PENDING", "source": "site_qr"})
+
+    return Response({"data": payloads._engagement_row(binding)}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_engagements(request):
+    if request.user.role != "employer":
+        return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
+    return Response({"data": payloads._employer_engagements(request.user)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def employer_engagement_action(request, binding_id):
+    """Actions on a contractor<->employer engagement.
+
+    body: {action:'approve-binding'|'approve-site'|'allot'|'reject', siteId?, siteIds?}
+    Both parties may approve the binding (two-sided consent). Only the employer
+    may approve a site or allot sites. Engagement has no OTP — accept in-app.
+    """
+    user = request.user
+    if user.role == "employer":
+        b = ContractorEmployerBinding.objects.filter(pk=binding_id, employer=user).first()
+    elif user.role == "contractor":
+        b = ContractorEmployerBinding.objects.filter(pk=binding_id, contractor=user).first()
+    else:
+        return Response({"error": "Not your engagement."}, status=status.HTTP_403_FORBIDDEN)
+    if b is None:
+        return Response({"error": "Engagement not found."}, status=status.HTTP_404_NOT_FOUND)
+    action = str(request.data.get("action") or "").lower()
+
+    if action == "approve-binding":
+        if user.role == "employer":
+            b.consent_employer = True
+        else:
+            b.consent_contractor = True
+        b.consent_method = "app"
+        if b.consent_contractor and b.consent_employer:
+            b.binding_status = "ACCEPTED"
+            b.accepted_at = timezone.now()
+        b.save()
+    elif action == "reject":
+        b.binding_status = "REJECTED"
+        b.save(update_fields=["binding_status"])
+    elif action == "approve-site":
+        if user.role != "employer":
+            return Response({"error": "Only the employer can approve a site."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
+        if a is None:
+            return Response({"error": "Site allotment not found."}, status=status.HTTP_404_NOT_FOUND)
+        a.status = "APPROVED"
+        a.approved_at = timezone.now()
+        a.save()
+    elif action == "allot":
+        if user.role != "employer":
+            return Response({"error": "Only the employer can allot sites."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_ids = request.data.get("siteIds") or []
+        for sid in site_ids:
+            site = Site.objects.filter(pk=sid, employer=request.user).first()
+            if site is None:
+                continue
+            ContractorSiteAllotment.objects.update_or_create(
+                binding=b, site=site,
+                defaults={"status": "APPROVED", "source": "employer_allot",
+                          "approved_at": timezone.now()})
+    else:
+        return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"data": payloads._engagement_row(b)}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

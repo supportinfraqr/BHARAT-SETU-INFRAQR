@@ -17,6 +17,8 @@ from .relationship import (
     SiteLicense,
     SiteOrder,
     WorkerContractorBinding,
+    ContractorEmployerBinding,
+    ContractorSiteAllotment,
     ContractorJob,
     RozgarRequest,
 )
@@ -111,7 +113,7 @@ __all__ = [
     "BssStaffProfile",
     "Site", "SiteDocument", "SiteGate", "SiteLicense", "SiteOrder",
     "SiteBocwRegistration", "SiteClraRegistration",
-    "WorkerContractorBinding", "ContractorJob", "RozgarRequest",
+    "WorkerContractorBinding", "ContractorEmployerBinding", "ContractorSiteAllotment", "ContractorJob", "RozgarRequest",
     "ConsentChallenge", "SmsOtp",
     "WorkerIdentity", "WorkerAddressMobility", "WorkerFamilyDependant",
     "WorkerSocialSecurity", "WorkerWelfareSafety", "WorkerBanking",

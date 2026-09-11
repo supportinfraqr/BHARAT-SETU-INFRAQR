@@ -262,6 +262,7 @@ export type ContractorPortalData = {
   complianceBatches: ContractorComplianceBatch[];
   auditReports: ContractorAuditReport[];
   grievances: ContractorGrievance[];
+  engagements: EmployerEngagement[];
   payroll: {
     config: ContractorPayrollConfig;
     records: PayrollWorkerRecord[];
@@ -294,6 +295,7 @@ export type EmployerSite = {
   contractorIds: string[];
   workers: number;
   compliance: number;
+  qrToken?: string;
   details?: EmployerSiteDetail;
   /** Raw scalar site-master fields (snake_case model column names) from the Site Detail sheet. */
   data?: Record<string, unknown>;
@@ -432,6 +434,9 @@ export type EmployerComplianceReport = {
   status: 'Compliant' | 'Pending' | 'Non-compliant';
 };
 
+export type EngagementAllotment = { id: string; siteId: string; site: string; siteCode: string; status: 'Pending' | 'Approved' | 'Rejected'; source?: string };
+export type EmployerEngagement = { id: string; ref: string; contractor: string; contractorCode: string; employer: string; employerCode: string; status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled'; consentContractor: boolean; consentEmployer: boolean; source: string; requestedOn: string; allotments: EngagementAllotment[] };
+
 export type EmployerPortalData = {
   identity: {
     name: string;
@@ -454,6 +459,7 @@ export type EmployerPortalData = {
   contractors: EmployerContractor[];
   workers: EmployerWorker[];
   approvals: EmployerApproval[];
+  engagements: EmployerEngagement[];
   gatePasses: EmployerGatePass[];
   submissions: EmployerSubmission[];
   complianceReports: EmployerComplianceReport[];

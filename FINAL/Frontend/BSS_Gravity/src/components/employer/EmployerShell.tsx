@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const workforceGroup = { key:'nav.workforce', icon:Network, items:[
   ['nav.workers','/employer/workers'],
   ['nav.contractors','/employer/contractors'],
+  ['nav.engagements','/employer/engagements'],
   ['nav.gatePass','/employer/gate-pass'],
   ['nav.grievanceCentre','/employer/grievances'],
 ] };

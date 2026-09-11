@@ -529,9 +529,70 @@ class WorkerContractorBinding(models.Model):
         return f"W{self.worker_id}-C{self.contractor_id}-S{self.site_id}"
 
 
+class ContractorEmployerBinding(models.Model):
+    """Direct contractor <-> employer engagement (two-sided consent). Sites are
+    allotted separately via ContractorSiteAllotment."""
+
+    STATUS = [("PENDING", "Pending"), ("ACCEPTED", "Accepted"),
+              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled")]
+    SOURCE = [("employer_qr", "Employer QR"), ("contractor_qr", "Contractor QR"),
+              ("site_qr", "Site QR")]
+
+    contractor = models.ForeignKey(User, on_delete=models.CASCADE,
+                                   related_name="employer_bindings",
+                                   limit_choices_to={"role": "contractor"})
+    employer = models.ForeignKey(User, on_delete=models.CASCADE,
+                                 related_name="contractor_bindings_direct",
+                                 limit_choices_to={"role": "employer"})
+    binding_status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    consent_contractor = models.BooleanField(default=False)
+    consent_employer = models.BooleanField(default=False)
+    consent_method = models.CharField(max_length=20, null=True, blank=True)
+    source = models.CharField(max_length=20, choices=SOURCE, default="site_qr")
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "contractor_employer_binding"
+        constraints = [
+            models.UniqueConstraint(fields=["contractor", "employer"],
+                                    name="uq_contractor_employer_binding"),
+        ]
+
+    def __str__(self):
+        return f"C{self.contractor_id}-E{self.employer_id} {self.binding_status}"
+
+
+class ContractorSiteAllotment(models.Model):
+    """A site the employer allots to a bound contractor (one row per site)."""
+
+    STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")]
+    SOURCE = [("site_qr", "Site QR"), ("employer_allot", "Employer Allotment")]
+
+    binding = models.ForeignKey(ContractorEmployerBinding, on_delete=models.CASCADE,
+                                related_name="allotments")
+    site = models.ForeignKey(Site, on_delete=models.CASCADE,
+                             related_name="contractor_allotments")
+    status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    source = models.CharField(max_length=20, choices=SOURCE, default="site_qr")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "contractor_site_allotment"
+        constraints = [
+            models.UniqueConstraint(fields=["binding", "site"],
+                                    name="uq_contractor_site_allotment"),
+        ]
+
+    def __str__(self):
+        return f"C{self.binding.contractor_id}-S{self.site_id} {self.status}"
+
+
 class ContractorJob(models.Model):
     """A job posting by a contractor, optionally scoped to a site."""
-
     contractor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="jobs",
                                    limit_choices_to={"role": "contractor"})
     site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True, related_name="jobs")

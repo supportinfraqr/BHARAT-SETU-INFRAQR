@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
 import { type Role } from "@/lib/permissions";
 
-type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string };
+type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER" | "BSS_SITE"; bssId?: string; siteToken?: string; siteCode?: string; issuer: string };
 
 type ScannedEntity = { kind: 'worker' | 'employer'; bssId: string; name: string; employer: string; site: string; designation: string };
 
@@ -22,20 +22,39 @@ export default function ContractorScanPage() {
   const [result, setResult] = useState<Record<string, any> | null>(null);
   const [entity, setEntity] = useState<ScannedEntity | null>(null);
   const [requestSent, setRequestSent] = useState(false);
+  const [scanned, setScanned] = useState<Payload | null>(null);
 
   useEffect(() => () => controls.current?.stop(), []);
 
   const verify = (text: string) => {
     try {
       const p = JSON.parse(text) as Payload;
-      if (!["BSS_WORKER","BSS_CONTRACTOR","BSS_EMPLOYER"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
-      const isWorker = p.type === "BSS_WORKER" || p.bssId.startsWith("BSS-W");
-      if (isWorker) {
+      if (p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
+      setScanned(p);
+      const bssId = p.bssId ?? "";
+      if (p.type === "BSS_SITE") {
+        setEntity({ kind: 'employer', bssId: p.siteToken ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site engagement' });
+        setRequestSent(false);
+        setState("binding");
+        setMessage("Site QR identified — request engagement. The employer approves the binding and this site.");
+        controls.current?.stop();
+        return;
+      }
+      if (p.type === "BSS_EMPLOYER") {
+        const known = contractor.employers.find(e => e.employerId === bssId);
+        setEntity({ kind: 'employer', bssId, name: known?.name ?? 'Principal Employer ' + bssId.slice(-4), employer: known?.name ?? 'Principal Employer', site: known?.sites?.[0] ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
+        setRequestSent(false);
+        setState("binding");
+        setMessage("Employer QR identified — request engagement; the employer approves the binding then allots sites.");
+        controls.current?.stop();
+        return;
+      }
+      if (p.type === "BSS_WORKER" || bssId.startsWith("BSS-W")) {
         // Worker QR → identify worker, show relationship, request binding (never auto-bind)
-        const known = contractor.workers.find(w => w.bssId === p.bssId);
+        const known = contractor.workers.find(w => w.bssId === bssId);
         setEntity({
-          kind: 'worker', bssId: p.bssId,
-          name: known?.name ?? 'BSS Worker ' + p.bssId.slice(-4),
+          kind: 'worker', bssId,
+          name: known?.name ?? 'BSS Worker ' + bssId.slice(-4),
           employer: known?.employer ?? contractor.principalEmployer.name,
           site: known?.site ?? contractor.sites[0]?.name ?? 'Unassigned site',
           designation: known?.designation ?? 'Not disclosed',
@@ -44,12 +63,10 @@ export default function ContractorScanPage() {
         setState("binding");
         setMessage("Worker identified — review current relationship before requesting binding");
       } else {
-        // Employer QR → request employer binding
-        const known = contractor.employers.find(e => e.employerId === p.bssId || e.name.includes(p.bssId.slice(-4)));
-        setEntity({ kind: 'employer', bssId: p.bssId, name: known?.name ?? 'Principal Employer ' + p.bssId.slice(-4), employer: known?.name ?? 'Principal Employer', site: known?.sites?.[0] ?? 'Site not assigned', designation: 'Billing contractor relationship' });
+        setEntity({ kind: 'employer', bssId, name: 'BSS Contractor ' + bssId.slice(-4), employer: 'Contractor', site: '—', designation: 'Contractor credential' });
         setRequestSent(false);
         setState("binding");
-        setMessage("Employer QR identified — employer approval is required to bind");
+        setMessage("Contractor credential identified.");
       }
       controls.current?.stop();
     } catch (e) {
@@ -59,11 +76,24 @@ export default function ContractorScanPage() {
     }
   };
 
-  const sendBinding = () => {
+  const sendBinding = async () => {
+    if (!scanned || !entity) return;
     setRequestSent(true);
-    setMessage(entity?.kind === 'worker'
-      ? `Binding request sent to ${entity.name}. The worker must approve before binding is complete.`
-      : `Binding request sent to ${entity?.name}. The principal employer must approve before binding is complete.`);
+    try {
+      const response = await fetch('/api/engagements/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
+      if (!response.ok) throw new Error(result.error || 'Engagement request could not be created.');
+      setMessage(entity.kind === 'worker'
+        ? `Binding request sent to ${entity.name}. The worker must approve before binding is complete.`
+        : `Engagement request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding${scanned.type === 'BSS_SITE' ? ' and this site.' : ' then allots sites.'}`);
+    } catch (e) {
+      setRequestSent(false);
+      setMessage(e instanceof Error ? e.message : 'Engagement request could not be created.');
+    }
   };
 
   const startCamera = async () => {

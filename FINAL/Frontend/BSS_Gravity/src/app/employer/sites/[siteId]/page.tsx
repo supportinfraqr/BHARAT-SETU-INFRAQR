@@ -4,10 +4,11 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Building2, HardHat, Info, Landmark, MapPin, Pencil, Phone, Settings, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
+import { ArrowLeft, Building2, HardHat, Info, Landmark, MapPin, Pencil, Phone, QrCode, Settings, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/SiteMap';
+import { SiteQr } from '@/components/qr/WorkerQr';
 import SiteCreateForm, { SECTIONS } from '@/components/employer/SiteCreateForm';
 
 const SiteMapView = dynamic(() => import('@/components/employer/SiteMap').then(m => m.SiteMapView), { ssr: false });
@@ -92,6 +93,17 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-5">{TAB_FIELDS[tab].map(name => <div key={name}><dt className="text-[11px] uppercase font-semibold text-gray-400">{LABELS[name] ?? name}</dt><dd className="text-sm font-medium mt-1 text-gray-800 break-words">{fieldValue(name)}</dd></div>)}</dl>
 
       {tab === 'address' && (() => { const lat = parseCoordinate(data.latitude as string | number | null | undefined); const lng = parseCoordinate(data.longitude as string | number | null | undefined); if (lat === null || lng === null) return null; return <div className="mt-8 pt-6 border-t border-gray-100"><p className="text-[11px] uppercase font-semibold text-gray-400 mb-3 flex items-center gap-1.5"><MapPin size={12}/>Map preview — OpenStreetMap</p><SiteMapView lat={lat} lng={lng} name={current.name}/></div>; })()}
+
+      {tab === 'address' && current.qrToken && (
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <p className="text-[11px] uppercase font-semibold text-gray-400 mb-3 flex items-center gap-1.5"><QrCode size={12}/>Site QR — contractors scan this to request engagement</p>
+          <div className="relative w-44 h-44 bg-white p-2 rounded-xl border border-gray-200">
+            <SiteQr siteToken={current.qrToken} siteCode={current.code} className="w-full h-full"/>
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[38px] h-[38px] bg-white rounded-[7px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[30px] h-[30px] object-contain"/></span></span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 font-mono">{current.code}</p>
+        </div>
+      )}
 
       <div className="border-t border-gray-100 mt-6 pt-5"><h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Connected relationships</h3>
         <div className="grid md:grid-cols-2 gap-4"><div className="border border-gray-100 rounded-xl p-4"><p className="text-[11px] uppercase text-gray-400 font-bold flex items-center gap-1"><Building2 size={12}/>Contractors at this site</p><div className="mt-2 space-y-2">{contractors.length ? contractors.map(c => <div key={c.id} className="flex justify-between text-xs"><span className="text-gray-700">{c.name}</span><span className={`font-semibold ${c.status === 'Active' ? 'text-green-700' : 'text-orange-700'}`}>{c.status}</span></div>) : <p className="text-xs text-gray-400">No contractors assigned.</p>}</div></div>
