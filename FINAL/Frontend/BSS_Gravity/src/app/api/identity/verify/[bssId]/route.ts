@@ -9,8 +9,9 @@ type Context = { params: Promise<{ bssId: string }> };
 export async function GET(_: Request, { params }: Context) {
   try {
     const { bssId } = await params;
-    const contractorId = /^BSSC\d{12}$/.test(bssId);
-    if (!isValidBSSID(bssId) && !contractorId) {
+    const contractorId = /^(?:BSS-C\d{10}|BSSC\d{12})$/.test(bssId);
+    const employerId = /^BSS-E\d{10}$/.test(bssId);
+    if (!isValidBSSID(bssId) && !contractorId && !employerId) {
       return NextResponse.json({ error: 'Invalid BSS ID.' }, { status: 400 });
     }
     const config = getRuntimeConfig();

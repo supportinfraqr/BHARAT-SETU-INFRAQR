@@ -4,7 +4,7 @@ import type { PortalRole } from '@/types/portal';
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const bssId = /^(?:BSS-W\d{10}|BSS\d{12})$/;
-const contractorBssId = /^BSSC\d{12}$/;
+const contractorBssId = /^(?:BSS-C\d{10}|BSSC\d{12})$/;
 
 function fail(message: string): never {
   throw Object.assign(new Error(message), { status: 422 });

@@ -53,9 +53,9 @@ export default function QRScannerWorkflow() {
     try {
       const p = JSON.parse(text) as Payload;
       if (!["BSS_WORKER","BSS_CONTRACTOR"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
-      if (p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSSC")) {
+      if (p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC")) {
         // Contractor QR → binding request flow (worker binds with contractor at a site)
-        setContractor({ bssId:p.bssId, name:p.bssId === "BSSC198200000001" ? "RK Buildcon Pvt. Ltd." : "Contractor " + p.bssId.slice(-4) });
+        setContractor({ bssId:p.bssId, name:p.bssId === "BSS-C0000000008" ? "RK Buildcon Pvt. Ltd." : "Contractor " + p.bssId.slice(-4) });
         setSelectedSite(""); setSiteDraft(""); setBindSent(false); setState("binding"); setMessage("Contractor identified — choose the site before sending a binding request");
       } else {
         if (p.bssId !== worker.identity.bssId) throw new Error("Worker record was not found on this device");

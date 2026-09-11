@@ -106,6 +106,19 @@ def _d(value, default=""):
     return value if value is not None and value != "" else default
 
 
+# BSS ID formats: BSS-W (worker), BSS-C (contractor), BSS-E (employer) + 10-digit PK.
+def _bss_worker_code(user_id):
+    return f"BSS-W{user_id:010d}"
+
+
+def _bss_contractor_code(user_id):
+    return f"BSS-C{user_id:010d}"
+
+
+def _bss_employer_code(user_id):
+    return f"BSS-E{user_id:010d}"
+
+
 def _dts(value):
     if value is None:
         return None
@@ -211,14 +224,14 @@ def _worker_employment_section(user, identity):
         if binding.contractor:
             cp = getattr(binding.contractor, "contractor_profile", None)
             contractor_name = _d(cp.contractor_name if cp else "")
-            contractor_code = f"BSS-CON-{binding.contractor.id}" if binding.contractor else ""
+            contractor_code = _bss_contractor_code(binding.contractor.id) if binding.contractor else ""
             contractor_contact = _d(binding.contractor.mobile if hasattr(binding.contractor, "mobile") else "")
             contractor_email = _d(binding.contractor.email if hasattr(binding.contractor, "email") else "")
             contractor_lin = _d(getattr(cp, "lin_number", "") if cp else "")
         if binding.site and binding.site.employer:
             emp_profile = getattr(binding.site.employer, "employer_profile", None)
             employer_name = _d(emp_profile.employer_name if emp_profile else "")
-            employer_code = f"BSS-EMP-{binding.site.employer.id}" if binding.site.employer else ""
+            employer_code = _bss_employer_code(binding.site.employer.id) if binding.site.employer else ""
             employer_industry = _d(getattr(emp_profile, "industry", "") if emp_profile else "")
             employer_email = _d(binding.site.employer.email if hasattr(binding.site.employer, "email") else "")
             employer_lin = _d(getattr(emp_profile, "lin_number", "") if emp_profile else "")
@@ -811,7 +824,7 @@ def _worker_bindings(user):
         if contractor:
             cp = getattr(contractor, "contractor_profile", None)
             contractor_name = _d(cp.contractor_name if cp else contractor.username)
-            contractor_code = _d(cp.contractor_code if cp else f"BSS-CON-{contractor.id}")
+            contractor_code = _d(cp.contractor_code if cp else _bss_contractor_code(contractor.id))
             contractor_lin = _d(getattr(cp, "lin", ""))
 
         status_map = {
@@ -938,7 +951,7 @@ def _contractor_identity(user):
     return {
         "name": _d(cp.contractor_name if cp else ""),
         "company": _d(cp.trade_name if cp else ""),
-        "bssId": _d(cp.contractor_code if cp else f"BSSC{user.id:04d}"),
+        "bssId": _d(cp.contractor_code if cp else _bss_contractor_code(user.id)),
         "incorpDate": _dts(cp.incorporation_date if cp else None),
         "entity": _d(cp.constitution if cp else ""),
         "verified": bool(cp and cp.is_verified_badge),
@@ -1098,7 +1111,7 @@ def _contractor_employers(user):
             employers[e.id] = {
                 "id": e.id,
                 "name": _d(ep.employer_name if ep else e.username),
-                "employerId": _d(ep.employer_code if ep else f"BSSE{e.id:04d}"),
+                "employerId": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
                 "sites": [],
                 "status": "ACTIVE",
                 "boundSince": None,
@@ -1609,7 +1622,7 @@ def _employer_identity(user):
     return {
         "name": _d(ep.employer_name if ep else ""),
         "company": _d(ep.trade_name if ep else ""),
-        "bssId": _d(ep.employer_code if ep else f"BSSE{user.id:04d}"),
+        "bssId": _d(ep.employer_code if ep else _bss_employer_code(user.id)),
         "entity": _d(ep.entity_class if ep else ""),
         "verified": _d(ep.verification_status if ep else "PENDING") == "APPROVED",
         "contact": _d(ep.contact_person if ep else ""),
@@ -1693,7 +1706,7 @@ def _employer_contractors(user):
                                                         binding_status="ACCEPTED").count()
         rows.append({
             "id": c.id, "name": _d(cp.contractor_name if cp else c.username),
-            "bssId": _d(cp.contractor_code if cp else f"BSSC{c.id:04d}"),
+            "bssId": _d(cp.contractor_code if cp else _bss_contractor_code(c.id)),
             "contact": _d(cp.contact_person if cp else ""),
             "email": _d(cp.email if cp else ""),
             "siteIds": site_ids, "workers": wcount,
@@ -1948,7 +1961,18 @@ def build_notifications(user):
 # ---------------------------------------------------------------------------
 def build_identity_verify(bss_id):
     bss_id = (bss_id or "").strip()
-    if bss_id.upper().startswith("BSSC"):
+    if bss_id.upper().startswith("BSS-E"):
+        ep = EmployerProfile.objects.filter(employer_code=bss_id).first()
+        if not ep:
+            return None
+        return {
+            "id": ep.user_id,
+            "name": _d(ep.employer_name),
+            "company": _d(ep.trade_name),
+            "bssId": _d(ep.employer_code),
+            "verified": bool(ep.approval_status == "APPROVED"),
+        }
+    if bss_id.upper().startswith("BSS-C") or bss_id.upper().startswith("BSSC"):
         try:
             cp = ContractorProfile.objects.get(contractor_code=bss_id)
         except ContractorProfile.DoesNotExist:
