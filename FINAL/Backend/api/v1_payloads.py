@@ -300,16 +300,24 @@ def _worker_compliance_section(user):
 def _worker_skills_section(user):
     sk = WorkerSkillsEmployability.objects.filter(user=user).first()
     secondary = [s.strip() for s in (sk.secondary_skills or "").split(",") if s.strip()] if sk else []
+    languages = [s.strip() for s in (sk.languages_known or "").split(",") if s.strip()] if sk else []
+    verified = bool(sk and sk.certification_number)
     return {
+        "qualificationCourse": _d(sk.qualification_course) if sk else "",
+        "boardUniversity": _d(sk.board_university) if sk else "",
+        "passingYear": _d(sk.passing_year) if sk else "",
+        "languages": languages,
         "primary": {
             "name": _d(getattr(sk, "primary_skill", None)) if sk else "",
-            "level": _d(getattr(sk, "typical_level", None), "novice") if sk else "novice",
             "experienceYears": _d(getattr(sk, "skill_experience_years", None)) if sk else "",
         },
         "secondary": secondary,
         "certification": {
             "name": _d(getattr(sk, "certification_name", None)) if sk else "",
-            "verified": bool(sk and sk.certification_number),
+            "number": _d(getattr(sk, "certification_number", None)) if sk else "",
+            "authority": _d(getattr(sk, "certification_authority", None)) if sk else "",
+            "expiry": _dts(sk.certification_expiry) if sk and sk.certification_expiry else "",
+            "verified": verified,
         },
     }
 

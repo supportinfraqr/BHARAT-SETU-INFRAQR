@@ -1091,22 +1091,21 @@ export default function WorkerProfilePage() {
               <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Qualification / Course</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">12th Standard (HSC)</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.skills?.qualificationCourse || 'Not declared'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Board / University</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">CBSE</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.skills?.boardUniversity || 'Not declared'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passing Year</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">2014</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.skills?.passingYear || '—'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Languages Known</p>
                   <div className="flex flex-wrap gap-1.5 mt-1">
-                    <span className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">Hindi</span>
-                    <span className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">English</span>
-                    <span className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">Marathi</span>
+                    {(worker.skills?.languages ?? []).map(lang => <span key={lang} className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">{lang}</span>)}
+                    {(!worker.skills?.languages?.length) && <span className="text-xs text-gray-400">Not recorded</span>}
                   </div>
                 </div>
               </div>
@@ -1126,61 +1125,55 @@ export default function WorkerProfilePage() {
                         <Award size={18} className="text-[#F47A32]" />
                         <h3 className="font-bold text-white">Primary Skill</h3>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-[#2F9E67] text-white">
-                        Verified
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${worker.skills?.certification?.verified ? 'bg-[#2F9E67] text-white' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {worker.skills?.certification?.verified ? 'Verified' : 'Self-Declared'}
                       </span>
                     </div>
                     <div className="p-5 space-y-5">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
-                          <p className="text-sm font-semibold text-gray-800">Construction</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill Family</p>
-                          <p className="text-sm font-semibold text-gray-800">Civil works</p>
+                          <p className="text-sm font-semibold text-gray-800">{worker.classification?.sector || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation</p>
-                          <p className="text-sm font-semibold text-gray-800">Bar Bender (Rebar)</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill Level</p>
-                          <p className="text-sm font-semibold text-[#073B67]">Expert (NSDC Level 4)</p>
+                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.primary?.name || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
-                          <p className="text-sm font-semibold text-gray-800">8 Years, 2 Months</p>
+                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.primary?.experienceYears || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
-                          <p className="text-sm font-semibold text-gray-800">Third-Party Assessed</p>
+                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.certification?.verified ? 'Third-Party Assessed' : 'Self-Declared'}</p>
                         </div>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-2 mb-3">
-                          <BadgeCheck size={16} className="text-[#2F9E67]" />
-                          <h4 className="text-sm font-bold text-gray-900">Certification Details</h4>
+                      {worker.skills?.certification?.verified && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="flex items-center gap-2 mb-3">
+                            <BadgeCheck size={16} className="text-[#2F9E67]" />
+                            <h4 className="text-sm font-bold text-gray-900">Certification Details</h4>
+                          </div>
+                          <div className="bg-[#E8F5E9]/50 p-4 rounded-lg border border-[#2F9E67]/20 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="col-span-2">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Certificate Name</p>
+                              <p className="text-sm font-bold text-gray-800">{worker.skills?.certification?.name || '—'}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Issuing Authority</p>
+                              <p className="text-sm font-semibold text-gray-800">{worker.skills?.certification?.authority || '—'}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cert. Number</p>
+                              <p className="text-xs font-mono font-semibold text-[#073B67]">{worker.skills?.certification?.number || '—'}</p>
+                            </div>
+                            <div className="col-span-2">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Validity</p>
+                              <p className="text-xs font-semibold text-gray-800">{worker.skills?.certification?.expiry || '—'}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-[#E8F5E9]/50 p-4 rounded-lg border border-[#2F9E67]/20 grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="col-span-2">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Certificate Name</p>
-                            <p className="text-sm font-bold text-gray-800">Advanced Rebar Detailing</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Issuing Authority</p>
-                            <p className="text-sm font-semibold text-gray-800">Construction Skill Dev Council</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cert. Number</p>
-                            <p className="text-xs font-mono font-semibold text-[#073B67]">CERT-CSDCI-88902</p>
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Validity</p>
-                            <p className="text-xs font-semibold text-gray-800">12 Mar 2023 - 12 Mar 2026</p>
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                   
@@ -1196,26 +1189,18 @@ export default function WorkerProfilePage() {
                       </span>
                     </div>
                     <div className="p-5">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
-                          <p className="text-sm font-semibold text-gray-800">Construction</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill Family</p>
-                          <p className="text-sm font-semibold text-gray-800">Masonry</p>
+                          <p className="text-sm font-semibold text-gray-800">{worker.classification?.sector || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation</p>
-                          <p className="text-sm font-semibold text-gray-800">Basic Mason</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill Level</p>
-                          <p className="text-sm font-semibold text-[#073B67]">Intermediate</p>
+                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.secondary?.[0] || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
-                          <p className="text-sm font-semibold text-gray-800">3 Years</p>
+                          <p className="text-sm font-semibold text-gray-800">—</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
