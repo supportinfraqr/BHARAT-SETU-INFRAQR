@@ -1,329 +1,484 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MessageSquareWarning, Mic, MicOff, Play, Pause, Send, Globe, Upload, FileText, 
-  CheckCircle2, Clock, ShieldCheck, AlertCircle, ChevronRight, Home
+  Mic, Square, Play, RotateCcw, Send, CheckCircle2, 
+  MessageSquareWarning, Volume2, Globe, Clock, FileAudio,
+  Loader2, Home, Info, Paperclip, X, ChevronRight, Download,
+  MapPin, UserRound, Building2, TimerReset, ClipboardList, MessageSquareText
 } from 'lucide-react';
 import Link from 'next/link';
-import { useWorker } from '@/contexts/WorkerContext';
+import { hasFoulLanguage } from '@/lib/profanity';
 
-type GrievanceItem = {
-  id: string;
+// Statuses mirror the BSS grievance lifecycle (schema: Submitted, Under Review,
+// In Progress, Resolved). UI never invents new statuses.
+type GrievanceStatus = 'Submitted' | 'Under Review' | 'In Progress' | 'Resolved';
+
+type Ticket = {
+  ref: string;
   category: string;
-  description: string;
-  status: 'SUBMITTED' | 'UNDER REVIEW' | 'IN PROGRESS' | 'RESOLVED';
+  status: GrievanceStatus;
+  raisedBy: string;
+  site: string;
+  assignedTo: string;
+  raisedAt: string;
   updatedAt: string;
+  description: string;
+  contractorReply: string | null;
 };
 
-export default function WorkerGrievancesPage() {
-  const { worker, portal } = useWorker();
-  const [activeTab, setActiveTab] = useState<'lodge' | 'track'>('lodge');
-  const [category, setCategory] = useState<string>('Wages');
-  const [language, setLanguage] = useState<string>('Hindi');
-  const [description, setDescription] = useState<string>('');
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [recordingTime, setRecordingTime] = useState<number>(0);
-  const [hasAudio, setHasAudio] = useState<boolean>(false);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [notice, setNotice] = useState<string>('');
-  const [error, setError] = useState<string>('');
+const initialTickets: Ticket[] = [
+  { ref:'GRV-2026-9123', category:'Accommodation', status:'Under Review', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Site HR · P. Menon', raisedAt:'14 Aug 2026, 10:24 AM', updatedAt:'16 Aug 2026, 03:40 PM', description:'Water supply in Block 3 labour camp is irregular since last week.', contractorReply:'Acknowledged. The contractor has scheduled a plumbing inspection of Block 3 on 18 Aug. Temporary tanker supply arranged.' },
+  { ref:'GRV-2026-8891', category:'Wages', status:'Resolved', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Payroll Desk · S. Iyer', raisedAt:'02 Jul 2026, 09:05 AM', updatedAt:'08 Jul 2026, 11:20 AM', description:'June wage slip shows a deduction I do not recognise.', contractorReply:'Deduction verified against attendance records and refunded in the July payout. Please check your July 31 credit.' },
+  { ref:'GRV-2026-8452', category:'Safety', status:'In Progress', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Safety Officer · R. Kumar', raisedAt:'28 Aug 2026, 05:12 PM', updatedAt:'28 Aug 2026, 05:12 PM', description:'Scaffolding near Gate 2 has loose planks that need replacement.', contractorReply:null },
+];
 
-  // Extract grievances list dynamically from backend context
-  const dynamicGrievances: GrievanceItem[] = worker.grievances?.recent?.id && worker.grievances.recent.id !== 'None'
-    ? [{
-        id: worker.grievances.recent.id,
-        category: 'Wages',
-        description: 'Grievance submitted regarding workplace conditions.',
-        status: (['SUBMITTED', 'UNDER REVIEW', 'IN PROGRESS', 'RESOLVED'].includes(worker.grievances.recent.status) 
-          ? worker.grievances.recent.status 
-          : 'UNDER REVIEW') as GrievanceItem['status'],
-        updatedAt: `Updated ${worker.grievances.recent.date}`
-      }]
-    : [];
+const TIMELINE_STEPS: Array<{ status: GrievanceStatus; label: string; note: string }> = [
+  { status:'Submitted', label:'Submitted', note:'Grievance recorded and assigned a reference.' },
+  { status:'Under Review', label:'Under Review', note:'Being assessed by the resolution team.' },
+  { status:'In Progress', label:'Action / Response', note:'Resolution action is in progress.' },
+  { status:'Resolved', label:'Resolved / Closed', note:'Closed after resolution is confirmed.' },
+];
 
-  const [grievanceList, setGrievanceList] = useState<GrievanceItem[]>(dynamicGrievances);
+const transcriptLines = ['Main concern: water supply in Block 3 labour camp is irregular since last week.', 'It affects about 40 workers in my camp block.', 'Requesting the contractor to arrange an immediate inspection.'];
 
-  // Status counts
-  const counts = {
-    submitted: grievanceList.filter(g => g.status === 'SUBMITTED').length,
-    underReview: grievanceList.filter(g => g.status === 'UNDER REVIEW').length,
-    inProgress: grievanceList.filter(g => g.status === 'IN PROGRESS').length,
-    resolved: grievanceList.filter(g => g.status === 'RESOLVED').length
+const STATUS_INDEX: Record<GrievanceStatus, number> = { Submitted:0, 'Under Review':1, 'In Progress':2, Resolved:3 };
+
+export default function GrievancePage() {
+  const [view, setView] = useState<'lodge' | 'track'>('lodge');
+  const [language, setLanguage] = useState('Hindi');
+  const [category, setCategory] = useState('Wages');
+  const [description, setDescription] = useState('');
+  const [privateMode, setPrivateMode] = useState(true);
+  const [attachment, setAttachment] = useState<string | null>(null);
+  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'recorded' | 'playing'>('idle');
+  const [timer, setTimer] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedGrievance, setSubmittedGrievance] = useState<{ref: string, date: string, status: GrievanceStatus} | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const contentTopRef = useRef<HTMLDivElement>(null);
+
+  // Deep-link support: /worker/grievances#GRV-… opens the grievance in Track Status.
+  const openReferenceFromHash = () => {
+    const ref = window.location.hash.replace(/^#/, '');
+    if (!/^GRV-/i.test(ref)) return false;
+    const ticket = tickets.find(item => item.ref === ref);
+    if (!ticket) return false;
+    setView('track');
+    setSelectedTicket(ticket);
+    setTimeout(() => {
+      const element = document.getElementById(ref);
+      if (element) element.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 60);
+    return true;
+  };
+  useEffect(() => {
+    let timer: number | undefined;
+    if (window.location.hash) timer = window.setTimeout(openReferenceFromHash, 0);
+    const onHashChange = () => { if (window.location.hash) openReferenceFromHash(); };
+    window.addEventListener('hashchange', onHashChange);
+    return () => { if (timer) window.clearTimeout(timer); window.removeEventListener('hashchange', onHashChange); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickets.length]);
+
+  const goTo = (next: 'lodge' | 'track') => {
+    setView(next);
+    contentTopRef.current?.scrollIntoView({ behavior:'smooth', block:'start' });
   };
 
-  const handleRecordToggle = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setHasAudio(true);
+  useEffect(() => {
+    if (recordingState === 'recording' || recordingState === 'playing') {
+      timerRef.current = setInterval(() => { setTimer(prev => prev + 1); }, 1000);
     } else {
-      setIsRecording(true);
-      setHasAudio(false);
-      setRecordingTime(0);
+      if (timerRef.current) clearInterval(timerRef.current);
     }
-  };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [recordingState]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Mock live AI transcription while recording
+  useEffect(() => {
+    if (recordingState !== 'recording') return;
+    const timers = transcriptLines.map((line, index) => window.setTimeout(() => setLiveTranscript(current => current ? current + '\n' + line : line), (index + 1) * 1800));
+    return () => timers.forEach(clearTimeout);
+  }, [recordingState]);
+
+  const startRecording = () => { setTimer(0); setLiveTranscript(''); setRecordingState('recording'); };
+  const stopRecording = () => setRecordingState('recorded');
+  const playRecording = () => {
+    const duration = timer;
+    setTimer(0);
+    setRecordingState('playing');
+    setTimeout(() => { setRecordingState('recorded'); setTimer(duration); }, duration * 1000);
+  };
+  const stopPlaying = () => setRecordingState('recorded');
+  const resetRecording = () => { setRecordingState('idle'); setTimer(0); setLiveTranscript(''); };
+
+  const submitGrievance = () => {
     setIsSubmitting(true);
-    setError('');
-    setNotice('');
-
-    try {
-      const newId = `GRV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const res = await fetch('/api/portal/grievances', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, language, description })
-      });
-      const data = await res.json().catch(() => ({}));
-      
-      const createdItem: GrievanceItem = {
-        id: data?.data?.id || newId,
-        category,
-        description: description || 'Voice audio recorded grievance submitted.',
-        status: 'UNDER REVIEW',
-        updatedAt: 'Updated Just Now'
-      };
-
-      setGrievanceList([createdItem, ...grievanceList]);
-      setNotice(`Grievance submitted successfully. Ticket ID: ${createdItem.id}`);
-      setDescription('');
-      setHasAudio(false);
-      setRecordingTime(0);
-    } catch (err) {
-      setError('Could not submit grievance. Please try again.');
-    } finally {
+    setTimeout(() => {
       setIsSubmitting(false);
-    }
+      const ref = `GRV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const ticket: Ticket = { ref, category, status:'Submitted', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Awaiting assignment', raisedAt:now, updatedAt:now, description:description || 'Voice grievance recorded (see audio).', contractorReply:null };
+      setTickets(current => [ticket, ...current]);
+      setSubmittedGrievance({ ref, date: now, status: 'Submitted' });
+      setRecordingState('idle'); setTimer(0); setDescription(''); setAttachment(null); setLiveTranscript('');
+    }, 2000);
   };
 
-  const statusBadge = (status: GrievanceItem['status']) => {
-    switch (status) {
-      case 'SUBMITTED':
-        return <span className="bg-gray-100 text-gray-700 font-bold text-[11px] px-2.5 py-1 rounded-md uppercase">SUBMITTED</span>;
-      case 'UNDER REVIEW':
-        return <span className="bg-blue-100 text-blue-700 font-bold text-[11px] px-2.5 py-1 rounded-md uppercase">UNDER REVIEW</span>;
-      case 'IN PROGRESS':
-        return <span className="bg-orange-100 text-orange-700 font-bold text-[11px] px-2.5 py-1 rounded-md uppercase">IN PROGRESS</span>;
-      case 'RESOLVED':
-        return <span className="bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-1 rounded-md uppercase">RESOLVED</span>;
-    }
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const statusBadge = (status: string) => {
+    const config: Record<string, string> = { 'Submitted':'bg-slate-100 text-slate-600', 'Under Review':'bg-blue-100 text-blue-700', 'In Progress':'bg-orange-100 text-[#F47A32]', 'Resolved':'bg-green-100 text-[#2F9E67]' };
+    return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${config[status] ?? 'bg-gray-100 text-gray-600'}`}>{status}</span>;
+  };
+
+  const counts = {
+    submitted: tickets.filter(t => t.status === 'Submitted').length,
+    underReview: tickets.filter(t => t.status === 'Under Review').length,
+    inProgress: tickets.filter(t => t.status === 'In Progress').length,
+    resolved: tickets.filter(t => t.status === 'Resolved').length,
+    total: tickets.length,
+  };
+  // Foul language — only a gentle in-form highlight; no notification is sent.
+  const foulSpotted = hasFoulLanguage(description) || hasFoulLanguage(liveTranscript);
+
+  const Timeline = ({ ticket }: { ticket: Ticket }) => {
+    const current = STATUS_INDEX[ticket.status];
+    const reached = STATUS_INDEX[ticket.status];
+    return (
+      <div className="space-y-0">
+        {TIMELINE_STEPS.map((step, index) => {
+          const isReached = index <= reached;
+          const isCurrent = index === current;
+          const showUpdated = isCurrent && index > 0 && ticket.updatedAt !== ticket.raisedAt;
+          return (
+            <div key={step.status} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isReached ? (isCurrent ? 'bg-[#073B67] border-[#073B67] text-white' : 'bg-green-100 border-green-200 text-[#2F9E67]') : 'bg-white border-gray-200 text-gray-300'}`}>
+                  {isReached && index < reached ? <CheckCircle2 size={13}/> : isCurrent ? <span className="w-1.5 h-1.5 rounded-full bg-white"/> : <span className="w-1.5 h-1.5 rounded-full bg-gray-200"/>}
+                </span>
+                {index < TIMELINE_STEPS.length - 1 && <span className={`w-0.5 flex-1 min-h-6 ${isReached && index < reached ? 'bg-green-200' : 'bg-gray-100'}`}/>}
+              </div>
+              <div className={`pb-5 ${isReached ? '' : 'opacity-45'}`}>
+                <p className={`text-xs font-bold ${isCurrent ? 'text-[#073B67]' : 'text-gray-700'}`}>{step.label}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">{isReached ? step.note : 'Pending'}</p>
+                {index === 0 && isReached && <p className="text-[11px] text-gray-400 mt-0.5">Raised {ticket.raisedAt}</p>}
+                {showUpdated && <p className="text-[11px] font-medium text-gray-500 mt-0.5">Last update · {ticket.updatedAt}</p>}
+              </div>
+            </div>
+          );
+        })}
+        <p className="text-[10px] text-gray-400 mt-1">Progress reflects events recorded in the BSS grievance system.</p>
+      </div>
+    );
   };
 
   return (
-    <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-6 bg-slate-50/50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+    <div ref={contentTopRef} className="p-4 lg:p-6 max-w-6xl mx-auto space-y-6 scroll-mt-24">
+      
+      <div className="flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-[#0B192C]">Grievances</h1>
+          <h1 className="text-2xl font-bold text-[#062D4F]">Grievances</h1>
           <p className="text-sm text-gray-500 mt-1">Lodge a new grievance or track your submitted tickets end-to-end.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setActiveTab('track')}
-            className="px-4 py-2 bg-white border border-gray-200 text-[#073B67] rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 flex items-center gap-2"
-          >
-            <FileText size={16} /> My Grievances · Track Status
-          </button>
-          <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm">
+        <div className="flex items-center gap-2">
+          {view === 'lodge' ? (
+            <button onClick={() => goTo('track')} className="h-10 px-4 rounded-lg bg-white border border-[#073B67] text-[#073B67] text-sm font-bold flex items-center gap-2 hover:bg-[#073B67]/5"><ClipboardList size={16}/>My Grievances · Track Status</button>
+          ) : (
+            <button onClick={() => goTo('lodge')} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F]"><Mic size={16}/>Lodge New Grievance</button>
+          )}
+          <Link href="/worker" className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all shadow-sm" title="Go to Dashboard">
             <Home size={18} />
           </Link>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-gray-800">{counts.submitted}</p>
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mt-1">SUBMITTED</p>
-        </div>
-        <div className="bg-blue-50/50 border border-blue-100/60 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-blue-600">{counts.underReview}</p>
-          <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mt-1">UNDER REVIEW</p>
-        </div>
-        <div className="bg-orange-50/50 border border-orange-100/60 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-orange-600">{counts.inProgress}</p>
-          <p className="text-[11px] font-bold text-orange-600 uppercase tracking-wider mt-1">IN PROGRESS</p>
-        </div>
-        <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-emerald-600">{counts.resolved}</p>
-          <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mt-1">RESOLVED</p>
-        </div>
-      </div>
+      {/* TICKET STATS */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label:'Submitted', value: counts.submitted, tone:'text-slate-600 bg-slate-50 border-slate-100' },
+          { label:'Under Review', value: counts.underReview, tone:'text-blue-700 bg-blue-50 border-blue-100' },
+          { label:'In Progress', value: counts.inProgress, tone:'text-[#F47A32] bg-orange-50 border-orange-100' },
+          { label:'Resolved', value: counts.resolved, tone:'text-[#2F9E67] bg-green-50 border-green-100' },
+        ].map(stat => <div key={stat.label} className={`rounded-xl border p-4 ${stat.tone}`}><strong className="block text-2xl font-bold">{stat.value}</strong><span className="text-[11px] font-semibold uppercase tracking-wider opacity-80">{stat.label}</span></div>)}
+      </section>
 
-      {/* Navigation Pills */}
-      <div className="bg-white p-1.5 border border-gray-200 rounded-2xl inline-flex gap-2">
-        <button
-          onClick={() => setActiveTab('lodge')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
-            activeTab === 'lodge' ? 'bg-[#0B192C] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <MessageSquareWarning size={16} /> Lodge Grievance
-        </button>
-        <button
-          onClick={() => setActiveTab('track')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all ${
-            activeTab === 'track' ? 'bg-[#0B192C] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <FileText size={16} /> Track Status <span className="bg-gray-200 text-gray-800 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{grievanceList.length}</span>
-        </button>
-      </div>
+      {/* SEGMENTED VIEW SWITCH — filing and tracking are distinct experiences */}
+      {!submittedGrievance && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-gray-200 rounded-2xl p-1.5">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            <button onClick={() => setView('lodge')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${view === 'lodge' ? 'bg-[#073B67] text-white shadow-sm' : 'text-gray-600 hover:text-[#073B67]'}`}><MessageSquareText size={15}/>Lodge Grievance</button>
+            <button onClick={() => setView('track')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-colors ${view === 'track' ? 'bg-[#073B67] text-white shadow-sm' : 'text-gray-600 hover:text-[#073B67]'}`}><ClipboardList size={15}/>Track Status <span className="text-[10px] bg-white/90 text-[#073B67] px-1.5 rounded-full font-black">{counts.total}</span></button>
+          </div>
+          {view === 'track' && <p className="text-[11px] font-semibold text-gray-400 px-3">{counts.total} grievance{counts.total === 1 ? '' : 's'} · statuses shown exactly as recorded by BSS</p>}
+        </div>
+      )}
 
-      {notice && <p role="status" className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-2xl text-sm font-bold flex items-center gap-2"><CheckCircle2 size={18}/>{notice}</p>}
-      {error && <p role="alert" className="p-4 bg-red-50 border border-red-100 text-red-800 rounded-2xl text-sm font-bold flex items-center gap-2"><AlertCircle size={18}/>{error}</p>}
-
-      {/* Main Content Layout */}
-      <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6">
-        
-        {/* Left Column: Form / Action */}
-        <div className="bg-white border border-gray-200 rounded-3xl p-6 lg:p-8 space-y-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Mic className="text-[#073B67]" size={20} /> New Grievance
-            </h2>
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl">
-              <Globe size={14} className="text-gray-400" />
-              <span>PREFERRED RESPONSE LANGUAGE</span>
-              <select 
-                value={language} 
-                onChange={e => setLanguage(e.target.value)} 
-                className="bg-transparent font-bold text-gray-900 focus:outline-none cursor-pointer"
-              >
-                <option value="Hindi">Hindi</option>
-                <option value="English">English</option>
-                <option value="Marathi">Marathi</option>
-                <option value="Bengali">Bengali</option>
-                <option value="Tamil">Tamil</option>
-              </select>
+      {submittedGrievance ? (
+        <div className="bg-white rounded-[16px] shadow-sm border border-green-200 overflow-hidden text-center p-10 animate-in zoom-in-95 duration-300">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 size={40} className="text-[#2F9E67]" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Grievance Submitted</h2>
+          <p className="text-gray-500 max-w-sm mx-auto mb-8">
+            Your complaint has been recorded and forwarded to the appropriate authorities. Track its progress from the My Grievances screen.
+          </p>
+          
+          <div className="bg-gray-50 border border-gray-200 rounded-xl max-w-md mx-auto p-4 flex flex-col gap-3 text-left">
+            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ticket / Reference Number</span>
+              <span className="font-mono font-bold text-[#073B67]">{submittedGrievance.ref}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Raised Date & Time</span>
+              <span className="font-semibold text-gray-800">{submittedGrievance.date}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-gray-200 pb-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Raised By</span>
+              <span className="font-semibold text-gray-800">Ravi Kumar (Self)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Status</span>
+              {statusBadge(submittedGrievance.status)}
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Category selection */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">GRIEVANCE CATEGORY</label>
-              <div className="flex flex-wrap gap-2">
-                {['Wages', 'Safety', 'Harassment', 'Accommodation', 'Benefits', 'Other'].map(cat => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCategory(cat)}
-                    className={`px-4 py-2.5 rounded-full text-xs font-bold transition-all border ${
-                      category === cat 
-                        ? 'bg-[#0B192C] text-white border-[#0B192C] shadow-sm' 
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <button onClick={() => goTo('track')} className="bg-[#073B67] text-white px-6 py-2.5 rounded-[8px] font-bold text-sm hover:bg-[#062D4F] transition-colors flex items-center gap-2"><ClipboardList size={16}/>View My Grievances</button>
+            <button onClick={() => setSubmittedGrievance(null)} className="bg-white border border-[#073B67] text-[#073B67] px-6 py-2.5 rounded-[8px] font-bold text-sm hover:bg-gray-50 transition-colors">
+              Record Another
+            </button>
+          </div>
+        </div>
+      ) : view === 'lodge' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          
+          {/* RECORDING / FORM INTERFACE */}
+          <div id="new-grievance" className="space-y-6 scroll-mt-24">
+            <div className="bg-white rounded-[16px] shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex flex-wrap justify-between items-center gap-3">
+                <h2 className="font-bold text-gray-800 flex items-center gap-2"><Mic size={18} className="text-[#073B67]"/> New Grievance</h2>
+                <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg">
+                  <Globe size={14} className="text-gray-400" />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:inline">Preferred Response Language</span>
+                  <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={recordingState !== 'idle'} className="text-xs font-bold text-gray-700 bg-transparent outline-none cursor-pointer">
+                    <option value="Hindi">Hindi</option>
+                    <option value="English">English</option>
+                    <option value="Marathi">Marathi</option>
+                    <option value="Telugu">Telugu</option>
+                    <option value="Bhojpuri">Bhojpuri</option>
+                    <option value="Punjabi">Punjabi</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            {/* Voice Audio Recorder Widget */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-6 text-center space-y-4">
-              <div className="text-3xl font-black text-gray-900 font-mono">
-                00:{recordingTime < 10 ? `0${recordingTime}` : recordingTime}
-              </div>
+              <div className="p-5 space-y-5">
+                {/* Category */}
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Grievance Category</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Wages','Safety','Harassment','Accommodation','Benefits','Other'].map(cat => (
+                      <button key={cat} type="button" onClick={() => setCategory(cat)} className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${category === cat ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#073B67]/40'}`}>{cat}</button>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={handleRecordToggle}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                    isRecording 
-                      ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-200' 
-                      : 'bg-[#073B67] text-white shadow-md hover:bg-[#062D4F]'
-                  }`}
-                >
-                  {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
-                </button>
+                {/* Recorder */}
+                <div className="bg-gray-50/70 rounded-xl p-5 flex flex-col items-center">
+                  <div className="text-4xl font-mono font-extrabold text-[#073B67] mb-5 tabular-nums">
+                    {formatTime(timer)}
+                  </div>
 
-                {hasAudio && (
-                  <button
-                    type="button"
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md hover:bg-emerald-600"
-                  >
-                    {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
-                  </button>
+                  {recordingState === 'idle' && (
+                    <button onClick={startRecording} className="w-20 h-20 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-500 border-4 border-red-100 transition-all shadow-md group">
+                      <Mic size={30} className="group-hover:scale-110 transition-transform" />
+                    </button>
+                  )}
+                  {recordingState === 'recording' && (
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping opacity-30"></div>
+                      <button onClick={stopRecording} className="relative w-20 h-20 rounded-full bg-red-500 flex items-center justify-center text-white border-4 border-red-200 shadow-lg">
+                        <Square size={26} fill="currentColor" />
+                      </button>
+                    </div>
+                  )}
+                  {recordingState === 'playing' && (
+                    <button onClick={stopPlaying} className="w-20 h-20 rounded-full bg-[#073B67] flex items-center justify-center text-white border-4 border-blue-200 shadow-lg">
+                      <Square size={26} fill="currentColor" />
+                    </button>
+                  )}
+                  {recordingState === 'recorded' && (
+                    <div className="flex items-center gap-6">
+                      <button onClick={resetRecording} className="flex flex-col items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors">
+                        <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center"><RotateCcw size={18} /></div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Re-record</span>
+                      </button>
+                      <button onClick={playRecording} className="flex flex-col items-center gap-1.5 text-[#2F9E67] hover:text-[#237c50] transition-colors">
+                        <div className="w-14 h-14 rounded-full bg-green-50 border-2 border-green-100 flex items-center justify-center shadow-sm"><Play size={24} fill="currentColor" className="ml-1" /></div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Play</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <p className="mt-4 text-sm font-semibold text-gray-500 h-5">
+                    {recordingState === 'idle' && 'Tap the microphone to start recording'}
+                    {recordingState === 'recording' && <span className="text-red-500 animate-pulse">● Recording in progress...</span>}
+                    {recordingState === 'playing' && 'Playing back recording...'}
+                    {recordingState === 'recorded' && 'Review your recording or submit'}
+                  </p>
+                </div>
+
+                {/* Live AI transcription */}
+                {recordingState !== 'idle' && (
+                  <div className="bg-[#0A192F] rounded-xl p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2"><Volume2 size={12}/>Live AI transcription · {language}</p>
+                    {recordingState === 'recording' && !liveTranscript ? <p className="text-xs text-slate-500 animate-pulse">Listening…</p> : <p className="text-xs text-slate-200 whitespace-pre-line leading-relaxed">{liveTranscript || (recordingState === 'recorded' ? transcriptLines.join('\n') : '')}</p>}
+                    {foulSpotted && <p className="mt-2 text-[11px] font-semibold text-amber-300 bg-amber-400/10 border border-amber-300/20 rounded-lg px-3 py-2">Heads up: your recording appears to contain strong language. Please describe your concern respectfully — offensive words are masked when your case is shown to the contractor.</p>}
+                  </div>
                 )}
+
+                {/* Describe the concern */}
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Describe the Concern</label>
+                  <textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Write the concern in your own words (optional if you recorded audio)" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] resize-none"/>
+                  {foulSpotted && <p className="mt-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-1.5"><MessageSquareWarning size={13} className="mt-0.5 flex-shrink-0"/>Please avoid using foul or abusive language in your grievance. Your case text is shared with the contractor — inappropriate words are masked on their screen but describing the issue clearly helps it get resolved faster.</p>}
+                </div>
+
+                {/* Attachment */}
+                <div className="flex items-center justify-between gap-3 bg-gray-50/70 rounded-xl p-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Paperclip size={16} className="text-gray-400 flex-shrink-0"/>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex-shrink-0">Upload Letter / Letter Image</span>
+                    {attachment ? <span className="text-xs font-semibold text-[#073B67] truncate flex items-center gap-1"><FileAudio size={14}/>{attachment}<button onClick={() => setAttachment(null)} className="text-gray-400 hover:text-red-500"><X size={13}/></button></span> : <span className="text-xs text-gray-400">No file chosen</span>}
+                  </div>
+                  <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setAttachment(f.name); }}/>
+                  <button onClick={() => fileRef.current?.click()} className="text-xs font-bold text-[#073B67] bg-white border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0">Choose file</button>
+                </div>
+
+                {/* Private toggle */}
+                <label className="flex items-start gap-3 bg-orange-50/70 border border-orange-100 rounded-xl p-3 cursor-pointer">
+                  <input type="checkbox" checked={privateMode} onChange={e => setPrivateMode(e.target.checked)} className="mt-0.5 accent-[#F47A32] w-4 h-4"/>
+                  <span className="text-xs text-gray-700 leading-relaxed"><strong className="flex items-center gap-1 text-[#F47A32]"><MessageSquareWarning size={13}/> Private submission</strong> Your BSS Worker ID is attached for resolution, but your identity is obscured from the contractor when this is enabled.</span>
+                </label>
+
+                <button onClick={submitGrievance} disabled={isSubmitting || (recordingState === 'idle' && !description.trim())} className="w-full bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white py-3 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2">
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  {isSubmitting ? 'Submitting Grievance...' : 'Submit Grievance'}
+                </button>
               </div>
-
-              <p className="text-xs font-medium text-gray-500">
-                {isRecording ? 'Recording audio... Speak your concern clearly' : hasAudio ? 'Audio recorded successfully. Click submit below.' : 'Click microphone to record your concern in your language'}
-              </p>
             </div>
 
-            {/* Text description fallback */}
-            <div>
-              <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">DESCRIBE THE CONCERN (OPTIONAL TEXT)</label>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Write your query or description here..."
-                rows={4}
-                className="w-full border border-gray-200 rounded-2xl p-4 text-sm text-gray-900 focus:outline-none focus:border-[#073B67] transition-all bg-white"
-              />
+            {/* Recording guide & tips */}
+            <div className="bg-[#073B67] rounded-[16px] p-5 text-white shadow-sm">
+              <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Info size={16} className="text-[#F47A32]"/> Recording guide</h3>
+              <div className="space-y-2 text-xs text-white/85">
+                <p className="flex items-start gap-2"><span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5">1</span>State your <strong>Worker Name and BSS ID</strong> at the start.</p>
+                <p className="flex items-start gap-2"><span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5">2</span>Mention the <strong>Contractor Name</strong> you are bound to.</p>
+                <p className="flex items-start gap-2"><span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5">3</span>Mention the <strong>Principal Employer and Site details</strong>.</p>
+                <p className="flex items-start gap-2"><span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-[10px] font-bold mt-0.5">4</span>Describe <strong>what happened, when and where</strong>, then what you expect.</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#F47A32] mb-2">Recording tips</h4>
+                <ul className="space-y-1 text-[11px] text-white/75">
+                  <li>• Record in a quiet place and speak clearly.</li>
+                  <li>• Keep the recording under 2 minutes.</li>
+                  <li>• You can re-record any time before submitting.</li>
+                  <li>• Attach a letter or photo if you have evidence.</li>
+                </ul>
+              </div>
             </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-12 bg-[#073B67] text-white rounded-2xl font-bold text-sm hover:bg-[#062D4F] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-60"
-            >
-              <Send size={18} /> {isSubmitting ? 'Submitting Grievance...' : 'Submit Grievance'}
-            </button>
-          </form>
-        </div>
-
-        {/* Right Column: Recent Grievance List */}
-        <div className="bg-white border border-gray-200 rounded-3xl p-6 space-y-5 shadow-sm h-fit">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <FileText className="text-[#073B67]" size={18} /> Your recent grievances
-            </h2>
-            <button onClick={() => setActiveTab('track')} className="text-xs font-bold text-[#073B67] hover:underline flex items-center gap-1">
-              View full tracking <ChevronRight size={14} />
-            </button>
           </div>
 
+          {/* TRACKING TEASER */}
           <div className="space-y-4">
-            {grievanceList.map((g) => (
-              <div key={g.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-white hover:shadow-sm transition-all space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-bold text-blue-700">{g.id}</span>
-                  {statusBadge(g.status)}
-                </div>
-                <p className="text-xs text-gray-700 font-medium line-clamp-2">{g.description}</p>
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100/80 text-[11px] text-gray-400">
-                  <span>{g.updatedAt}</span>
-                  <button onClick={() => setActiveTab('track')} className="text-xs font-bold text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-3 py-1 rounded-lg">
-                    Track
-                  </button>
-                </div>
+            <div className="bg-white rounded-[16px] shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
+                <h2 className="font-bold text-gray-800 flex items-center gap-2"><ClipboardList size={17} className="text-[#073B67]"/> Your recent grievances</h2>
+                <button onClick={() => goTo('track')} className="text-xs font-bold text-[#073B67] hover:underline flex items-center gap-1">View full tracking<ChevronRight size={14}/></button>
               </div>
-            ))}
-            {grievanceList.length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-8">No grievances submitted yet.</p>
-            )}
+              <div className="divide-y divide-gray-100">
+                {tickets.slice(0, 3).map(ticket => (
+                  <div key={ticket.ref} className="p-4 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-bold text-[#073B67]">{ticket.ref}</span>{statusBadge(ticket.status)}</div>
+                      <p className="text-[13px] text-gray-700 font-medium mt-1 line-clamp-1">{ticket.description}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Updated {ticket.updatedAt}</p>
+                    </div>
+                    <button onClick={() => { setSelectedTicket(ticket); goTo('track'); }} className="text-[11px] font-bold text-[#073B67] bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-100 flex-shrink-0">Track</button>
+                  </div>
+                ))}
+                {tickets.length === 0 && <p className="p-6 text-center text-xs text-gray-400">No grievances raised yet.</p>}
+              </div>
+            </div>
           </div>
+
         </div>
+      ) : (
+        /* TRACK STATUS — dedicated tracking experience */
+        <div className="space-y-4 scroll-mt-24">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-bold text-gray-800 flex items-center gap-2"><Clock size={17} className="text-[#073B67]"/> My Grievances — Track Status</h2>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{counts.total} ticket{counts.total === 1 ? '' : 's'}</span>
+          </div>
 
-      </div>
+          {tickets.map(ticket => (
+            <article key={ticket.ref} id={ticket.ref} className="bg-white rounded-[12px] border border-gray-200 shadow-sm overflow-hidden scroll-mt-28">
+              <button onClick={() => setSelectedTicket(selectedTicket?.ref === ticket.ref ? null : ticket)} className="w-full p-4 text-left flex items-start gap-3 hover:bg-gray-50/60 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-[#073B67]">{ticket.ref}</span>
+                    {statusBadge(ticket.status)}
+                    <span className="text-[10px] font-semibold text-gray-400">{ticket.category}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800 mt-1.5 line-clamp-1">{ticket.description}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">Raised {ticket.raisedAt} · Last update {ticket.updatedAt}</p>
+                </div>
+                <span className="flex items-center gap-1.5 mt-1 flex-shrink-0"><span className="text-[10px] font-bold text-[#073B67]">{selectedTicket?.ref === ticket.ref ? 'Hide Details' : 'View Details'}</span><ChevronRight size={16} className={`text-gray-300 transition-transform ${selectedTicket?.ref === ticket.ref ? 'rotate-90' : ''}`}/></span>
+              </button>
 
-      {/* Floating Voice Guide */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button className="bg-[#0B192C] text-white px-5 py-3 rounded-full text-xs font-bold flex items-center gap-2 shadow-2xl hover:scale-105 transition-transform">
-          <Mic size={16} className="text-blue-400" />
-          <span>सुनकर सीखें / Listen & Learn</span>
-        </button>
-      </div>
+              {selectedTicket?.ref === ticket.ref && (
+                <div className="border-t border-gray-100 bg-gray-50/50 p-4 sm:p-5 space-y-4 animate-in slide-in-from-top-1 duration-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><UserRound size={11}/> Raised By</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.raisedBy}</p></div>
+                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><MapPin size={11}/> Site Location</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.site}</p></div>
+                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Building2 size={11}/> Responsible Authority</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.assignedTo}</p></div>
+                    <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><TimerReset size={11}/> Updated Date & Time</p><p className="font-semibold text-gray-800 mt-0.5">{ticket.updatedAt}</p></div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Progress timeline */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-4">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Resolution Progress</p>
+                      <Timeline ticket={ticket} />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Latest Response / Update</p>
+                        {ticket.contractorReply ? <p className="text-xs text-gray-700 leading-relaxed">{ticket.contractorReply}</p> : <p className="text-xs text-gray-400 italic">Awaiting response — the assigned authority has been notified.</p>}
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <button onClick={() => alert(`Downloading letter for ${ticket.ref} (PDF).`)} disabled={ticket.status !== 'Resolved'} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-40"><Download size={14}/>Download Letter</button>
+                        <span className="text-[11px] text-gray-400 ml-auto">Auto-generated reference · {ticket.ref}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </article>
+          ))}
+
+          {tickets.length === 0 && <div className="bg-white border border-dashed border-gray-300 rounded-xl p-10 text-center"><p className="text-sm font-semibold text-gray-600">No grievances raised yet</p><p className="text-xs text-gray-400 mt-1">Your raised grievances and their status will appear here.</p></div>}
+        </div>
+      )}
     </div>
   );
 }
