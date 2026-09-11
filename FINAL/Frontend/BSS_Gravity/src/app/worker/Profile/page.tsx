@@ -299,7 +299,7 @@ export default function WorkerProfilePage() {
             <div className="space-y-8 animate-in fade-in">
               <div className="flex flex-col md:flex-row gap-8 items-start">
                  <div className="w-28 h-28 rounded-full border border-black/10 overflow-hidden flex-shrink-0 relative group">
-                    <img src={worker.identity.photoUrl} alt="Worker" className="w-full h-full object-cover" />
+                    {worker.identity.photoUrl ? <img src={worker.identity.photoUrl} alt="Worker" className="w-full h-full object-cover" /> : <span className="w-full h-full grid place-items-center text-gray-300"><UserCircle size={44}/></span>}
                     <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer backdrop-blur-sm transition-all">
                       <span className="text-white text-[11px] font-semibold uppercase tracking-wider">Change Photo</span>
                     </div>

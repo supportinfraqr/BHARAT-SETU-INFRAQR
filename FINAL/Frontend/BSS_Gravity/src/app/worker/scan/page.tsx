@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
-import { Camera, CheckCircle2, Handshake, Home, MapPin, ScanLine, ShieldCheck, Upload, XCircle } from "lucide-react";
+import { Camera, CheckCircle2, Handshake, Home, MapPin, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -150,7 +150,7 @@ export default function QRScannerWorkflow() {
             </div>
           ):result?(
             <div className="space-y-5">
-              <div className="flex items-center gap-4"><img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-full object-cover"/><div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>
+              <div className="flex items-center gap-4">{result.identity.photoUrl ? <img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-full object-cover"/> : <span className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-400"><UserRound size={26}/></span>}<div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>
               <dl className="grid grid-cols-2 gap-3 text-sm">{result.identity.category&&<><dt className="text-gray-500">Category</dt><dd className="font-semibold">{result.identity.category}</dd></>}{result.employment?.status&&<><dt className="text-gray-500">Employment</dt><dd className="font-semibold">{result.employment.status}</dd></>}{result.employment?.site&&<><dt className="text-gray-500">Site</dt><dd className="font-semibold">{result.employment.site}</dd></>}{result.skills?.primary?.name&&<><dt className="text-gray-500">Primary skill</dt><dd className="font-semibold">{result.skills?.primary?.name}</dd></>}</dl>
               <p className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900">Sensitive identifiers, family data and banking details are withheld or masked according to the selected relationship.</p>
             </div>
