@@ -87,8 +87,8 @@ export default function WorkerProfilePage() {
   // EmploymentStatus values must match BssTaxonomies.EmploymentStatus exactly
   // ("Gig active", "Self-employed", "Seasonal", …) so the conditional
   // sub-forms below render when the matching option is selected.
-  const [employmentStatus, setEmploymentStatus] = useState(BssTaxonomies.EmploymentStatus[0]);
-  const [workerCategory, setWorkerCategory] = useState(worker.identity.category && (BssTaxonomies.WorkerCategory as readonly string[]).includes(worker.identity.category) ? worker.identity.category : BssTaxonomies.WorkerCategory[4]);
+  const [employmentStatus, setEmploymentStatus] = useState(worker.classification?.currentEmploymentStatus || BssTaxonomies.EmploymentStatus[0]);
+  const [workerCategory, setWorkerCategory] = useState(worker.classification?.workerCategory || worker.identity.category || BssTaxonomies.WorkerCategory[0]);
 
   // Welfare & Safety — Medical examination values come from the Worker record.
   const medicalExaminationStatus = worker.compliance.medicalExaminationStatus?.trim() || '';
@@ -587,28 +587,28 @@ export default function WorkerProfilePage() {
                    </select>
                 </div>
                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Sector</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
-                     {BssTaxonomies.Sector.map(s => <option key={s} value={s}>{s}</option>)}
-                   </select>
-                </div>
-                <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Industry</label>
-                   <input type="text" defaultValue="Infrastructure" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
-                </div>
-                <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Occupation</label>
-                   <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
-                     <option>Bar Bender (Rebar)</option>
-                     <option>Mason</option>
-                     <option>Carpenter</option>
-                     <option>Electrician</option>
-                   </select>
-                </div>
-                <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Total Worker Experience (Years)</label>
-                   <input type="number" defaultValue="8" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
-                </div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Sector</label>
+                    <select defaultValue={worker.classification?.sector} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                      {BssTaxonomies.Sector.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Industry</label>
+                    <input type="text" defaultValue={worker.classification?.industry} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                 </div>
+                 <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Occupation</label>
+                    <select defaultValue={worker.classification?.occupation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                      <option>Bar Bender (Rebar)</option>
+                      <option>Mason</option>
+                      <option>Carpenter</option>
+                      <option>Electrician</option>
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Total Worker Experience (Years)</label>
+                    <input type="number" defaultValue={worker.classification?.totalWorkerExperience} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                 </div>
               </div>
 
               {/* Conditional Block: GIG ACTIVE (taxonomy value "Gig active") */}
@@ -765,7 +765,7 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Frequency</label>
-                    <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <select defaultValue={worker.classification?.paymentFrequency} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                       <option>Weekly</option>
                       <option>Fortnightly</option>
                       <option>Monthly</option>
@@ -789,13 +789,13 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Source</label>
-                    <input type="text" defaultValue="Self Registered via App" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent for Data Sharing</label>
                     <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
                       <CheckCircle2 size={18} className="text-[#2F9E67]"/>
-                      <span className="text-[14px] font-medium text-[#1D1D1F]">Granted on 14 Aug 2024</span>
+                      <span className="text-[14px] font-medium text-[#1D1D1F]">{worker.other?.consentDate ? `Granted on ${worker.other.consentDate}` : 'Not granted'}</span>
                     </div>
                   </div>
                 </div>
@@ -1338,31 +1338,31 @@ export default function WorkerProfilePage() {
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent for Registration</label>
                   <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
                     <CheckCircle2 size={18} className="text-[#2F9E67]"/>
-                    <span className="text-[14px] font-medium text-[#1D1D1F]">Granted</span>
+                    <span className="text-[14px] font-medium text-[#1D1D1F]">{worker.other?.consentRegistration ? 'Granted' : 'Not granted'}</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent for Verification / Data Sharing</label>
                   <div className="flex items-center gap-2 w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3">
                     <CheckCircle2 size={18} className="text-[#2F9E67]"/>
-                    <span className="text-[14px] font-medium text-[#1D1D1F]">Granted</span>
+                    <span className="text-[14px] font-medium text-[#1D1D1F]">{worker.other?.consentVerification ? 'Granted' : 'Not granted'}</span>
                   </div>
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent Date</label>
-                  <input type="text" defaultValue="14 Aug 2024" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input type="text" defaultValue={worker.other?.consentDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Source</label>
-                  <input type="text" defaultValue="Self Registered via App" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registered By</label>
-                  <input type="text" defaultValue="Worker Self-Service (BSS App)" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input type="text" defaultValue={worker.other?.registeredBy} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Date</label>
-                  <input type="text" defaultValue="14 Aug 2024" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input type="text" defaultValue={worker.other?.registrationDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
               </div>
             </div>
