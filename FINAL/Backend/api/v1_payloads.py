@@ -1089,13 +1089,13 @@ def _contractor_workers(user):
             "mobile": _d(wi.mobile_number if wi else ""),
             "site": site.site_name if site else "",
             "employer": _d(emp.employer_name if emp else ""),
-            "designation": "",
-            "doj": None,
+            "designation": _d(b.designation),
+            "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": 0,
             "status": _d(b.binding_status),
             "verified": bool(wi and wi.aadhaar),
             "refCode": _d(wi.bss_worker_id if wi else ""),
-            "department": "",
+            "department": _d(b.department),
             "gender": _d(wi.gender if wi else ""),
             "category": "",
             "skills": "",
@@ -1311,14 +1311,15 @@ def _contractor_binding_requests(user):
     rows = []
     for b in WorkerContractorBinding.objects.filter(contractor=user):
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        ep = getattr(b.site.employer, "employer_profile", None) if b.site and b.site.employer else None
         rows.append({
             "id": b.id, "type": "worker",
             "entityName": _d(wi.name if wi else b.worker.username),
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "site": b.site.site_name if b.site else "",
-            "employer": "",
-            "designation": "",
-            "wage": 0,
+            "employer": _d(ep.employer_name if ep else ""),
+            "designation": _d(b.designation),
+            "wage": float(b.offered_wage) if b.offered_wage else 0,
             "requestedOn": _dts(b.created_at),
             "status": _d(b.binding_status),
         })
@@ -1817,7 +1818,8 @@ def _employer_workers(user):
             "contractorId": b.contractor_id,
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
             "siteId": b.site_id, "site": b.site.site_name if b.site else "",
-            "designation": "", "doj": None,
+            "designation": _d(b.designation),
+            "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "attendance": "PRESENT", "compliance": 0,
             "status": _d(b.binding_status), "verified": bool(wi and wi.aadhaar),
         })
@@ -2167,7 +2169,7 @@ def build_admin_payroll(user):
             "employer": _d(ep.employer_name if ep else ""),
             "site": b.site.site_name if b.site else "",
             "contractor": _d(cp.contractor_name if cp else ""),
-            "designation": "",
+            "designation": _d(b.designation),
         })
 
     payroll_user = User.objects.filter(employer_profile__isnull=False,

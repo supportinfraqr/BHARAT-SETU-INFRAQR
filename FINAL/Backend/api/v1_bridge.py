@@ -46,6 +46,7 @@ from bss_core.models import (
     ContractorSiteAllotment,
     WorkerContractorBinding,
     WorkerEducation,
+    WorkerEmployment,
     WorkerFamilyDependant,
     WorkerGatePass,
     WorkerIdentity,
@@ -1264,42 +1265,49 @@ def _persist_mutation(user, role_path, resource, method, body):
             obj.save(update_fields=["available_for_work"])
         return obj.id
     if resource == "workers" and role_path == "contractor" and method == "POST":
-        bss_id = str(body.get("bssId") or "").strip().upper()
-        site_id = body.get("siteId")
-        site = None
-        if site_id:
-            site = Site.objects.filter(pk=site_id).first()
-        if site is None and body.get("site"):
-            site_label = str(body.get("site")).strip()
-            site = (Site.objects.filter(site_name=site_label).first()
-                    or Site.objects.filter(site_code=site_label).first())
-        # Bind an existing worker by BSS ID when provided; otherwise create one.
-        w = None
-        if bss_id:
-            ident = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
-            if ident:
-                w = ident.user
-        if w is None:
-            name = body.get("name") or "Worker"
-            mobile = body.get("mobile") or body.get("contact") or ""
-            username = f"worker_{uuid.uuid4().hex[:8]}"
-            w = User.objects.create_user(username=username, password="Bss@Worker123",
-                                         role="worker", account_active=True, is_active=True)
-            WorkerIdentity.objects.create(user=w, bss_worker_id=bss_id or _bss_worker_id(w.id),
-                                          name=name, mobile_number=mobile)
-        if user.role == "contractor" and site:
-            if not _contractor_engaged_at_site(user, site.id):
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError(
-                    "You are not engaged at this site. Ask the employer to allot this site to you first.")
-            binding, _ = WorkerContractorBinding.objects.get_or_create(
-                worker=w, contractor=user, site=site)
-            binding.binding_status = "ACCEPTED"
-            binding.consent_worker = True
-            binding.consent_contractor = True
-            _apply_binding_terms(binding, body)
-            binding.save()
-        return w.id
+        from rest_framework.exceptions import ValidationError
+        rows = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
+        created = []
+        for row in rows:
+            row = row if isinstance(row, dict) else {}
+            bss_id = str(row.get("bssId") or "").strip().upper()
+            site_id = row.get("siteId")
+            site = Site.objects.filter(pk=site_id).first() if site_id else None
+            if site is None and row.get("site"):
+                site_label = str(row.get("site")).strip()
+                site = (Site.objects.filter(site_name=site_label).first()
+                        or Site.objects.filter(site_code=site_label).first())
+            # Bind an existing worker by BSS ID when provided; otherwise create one.
+            w = None
+            if bss_id:
+                ident = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
+                if ident:
+                    w = ident.user
+            if w is None:
+                name = row.get("name") or "Worker"
+                mobile = row.get("mobile") or row.get("contact") or ""
+                username = f"worker_{uuid.uuid4().hex[:8]}"
+                w = User.objects.create_user(username=username, password="Bss@Worker123",
+                                             role="worker", account_active=True, is_active=True)
+                WorkerIdentity.objects.create(user=w, bss_worker_id=bss_id or _bss_worker_id(w.id),
+                                              name=name, mobile_number=mobile)
+            if user.role == "contractor" and site:
+                if not _contractor_engaged_at_site(user, site.id):
+                    raise ValidationError(
+                        "You are not engaged at this site. Ask the employer to allot this site to you first.")
+                binding, _ = WorkerContractorBinding.objects.get_or_create(
+                    worker=w, contractor=user, site=site)
+                if binding.binding_status != "ACCEPTED":
+                    # Two-sided: the contractor consents now, the worker accepts (app/OTP).
+                    binding.binding_status = "PENDING"
+                    binding.consent_contractor = True
+                    binding.consent_worker = False
+                _apply_binding_terms(binding, row)
+                binding.save()
+            created.append(w.id)
+        if isinstance(body.get("bulk"), list):
+            return created
+        return created[0] if created else None
     if resource == "approvals" and role_path == "employer" and method == "PATCH":
         ids = body.get("ids") or []
         new_status = body.get("status") or "APPROVED"
@@ -1650,6 +1658,34 @@ def _apply_binding_terms(binding, data):
     return binding
 
 
+def _sync_employment_from_binding(binding):
+    """Auto-link connected records when a binding becomes ACCEPTED. Creates or
+    refreshes the worker's WorkerEmployment row (drives the dashboard, gate
+    passes and payroll views) from the binding's offered terms."""
+    if binding is None or binding.binding_status != "ACCEPTED":
+        return
+    emp, _ = WorkerEmployment.objects.get_or_create(user=binding.worker)
+    emp.assignment = binding
+    if binding.designation:
+        emp.designation = binding.designation
+    if binding.department:
+        emp.department = binding.department
+    if binding.shift:
+        emp.shift = binding.shift
+    if binding.accepted_at and not emp.doj:
+        emp.doj = binding.accepted_at.date()
+    emp.status = "Active"
+    emp.save()
+
+
+def _unlink_employment_from_binding(binding):
+    """Reverse the auto-link when a binding is cancelled (unbound)."""
+    if binding is None:
+        return
+    WorkerEmployment.objects.filter(user=binding.worker, assignment=binding).update(
+        assignment=None, status="Inactive")
+
+
 def _verify_binding_otp(mobile, credential):
     otp = SmsOtp.objects.filter(mobile=mobile, purpose="BINDING").order_by("-created_at").first()
     if otp is None or otp.is_expired or otp.attempts >= otp.max_attempts:
@@ -1793,6 +1829,8 @@ def binding_consent(request, binding_id):
             b.binding_status = "CANCELLED"
             b.unbound_at = timezone.now()
         b.save()
+        if b.binding_status == "CANCELLED":
+            _unlink_employment_from_binding(b)
     else:
         if side == "worker":
             b.consent_worker = True
@@ -1803,6 +1841,8 @@ def binding_consent(request, binding_id):
             b.binding_status = "ACCEPTED"
             b.accepted_at = timezone.now()
         b.save()
+        if b.binding_status == "ACCEPTED":
+            _sync_employment_from_binding(b)
     return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
 
 

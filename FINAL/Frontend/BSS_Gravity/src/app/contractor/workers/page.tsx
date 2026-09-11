@@ -27,7 +27,7 @@ const columns: DataColumn<ContractorWorker>[] = [
 type RowDraft = { bssId:string; name:string; mobile:string; designation:string; site:string; employer:string; department:string; refCode:string };
 
 export default function WorkerMasterPage() {
-  const { contractor, replaceContractor, mutate, employerScope, scoped } = useContractor();
+  const { contractor, mutate, employerScope, scoped } = useContractor();
   const [modal, setModal] = useState<'single' | 'bulk' | 'manual' | null>(null);
   const [rows, setRows] = useState<RowDraft[]>([]);
   const [busy, setBusy] = useState(false);
@@ -49,10 +49,9 @@ export default function WorkerMasterPage() {
     event.preventDefault(); setBusy(true); setError('');
     const data = Object.fromEntries(new FormData(event.currentTarget));
     try {
-      const result = await mutate<{ data: ContractorWorker }>('workers', 'POST', data);
-      replaceContractor({ ...contractor, workers: [result.data, ...contractor.workers], stats: { ...contractor.stats, totalWorkers: contractor.stats.totalWorkers + 1 } });
+      await mutate<{ data: unknown }>('workers', 'POST', data);
       setModal(null);
-      setNotice(`Binding request for ${String(data.name)} sent — the worker must accept before the profile unlocks.`);
+      setNotice(`Binding request for ${String(data.name)} sent — the worker must accept before the profile unlocks. Track it under Binding Requests.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Worker could not be added.'); }
     finally { setBusy(false); }
   }
@@ -62,10 +61,9 @@ export default function WorkerMasterPage() {
     const data = Object.fromEntries(new FormData(event.currentTarget));
     try {
       const payload = { ...data, doj: new Date().toISOString().slice(0, 10), compliance: 'Non-compliant', status: 'Active', verified: false };
-      const result = await mutate<{ data: ContractorWorker }>('workers', 'POST', payload);
-      replaceContractor({ ...contractor, workers: [result.data, ...contractor.workers], stats: { ...contractor.stats, totalWorkers: contractor.stats.totalWorkers + 1 } });
+      await mutate<{ data: unknown }>('workers', 'POST', payload);
       setModal(null);
-      setNotice(`Worker ${String(data.name)} created manually with Ref Worker Code ${String(data.refCode || '—')}.`);
+      setNotice(`Worker ${String(data.name)} created. A binding request was sent — the worker must accept to activate the profile.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Worker could not be created.'); }
     finally { setBusy(false); }
   }
@@ -76,9 +74,8 @@ export default function WorkerMasterPage() {
     if (!valid.length) { setError('Add at least one complete row.'); setBusy(false); return; }
     try {
       const payload = valid.map(row => ({ bssId: row.bssId.toUpperCase(), name: row.name, mobile: row.mobile || '', designation: row.designation, site: row.site, employer: row.employer, department: row.department, refCode: row.refCode, doj: new Date().toISOString().slice(0, 10), compliance: 'Non-compliant', status: 'Active' }));
-      const result = await mutate<{ data: ContractorWorker[] }>('workers', 'POST', { bulk: payload });
-      replaceContractor({ ...contractor, workers: [...result.data, ...contractor.workers], stats: { ...contractor.stats, totalWorkers: contractor.stats.totalWorkers + result.data.length } });
-      setNotice(`Bound ${result.data.length} workers.`); setRows([]); setModal(null);
+      await mutate<{ data: number[] }>('workers', 'POST', { bulk: payload });
+      setNotice(`Binding requests sent for ${valid.length} worker${valid.length === 1 ? '' : 's'} — each worker must accept before their profile unlocks.`); setRows([]); setModal(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Bulk binding could not be completed.'); }
     finally { setBusy(false); }
   }

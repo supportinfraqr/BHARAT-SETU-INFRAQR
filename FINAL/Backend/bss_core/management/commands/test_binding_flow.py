@@ -14,7 +14,8 @@ import uuid
 
 from django.core.management.base import BaseCommand
 
-from bss_core.models import Site, User, WorkerContractorBinding
+from bss_core.models import Site, User, WorkerContractorBinding, WorkerEmployment
+from api import v1_bridge as bridge
 from api import v1_payloads as payloads
 
 EMPLOYER_PHONE = "7777777777"
@@ -73,6 +74,9 @@ class Command(BaseCommand):
         if changed:
             binding.save(update_fields=changed)
 
+        # ── Auto-link: acceptance creates the worker's employment record ────
+        bridge._sync_employment_from_binding(binding)
+
         # ── Assertions ──────────────────────────────────────────────────────
         results = []
 
@@ -92,6 +96,21 @@ class Command(BaseCommand):
                  and match["department"] == "Civil Works"
                  and match["shift"] == "Day"
                  and match["wage"].startswith("₹21,000")),
+        ))
+
+        results.append((
+            "acceptance auto-links WorkerEmployment",
+            WorkerEmployment.objects.filter(
+                user=worker, assignment=binding, status="Active").exists(),
+        ))
+
+        employment = payloads._worker_employment_section(worker, None)
+        results.append((
+            "dashboard employment reflects the binding",
+            employment["status"] == "Active"
+            and employment["contractor"] == "BuildWell Contractors"
+            and employment["site"] == "Demo Metro Site"
+            and employment["designation"] == "Mason",
         ))
 
         contractor_workers = payloads._contractor_workers(contractor)
