@@ -1391,6 +1391,87 @@ def _handle_document_upload(user, body):
 # ---------------------------------------------------------------------------
 # Submissions (multipart uploads)
 # ---------------------------------------------------------------------------
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_documents(request):
+    """Worker document register — GET lists the catalog merged with uploads;
+    POST (multipart: file, code, expiry) uploads/replaces a document."""
+    from bss_core.models import WorkerDocument, WorkerDocumentMaster
+    user = request.user
+    if user.role != "worker":
+        return Response({"error": "Only workers can manage their documents."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == "GET":
+        return Response({"data": payloads._worker_documents_display(user)},
+                        status=status.HTTP_200_OK)
+
+    file_obj = request.FILES.get("file")
+    code = (request.data.get("code") or "").strip().upper()
+    name = (request.data.get("name") or "").strip()
+    expiry = (request.data.get("expiry") or "").strip()
+    if not file_obj:
+        return Response({"error": "Choose a document to upload."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    master = WorkerDocumentMaster.objects.filter(code=code).first() if code else None
+    if master is None and name:
+        master = WorkerDocumentMaster.objects.filter(document_name__iexact=name).first()
+    if master is None:
+        return Response({"error": "Unknown document type."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    WorkerDocument.objects.filter(user=user, document=master).delete()
+    doc = WorkerDocument(
+        user=user, document=master,
+        file_name=os.path.basename(file_obj.name or "document"),
+        file_size=file_obj.size, mime_type=file_obj.content_type or "",
+        status="UNDER_VERIFICATION", is_mandatory=master.is_mandatory,
+        owner_role="worker",
+    )
+    if expiry:
+        try:
+            doc.expiry_date = datetime.date.fromisoformat(expiry)
+        except ValueError:
+            pass
+    doc.file.save(doc.file_name, file_obj, save=False)
+    doc.file_path = doc.file.name
+    doc.save()
+    return Response({"data": {
+        "id": doc.id, "name": master.document_name, "code": master.code,
+        "status": doc.status, "date": payloads._dts(doc.uploaded_at),
+        "downloadUrl": f"/api/worker/documents/{doc.id}/file",
+    }}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "DELETE"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_document_detail(request, document_id):
+    """Download (GET) or delete (DELETE) a single worker document."""
+    from bss_core.models import WorkerDocument
+    doc = WorkerDocument.objects.filter(pk=document_id, user=request.user).first()
+    if doc is None:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+    if request.method == "DELETE":
+        if doc.file:
+            doc.file.delete(save=False)
+        doc.delete()
+        return Response({"success": True, "deleted": True}, status=status.HTTP_200_OK)
+    if not doc.file:
+        return Response({"error": "No file stored for this document."},
+                        status=status.HTTP_404_NOT_FOUND)
+    try:
+        response = FileResponse(doc.file.open("rb"), as_attachment=False,
+                                filename=doc.file_name or os.path.basename(doc.file.name))
+    except Exception:
+        return Response({"error": "Stored file is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    response["Content-Type"] = doc.mime_type or "application/octet-stream"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])

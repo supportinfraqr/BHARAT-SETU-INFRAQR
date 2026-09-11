@@ -376,6 +376,7 @@ class WorkerDocument(models.Model):
                                  related_name="uploads")
     file_name = models.CharField(max_length=255, blank=True)
     file_path = models.CharField(max_length=255, blank=True)
+    file = models.FileField(upload_to="worker_documents/%Y/%m/", blank=True, null=True)
     file_size = models.BigIntegerField(null=True, blank=True)
     mime_type = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="UPLOADED")

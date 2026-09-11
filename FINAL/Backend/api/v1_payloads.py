@@ -699,22 +699,66 @@ def _worker_courses():
     ]
 
 
+def _doc_owner_label(value):
+    return {"worker": "Worker", "contractor": "Contractor", "system": "System"}.get(
+        (value or "").strip().lower(), "Worker")
+
+
 def _worker_documents_display(user):
-    docs = WorkerDocument.objects.filter(user=user)
-    if docs.exists():
-        return [
-            {"name": _d(d.document.document_name if d.document else ""),
-             "mandatory": bool(d.is_mandatory), "owner": _d(d.owner_role, "Worker"),
-             "status": _d(d.status, "Uploaded"), "date": _dts(d.uploaded_at), "downloadUrl": ""}
-            for d in docs
-        ]
-    return [
-        {"name": "Aadhaar Card", "mandatory": True, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
-        {"name": "PAN Card", "mandatory": False, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
-        {"name": "Bank Passbook / Cancelled Cheque", "mandatory": True, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
-        {"name": "Medical Fitness Certificate", "mandatory": False, "owner": "Contractor", "status": "Pending", "date": None, "downloadUrl": ""},
-        {"name": "Safety Induction Badge", "mandatory": True, "owner": "System", "status": "Verified", "date": None, "downloadUrl": ""},
-    ]
+    """The worker's document register: the master catalog merged with the
+    worker's own uploads (uploads override catalog rows)."""
+    uploads = {
+        d.document_id: d
+        for d in WorkerDocument.objects.select_related("document").filter(user=user)
+    }
+    rows = []
+    masters = list(WorkerDocumentMaster.objects.all().order_by("sort_order", "id"))
+    seen = set()
+    for m in masters:
+        d = uploads.get(m.id)
+        if d:
+            seen.add(d.id)
+            rows.append({
+                "id": d.id,
+                "name": _d(m.document_name),
+                "code": _d(m.code),
+                "mandatory": bool(d.is_mandatory or m.is_mandatory),
+                "owner": _doc_owner_label(d.owner_role or m.uploaded_by),
+                "status": _d(d.status, "UPLOADED"),
+                "date": _dts(d.uploaded_at) if d.uploaded_at else None,
+                "expiry": _dts(d.expiry_date) if d.expiry_date else None,
+                "fileName": _d(d.file_name),
+                "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+            })
+        else:
+            rows.append({
+                "id": None,
+                "name": _d(m.document_name),
+                "code": _d(m.code),
+                "mandatory": bool(m.is_mandatory),
+                "owner": _doc_owner_label(m.uploaded_by),
+                "status": "MISSING",
+                "date": None,
+                "expiry": None,
+                "fileName": "",
+                "downloadUrl": "",
+            })
+    for d in uploads.values():
+        if d.id in seen:
+            continue
+        rows.append({
+            "id": d.id,
+            "name": _d(d.document.document_name if d.document else ""),
+            "code": _d(d.document.code if d.document else ""),
+            "mandatory": bool(d.is_mandatory),
+            "owner": _doc_owner_label(d.owner_role),
+            "status": _d(d.status, "UPLOADED"),
+            "date": _dts(d.uploaded_at) if d.uploaded_at else None,
+            "expiry": _dts(d.expiry_date) if d.expiry_date else None,
+            "fileName": _d(d.file_name),
+            "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+        })
+    return rows
 
 
 def _worker_job_requests(user):
