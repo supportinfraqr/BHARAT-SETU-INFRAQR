@@ -71,7 +71,7 @@ export type WorkerRecord = {
     secondary: string[];
     certification: { name: string; verified: boolean };
   };
-  socialSecurity: { epfoUan: string; esicIp: string; eShramLinked: boolean; bocwRegistered: boolean; lwfNo?: string; wcPolicyNo?: string; eShramNo?: string; stateWorkerId?: string };
+  socialSecurity: { epfoUan: string; esicIp: string; eShramLinked: boolean; bocwRegistered: boolean; lwfNo?: string; wcPolicyNo?: string; eShramNo?: string; stateWorkerId?: string; bocwRegNumber?: string };
   documents: { required: number; uploaded: number; missing: string[] };
   rozgarRequests: Array<{ id: string; employer: string; site: string; status: string }>;
   grievances: { openCount: number; recent: { id: string; status: string; date: string } };

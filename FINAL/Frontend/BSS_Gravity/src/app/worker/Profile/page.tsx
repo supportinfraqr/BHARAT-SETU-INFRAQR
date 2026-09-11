@@ -475,24 +475,24 @@ export default function WorkerProfilePage() {
                    <input type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">LWF Number (Labour Welfare Fund)</label>
-                   <input type="text" placeholder="Enter if available" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                 </div>
-                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">e-Shram Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">Not Linked</span></label>
-                   <input type="text" placeholder="Enter 12 digit UAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                 </div>
-                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">BOCW Registration Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">Not Registered</span></label>
-                   <input type="text" placeholder="State BOCW ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                 </div>
-                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">WC Policy No. (Workmen Compensation)</label>
-                   <input type="text" placeholder="Insurance Policy No." className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                 </div>
-                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">State Worker ID</label>
-                   <input type="text" placeholder="State labour department worker ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">LWF Number (Labour Welfare Fund)</label>
+                    <input type="text" defaultValue={worker.socialSecurity.lwfNo} placeholder="Enter if available" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">e-Shram Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">{worker.socialSecurity.eShramNo ? 'Linked' : 'Not Linked'}</span></label>
+                    <input type="text" defaultValue={worker.socialSecurity.eShramNo} placeholder="Enter 12 digit UAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">BOCW Registration Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">{worker.socialSecurity.bocwRegNumber ? 'Registered' : 'Not Registered'}</span></label>
+                    <input type="text" defaultValue={worker.socialSecurity.bocwRegNumber} placeholder="State BOCW ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">WC Policy No. (Workmen Compensation)</label>
+                    <input type="text" defaultValue={worker.socialSecurity.wcPolicyNo} placeholder="Insurance Policy No." className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">State Worker ID</label>
+                    <input type="text" defaultValue={worker.socialSecurity.stateWorkerId} placeholder="State labour department worker ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
               </div>
             </div>
