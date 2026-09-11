@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BssTaxonomies } from '@/data/taxonomies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
@@ -82,6 +82,53 @@ export default function WorkerProfilePage() {
       setVerifyingId(null);
     }, 2000); // 2 second mock delay
   };
+
+  // ── DigiLocker document wallet ──────────────────────────────────────────
+  type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; status?: string };
+  const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
+  const [digilockerStatus, setDigilockerStatus] = useState<'idle' | 'linking' | 'linked' | 'error'>('idle');
+  const [digilockerMessage, setDigilockerMessage] = useState('');
+
+  const loadDigilockerDocs = useCallback(async () => {
+    try {
+      const response = await fetch('/api/digilocker/documents', { cache: 'no-store' });
+      if (!response.ok) return;
+      const json = await response.json() as DigiLockerDoc[] | { data?: DigiLockerDoc[] };
+      const list = Array.isArray(json) ? json : json.data;
+      if (Array.isArray(list)) setDigilockerDocs(list);
+    } catch { /* non-fatal */ }
+  }, []);
+
+  const linkDigiLocker = async () => {
+    setDigilockerStatus('linking');
+    setDigilockerMessage('');
+    try {
+      const response = await fetch('/api/digilocker/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const json = await response.json() as { authorize_url?: string; error?: string };
+      if (!response.ok || !json.authorize_url) throw new Error(json.error || 'Could not start DigiLocker linking.');
+      window.location.href = json.authorize_url;
+    } catch (error) {
+      setDigilockerStatus('error');
+      setDigilockerMessage(error instanceof Error ? error.message : 'DigiLocker linking failed.');
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const outcome = params.get('digilocker');
+    if (outcome === 'linked') {
+      setDigilockerStatus('linked');
+      loadDigilockerDocs();
+      let tries = 0;
+      const timer = setInterval(() => { tries += 1; loadDigilockerDocs(); if (tries >= 5) clearInterval(timer); }, 3000);
+      return () => clearInterval(timer);
+    }
+    if (outcome === 'error') {
+      setDigilockerStatus('error');
+      setDigilockerMessage(params.get('message') || 'DigiLocker linking failed.');
+    }
+    loadDigilockerDocs();
+  }, [loadDigilockerDocs]);
   
   // Conditional UI State
   // EmploymentStatus values must match BssTaxonomies.EmploymentStatus exactly
@@ -1489,6 +1536,43 @@ export default function WorkerProfilePage() {
                           <input type="text" placeholder="IFSC" defaultValue={verifiedGovIds.bankSecondary ? "BARB0MUM123" : "BARB0MUM1234"} className="w-1/3 bg-white border border-gray-300 rounded-xl px-3 py-2 text-[13px] font-medium uppercase focus:outline-none" />
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* DigiLocker — fetch issued documents */}
+                  <div className="flex flex-col md:flex-row gap-4 p-5 rounded-[16px] border border-gray-200 bg-gray-50/50">
+                    <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-full flex items-center justify-center shrink-0">
+                      <FileText size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-[15px] font-bold text-gray-900">DigiLocker — Fetch Issued Documents</h4>
+                      <p className="text-[13px] text-gray-500 mb-3">Link your DigiLocker account to pull your government-issued documents (Aadhaar, PAN, certificates) into BSS.</p>
+                      {digilockerStatus === 'linked' && (
+                        <p className="text-[12px] text-[#2F9E67] font-semibold mb-2">DigiLocker linked — fetching documents…</p>
+                      )}
+                      {digilockerStatus === 'error' && digilockerMessage && (
+                        <p className="text-[12px] text-[#FF3B30] font-semibold mb-2">{digilockerMessage}</p>
+                      )}
+                      {digilockerDocs.length > 0 ? (
+                        <div className="space-y-2 mt-2">
+                          {digilockerDocs.map(doc => (
+                            <div key={doc.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-[13px] font-semibold text-gray-800 truncate">{doc.doctype || 'Document'}</p>
+                                <p className="text-[11px] text-gray-500 truncate">{[doc.issuer, doc.doc_date].filter(Boolean).join(' · ')}</p>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${doc.status === 'DOWNLOADED' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{doc.status || '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-gray-400">No DigiLocker documents fetched yet.</p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-start md:justify-end min-w-[140px]">
+                      <button type="button" onClick={linkDigiLocker} disabled={digilockerStatus === 'linking'} className="bg-sky-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-sky-700 flex items-center gap-2 disabled:opacity-60">
+                        {digilockerStatus === 'linking' ? <RefreshCw size={16} className="animate-spin" /> : 'Link DigiLocker'}
+                      </button>
                     </div>
                   </div>
                   

@@ -4,9 +4,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
 from api import v1_bridge
+from api import views as api_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -77,6 +79,13 @@ _v1_mutations = _v1(
 
 urlpatterns += _v1_patterns
 urlpatterns += _v1_mutations
+
+# DigiLocker also under /v1/ so the Next.js server (which reaches Django via the
+# public /v1/ proxy) can drive the OAuth + document-fetch flow with the worker's
+# JWT. The browser-facing redirect_uri stays on the Next.js /api/digilocker route.
+_v1_digilocker_router = DefaultRouter()
+_v1_digilocker_router.register(r"digilocker", api_views.DigiLockerViewSet, basename="v1-digilocker")
+urlpatterns += [path("v1/", include(_v1_digilocker_router.urls))]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
