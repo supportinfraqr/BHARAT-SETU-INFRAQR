@@ -40,6 +40,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    // Media (Aadhaar photos, uploaded documents) is stored on the Django
+    // backend and referenced as /media/... . On AWS nginx serves /media/
+    // directly; in local/dev there is no nginx, so proxy it to the backend.
+    const backend = (process.env.BSS_API_BASE_URL ?? '').replace(/\/$/, '');
+    if (!backend) return [];
+    return [{ source: '/media/:path*', destination: `${backend}/media/:path*` }];
+  },
   async headers() {
     return [{
       source:'/:path*',
