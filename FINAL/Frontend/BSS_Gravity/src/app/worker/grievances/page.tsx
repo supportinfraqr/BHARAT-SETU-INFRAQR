@@ -195,6 +195,37 @@ export default function GrievancePage() {
       .catch(() => { /* keep the original transcription */ });
   };
 
+  const startSpeechToText = (lang: string) => {
+    const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!Ctor) {
+      setRecordError('Live transcription is not supported in this browser. Your audio will still be recorded.');
+      return;
+    }
+    const recognition = new Ctor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = LANGUAGE_BCP47[lang] || 'en-IN';
+    recognition.onresult = event => {
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i += 1) transcript += `${event.results[i][0].transcript} `;
+      setLiveTranscript(transcript.trim());
+    };
+    recognition.onerror = () => { /* audio is still recorded */ };
+    recognition.start();
+    recognitionRef.current = recognition;
+  };
+
+  const changeLanguage = (next: string) => {
+    setLanguage(next);
+    // Apply immediately to an in-progress recording by restarting recognition.
+    if (recordingState === 'recording') {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      startSpeechToText(next);
+    }
+  };
+
   const startRecording = async () => {
     setRecordError('');
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
@@ -216,24 +247,7 @@ export default function GrievancePage() {
       mediaRecorderRef.current = recorder;
       recorder.start();
 
-      const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
-      const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
-      if (Ctor) {
-        const recognition = new Ctor();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = LANGUAGE_BCP47[language] || 'en-IN';
-        recognition.onresult = event => {
-          let transcript = '';
-          for (let i = 0; i < event.results.length; i += 1) transcript += `${event.results[i][0].transcript} `;
-          setLiveTranscript(transcript.trim());
-        };
-        recognition.onerror = () => { /* audio is still recorded */ };
-        recognition.start();
-        recognitionRef.current = recognition;
-      } else {
-        setRecordError('Live transcription is not supported in this browser. Your audio will still be recorded.');
-      }
+      startSpeechToText(language);
 
       setTimer(0);
       setLiveTranscript('');
@@ -433,7 +447,7 @@ export default function GrievancePage() {
                 <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg">
                   <Globe size={14} className="text-gray-400" />
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:inline">Preferred Response Language</span>
-                  <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={recordingState !== 'idle'} className="text-xs font-bold text-gray-700 bg-transparent outline-none cursor-pointer">
+                  <select value={language} onChange={(e) => changeLanguage(e.target.value)} className="text-xs font-bold text-gray-700 bg-transparent outline-none cursor-pointer">
                     <option value="Hindi">Hindi</option>
                     <option value="English">English</option>
                     <option value="Marathi">Marathi</option>
