@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Mic, Square, Play, RotateCcw, Send, CheckCircle2, 
   MessageSquareWarning, Volume2, Globe, Clock, FileAudio,
-  Loader2, Home, Info, Paperclip, X, ChevronRight, Download,
+  Loader2, Home, Info, Paperclip, X, ChevronRight,
   MapPin, UserRound, Building2, TimerReset, ClipboardList, MessageSquareText
 } from 'lucide-react';
 import Link from 'next/link';
 import { hasFoulLanguage } from '@/lib/profanity';
+import { useWorker } from '@/contexts/WorkerContext';
 
 // Statuses mirror the BSS grievance lifecycle (schema: Submitted, Under Review,
 // In Progress, Resolved). UI never invents new statuses.
@@ -25,13 +26,34 @@ type Ticket = {
   updatedAt: string;
   description: string;
   contractorReply: string | null;
+  audioUrl?: string;
+  duration?: number;
 };
 
-const initialTickets: Ticket[] = [
-  { ref:'GRV-2026-9123', category:'Accommodation', status:'Under Review', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Site HR · P. Menon', raisedAt:'14 Aug 2026, 10:24 AM', updatedAt:'16 Aug 2026, 03:40 PM', description:'Water supply in Block 3 labour camp is irregular since last week.', contractorReply:'Acknowledged. The contractor has scheduled a plumbing inspection of Block 3 on 18 Aug. Temporary tanker supply arranged.' },
-  { ref:'GRV-2026-8891', category:'Wages', status:'Resolved', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Payroll Desk · S. Iyer', raisedAt:'02 Jul 2026, 09:05 AM', updatedAt:'08 Jul 2026, 11:20 AM', description:'June wage slip shows a deduction I do not recognise.', contractorReply:'Deduction verified against attendance records and refunded in the July payout. Please check your July 31 credit.' },
-  { ref:'GRV-2026-8452', category:'Safety', status:'In Progress', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Safety Officer · R. Kumar', raisedAt:'28 Aug 2026, 05:12 PM', updatedAt:'28 Aug 2026, 05:12 PM', description:'Scaffolding near Gate 2 has loose planks that need replacement.', contractorReply:null },
-];
+type BackendGrievance = {
+  id: number;
+  ref: string;
+  category: string;
+  status: GrievanceStatus;
+  body: string;
+  language: string;
+  attachment: string;
+  raisedBy: string;
+  assignedTo: string;
+  raisedAt: string;
+  updatedAt: string;
+  resolvedAt: string;
+  response: string;
+  audioUrl: string;
+  duration: number;
+};
+
+function formatDateTime(value: string): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 const TIMELINE_STEPS: Array<{ status: GrievanceStatus; label: string; note: string }> = [
   { status:'Submitted', label:'Submitted', note:'Grievance recorded and assigned a reference.' },
@@ -40,11 +62,24 @@ const TIMELINE_STEPS: Array<{ status: GrievanceStatus; label: string; note: stri
   { status:'Resolved', label:'Resolved / Closed', note:'Closed after resolution is confirmed.' },
 ];
 
-const transcriptLines = ['Main concern: water supply in Block 3 labour camp is irregular since last week.', 'It affects about 40 workers in my camp block.', 'Requesting the contractor to arrange an immediate inspection.'];
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+const LANGUAGE_BCP47: Record<string, string> = {
+  Hindi: 'hi-IN', English: 'en-IN', Marathi: 'mr-IN', Telugu: 'te-IN', Bhojpuri: 'hi-IN', Punjabi: 'pa-IN',
+};
 
 const STATUS_INDEX: Record<GrievanceStatus, number> = { Submitted:0, 'Under Review':1, 'In Progress':2, Resolved:3 };
 
 export default function GrievancePage() {
+  const { worker } = useWorker();
   const [view, setView] = useState<'lodge' | 'track'>('lodge');
   const [language, setLanguage] = useState('Hindi');
   const [category, setCategory] = useState('Wages');
@@ -55,12 +90,55 @@ export default function GrievancePage() {
   const [timer, setTimer] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedGrievance, setSubmittedGrievance] = useState<{ref: string, date: string, status: GrievanceStatus} | null>(null);
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [liveTranscript, setLiveTranscript] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [recordError, setRecordError] = useState('');
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState('');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const contentTopRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+
+  const toTicket = useCallback((g: BackendGrievance): Ticket => ({
+    ref: g.ref,
+    category: g.category,
+    status: g.status,
+    raisedBy: g.raisedBy,
+    site: worker.employment?.site || '—',
+    assignedTo: g.assignedTo,
+    raisedAt: formatDateTime(g.raisedAt),
+    updatedAt: formatDateTime(g.updatedAt),
+    description: g.body || 'Voice grievance recorded (see audio).',
+    contractorReply: g.response || null,
+    audioUrl: g.audioUrl || undefined,
+    duration: g.duration || 0,
+  }), [worker.employment?.site]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const response = await fetch('/api/worker/grievances', { cache: 'no-store' });
+      const json = await response.json() as { data?: BackendGrievance[]; error?: string };
+      if (!response.ok) throw new Error(json.error || 'Grievances could not be loaded.');
+      setTickets((json.data ?? []).map(toTicket));
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Grievances could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  }, [toTicket]);
+
+  useEffect(() => { void load(); }, [load]);
 
   // Deep-link support: /worker/grievances#GRV-… opens the grievance in Track Status.
   const openReferenceFromHash = () => {
@@ -99,35 +177,118 @@ export default function GrievancePage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [recordingState]);
 
-  // Mock live AI transcription while recording
-  useEffect(() => {
-    if (recordingState !== 'recording') return;
-    const timers = transcriptLines.map((line, index) => window.setTimeout(() => setLiveTranscript(current => current ? current + '\n' + line : line), (index + 1) * 1800));
-    return () => timers.forEach(clearTimeout);
-  }, [recordingState]);
-
-  const startRecording = () => { setTimer(0); setLiveTranscript(''); setRecordingState('recording'); };
-  const stopRecording = () => setRecordingState('recorded');
-  const playRecording = () => {
-    const duration = timer;
-    setTimer(0);
-    setRecordingState('playing');
-    setTimeout(() => { setRecordingState('recorded'); setTimer(duration); }, duration * 1000);
+  // Real speech-to-text (browser Web Speech API) + MediaRecorder, mirroring the
+  // EesassinErp grievance recorder. No server-side transcription.
+  const stopAudioStream = () => {
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
   };
-  const stopPlaying = () => setRecordingState('recorded');
-  const resetRecording = () => { setRecordingState('idle'); setTimer(0); setLiveTranscript(''); };
 
-  const submitGrievance = () => {
+  const translateText = (text: string, targetLanguage: string) => {
+    const target = (LANGUAGE_BCP47[targetLanguage] || 'en-IN').split('-')[0];
+    fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(target)}&dt=t&q=${encodeURIComponent(text)}`)
+      .then(r => r.json())
+      .then((data: Array<Array<[string]>>) => {
+        const translated = (data?.[0] ?? []).map(item => item?.[0] ?? '').join('');
+        if (translated) setLiveTranscript(translated);
+      })
+      .catch(() => { /* keep the original transcription */ });
+  };
+
+  const startRecording = async () => {
+    setRecordError('');
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setRecordError('Audio recording is not supported in this browser. Please type your concern instead.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = event => { if (event.data.size) audioChunksRef.current.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setAudioUrl(prev => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(blob); });
+        stopAudioStream();
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+
+      const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+      const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+      if (Ctor) {
+        const recognition = new Ctor();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = LANGUAGE_BCP47[language] || 'en-IN';
+        recognition.onresult = event => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i += 1) transcript += `${event.results[i][0].transcript} `;
+          setLiveTranscript(transcript.trim());
+        };
+        recognition.onerror = () => { /* audio is still recorded */ };
+        recognition.start();
+        recognitionRef.current = recognition;
+      } else {
+        setRecordError('Live transcription is not supported in this browser. Your audio will still be recorded.');
+      }
+
+      setTimer(0);
+      setLiveTranscript('');
+      setRecordingState('recording');
+    } catch (err) {
+      stopAudioStream();
+      const denied = err instanceof Error && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+      setRecordError(denied ? 'Microphone access was not allowed. Enable permission or type your concern.' : 'The recording could not start. Please try again or type your concern.');
+    }
+  };
+
+  const stopRecording = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+    if (liveTranscript.trim()) translateText(liveTranscript, language);
+    setRecordingState('recorded');
+  };
+
+  const playRecording = () => {
+    if (!audioUrl) return;
+    setRecordingState('playing');
+    const el = audioElRef.current;
+    if (el) { el.currentTime = 0; void el.play(); }
+  };
+  const stopPlaying = () => { audioElRef.current?.pause(); setRecordingState('recorded'); };
+  const resetRecording = () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(''); setAudioBlob(null); setRecordingState('idle'); setTimer(0); setLiveTranscript(''); setRecordError('');
+  };
+
+  const submitGrievance = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const ref = `GRV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
-      const ticket: Ticket = { ref, category, status:'Submitted', raisedBy:'Ravi Kumar (Self)', site:'Mumbai Metro Line 3', assignedTo:'Awaiting assignment', raisedAt:now, updatedAt:now, description:description || 'Voice grievance recorded (see audio).', contractorReply:null };
+    setSubmitError('');
+    try {
+      const form = new FormData();
+      form.append('category', category);
+      form.append('body', description || liveTranscript);
+      form.append('language', language);
+      form.append('attachment', attachment ?? '');
+      form.append('duration', String(timer));
+      if (audioBlob) form.append('audio', audioBlob, 'recording.webm');
+      const response = await fetch('/api/worker/grievances', { method: 'POST', body: form });
+      const json = await response.json() as { data?: BackendGrievance; error?: string };
+      if (!response.ok || !json.data) throw new Error(json.error || 'Grievance could not be submitted.');
+      const ticket = toTicket(json.data);
       setTickets(current => [ticket, ...current]);
-      setSubmittedGrievance({ ref, date: now, status: 'Submitted' });
-      setRecordingState('idle'); setTimer(0); setDescription(''); setAttachment(null); setLiveTranscript('');
-    }, 2000);
+      setSubmittedGrievance({ ref: ticket.ref, date: ticket.raisedAt, status: ticket.status });
+      resetRecording();
+      setDescription(''); setAttachment(null);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'Grievance could not be submitted.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -203,6 +364,8 @@ export default function GrievancePage() {
       </div>
 
       {/* TICKET STATS */}
+      {loading && <p className="text-xs font-semibold text-gray-400">Loading your grievances…</p>}
+      {loadError && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label:'Submitted', value: counts.submitted, tone:'text-slate-600 bg-slate-50 border-slate-100' },
@@ -335,13 +498,15 @@ export default function GrievancePage() {
                     {recordingState === 'playing' && 'Playing back recording...'}
                     {recordingState === 'recorded' && 'Review your recording or submit'}
                   </p>
+                  <audio ref={audioElRef} src={audioUrl || undefined} onEnded={() => setRecordingState('recorded')} className="hidden" />
+                  {recordError && <p className="mt-2 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">{recordError}</p>}
                 </div>
 
                 {/* Live AI transcription */}
                 {recordingState !== 'idle' && (
                   <div className="bg-[#0A192F] rounded-xl p-4">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2"><Volume2 size={12}/>Live AI transcription · {language}</p>
-                    {recordingState === 'recording' && !liveTranscript ? <p className="text-xs text-slate-500 animate-pulse">Listening…</p> : <p className="text-xs text-slate-200 whitespace-pre-line leading-relaxed">{liveTranscript || (recordingState === 'recorded' ? transcriptLines.join('\n') : '')}</p>}
+                    {recordingState === 'recording' && !liveTranscript ? <p className="text-xs text-slate-500 animate-pulse">Listening…</p> : <p className="text-xs text-slate-200 whitespace-pre-line leading-relaxed">{liveTranscript || (recordingState === 'recorded' ? 'No speech detected — your audio recording is still attached.' : '')}</p>}
                     {foulSpotted && <p className="mt-2 text-[11px] font-semibold text-amber-300 bg-amber-400/10 border border-amber-300/20 rounded-lg px-3 py-2">Heads up: your recording appears to contain strong language. Please describe your concern respectfully — offensive words are masked when your case is shown to the contractor.</p>}
                   </div>
                 )}
@@ -370,7 +535,8 @@ export default function GrievancePage() {
                   <span className="text-xs text-gray-700 leading-relaxed"><strong className="flex items-center gap-1 text-[#F47A32]"><MessageSquareWarning size={13}/> Private submission</strong> Your BSS Worker ID is attached for resolution, but your identity is obscured from the contractor when this is enabled.</span>
                 </label>
 
-                <button onClick={submitGrievance} disabled={isSubmitting || (recordingState === 'idle' && !description.trim())} className="w-full bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white py-3 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2">
+                {submitError && <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{submitError}</p>}
+                <button onClick={submitGrievance} disabled={isSubmitting || (!description.trim() && !liveTranscript.trim() && !audioBlob)} className="w-full bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white py-3 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2">
                   {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                   {isSubmitting ? 'Submitting Grievance...' : 'Submit Grievance'}
                 </button>
@@ -465,8 +631,13 @@ export default function GrievancePage() {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Latest Response / Update</p>
                         {ticket.contractorReply ? <p className="text-xs text-gray-700 leading-relaxed">{ticket.contractorReply}</p> : <p className="text-xs text-gray-400 italic">Awaiting response — the assigned authority has been notified.</p>}
                       </div>
+                      {ticket.audioUrl && (
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><FileAudio size={12}/> Voice recording</p>
+                          <audio controls src={ticket.audioUrl} className="w-full" />
+                        </div>
+                      )}
                       <div className="flex flex-wrap gap-2 items-center">
-                        <button onClick={() => alert(`Downloading letter for ${ticket.ref} (PDF).`)} disabled={ticket.status !== 'Resolved'} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-40"><Download size={14}/>Download Letter</button>
                         <span className="text-[11px] text-gray-400 ml-auto">Auto-generated reference · {ticket.ref}</span>
                       </div>
                     </div>

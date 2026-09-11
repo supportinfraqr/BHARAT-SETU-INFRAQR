@@ -53,6 +53,8 @@ _v1_patterns = _v1(
     ("worker/submissions", v1_bridge.worker_submissions, "v1_worker_submissions"),
     ("worker/documents", v1_bridge.worker_documents, "v1_worker_documents"),
     ("worker/documents/<int:document_id>", v1_bridge.worker_document_detail, "v1_worker_document_detail"),
+    ("worker/grievances", v1_bridge.worker_grievances, "v1_worker_grievances"),
+    ("worker/grievances/<int:grievance_id>/audio", v1_bridge.worker_grievance_audio, "v1_worker_grievance_audio"),
     ("worker/verify-document", v1_bridge.worker_verify_document, "v1_worker_verify_document"),
     ("worker/link-aadhaar", v1_bridge.worker_link_aadhaar, "v1_worker_link_aadhaar"),
     ("contractor/submissions", v1_bridge.contractor_submissions, "v1_contractor_submissions"),

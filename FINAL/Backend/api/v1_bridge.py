@@ -1503,6 +1503,104 @@ def worker_document_detail(request, document_id):
     return response
 
 
+def _grievance_status_label(status):
+    return {
+        "RECORDED": "Submitted", "SUBMITTED": "Submitted",
+        "VIEWED_ON_DASHBOARD": "Under Review", "OPEN": "Under Review",
+        "IN_PROGRESS": "In Progress", "REOPENED": "In Progress",
+        "RESOLVED": "Resolved",
+    }.get(str(status).upper(), "Submitted")
+
+
+def _grievance_category_label(category):
+    return {
+        "WAGES": "Wages", "SAFETY": "Safety", "HARASSMENT": "Harassment",
+        "ACCOMMODATION": "Accommodation", "BENEFITS": "Benefits", "OTHER": "Other",
+    }.get(str(category).upper(), "Other")
+
+
+def _grievance_payload(g):
+    latest = g.responses.order_by("-created_at").first() if hasattr(g, "responses") else None
+    assigned = g.assigned_to.get_full_name() if g.assigned_to else ""
+    return {
+        "id": g.id,
+        "ref": payloads._d(g.ticket_no),
+        "category": _grievance_category_label(g.category),
+        "status": _grievance_status_label(g.status),
+        "body": payloads._d(g.body),
+        "language": payloads._d(g.language),
+        "attachment": payloads._d(g.attachment_file),
+        "audioUrl": f"/api/worker/grievances/{g.id}/audio" if g.audio else "",
+        "duration": g.recording_duration_secs or 0,
+        "raisedBy": "You (Self)",
+        "assignedTo": payloads._d(assigned, "Awaiting assignment"),
+        "raisedAt": payloads._dts(g.created_at),
+        "updatedAt": payloads._dts(g.updated_at),
+        "resolvedAt": payloads._dts(g.resolved_at) if g.resolved_at else "",
+        "response": payloads._d(latest.body) if latest else "",
+    }
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_grievances(request):
+    """Worker grievance register — GET lists tickets; POST files a new one
+    (multipart: body/category/language + optional audio recording)."""
+    from bss_core.models import WorkerGrievance
+    user = request.user
+    if user.role != "worker":
+        return Response({"error": "Only workers can manage grievances."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if request.method == "GET":
+        gs = WorkerGrievance.objects.filter(worker=user).order_by("-created_at")
+        return Response({"data": [_grievance_payload(g) for g in gs]}, status=status.HTTP_200_OK)
+
+    body = request.data or {}
+    category = str(body.get("category") or "OTHER").strip().upper()
+    if category not in dict(WorkerGrievance.CATEGORY):
+        category = "OTHER"
+    text = str(body.get("body") or "").strip()[:1000]
+    language = str(body.get("language") or "").strip()[:40]
+    attachment = str(body.get("attachment") or "").strip()[:255]
+    audio = request.FILES.get("audio")
+    if not text and not audio:
+        return Response({"error": "Describe your concern or record audio."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    g = WorkerGrievance(
+        worker=user, category=category, language=language, body=text,
+        attachment_file=attachment, status="SUBMITTED", submitted_at=timezone.now(),
+    )
+    try:
+        if body.get("duration") is not None:
+            g.recording_duration_secs = int(body.get("duration"))
+    except (TypeError, ValueError):
+        pass
+    if audio:
+        g.audio.save(os.path.basename(audio.name or "recording.webm"), audio, save=False)
+        g.recording_file = g.audio.name
+    g.save()
+    return Response({"data": _grievance_payload(g)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_grievance_audio(request, grievance_id):
+    from bss_core.models import WorkerGrievance
+    g = WorkerGrievance.objects.filter(pk=grievance_id, worker=request.user).first()
+    if g is None or not g.audio:
+        return Response({"error": "Recording not found."}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        response = FileResponse(g.audio.open("rb"), as_attachment=False,
+                                filename=os.path.basename(g.audio.name))
+    except Exception:
+        return Response({"error": "Recording is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    response["Content-Type"] = "audio/webm"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])

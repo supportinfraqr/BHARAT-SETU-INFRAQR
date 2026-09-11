@@ -206,6 +206,7 @@ class WorkerGrievance(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY, default="OTHER")
     language = models.CharField(max_length=40, blank=True)
     recording_file = models.CharField(max_length=255, blank=True)
+    audio = models.FileField(upload_to="worker_grievances/%Y/%m/", blank=True, null=True)
     recording_duration_secs = models.IntegerField(null=True, blank=True)
     body = models.CharField(max_length=1000, blank=True)
     attachment_file = models.CharField(max_length=255, blank=True)
