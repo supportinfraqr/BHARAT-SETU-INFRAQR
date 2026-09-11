@@ -1264,22 +1264,41 @@ def _persist_mutation(user, role_path, resource, method, body):
             obj.save(update_fields=["available_for_work"])
         return obj.id
     if resource == "workers" and role_path == "contractor" and method == "POST":
-        name = body.get("name") or "Worker"
-        mobile = body.get("mobile") or body.get("contact") or ""
-        username = f"worker_{uuid.uuid4().hex[:8]}"
-        w = User.objects.create_user(username=username, password="Bss@Worker123",
-                                     role="worker", account_active=True, is_active=True)
-        WorkerIdentity.objects.create(user=w, bss_worker_id=_bss_worker_id(w.id),
-                                      name=name, mobile_number=mobile)
+        bss_id = str(body.get("bssId") or "").strip().upper()
         site_id = body.get("siteId")
-        site = Site.objects.filter(pk=site_id).first() if site_id else None
+        site = None
+        if site_id:
+            site = Site.objects.filter(pk=site_id).first()
+        if site is None and body.get("site"):
+            site_label = str(body.get("site")).strip()
+            site = (Site.objects.filter(site_name=site_label).first()
+                    or Site.objects.filter(site_code=site_label).first())
+        # Bind an existing worker by BSS ID when provided; otherwise create one.
+        w = None
+        if bss_id:
+            ident = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
+            if ident:
+                w = ident.user
+        if w is None:
+            name = body.get("name") or "Worker"
+            mobile = body.get("mobile") or body.get("contact") or ""
+            username = f"worker_{uuid.uuid4().hex[:8]}"
+            w = User.objects.create_user(username=username, password="Bss@Worker123",
+                                         role="worker", account_active=True, is_active=True)
+            WorkerIdentity.objects.create(user=w, bss_worker_id=bss_id or _bss_worker_id(w.id),
+                                          name=name, mobile_number=mobile)
         if user.role == "contractor" and site:
             if not _contractor_engaged_at_site(user, site.id):
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError(
                     "You are not engaged at this site. Ask the employer to allot this site to you first.")
-            WorkerContractorBinding.objects.create(worker=w, contractor=user, site=site,
-                                                   binding_status="ACCEPTED")
+            binding, _ = WorkerContractorBinding.objects.get_or_create(
+                worker=w, contractor=user, site=site)
+            binding.binding_status = "ACCEPTED"
+            binding.consent_worker = True
+            binding.consent_contractor = True
+            _apply_binding_terms(binding, body)
+            binding.save()
         return w.id
     if resource == "approvals" and role_path == "employer" and method == "PATCH":
         ids = body.get("ids") or []
@@ -1614,6 +1633,23 @@ def _binding_enabled(user):
     return bool(p.binding_enabled) if p else True
 
 
+def _apply_binding_terms(binding, data):
+    """Capture the offered terms (designation/department/shift/offered wage) at
+    bind time. These drive the worker's Current Employment Details."""
+    from decimal import Decimal, InvalidOperation
+    for field in ("designation", "department", "shift"):
+        value = data.get(field)
+        if value not in (None, ""):
+            setattr(binding, field, str(value).strip()[:80])
+    wage = data.get("offeredWage", data.get("offered_wage"))
+    if wage not in (None, ""):
+        try:
+            binding.offered_wage = Decimal(str(wage))
+        except (InvalidOperation, ValueError):
+            pass
+    return binding
+
+
 def _verify_binding_otp(mobile, credential):
     otp = SmsOtp.objects.filter(mobile=mobile, purpose="BINDING").order_by("-created_at").first()
     if otp is None or otp.is_expired or otp.attempts >= otp.max_attempts:
@@ -1669,7 +1705,8 @@ def worker_bindings(request):
     b.binding_status = "PENDING"
     b.consent_worker = False
     b.consent_contractor = False
-    b.save(update_fields=["binding_status", "consent_worker", "consent_contractor"])
+    _apply_binding_terms(b, request.data)
+    b.save()
     return Response({"data": payloads._binding_row(b)}, status=status.HTTP_201_CREATED)
 
 

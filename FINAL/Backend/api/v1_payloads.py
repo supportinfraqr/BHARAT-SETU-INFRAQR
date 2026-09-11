@@ -234,16 +234,16 @@ def _worker_employment_section(user, identity):
             cp = getattr(binding.contractor, "contractor_profile", None)
             contractor_name = _d(cp.contractor_name if cp else "")
             contractor_code = _bss_contractor_code(binding.contractor.id) if binding.contractor else ""
-            contractor_contact = _d(binding.contractor.mobile if hasattr(binding.contractor, "mobile") else "")
-            contractor_email = _d(binding.contractor.email if hasattr(binding.contractor, "email") else "")
-            contractor_lin = _d(getattr(cp, "lin_number", "") if cp else "")
+            contractor_contact = _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "") if cp else "")
+            contractor_email = _d(getattr(cp, "email", "") if cp else "")
+            contractor_lin = _d(getattr(cp, "lin", "") if cp else "")
         if binding.site and binding.site.employer:
             emp_profile = getattr(binding.site.employer, "employer_profile", None)
             employer_name = _d(emp_profile.employer_name if emp_profile else "")
             employer_code = _bss_employer_code(binding.site.employer.id) if binding.site.employer else ""
             employer_industry = _d(getattr(emp_profile, "industry", "") if emp_profile else "")
-            employer_email = _d(binding.site.employer.email if hasattr(binding.site.employer, "email") else "")
-            employer_lin = _d(getattr(emp_profile, "lin_number", "") if emp_profile else "")
+            employer_email = _d(getattr(emp_profile, "email", "") if emp_profile else "")
+            employer_lin = _d(getattr(emp_profile, "lin", "") if emp_profile else "")
 
     contractor_state = ""
     contractor_address = ""
@@ -264,11 +264,14 @@ def _worker_employment_section(user, identity):
         "employer": employer_name,
         "contractor": contractor_name,
         "site": site_name,
-        "department": _d(getattr(emp, "department", "")) if emp else "",
-        "designation": _d(getattr(emp, "designation", "")) if emp else "",
+        "department": (_d(binding.department) if binding and binding.department
+                       else (_d(getattr(emp, "department", "")) if emp else "")),
+        "designation": (_d(binding.designation) if binding and binding.designation
+                        else (_d(getattr(emp, "designation", "")) if emp else "")),
         "doj": (_dts(emp.doj) if emp and emp.doj
                 else (_dts(binding.accepted_at) if binding and binding.accepted_at else "")),
-        "shift": _d(getattr(emp, "shift", "")) if emp else "",
+        "shift": (_d(binding.shift) if binding and binding.shift
+                  else (_d(getattr(emp, "shift", "")) if emp else "")),
         "campNo": _d(emp.camp_no) if emp else "",
         "refWorkerId": _d(emp.ref_worker_id) if emp else "",
         "transportFacility": _d(emp.transport_facility) if emp else "",
@@ -837,7 +840,8 @@ def _binding_row(b):
     worker_bss = _d(wi.bss_worker_id if wi else _bss_worker_code(b.worker_id))
     emp = WorkerEmployment.objects.filter(user=b.worker).first()
     latest_wage = WorkerWages.objects.filter(worker=b.worker).order_by("-period_end").first()
-    wage = f"₹{_num(latest_wage.gross_wage):,.0f} / month" if latest_wage and latest_wage.gross_wage else ""
+    wage_value = b.offered_wage if b.offered_wage is not None else (latest_wage.gross_wage if latest_wage else None)
+    wage = f"₹{_num(wage_value):,.0f} / month" if wage_value else ""
     status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
                   "CANCELLED": "Cancelled", "EXPIRED": "Expired"}
     return {
@@ -851,7 +855,9 @@ def _binding_row(b):
         "employer": employer_name,
         "site": site.site_name if site else "",
         "siteId": b.site_id,
-        "designation": _d(emp.designation if emp else ""),
+        "designation": _d(b.designation) or (_d(emp.designation) if emp else ""),
+        "department": _d(b.department) or (_d(emp.department) if emp else ""),
+        "shift": _d(b.shift) or (_d(emp.shift) if emp else ""),
         "wage": wage,
         "requestedOn": _dts(b.created_at),
         "status": status_map.get(str(b.binding_status).upper(), "Pending"),

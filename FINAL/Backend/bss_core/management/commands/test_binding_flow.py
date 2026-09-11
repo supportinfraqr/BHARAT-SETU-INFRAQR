@@ -55,14 +55,23 @@ class Command(BaseCommand):
             site.employer = employer
             site.save(update_fields=["employer"])
 
+        terms = {"designation": "Mason", "department": "Civil Works", "shift": "Day",
+                 "offered_wage": 21000}
         binding, _ = WorkerContractorBinding.objects.get_or_create(
             worker=worker, contractor=contractor, site=site,
             defaults={"binding_status": "ACCEPTED", "consent_worker": True,
-                      "consent_contractor": True, "consent_method": "app"},
+                      "consent_contractor": True, "consent_method": "app", **terms},
         )
+        changed = []
         if binding.binding_status != "ACCEPTED":
             binding.binding_status = "ACCEPTED"
-            binding.save(update_fields=["binding_status"])
+            changed.append("binding_status")
+        for field, value in terms.items():
+            if not getattr(binding, field):
+                setattr(binding, field, value)
+                changed.append(field)
+        if changed:
+            binding.save(update_fields=changed)
 
         # ── Assertions ──────────────────────────────────────────────────────
         results = []
@@ -75,6 +84,14 @@ class Command(BaseCommand):
                  and match["employer"] == "Adani Infra Pvt Ltd"
                  and match["site"] == "Demo Metro Site"
                  and match["status"] == "Accepted"),
+        ))
+
+        results.append((
+            "binding carries the offered terms",
+            bool(match and match["designation"] == "Mason"
+                 and match["department"] == "Civil Works"
+                 and match["shift"] == "Day"
+                 and match["wage"].startswith("₹21,000")),
         ))
 
         contractor_workers = payloads._contractor_workers(contractor)

@@ -49,6 +49,31 @@ EMPLOYERS = [
     ("8888888888", "L&T Construction"),
 ]
 
+# Contact/registration details shown to bound workers (contractor & employer
+# details on the worker dashboard). Keyed by phone.
+CONTRACTOR_DETAILS = {
+    "4444444444": {"contact_person": "Rajesh Nair", "email": "contact@buildwell.example",
+                   "lin": "MH/CLRA/2026/000444", "state": "Maharashtra",
+                   "district": "Mumbai Suburban", "address": "Plot 14, MIDC, Andheri East, Mumbai 400093"},
+    "5555555555": {"contact_person": "Meera Iyer", "email": "ops@skylineinfra.example",
+                   "lin": "MH/CLRA/2026/000555", "state": "Maharashtra",
+                   "district": "Thane", "address": "2nd Floor, Hiranandani Estate, Thane West 400607"},
+    "6666666666": {"contact_person": "Salim Shaikh", "email": "admin@metrolabour.example",
+                   "lin": "MH/CLRA/2026/000666", "state": "Maharashtra",
+                   "district": "Pune", "address": "Survey 88, Hinjewadi Phase 2, Pune 411057"},
+}
+
+EMPLOYER_DETAILS = {
+    "7777777777": {"contact_person": "Priya Menon", "email": "projects@adaniinfra.example",
+                   "industry": "Infrastructure", "lin": "MH/PE/2026/000777",
+                   "state": "Maharashtra", "district": "Mumbai",
+                   "address": "Adani Corporate House, Shantigram, Ahmedabad 382421"},
+    "8888888888": {"contact_person": "Karthik Rao", "email": "sites@lntconstruction.example",
+                   "industry": "Construction", "lin": "MH/PE/2026/000888",
+                   "state": "Maharashtra", "district": "Mumbai Suburban",
+                   "address": "L&T House, Ballard Estate, Mumbai 400001"},
+}
+
 
 def _bss_worker_id(user_id):
     return f"BSS-W{user_id:010d}"
@@ -105,6 +130,7 @@ class Command(BaseCommand):
                     "contractor_name": name, "trade_name": name,
                     "contractor_code": _bss_contractor_code(user.id),
                     "approval_status": "APPROVED", "is_verified_badge": True, "mobile": phone,
+                    **CONTRACTOR_DETAILS.get(phone, {}),
                 },
             )
             _set_mobile(user, phone)
@@ -118,6 +144,7 @@ class Command(BaseCommand):
                     "employer_name": name, "trade_name": name,
                     "employer_code": _bss_employer_code(user.id),
                     "approval_status": "APPROVED", "mobile": phone,
+                    **EMPLOYER_DETAILS.get(phone, {}),
                 },
             )
             _set_mobile(user, phone)

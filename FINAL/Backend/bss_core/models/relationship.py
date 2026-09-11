@@ -500,6 +500,12 @@ class WorkerContractorBinding(models.Model):
     consent_worker = models.BooleanField(default=False)
     consent_contractor = models.BooleanField(default=False)
     consent_method = models.CharField(max_length=20, choices=CONSENT_METHOD, null=True, blank=True)
+    # Offered terms captured when the binding is created (drive the worker's
+    # Current Employment Details and the binding card).
+    designation = models.CharField(max_length=80, blank=True)
+    department = models.CharField(max_length=80, blank=True)
+    shift = models.CharField(max_length=40, blank=True)
+    offered_wage = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     # Two-sided unbinding: a binding is cancelled only when both sides consent.
     unbind_requested_at = models.DateTimeField(null=True, blank=True)
