@@ -338,9 +338,9 @@ def _demo_otp_mobiles():
 
 
 def _issue_otp(mobile, purpose="LOGIN", ttl_minutes=5):
-    # Demo accounts: a fixed OTP (no real delivery) for LOGIN only, in DEBUG.
-    demo = (purpose == "LOGIN" and settings.DEBUG
-            and str(mobile) in _demo_otp_mobiles())
+    # Demo accounts: a fixed OTP (no real delivery) for LOGIN only. Enabled by
+    # setting BSS_DEMO_OTP_MOBILES to the whitelist (empty = disabled).
+    demo = purpose == "LOGIN" and str(mobile) in _demo_otp_mobiles()
     value = os.environ.get("BSS_DEMO_OTP", "123456") if demo else _generate_otp_value()
     otp = SmsOtp.objects.create(
         mobile=mobile,
