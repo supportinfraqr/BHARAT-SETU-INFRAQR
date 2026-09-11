@@ -8,7 +8,7 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import RebindAuthModal from "@/components/worker/RebindAuthModal";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 
-type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR"; bssId: string; issuer: string };
+type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string };
 
 type ScanResult = {
   identity: { name: string; bssId: string; photoUrl: string; category?: string };
@@ -52,11 +52,16 @@ export default function QRScannerWorkflow() {
   const verify = (text: string) => {
     try {
       const p = JSON.parse(text) as Payload;
-      if (!["BSS_WORKER","BSS_CONTRACTOR"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
-      if (p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC")) {
+      if (!["BSS_WORKER","BSS_CONTRACTOR","BSS_EMPLOYER"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
+      const isContractor = p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC");
+      const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E");
+      if (isContractor) {
         // Contractor QR → binding request flow (worker binds with contractor at a site)
         setContractor({ bssId:p.bssId, name:p.bssId === "BSS-C0000000008" ? "RK Buildcon Pvt. Ltd." : "Contractor " + p.bssId.slice(-4) });
         setSelectedSite(""); setSiteDraft(""); setBindSent(false); setState("binding"); setMessage("Contractor identified — choose the site before sending a binding request");
+      } else if (isEmployer) {
+        // Principal Employer QR → informational only for workers
+        setState("error"); setMessage(`Principal Employer credential (${p.bssId}). No binding action is available for workers here.`);
       } else {
         if (p.bssId !== worker.identity.bssId) throw new Error("Worker record was not found on this device");
         setResult(sanitizeWorkerProfile(worker, viewerRole));

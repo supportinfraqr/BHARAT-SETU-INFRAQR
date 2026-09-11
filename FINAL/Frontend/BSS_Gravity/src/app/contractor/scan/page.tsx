@@ -29,7 +29,8 @@ export default function ContractorScanPage() {
     try {
       const p = JSON.parse(text) as Payload;
       if (!["BSS_WORKER","BSS_CONTRACTOR","BSS_EMPLOYER"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
-      if (p.type === "BSS_WORKER" || p.bssId.startsWith("BSS")) {
+      const isWorker = p.type === "BSS_WORKER" || p.bssId.startsWith("BSS-W");
+      if (isWorker) {
         // Worker QR → identify worker, show relationship, request binding (never auto-bind)
         const known = contractor.workers.find(w => w.bssId === p.bssId);
         setEntity({

@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 
 export function createWorkerQrPayload(bssId: string) {
-  return JSON.stringify({ v: 1, type: "BSS_WORKER", bssId, issuer: "Bharat Shram Setu" });
+  const id = (bssId || "").toUpperCase();
+  const type = id.startsWith("BSS-C") || id.startsWith("BSSC") ? "BSS_CONTRACTOR"
+    : id.startsWith("BSS-E") ? "BSS_EMPLOYER"
+    : "BSS_WORKER";
+  return JSON.stringify({ v: 1, type, bssId, issuer: "Bharat Shram Setu" });
 }
 
 export default function WorkerQr({ bssId, className = "w-full h-full" }: { bssId: string; className?: string }) {

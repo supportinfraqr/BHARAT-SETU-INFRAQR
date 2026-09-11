@@ -6,7 +6,7 @@ import { Building2, Camera, CheckCircle2, Home, Landmark, Link2, Network, ScanLi
 import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
 
-type Payload = { v: number; type: 'BSS_WORKER' | 'BSS_CONTRACTOR'; bssId: string; issuer: string };
+type Payload = { v: number; type: 'BSS_WORKER' | 'BSS_CONTRACTOR' | 'BSS_EMPLOYER'; bssId: string; issuer: string };
 
 type ScannedEntity = {
   kind: 'worker' | 'contractor';
@@ -34,26 +34,11 @@ export default function EmployerScanPage() {
   const verify = (text: string) => {
     try {
       const p = JSON.parse(text) as Payload;
-      if (!['BSS_WORKER', 'BSS_CONTRACTOR'].includes(p.type) || p.v !== 1 || p.issuer !== 'Bharat Shram Setu') throw new Error('Unsupported QR credential');
-      // Demo QRs share one payload generator, so resolve by BSS ID prefix first.
-      if (p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC')) {
+      if (!['BSS_WORKER', 'BSS_CONTRACTOR', 'BSS_EMPLOYER'].includes(p.type) || p.v !== 1 || p.issuer !== 'Bharat Shram Setu') throw new Error('Unsupported QR credential');
+      const isContractor = p.type === 'BSS_CONTRACTOR' || p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC');
+      const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W');
+      if (isContractor) {
         // Contractor QR → identify contractor, display relationship
-        const known = employer.workers.find(w => w.bssId === p.bssId);
-        const bound = Boolean(known);
-        setEntity({
-          kind: 'worker',
-          bssId: p.bssId,
-          name: known?.name ?? 'BSS Worker ' + p.bssId.slice(-4),
-          site: known?.site ?? 'Unassigned site',
-          contractor: known?.contractor ?? 'Unmapped',
-          detail: known?.designation ?? 'Not disclosed',
-          bound,
-          status: bound ? (known!.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
-        });
-        setState('identified');
-        setMessage(bound ? 'Worker identified — current binding displayed below' : 'Worker QR identified — this worker is not bound to any of your contractors');
-      } else if (p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS89')) {
-        // Worker QR → identify worker, display current binding (never auto-bind)
         const known = employer.contractors.find(c => c.bssId === p.bssId);
         const bound = Boolean(known);
         setEntity({
@@ -68,6 +53,25 @@ export default function EmployerScanPage() {
         });
         setState('identified');
         setMessage(bound ? 'Contractor identified — engagement details displayed below' : 'Contractor QR identified — this contractor is not connected to your organisation');
+      } else if (isWorker) {
+        // Worker QR → identify worker, display current binding (never auto-bind)
+        const known = employer.workers.find(w => w.bssId === p.bssId);
+        const bound = Boolean(known);
+        setEntity({
+          kind: 'worker',
+          bssId: p.bssId,
+          name: known?.name ?? 'BSS Worker ' + p.bssId.slice(-4),
+          site: known?.site ?? 'Unassigned site',
+          contractor: known?.contractor ?? 'Unmapped',
+          detail: known?.designation ?? 'Not disclosed',
+          bound,
+          status: bound ? (known!.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
+        });
+        setState('identified');
+        setMessage(bound ? 'Worker identified — current binding displayed below' : 'Worker QR identified — this worker is not bound to any of your contractors');
+      } else {
+        setState('error');
+        setMessage(`Principal Employer credential (${p.bssId}) — no action available.`);
       }
       controls.current?.stop();
     } catch (e) {
