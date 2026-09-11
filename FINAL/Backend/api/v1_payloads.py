@@ -29,6 +29,7 @@ from bss_core.models import (
     WorkerClassification,
     WorkerContractorBinding,
     WorkerDocument,
+    WorkerDocumentMaster,
     WorkerEducation,
     WorkerEmployment,
     WorkerFamilyDependant,

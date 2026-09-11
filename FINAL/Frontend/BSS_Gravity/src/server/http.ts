@@ -61,7 +61,7 @@ export async function upstreamStream(baseUrl: string | undefined, path: string, 
   const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
   try {
     const headers = buildUpstreamHeaders(session, init);
-    headers.set('Accept', 'application/octet-stream, application/pdf');
+    if (!headers.has('Accept')) headers.set('Accept', '*/*');
     const response = await fetch(`${baseUrl}${path}`, { ...init, headers, cache: 'no-store', signal: controller.signal });
     if (!response.ok) {
       const payload = await response.text();
