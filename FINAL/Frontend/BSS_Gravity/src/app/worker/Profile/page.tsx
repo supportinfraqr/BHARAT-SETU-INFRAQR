@@ -505,15 +505,15 @@ export default function WorkerProfilePage() {
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Aadhaar No.</label>
                     <div className="flex items-center gap-3">
-                      <input type="password" defaultValue="123456789012" className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F]" readOnly />
-                      <span className="bg-[#E8F5E9] text-[#2F9E67] px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0">Verified</span>
+                      <input type="password" defaultValue={worker.identity.aadhaar} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F]" readOnly />
+                      <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.aadhaarVerified ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-[#86868B]'}`}>{worker.identity.aadhaarVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">PAN No.</label>
                     <div className="flex items-center gap-3">
-                      <input type="text" placeholder="Enter PAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] uppercase" />
-                      <span className="bg-gray-100 text-[#86868B] px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0">Pending</span>
+                      <input type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] uppercase" />
+                      <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.panVerified ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-[#86868B]'}`}>{worker.identity.panVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>
               </div>
@@ -537,51 +537,22 @@ export default function WorkerProfilePage() {
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name</label>
-                        <input type="text" defaultValue="State Bank of India" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input type="text" defaultValue={worker.banking.bankName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Holder Name</label>
-                        <input type="text" defaultValue="Ravi Kumar" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input type="text" defaultValue={worker.banking.holderName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Number</label>
-                        <input type="password" defaultValue="31029384756" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input type="password" defaultValue={worker.banking.accountNumber} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">IFSC Code</label>
-                        <input type="text" defaultValue="SBIN0001234" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
+                        <input type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div className="sm:col-span-2">
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${verifiedGovIds.bankPrimary ? 'text-[#2F9E67] bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {verifiedGovIds.bankPrimary ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending — verify in Govt. Integrations'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Secondary account */}
-                  <div className="rounded-[16px] border border-gray-200 bg-white overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#1D1D1F]"><CreditCard size={14} className="text-gray-400"/> Secondary Account</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
-                    </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
-                      <div className="sm:col-span-2">
-                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name</label>
-                        <input type="text" defaultValue="Bank of Baroda" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Holder Name</label>
-                        <input type="text" defaultValue="Ravi Kumar" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
-                      </div>
-                      <div>
-                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Number</label>
-                        <input type="password" defaultValue="50123456789012" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
-                      </div>
-                      <div>
-                        <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">IFSC Code</label>
-                        <input type="text" defaultValue="BARB0MUM1234" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${verifiedGovIds.bankSecondary ? 'text-[#2F9E67] bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {verifiedGovIds.bankSecondary ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending — verify in Govt. Integrations'}</span>
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${worker.banking.verificationStatus === 'Verified' ? 'text-[#2F9E67] bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {worker.banking.verificationStatus === 'Verified' ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending — verify in Govt. Integrations'}</span>
                       </div>
                     </div>
                   </div>
