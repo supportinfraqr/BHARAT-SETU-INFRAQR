@@ -301,7 +301,7 @@ def _worker_skills_section(user):
     sk = WorkerSkillsEmployability.objects.filter(user=user).first()
     secondary = [s.strip() for s in (sk.secondary_skills or "").split(",") if s.strip()] if sk else []
     languages = [s.strip() for s in (sk.languages_known or "").split(",") if s.strip()] if sk else []
-    verified = bool(sk and sk.certification_number)
+    verified = bool(sk and sk.certification_verified)
     return {
         "qualificationCourse": _d(sk.qualification_course) if sk else "",
         "boardUniversity": _d(sk.board_university) if sk else "",

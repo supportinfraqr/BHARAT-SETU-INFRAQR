@@ -73,7 +73,7 @@ export type WorkerRecord = {
     languages?: string[];
     primary: { name: string; level?: string; experienceYears?: string };
     secondary: string[];
-    certification: { name: string; number?: string; authority?: string; expiry?: string; verified: boolean };
+    certification?: { name: string; number?: string; authority?: string; expiry?: string; verified: boolean };
   };
   socialSecurity: { epfoUan: string; esicIp: string; eShramLinked: boolean; bocwRegistered: boolean; lwfNo?: string; wcPolicyNo?: string; eShramNo?: string; stateWorkerId?: string; bocwRegNumber?: string };
   documents: { required: number; uploaded: number; missing: string[] };

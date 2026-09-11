@@ -16,7 +16,7 @@ import {
 
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
-  const { worker, portal, updateWorker } = useWorker();
+  const { worker, portal, updateWorker, saveWorker } = useWorker();
   const mobilityRef = useRef<MobilitySectionHandle>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
@@ -95,10 +95,45 @@ export default function WorkerProfilePage() {
   const medicalFitnessStatus = worker.welfare?.medicalFitnessStatus?.trim() || '';
   const medicalStatusTone = medicalExaminationStatus === 'Completed' ? 'text-[#2F9E67]' : medicalExaminationStatus === 'Pending' ? 'text-[#F47A32]' : medicalExaminationStatus === 'Expired' ? 'text-[#FF3B30]' : 'text-gray-900';
 
+  // Skills & Education — self-declared manual-entry fields (editable).
+  // Certification is verified via course completion and is NOT editable here.
+  const [skillsForm, setSkillsForm] = useState({
+    qualificationCourse: worker.skills?.qualificationCourse ?? '',
+    boardUniversity: worker.skills?.boardUniversity ?? '',
+    passingYear: worker.skills?.passingYear ?? '',
+    languages: (worker.skills?.languages ?? []).join(', '),
+    primaryName: worker.skills?.primary?.name ?? '',
+    primaryExperience: worker.skills?.primary?.experienceYears ?? '',
+    secondary: (worker.skills?.secondary ?? []).join(', '),
+  });
+  const setSkill = (key: keyof typeof skillsForm, value: string) => setSkillsForm(current => ({ ...current, [key]: value }));
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (activeTab === 'contact') {
       await mobilityRef.current?.save();
+      return;
+    }
+    if (activeTab === 'skills') {
+      setIsSaving(true);
+      try {
+        await saveWorker({
+          skills: {
+            qualificationCourse: skillsForm.qualificationCourse,
+            boardUniversity: skillsForm.boardUniversity,
+            passingYear: skillsForm.passingYear,
+            languages: skillsForm.languages.split(',').map(s => s.trim()).filter(Boolean),
+            primary: { name: skillsForm.primaryName, experienceYears: skillsForm.primaryExperience },
+            secondary: skillsForm.secondary.split(',').map(s => s.trim()).filter(Boolean),
+          },
+        });
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+      } catch {
+        setShowSuccess(false);
+      } finally {
+        setIsSaving(false);
+      }
       return;
     }
     setIsSaving(true);
@@ -1091,22 +1126,19 @@ export default function WorkerProfilePage() {
               <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Qualification / Course</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.skills?.qualificationCourse || 'Not declared'}</p>
+                  <input type="text" value={skillsForm.qualificationCourse} onChange={e => setSkill('qualificationCourse', e.target.value)} placeholder="e.g. 12th Standard (HSC)" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Board / University</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.skills?.boardUniversity || 'Not declared'}</p>
+                  <input type="text" value={skillsForm.boardUniversity} onChange={e => setSkill('boardUniversity', e.target.value)} placeholder="e.g. CBSE" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Passing Year</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.skills?.passingYear || '—'}</p>
+                  <input type="text" inputMode="numeric" value={skillsForm.passingYear} onChange={e => setSkill('passingYear', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 2014" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Languages Known</p>
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {(worker.skills?.languages ?? []).map(lang => <span key={lang} className="text-[10px] font-semibold bg-white border border-gray-200 text-[#073B67] px-2 py-0.5 rounded">{lang}</span>)}
-                    {(!worker.skills?.languages?.length) && <span className="text-xs text-gray-400">Not recorded</span>}
-                  </div>
+                  <input type="text" value={skillsForm.languages} onChange={e => setSkill('languages', e.target.value)} placeholder="Comma separated, e.g. Hindi, English" className="mt-2 w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                 </div>
               </div>
 
@@ -1133,19 +1165,19 @@ export default function WorkerProfilePage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
-                          <p className="text-sm font-semibold text-gray-800">{worker.classification?.sector || '—'}</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-1">{worker.classification?.sector || '—'}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation</p>
-                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.primary?.name || '—'}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation / Trade</p>
+                          <input type="text" value={skillsForm.primaryName} onChange={e => setSkill('primaryName', e.target.value)} placeholder="e.g. Bar Bender (Rebar)" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
-                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.primary?.experienceYears || '—'}</p>
+                          <input type="text" value={skillsForm.primaryExperience} onChange={e => setSkill('primaryExperience', e.target.value)} placeholder="e.g. 8 Years" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
-                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.certification?.verified ? 'Third-Party Assessed' : 'Self-Declared'}</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-1">{worker.skills?.certification?.verified ? 'Third-Party Assessed' : 'Self-Declared'}</p>
                         </div>
                       </div>
                       {worker.skills?.certification?.verified && (
@@ -1192,19 +1224,19 @@ export default function WorkerProfilePage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Sector</p>
-                          <p className="text-sm font-semibold text-gray-800">{worker.classification?.sector || '—'}</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-1">{worker.classification?.sector || '—'}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation</p>
-                          <p className="text-sm font-semibold text-gray-800">{worker.skills?.secondary?.[0] || '—'}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Occupation / Trade</p>
+                          <input type="text" value={skillsForm.secondary} onChange={e => setSkill('secondary', e.target.value)} placeholder="Comma separated trades" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Experience</p>
-                          <p className="text-sm font-semibold text-gray-800">—</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-1">—</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assessment Source</p>
-                          <p className="text-sm font-semibold text-gray-800">Unassessed</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-1">Unassessed</p>
                         </div>
                       </div>
                     </div>

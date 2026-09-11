@@ -948,9 +948,8 @@ def _persist_mutation(user, role_path, resource, method, body):
             if v is not None:
                 setattr(identity, fld, v)
         # personal section fields live on the same WorkerIdentity row.
+        # Aadhaar-owned (Freeze): maritalStatus, fatherName are NOT writable.
         personal_map = {
-            "maritalStatus": "marital_status",
-            "fatherName": "father_name",
             "motherName": "mother_name",
             "spouseName": "spouse_name",
             "disabilityStatus": "disability_status",
@@ -1009,21 +1008,29 @@ def _persist_mutation(user, role_path, resource, method, body):
             bk.save(update_fields=["upi_enabled"])
 
         # Welfare & safety — worker self-edit is limited to the fields the sheet
-        # marks "Worker Manual Entry". Contractor-owned statuses (medical exam /
-        # fitness / safety training / site induction) are NOT writable here — they
-        # come from the contractor side per the sheet ("Contractor Side").
+        # marks "Worker Manual Entry". Gate-pass fields (Auto after Binding) are
+        # NOT writable here.
         wel_patch = body.get("welfare") or {}
         if wel_patch:
             ws, _ = WorkerWelfareSafety.objects.get_or_create(user=user)
             wel_map = {
                 "ppeRequired": "ppe_required",
                 "typesOfPpeGiven": "types_of_ppe_given",
+                "safetyTrainingCompleted": "safety_training_completed",
+                "siteInductionStatus": "site_induction_status",
                 "insuranceStatus": "insurance_status",
                 "accommodationProvided": "accomodation_provided",
+                "policeVerification": "police_verification",
+                "trainerName": "trainer_name",
+                "medicalExaminationStatus": "medical_examination_status",
+                "medicalFitnessStatus": "medical_fitness_status",
             }
             for fe_key, fld in wel_map.items():
                 if wel_patch.get(fe_key) is not None:
                     setattr(ws, fld, wel_patch.get(fe_key))
+            for fe_key, fld in {"trainingDate": "training_date", "lastMedicalExamination": "last_medical_examination", "nextMedicalDue": "next_medical_due"}.items():
+                if wel_patch.get(fe_key) is not None:
+                    setattr(ws, fld, wel_patch.get(fe_key) or None)
             ws.save()
 
         # Classification — full manual-entry row.
@@ -1066,11 +1073,35 @@ def _persist_mutation(user, role_path, resource, method, body):
                 "seasonWorkLocation": "season_work_location",
                 "seasonExpectedIncome": "season_expected_income",
                 "seasonPaymentFrequency": "season_payment_frequency",
+                "paymentMode": "payment_mode",
             }
             for fe_key, fld in cls_map.items():
                 if cls_patch.get(fe_key) is not None:
                     setattr(wc, fld, cls_patch.get(fe_key))
             wc.save()
+
+        # Skills & education — self-declared manual entry. Certification (name/
+        # number/authority/expiry/verified) is set only by the course-completion
+        # system and is NOT writable from the worker profile.
+        sk_patch = body.get("skills") or {}
+        if sk_patch:
+            sk, _ = WorkerSkillsEmployability.objects.get_or_create(user=user)
+            if sk_patch.get("qualificationCourse") is not None:
+                sk.qualification_course = sk_patch.get("qualificationCourse")
+            if sk_patch.get("boardUniversity") is not None:
+                sk.board_university = sk_patch.get("boardUniversity")
+            if sk_patch.get("passingYear") is not None:
+                sk.passing_year = sk_patch.get("passingYear")
+            if sk_patch.get("languages") is not None:
+                sk.languages_known = ", ".join(str(l).strip() for l in sk_patch.get("languages") if str(l).strip())
+            primary = sk_patch.get("primary") or {}
+            if primary.get("name") is not None:
+                sk.primary_skill = primary.get("name")
+            if primary.get("experienceYears") is not None:
+                sk.skill_experience_years = primary.get("experienceYears")
+            if sk_patch.get("secondary") is not None:
+                sk.secondary_skills = ", ".join(str(s).strip() for s in sk_patch.get("secondary") if str(s).strip())
+            sk.save()
 
         # Family & dependants — manual entry (nominees).
         fam_patch = body.get("family") or {}

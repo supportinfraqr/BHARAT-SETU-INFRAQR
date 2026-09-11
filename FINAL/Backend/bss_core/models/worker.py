@@ -284,6 +284,7 @@ class WorkerSkillsEmployability(models.Model):
     certification_number = models.CharField(max_length=60, blank=True)
     certification_authority = models.CharField(max_length=120, blank=True)
     certification_expiry = models.DateField(null=True, blank=True)
+    certification_verified = models.BooleanField(default=False)
     languages_known = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
