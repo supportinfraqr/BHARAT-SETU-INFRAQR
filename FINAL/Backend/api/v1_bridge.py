@@ -8,6 +8,7 @@ headers are supplied).
 """
 
 import json
+import logging
 import os
 import re
 import secrets
@@ -277,6 +278,16 @@ def _find_user(identifier):
     cred = UserCredential.objects.filter(identity_value=identifier).first()
     if cred:
         return cred.user
+    # BSS ID lookup (worker / contractor / employer)
+    wi = WorkerIdentity.objects.filter(bss_worker_id=identifier).first()
+    if wi:
+        return wi.user
+    cp = ContractorProfile.objects.filter(contractor_code=identifier).first()
+    if cp:
+        return cp.user
+    ep = EmployerProfile.objects.filter(employer_code=identifier).first()
+    if ep:
+        return ep.user
     return None
 
 
@@ -321,8 +332,16 @@ def _verify_credential(user, method, credential):
     return False
 
 
+def _demo_otp_mobiles():
+    raw = os.environ.get("BSS_DEMO_OTP_MOBILES", "")
+    return {m.strip() for m in raw.split(",") if m.strip()}
+
+
 def _issue_otp(mobile, purpose="LOGIN", ttl_minutes=5):
-    value = _generate_otp_value()
+    # Demo accounts: a fixed OTP (no real delivery) for LOGIN only, in DEBUG.
+    demo = (purpose == "LOGIN" and settings.DEBUG
+            and str(mobile) in _demo_otp_mobiles())
+    value = os.environ.get("BSS_DEMO_OTP", "123456") if demo else _generate_otp_value()
     otp = SmsOtp.objects.create(
         mobile=mobile,
         purpose=purpose,
@@ -330,7 +349,10 @@ def _issue_otp(mobile, purpose="LOGIN", ttl_minutes=5):
         expires_at=timezone.now() + timedelta(minutes=ttl_minutes),
         max_attempts=int(os.environ.get("BSS_OTP_MAX_ATTEMPTS") or 5),
     )
-    _deliver_otp_async(otp.pk, mobile, value, ttl_minutes)
+    if demo:
+        logging.getLogger(__name__).info("Demo login OTP for %s: %s", mobile, value)
+    else:
+        _deliver_otp_async(otp.pk, mobile, value, ttl_minutes)
     return otp
 
 
