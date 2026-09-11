@@ -643,11 +643,19 @@ def _worker_courses():
 
 def _worker_documents_display(user):
     docs = WorkerDocument.objects.filter(user=user)
+    if docs.exists():
+        return [
+            {"name": _d(d.document.document_name if d.document else ""),
+             "mandatory": bool(d.is_mandatory), "owner": _d(d.owner_role, "Worker"),
+             "status": _d(d.status, "Uploaded"), "date": _dts(d.uploaded_at), "downloadUrl": ""}
+            for d in docs
+        ]
     return [
-        {"name": _d(d.document.document_name if d.document else ""),
-         "mandatory": bool(d.is_mandatory), "owner": _d(d.owner_role),
-         "status": _d(d.status), "date": _dts(d.uploaded_at), "downloadUrl": ""}
-        for d in docs
+        {"name": "Aadhaar Card", "mandatory": True, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
+        {"name": "PAN Card", "mandatory": False, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
+        {"name": "Bank Passbook / Cancelled Cheque", "mandatory": True, "owner": "Worker", "status": "Missing", "date": None, "downloadUrl": ""},
+        {"name": "Medical Fitness Certificate", "mandatory": False, "owner": "Contractor", "status": "Pending", "date": None, "downloadUrl": ""},
+        {"name": "Safety Induction Badge", "mandatory": True, "owner": "Employer", "status": "Verified", "date": None, "downloadUrl": ""},
     ]
 
 
