@@ -197,6 +197,13 @@ def _worker_employment_section(user, identity):
     binding = None
     if emp and emp.assignment_id:
         binding = emp.assignment
+    if binding is None:
+        # No WorkerEmployment record yet — fall back to the most recent accepted
+        # binding so the dashboard reflects the current employment.
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=user, binding_status="ACCEPTED")
+                   .select_related("site", "site__employer", "contractor")
+                   .order_by("-accepted_at", "-created_at").first())
     employer_name = ""
     employer_code = ""
     employer_industry = ""
@@ -252,13 +259,15 @@ def _worker_employment_section(user, identity):
         employer_address = _d(_ep.address if _ep else "")
     site_state = getattr(binding.site, "state", "") if binding and binding.site else ""
     return {
-        "status": _d(getattr(emp, "status", "")) if emp else "",
+        "status": (_d(getattr(emp, "status", "")) if emp and getattr(emp, "status", "")
+                   else ("Active" if binding else "")),
         "employer": employer_name,
         "contractor": contractor_name,
         "site": site_name,
         "department": _d(getattr(emp, "department", "")) if emp else "",
         "designation": _d(getattr(emp, "designation", "")) if emp else "",
-        "doj": _dts(emp.doj) if emp and emp.doj else "",
+        "doj": (_dts(emp.doj) if emp and emp.doj
+                else (_dts(binding.accepted_at) if binding and binding.accepted_at else "")),
         "shift": _d(getattr(emp, "shift", "")) if emp else "",
         "campNo": _d(emp.camp_no) if emp else "",
         "refWorkerId": _d(emp.ref_worker_id) if emp else "",
