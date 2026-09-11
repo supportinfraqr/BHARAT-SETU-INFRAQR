@@ -774,7 +774,7 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Mode</label>
-                    <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <select defaultValue={worker.classification?.paymentMode} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                       <option>Bank Transfer</option>
                       <option>Cheque</option>
                       <option>Cash</option>

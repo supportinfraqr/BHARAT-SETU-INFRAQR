@@ -88,7 +88,7 @@ export type WorkerRecord = {
   };
   classification: {
     workerCategory?: string; sector?: string; industry?: string; occupation?: string; skill?: string;
-    currentEmploymentStatus?: string; totalWorkerExperience?: string; paymentFrequency?: string;
+    currentEmploymentStatus?: string; totalWorkerExperience?: string; paymentFrequency?: string; paymentMode?: string;
   };
   other?: {
     registrationSource?: string; registeredBy?: string; registrationDate?: string;

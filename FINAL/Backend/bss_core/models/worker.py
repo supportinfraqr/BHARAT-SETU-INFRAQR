@@ -212,6 +212,7 @@ class WorkerClassification(models.Model):
     season_work_location = models.CharField(max_length=120, blank=True)
     season_expected_income = models.CharField(max_length=40, blank=True)
     season_payment_frequency = models.CharField(max_length=40, blank=True)
+    payment_mode = models.CharField(max_length=40, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -532,8 +532,9 @@ def _worker_classification_section(user):
         "seasonalAvgHoursPerDay": _d(wc.season_avg_hours_per_day),
         "seasonalAvgDaysPerWeek": _d(wc.season_avg_days_per_week),
         "seasonalLocation": _d(wc.season_work_location),
-        "seasonalExpectedIncome": _d(wc.season_expected_income),
-        "paymentFrequency": _d(wc.season_payment_frequency),
+         "seasonalExpectedIncome": _d(wc.season_expected_income),
+         "paymentFrequency": _d(wc.season_payment_frequency),
+         "paymentMode": _d(wc.payment_mode),
     }
 
 
