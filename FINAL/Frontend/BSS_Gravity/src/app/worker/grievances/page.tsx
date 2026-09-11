@@ -450,20 +450,20 @@ export default function GrievancePage() {
                   <Globe size={14} className="text-gray-400" />
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:inline">Preferred Response Language</span>
                   <select value={language} onChange={(e) => changeLanguage(e.target.value)} className="text-xs font-bold text-gray-700 bg-transparent outline-none cursor-pointer">
-                    <option value="Hindi">Hindi</option>
+                    <option value="Hindi">हिन्दी</option>
                     <option value="English">English</option>
-                    <option value="Marathi">Marathi</option>
-                    <option value="Telugu">Telugu</option>
-                    <option value="Bhojpuri">Bhojpuri</option>
-                    <option value="Punjabi">Punjabi</option>
-                    <option value="Bengali">Bengali</option>
-                    <option value="Tamil">Tamil</option>
-                    <option value="Gujarati">Gujarati</option>
-                    <option value="Kannada">Kannada</option>
-                    <option value="Malayalam">Malayalam</option>
-                    <option value="Odia">Odia</option>
-                    <option value="Urdu">Urdu</option>
-                    <option value="Assamese">Assamese</option>
+                    <option value="Marathi">मराठी</option>
+                    <option value="Telugu">తెలుగు</option>
+                    <option value="Bhojpuri">भोजपुरी</option>
+                    <option value="Punjabi">ਪੰਜਾਬੀ</option>
+                    <option value="Bengali">বাংলা</option>
+                    <option value="Tamil">தமிழ்</option>
+                    <option value="Gujarati">ગુજરાતી</option>
+                    <option value="Kannada">ಕನ್ನಡ</option>
+                    <option value="Malayalam">മലയാളം</option>
+                    <option value="Odia">ଓଡ଼ିଆ</option>
+                    <option value="Urdu">اردو</option>
+                    <option value="Assamese">অসমীয়া</option>
                   </select>
                 </div>
               </div>
