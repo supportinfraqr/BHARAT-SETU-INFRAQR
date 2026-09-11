@@ -71,17 +71,15 @@ export default function WorkerProfilePage() {
   };
   const segColors = ['bg-[#073B67]', 'bg-[#F47A32]', 'bg-[#2F9E67]', 'bg-[#7A5AF8]', 'bg-[#0EA5E9]', 'bg-[#E11D48]'];
   
-  // API Mock State for Gov Integrations
-  const [verifyingId, setVerifyingId] = useState<string | null>(null);
-  const [verifiedGovIds, setVerifiedGovIds] = useState<Record<string, boolean>>({ aadhaar: true }); // Mock aadhaar as verified initially
-
-  const handleVerify = (idType: string) => {
-    setVerifyingId(idType);
-    setTimeout(() => {
-      setVerifiedGovIds(prev => ({ ...prev, [idType]: true }));
-      setVerifyingId(null);
-    }, 2000); // 2 second mock delay
+  // ── Government ID integrations (sourced from the worker profile) ────────
+  const maskId = (value: string, keep = 4) => {
+    const clean = (value || '').replace(/\s+/g, '');
+    return clean ? '•'.repeat(Math.max(0, clean.length - keep)) + clean.slice(-keep) : '';
   };
+  const aadhaarDisplay = maskId(worker.identity.aadhaar, 4);
+  const panDisplay = worker.identity.pan || '';
+  const uanDisplay = worker.socialSecurity.epfoUan || '';
+  const bankVerified = worker.banking.verificationStatus === 'Verified';
 
   // ── DigiLocker document wallet ──────────────────────────────────────────
   type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; status?: string };
@@ -1456,16 +1454,14 @@ export default function WorkerProfilePage() {
                     </div>
                     <div className="flex-1">
                       <h4 className="text-[15px] font-bold text-gray-900">Aadhaar Verification</h4>
-                      <p className="text-[13px] text-gray-500 mb-3">Fetch demographics directly from UIDAI.</p>
-                      <input type="text" placeholder="XXXX-XXXX-XXXX" defaultValue="8472-XXXX-1234" className="w-full max-w-sm bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium focus:outline-none" />
+                      <p className="text-[13px] text-gray-500 mb-3">Fetched from UIDAI via Aadhaar oKYC.</p>
+                      <p className="font-mono text-[15px] font-semibold text-gray-800">{aadhaarDisplay || 'Not linked'}</p>
                     </div>
                     <div className="flex items-center justify-start md:justify-end min-w-[140px]">
-                      {verifiedGovIds.aadhaar ? (
+                      {worker.identity.aadhaarVerified ? (
                         <span className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-green-100"><CheckCircle size={16}/> Verified</span>
                       ) : (
-                        <button type="button" onClick={() => handleVerify('aadhaar')} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-blue-700 flex items-center gap-2">
-                          {verifyingId === 'aadhaar' ? <RefreshCw size={16} className="animate-spin" /> : 'Verify API'}
-                        </button>
+                        <span className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-orange-100"><Clock size={16}/> Pending</span>
                       )}
                     </div>
                   </div>
@@ -1477,16 +1473,14 @@ export default function WorkerProfilePage() {
                     </div>
                     <div className="flex-1">
                       <h4 className="text-[15px] font-bold text-gray-900">PAN Card Verification</h4>
-                      <p className="text-[13px] text-gray-500 mb-3">Fetch financial KYC details from NSDL.</p>
-                      <input type="text" placeholder="ABCDE1234F" defaultValue={verifiedGovIds.pan ? "BMZPX9241K" : ""} className="w-full max-w-sm bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium uppercase focus:outline-none" />
+                      <p className="text-[13px] text-gray-500 mb-3">Financial KYC details (NSDL).</p>
+                      <p className="font-mono text-[15px] font-semibold uppercase text-gray-800">{panDisplay || 'Not linked'}</p>
                     </div>
                     <div className="flex items-center justify-start md:justify-end min-w-[140px]">
-                      {verifiedGovIds.pan ? (
+                      {worker.identity.panVerified ? (
                         <span className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-green-100"><CheckCircle size={16}/> Verified</span>
                       ) : (
-                        <button type="button" onClick={() => handleVerify('pan')} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-blue-700 flex items-center gap-2">
-                          {verifyingId === 'pan' ? <RefreshCw size={16} className="animate-spin" /> : 'Verify API'}
-                        </button>
+                        <span className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-orange-100"><Clock size={16}/> Pending</span>
                       )}
                     </div>
                   </div>
@@ -1498,42 +1492,35 @@ export default function WorkerProfilePage() {
                     </div>
                     <div className="flex-1">
                       <h4 className="text-[15px] font-bold text-gray-900">UAN Verification</h4>
-                      <p className="text-[13px] text-gray-500 mb-3">Fetch EPFO records via Universal Account Number.</p>
-                      <input type="text" placeholder="12-digit UAN" defaultValue={verifiedGovIds.uan ? "100984736122" : ""} className="w-full max-w-sm bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium focus:outline-none" />
+                      <p className="text-[13px] text-gray-500 mb-3">EPFO Universal Account Number.</p>
+                      <p className="font-mono text-[15px] font-semibold text-gray-800">{uanDisplay || 'Not linked'}</p>
                     </div>
                     <div className="flex items-center justify-start md:justify-end min-w-[140px]">
-                      {verifiedGovIds.uan ? (
-                        <span className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-green-100"><CheckCircle size={16}/> Verified</span>
+                      {uanDisplay ? (
+                        <span className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-green-100"><CheckCircle size={16}/> On record</span>
                       ) : (
-                        <button type="button" onClick={() => handleVerify('uan')} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-blue-700 flex items-center gap-2">
-                          {verifyingId === 'uan' ? <RefreshCw size={16} className="animate-spin" /> : 'Verify API'}
-                        </button>
+                        <span className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg text-[13px] font-bold border border-orange-100"><Clock size={16}/> Pending</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Bank Accounts — both registered accounts are KYC-verified here */}
+                  {/* Bank Account — from the verified banking record */}
                   <div className="flex flex-col md:flex-row gap-4 p-5 rounded-[16px] border border-gray-200 bg-gray-50/50">
                     <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
                       <Building2 size={24} />
                     </div>
                     <div className="flex-1 space-y-4">
                       <div>
-                        <h4 className="text-[15px] font-bold text-gray-900">Bank KYC — Primary &amp; Secondary Accounts (Penny Drop)</h4>
-                        <p className="text-[13px] text-gray-500 mt-0.5">Both registered bank accounts are subjected to KYC via the NPCI bank verification API. Primary account receives salary.</p>
+                        <h4 className="text-[15px] font-bold text-gray-900">Bank Account (NPCI Penny Drop KYC)</h4>
+                        <p className="text-[13px] text-gray-500 mt-0.5">Your salary account, verified via the NPCI bank verification API. Update details in the Banking tab.</p>
                       </div>
                       <div className="rounded-[14px] border border-gray-200 bg-white p-4">
-                        <p className="flex items-center justify-between gap-2 text-[13px] font-bold text-gray-800 mb-2"><span className="inline-flex items-center gap-1.5"><CheckCircle size={14} className="text-[#2F9E67]"/> Primary Account</span>{verifiedGovIds.bankPrimary ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-lg px-2 py-1"><CheckCircle size={13}/> KYC Verified</span> : <button type="button" onClick={() => handleVerify('bankPrimary')} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-blue-700 flex items-center gap-1.5">{verifyingId === 'bankPrimary' ? <RefreshCw size={13} className="animate-spin" /> : 'Verify API'}</button>}</p>
-                        <div className="flex gap-2">
-                          <input type="text" placeholder="Account No" defaultValue={verifiedGovIds.bankPrimary ? "39201948301" : "31029384756"} className="w-2/3 bg-white border border-gray-300 rounded-xl px-3 py-2 text-[13px] font-medium focus:outline-none" />
-                          <input type="text" placeholder="IFSC" defaultValue={verifiedGovIds.bankPrimary ? "SBIN000123" : "SBIN0001234"} className="w-1/3 bg-white border border-gray-300 rounded-xl px-3 py-2 text-[13px] font-medium uppercase focus:outline-none" />
-                        </div>
-                      </div>
-                      <div className="rounded-[14px] border border-gray-200 bg-white p-4">
-                        <p className="flex items-center justify-between gap-2 text-[13px] font-bold text-gray-800 mb-2"><span className="inline-flex items-center gap-1.5"><CreditCard size={14} className="text-gray-400"/> Secondary Account</span>{verifiedGovIds.bankSecondary ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-lg px-2 py-1"><CheckCircle size={13}/> KYC Verified</span> : <button type="button" onClick={() => handleVerify('bankSecondary')} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-blue-700 flex items-center gap-1.5">{verifyingId === 'bankSecondary' ? <RefreshCw size={13} className="animate-spin" /> : 'Verify API'}</button>}</p>
-                        <div className="flex gap-2">
-                          <input type="text" placeholder="Account No" defaultValue={verifiedGovIds.bankSecondary ? "50100123456789" : "50123456789012"} className="w-2/3 bg-white border border-gray-300 rounded-xl px-3 py-2 text-[13px] font-medium focus:outline-none" />
-                          <input type="text" placeholder="IFSC" defaultValue={verifiedGovIds.bankSecondary ? "BARB0MUM123" : "BARB0MUM1234"} className="w-1/3 bg-white border border-gray-300 rounded-xl px-3 py-2 text-[13px] font-medium uppercase focus:outline-none" />
+                        <p className="flex items-center justify-between gap-2 text-[13px] font-bold text-gray-800 mb-3"><span className="inline-flex items-center gap-1.5"><CheckCircle size={14} className="text-[#2F9E67]"/> {worker.banking.bankName || 'Bank account'}</span>{bankVerified ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-lg px-2 py-1"><CheckCircle size={13}/> KYC Verified</span> : <span className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1"><Clock size={13}/> Pending</span>}</p>
+                        <div className="grid grid-cols-2 gap-3 text-[13px]">
+                          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Account Holder</p><p className="font-semibold text-gray-800 mt-0.5">{worker.banking.holderName || '—'}</p></div>
+                          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Account Number</p><p className="font-mono font-semibold text-gray-800 mt-0.5">{maskId(worker.banking.accountNumber, 4) || '—'}</p></div>
+                          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">IFSC</p><p className="font-mono font-semibold uppercase text-gray-800 mt-0.5">{worker.banking.ifsc || '—'}</p></div>
+                          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">UPI</p><p className="font-semibold text-gray-800 mt-0.5">{worker.banking.upiEnabled ? 'Enabled' : 'Not enabled'}</p></div>
                         </div>
                       </div>
                     </div>
