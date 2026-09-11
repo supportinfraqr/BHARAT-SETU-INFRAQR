@@ -1739,14 +1739,47 @@ def _employer_workers(user):
 
 
 def _employer_approvals(user):
+    """Pending binding approvals for this employer. Every request is site-scoped
+    (E·C·S·W) — the site shown is the one the contractor/worker is approved against."""
+    status_label = {"PENDING": "Pending", "APPROVED": "Approved",
+                    "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
     rows = []
-    for a in user.approvals_handled.filter(status="PENDING")[:20] if hasattr(user, "approvals_handled") else []:
+    qs = user.approvals_handled.filter(status="PENDING")[:20] if hasattr(user, "approvals_handled") else []
+    for a in qs:
+        entity_type = _d(a.entity_type)
+        meta = a.metadata if isinstance(a.metadata, dict) else {}
+        target = User.objects.filter(pk=a.entity_id).first() if str(a.entity_id).isdigit() else None
+        name = ""
+        bss_id = ""
+        contractor_name = ""
+        site_name = _d(meta.get("site_name"))
+        checks = []
+        if entity_type.lower() == "contractor" and target:
+            cp = getattr(target, "contractor_profile", None)
+            name = _d(cp.contractor_name if cp else target.username)
+            bss_id = _d(cp.contractor_code if cp else _bss_contractor_code(target.id))
+            binding = WorkerContractorBinding.objects.filter(contractor=target, site__employer=user).first()
+            if binding and binding.site:
+                site_name = site_name or _d(binding.site.site_name)
+            checks = ["KYC", "Licence"]
+        elif entity_type.lower() == "worker" and target:
+            wi = WorkerIdentity.objects.filter(user=target).first()
+            name = _d(wi.name if wi else target.username)
+            bss_id = _d(wi.bss_worker_id if wi else _bss_worker_code(target.id))
+            binding = WorkerContractorBinding.objects.filter(worker=target, site__employer=user).first()
+            if binding:
+                if binding.site:
+                    site_name = site_name or _d(binding.site.site_name)
+                if binding.contractor:
+                    cp = getattr(binding.contractor, "contractor_profile", None)
+                    contractor_name = _d(cp.contractor_name if cp else binding.contractor.username)
+            checks = ["Aadhaar", "Bank"]
         rows.append({
-            "id": a.id, "entityType": _d(a.entity_type),
-            "entityId": _d(a.entity_id), "name": "",
-            "bssId": "", "contractor": "",
-            "site": "", "submittedAt": _dts(a.requested_at),
-            "checks": [], "status": _d(a.status),
+            "id": str(a.id), "entityType": entity_type,
+            "entityId": str(a.entity_id), "name": name,
+            "bssId": bss_id, "contractor": contractor_name or None,
+            "site": site_name, "submittedAt": _dts(a.requested_at),
+            "checks": checks, "status": status_label.get(str(a.status).upper(), "Pending"),
         })
     return rows
 
