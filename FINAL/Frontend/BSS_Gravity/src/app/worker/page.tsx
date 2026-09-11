@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ArrowRight, BadgeCheck, Bell, BriefcaseBusiness, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock3, FileText, GraduationCap, Handshake, IdCard, IndianRupee, Landmark, MapPin, Megaphone, MessageSquareText, QrCode, Settings, ShieldCheck, UserRound, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, BadgeCheck, Bell, BriefcaseBusiness, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, Clock3, FileText, Fingerprint, GraduationCap, Handshake, IdCard, IndianRupee, Landmark, MapPin, Megaphone, MessageSquareText, QrCode, Settings, ShieldCheck, UserRound, X } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -61,6 +61,7 @@ export default function WorkerOverview() {
   }
   return <div className="space-y-5 pb-12">
     {availableForWork && <section className="bg-[#073B67] border border-[#073B67] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0"><BadgeCheck size={20}/></span><div className="flex-1"><p className="text-sm font-bold">Available for work — ON</p><p className="text-xs text-white/80 mt-0.5">Employers can see that you are available and shortlist you for matching jobs. Turn it off anytime in Rozgar Setu.</p></div><Link href="/worker/rozgar" className="h-9 px-3 rounded-lg bg-white/10 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-white/20 flex-shrink-0">Manage availability<ArrowRight size={13}/></Link></section>}
+    {!worker.identity.aadhaarVerified && <section className="bg-[#FFF8F0] border border-[#F47A32]/20 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"><span className="w-10 h-10 rounded-xl bg-[#F47A32] grid place-items-center flex-shrink-0 text-white"><Fingerprint size={20}/></span><div className="flex-1"><p className="text-sm font-bold text-[#9A3412]">Link your Aadhaar</p><p className="text-xs text-[#9A3412]/80 mt-0.5">Enter your Aadhaar to verify via OTP and auto-fill your name, date of birth, address and photo.</p></div><Link href="/worker/Profile?tab=integrations" className="h-9 px-3 rounded-lg bg-[#F47A32] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#e06a24] flex-shrink-0">Link Aadhaar<ArrowRight size={13}/></Link></section>}
 
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">{t('nav.overview')}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950">{t('dash.welcome')}, {worker.identity.name.split(' ')[0]}</h1><span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{t('portal.worker')}</span></div><p className="text-sm text-gray-500 mt-1">A quick view of your identity, work and benefits.</p></div>

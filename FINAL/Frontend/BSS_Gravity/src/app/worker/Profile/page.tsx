@@ -81,6 +81,47 @@ export default function WorkerProfilePage() {
   const uanDisplay = worker.socialSecurity.epfoUan || '';
   const bankVerified = worker.banking.verificationStatus === 'Verified';
 
+  // ── Aadhaar oKYC linking (for workers whose Aadhaar isn't linked yet) ────
+  const [aadhaarLink, setAadhaarLink] = useState({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '' });
+
+  const sendAadhaarOtp = async () => {
+    const aadhaar = aadhaarLink.aadhaar.replace(/\D/g, '');
+    if (!/^\d{12}$/.test(aadhaar)) { setAadhaarLink(s => ({ ...s, error: 'Enter a valid 12-digit Aadhaar number.' })); return; }
+    setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
+    try {
+      const response = await fetch('/api/auth/aadhaar/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar }) });
+      const json = await response.json() as { referenceId?: string; error?: string };
+      if (!response.ok || !json.referenceId) throw new Error(json.error || 'OTP could not be sent.');
+      setAadhaarLink(s => ({ ...s, referenceId: json.referenceId as string, sent: true, busy: false, notice: 'OTP sent to the mobile linked with your Aadhaar.' }));
+    } catch (error) {
+      setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'OTP could not be sent.' }));
+    }
+  };
+
+  const verifyAadhaarOtp = async () => {
+    const aadhaar = aadhaarLink.aadhaar.replace(/\D/g, '');
+    if (!/^\d{6}$/.test(aadhaarLink.otp)) { setAadhaarLink(s => ({ ...s, error: 'Enter the 6-digit OTP.' })); return; }
+    setAadhaarLink(s => ({ ...s, busy: true, error: '', notice: '' }));
+    try {
+      const response = await fetch('/api/worker/link-aadhaar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aadhaar, referenceId: aadhaarLink.referenceId, otp: aadhaarLink.otp }) });
+      const json = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(json.error || 'Aadhaar verification failed.');
+      const profileResponse = await fetch('/api/worker/profile', { cache: 'no-store' });
+      const profileJson = await profileResponse.json() as { data?: typeof worker };
+      if (profileJson.data) updateWorker(profileJson.data);
+      setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '' });
+    } catch (error) {
+      setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'Aadhaar verification failed.' }));
+    }
+  };
+
+  // Deep-link support: /worker/Profile?tab=integrations
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    const allowed = ['personal', 'contact', 'family', 'social', 'banking', 'classification', 'employment', 'skills', 'welfare', 'other', 'integrations'] as const;
+    if (tab && (allowed as readonly string[]).includes(tab)) setActiveTab(tab as typeof allowed[number]);
+  }, []);
+
   // ── DigiLocker document wallet ──────────────────────────────────────────
   type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; status?: string };
   const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
@@ -1455,7 +1496,26 @@ export default function WorkerProfilePage() {
                     <div className="flex-1">
                       <h4 className="text-[15px] font-bold text-gray-900">Aadhaar Verification</h4>
                       <p className="text-[13px] text-gray-500 mb-3">Fetched from UIDAI via Aadhaar oKYC.</p>
-                      <p className="font-mono text-[15px] font-semibold text-gray-800">{aadhaarDisplay || 'Not linked'}</p>
+                      {worker.identity.aadhaarVerified ? (
+                        <p className="font-mono text-[15px] font-semibold text-gray-800">{aadhaarDisplay || 'Not linked'}</p>
+                      ) : (
+                        <div className="space-y-2 max-w-sm">
+                          <input type="text" inputMode="numeric" value={aadhaarLink.aadhaar} onChange={e => setAadhaarLink(s => ({ ...s, aadhaar: e.target.value.replace(/\D/g, '').slice(0, 12), error: '' }))} disabled={aadhaarLink.sent} placeholder="12-digit Aadhaar number" className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium tracking-wider focus:outline-none disabled:bg-gray-100" />
+                          {aadhaarLink.sent && <input type="text" inputMode="numeric" value={aadhaarLink.otp} onChange={e => setAadhaarLink(s => ({ ...s, otp: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} placeholder="6-digit OTP" className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium tracking-[0.3em] focus:outline-none" />}
+                          {aadhaarLink.error && <p className="text-[12px] text-red-600">{aadhaarLink.error}</p>}
+                          {aadhaarLink.notice && <p className="text-[12px] text-green-700">{aadhaarLink.notice}</p>}
+                          <div className="flex gap-2">
+                            {!aadhaarLink.sent ? (
+                              <button type="button" onClick={sendAadhaarOtp} disabled={aadhaarLink.busy} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-blue-700 disabled:opacity-60">{aadhaarLink.busy ? 'Sending…' : 'Send OTP'}</button>
+                            ) : (
+                              <>
+                                <button type="button" onClick={verifyAadhaarOtp} disabled={aadhaarLink.busy} className="bg-[#0F172A] text-white px-4 py-2 rounded-xl text-[13px] font-bold hover:bg-black disabled:opacity-60">{aadhaarLink.busy ? 'Verifying…' : 'Verify & Link'}</button>
+                                <button type="button" onClick={() => setAadhaarLink(s => ({ ...s, sent: false, otp: '', notice: '', error: '' }))} className="px-3 py-2 rounded-xl text-[13px] font-semibold text-gray-500 hover:text-gray-700">Change number</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-start md:justify-end min-w-[140px]">
                       {worker.identity.aadhaarVerified ? (
