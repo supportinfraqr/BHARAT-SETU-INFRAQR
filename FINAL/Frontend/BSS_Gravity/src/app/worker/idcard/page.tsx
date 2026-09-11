@@ -87,9 +87,74 @@ export default function IdentityCardPage() {
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/verify/${encodeURIComponent(worker.identity.bssId)}`;
-    if (navigator.share) await navigator.share({ title: 'BSS Worker ID', text: worker.identity.bssId, url });
-    else { await navigator.clipboard.writeText(url); setExportNotice('Secure verification link copied.'); }
+    if (!frontRef.current || !backRef.current || isExporting) return;
+    setIsExporting(true);
+    setExportError('');
+    setExportNotice('');
+    try {
+      await document.fonts.ready;
+      const [{ toPng }, { jsPDF }] = await Promise.all([import('html-to-image'), import('jspdf')]);
+      const captureOptions = {
+        width: 400,
+        height: 252,
+        pixelRatio: 4,
+        cacheBust: true,
+        backgroundColor: '#0A192F',
+        style: {
+          position: 'relative',
+          inset: 'auto',
+          width: '400px',
+          height: '252px',
+          transform: 'none',
+          backfaceVisibility: 'visible',
+          WebkitBackfaceVisibility: 'visible',
+          opacity: '1',
+          boxShadow: 'none',
+        },
+      } as const;
+      const [frontImage, backImage] = await Promise.all([
+        toPng(frontRef.current, captureOptions),
+        toPng(backRef.current, captureOptions),
+      ]);
+      const cardWidth = 85.6;
+      const cardHeight = 53.98;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [cardWidth, cardHeight], compress: true, precision: 16 });
+      pdf.setProperties({ title: `BSS ID Card - ${worker.identity.bssId}`, subject: 'Worker identity card', author: 'Bharat Shram Setu', creator: 'Bharat Shram Setu Worker Portal' });
+      pdf.addImage(frontImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+      pdf.addPage([cardWidth, cardHeight], 'landscape');
+      pdf.addImage(backImage, 'PNG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
+
+      const blob = pdf.output('blob');
+      const fileName = `BSS-ID-Card-${worker.identity.bssId}.pdf`;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+      const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(worker.identity.bssId)}`;
+      const shareText = `${worker.identity.name} · ${worker.identity.bssId}`;
+
+      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'BSS Worker ID Card', text: shareText });
+        setExportNotice('BSS ID card shared.');
+      } else {
+        // File sharing unsupported: download the card and share/copy the verify link.
+        const url = URL.createObjectURL(blob);
+        const download = document.createElement('a');
+        download.href = url;
+        download.download = fileName;
+        download.rel = 'noopener';
+        document.body.appendChild(download);
+        download.click();
+        download.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        if (navigator.share) await navigator.share({ title: 'BSS Worker ID', text: worker.identity.bssId, url: verifyUrl });
+        else await navigator.clipboard.writeText(verifyUrl);
+        setExportNotice('ID card downloaded — file sharing isn’t supported here, so the verification link was shared instead.');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return; // user dismissed the share sheet
+      console.error('ID card share failed', error);
+      setExportError('The ID card could not be shared. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getGenderInitial = (gender?: string) => {
@@ -306,8 +371,8 @@ export default function IdentityCardPage() {
         <button onClick={handleDownload} disabled={isExporting} className="flex-1 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2">
           <Download size={18} /> {isExporting ? 'Creating print PDF…' : 'View / Download Print-Ready PDF'}
         </button>
-        <button onClick={handleShare} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2">
-          <Share2 size={18} /> Share Digital ID
+        <button onClick={handleShare} disabled={isExporting} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-wait px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2">
+          <Share2 size={18} /> {isExporting ? 'Preparing…' : 'Share Digital ID'}
         </button>
       </div>
       <Link href="/worker/OrderCard" className="w-full h-11 rounded-[12px] border border-[#073B67]/20 bg-blue-50/60 text-[#073B67] font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-50"><PackageCheck size={18}/>Order Physical Card</Link>
