@@ -156,7 +156,7 @@ export default function ContractorIdentityCardPage() {
       const shareText = `${portal.identity.company} · ${entityId}\nVerify: ${verifyUrl}`;
 
       if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'BSS Contractor ID Card', text: shareText });
+        await navigator.share({ files: [file], title: 'BSS Contractor ID Card', text: shareText, url: verifyUrl });
         setExportNotice('BSS ID card shared.');
       } else {
         const url = URL.createObjectURL(blob);

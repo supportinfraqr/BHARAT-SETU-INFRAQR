@@ -128,10 +128,10 @@ export default function IdentityCardPage() {
       const fileName = `BSS-ID-Card-${worker.identity.bssId}.pdf`;
       const file = new File([blob], fileName, { type: 'application/pdf' });
       const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(worker.identity.bssId)}`;
-      const shareText = `${worker.identity.name} · ${worker.identity.bssId}`;
+      const shareText = `${worker.identity.name} · ${worker.identity.bssId}\nVerify: ${verifyUrl}`;
 
       if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'BSS Worker ID Card', text: shareText });
+        await navigator.share({ files: [file], title: 'BSS Worker ID Card', text: shareText, url: verifyUrl });
         setExportNotice('BSS ID card shared.');
       } else {
         // File sharing unsupported: download the card and share/copy the verify link.

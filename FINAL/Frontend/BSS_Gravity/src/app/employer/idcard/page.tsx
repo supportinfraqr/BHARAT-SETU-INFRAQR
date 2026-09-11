@@ -84,7 +84,7 @@ export default function EmployerIdentityCardPage() {
       const verifyUrl = `${window.location.origin}/verify/${encodeURIComponent(entityId)}`;
       const shareText = `${employer.identity.company} · ${entityId}\nVerify: ${verifyUrl}`;
       if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title:'BSS Employer ID Card', text: shareText });
+        await navigator.share({ files: [file], title:'BSS Employer ID Card', text: shareText, url: verifyUrl });
         setNotice('BSS ID card shared.');
       } else {
         const url = URL.createObjectURL(blob);
