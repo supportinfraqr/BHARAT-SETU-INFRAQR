@@ -55,7 +55,7 @@ export default function WorkerProfilePage() {
   };
   const updateNominee = (id: number, patch: Partial<Nominee>) => setNominees(current => current.map(n => n.id === id ? { ...n, ...patch } : n));
   const addNominee = () => { setNominees(current => [...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: 0 }]); setNextNomineeId(id => id + 1); };
-  const removeNominee = (id: number) => setNominees(current => current.length > 1 ? current.filter(n => n.id !== id) : current);
+  const removeNominee = (id: number) => setNominees(current => current.filter(n => n.id !== id));
   const pickNomineeDoc = (id: number) => { setDocTargetId(id); window.setTimeout(() => nomineeFileRef.current?.click(), 0); };
   const addNomineeDoc = (file?: File) => {
     if (!file || docTargetId === null) return;
@@ -373,7 +373,7 @@ export default function WorkerProfilePage() {
                     <div key={n.id} className="rounded-[16px] border border-black/10 bg-gray-50/40 p-4 space-y-4">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Nominee {rowIndex + 1} {n.name && <span className="normal-case text-gray-600">— {n.name}</span>}</p>
-                        <button type="button" onClick={() => removeNominee(n.id)} disabled={nominees.length === 1} aria-label="Remove nominee" className="w-7 h-7 grid place-items-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30"><Trash2 size={14}/></button>
+                        <button type="button" onClick={() => removeNominee(n.id)} aria-label="Remove nominee" className="w-7 h-7 grid place-items-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-4">
                         <div className="lg:col-span-1">

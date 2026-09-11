@@ -50,6 +50,7 @@ _v1_patterns = _v1(
     ("bss-staff/operations/actions", v1_bridge.bss_staff_actions, "v1_bss_staff_actions"),
     ("worker/submissions", v1_bridge.worker_submissions, "v1_worker_submissions"),
     ("worker/verify-document", v1_bridge.worker_verify_document, "v1_worker_verify_document"),
+    ("worker/link-aadhaar", v1_bridge.worker_link_aadhaar, "v1_worker_link_aadhaar"),
     ("contractor/submissions", v1_bridge.contractor_submissions, "v1_contractor_submissions"),
     ("admin/payroll", v1_bridge.admin_payroll, "v1_admin_payroll"),
     ("worker/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_worker_submission_file", {"role_path": "worker"}),

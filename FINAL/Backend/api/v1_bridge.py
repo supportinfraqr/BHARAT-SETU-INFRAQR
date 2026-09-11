@@ -537,6 +537,17 @@ def aadhaar_verify(request):
             challenge.save(update_fields=["user", "name", "gender", "date_of_birth",
                                           "care_of", "full_address", "state", "district",
                                           "pincode", "photo_path", "updated_at"])
+            # Populate the Aadhaar-owned (frozen) current-address block.
+            WorkerAddressMobility.objects.get_or_create(
+                user=user,
+                defaults={
+                    "current_address": data.get("full_address") or "",
+                    "current_state": addr.get("state") or "",
+                    "current_district": addr.get("district") or "",
+                    "current_city": addr.get("vtc") or addr.get("city") or "",
+                    "current_pincode": str(addr.get("pincode") or ""),
+                },
+            )
     else:
         user = cred.user
 
@@ -551,6 +562,111 @@ def aadhaar_verify(request):
     payload["bssId"] = identity.bss_worker_id if identity else None
     payload["subject"] = user.username
     return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_link_aadhaar(request):
+    """Link/verify Aadhaar for the currently authenticated worker and fill
+    identity (name/gender/dob/aadhaar/photo) + current address from oKYC."""
+    body = request.data or {}
+    aadhaar = _sanitize_aadhaar(body.get("aadhaar"))
+    reference_id = str(body.get("referenceId") or "").strip()
+    otp = str(body.get("otp") or "").strip()
+    if not aadhaar or not reference_id or not otp:
+        return Response({"error": "aadhaar, referenceId and otp are required"},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    challenge = AadhaarChallenge.objects.filter(
+        aadhaar_number=aadhaar, reference_id=reference_id).order_by("-created_at").first()
+    if challenge is None:
+        return Response({"error": "Unknown Aadhaar OTP request. Send a new OTP first."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if challenge.is_expired:
+        challenge.status = "EXPIRED"
+        challenge.save(update_fields=["status", "updated_at"])
+        return Response({"error": "OTP expired. Request a new OTP."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if challenge.status == "VERIFIED":
+        return Response({"error": "This Aadhaar has already been verified."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if challenge.otp_attempts >= challenge.max_attempts:
+        challenge.status = "FAILED"
+        challenge.save(update_fields=["status", "updated_at"])
+        return Response({"error": "Too many attempts. Request a new OTP."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = aadhaar_client.verify_otp(reference_id, otp)
+    except aadhaar_client.SandboxError:
+        challenge.otp_attempts += 1
+        challenge.save(update_fields=["otp_attempts", "updated_at"])
+        return Response({"error": "Aadhaar verification service is currently unavailable."},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    challenge.otp_attempts += 1
+    challenge.response_json = json.dumps(result, default=str)
+    challenge.save(update_fields=["otp_attempts", "response_json", "updated_at"])
+
+    data = result.get("data") or {}
+    if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
+        msg = data.get("message") or "Aadhaar verification failed. Check the OTP and try again."
+        if challenge.otp_attempts >= challenge.max_attempts:
+            challenge.status = "FAILED"
+            challenge.save(update_fields=["status", "updated_at"])
+        return Response({"error": str(msg)}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user
+    if UserCredential.objects.filter(identity_type="aadhaar", identity_value=aadhaar).exclude(user=user).exists():
+        return Response({"error": "This Aadhaar is already linked to another account."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    if not identity:
+        identity = WorkerIdentity.objects.create(user=user, bss_worker_id=_bss_worker_id(user.id))
+
+    addr = data.get("address") or {}
+    identity.name = data.get("name") or identity.name
+    identity.gender = (data.get("gender") or "").upper() or identity.gender
+    dob = _parse_dob(data.get("date_of_birth"))
+    if dob:
+        identity.date_of_birth = dob
+    identity.aadhaar = aadhaar
+    photo = _save_aadhaar_photo(aadhaar, data.get("photo"))
+    if photo:
+        identity.photo = photo
+    identity.save()
+
+    a, _ = WorkerAddressMobility.objects.get_or_create(user=user)
+    a.current_address = data.get("full_address") or a.current_address
+    a.current_state = addr.get("state") or a.current_state
+    a.current_district = addr.get("district") or a.current_district
+    a.current_city = addr.get("vtc") or addr.get("city") or a.current_city
+    if addr.get("pincode"):
+        a.current_pincode = str(addr.get("pincode"))
+    a.save()
+
+    UserCredential.objects.get_or_create(
+        user=user, identity_type="aadhaar", identity_value=aadhaar,
+        defaults={"verified": True})
+
+    challenge.user = user
+    challenge.name = data.get("name") or ""
+    challenge.gender = data.get("gender") or ""
+    challenge.date_of_birth = data.get("date_of_birth") or ""
+    challenge.care_of = data.get("care_of") or ""
+    challenge.full_address = data.get("full_address") or ""
+    challenge.state = addr.get("state") or ""
+    challenge.district = addr.get("district") or ""
+    challenge.pincode = addr.get("pincode") or ""
+    challenge.photo_path = identity.photo
+    challenge.status = "VERIFIED"
+    challenge.save(update_fields=["user", "name", "gender", "date_of_birth", "care_of",
+                                  "full_address", "state", "district", "pincode",
+                                  "photo_path", "status", "updated_at"])
+
+    return Response({"success": True, "aadhaarVerified": True}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
