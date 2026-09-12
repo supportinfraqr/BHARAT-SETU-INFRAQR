@@ -2493,20 +2493,26 @@ def _site_scalar_data(s):
 
 
 def _employer_contractors(user):
-    cids = WorkerContractorBinding.objects.filter(site__employer=user).values_list(
-        "contractor_id", flat=True).distinct()
+    cids = set(WorkerContractorBinding.objects.filter(site__employer=user).values_list(
+        "contractor_id", flat=True).distinct())
+    # Contractors engaged directly (scanned this employer's QR) and accepted.
+    cids |= set(ContractorEmployerBinding.objects.filter(
+        employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
     rows = []
     for cid in cids:
         c = User.objects.filter(id=cid).first()
         if not c:
             continue
         cp = getattr(c, "contractor_profile", None)
-        site_ids = list(Site.objects.filter(employer=user, bindings__contractor=c).values_list("id", flat=True))
+        site_ids = set(Site.objects.filter(employer=user, bindings__contractor=c).values_list("id", flat=True))
+        site_ids |= set(ContractorSiteAllotment.objects.filter(
+            binding__contractor=c, binding__employer=user, status="APPROVED").values_list("site_id", flat=True))
+        site_ids = sorted(site_ids)
         wcount = WorkerContractorBinding.objects.filter(contractor=c, site__employer=user,
                                                         binding_status="ACCEPTED").count()
         rows.append({
-            "id": c.id, "name": _d(cp.contractor_name if cp else c.username),
-            "bssId": _d(cp.contractor_code if cp else _bss_contractor_code(c.id)),
+            "id": c.id, "name": _d(cp.contractor_name if cp else "", c.username),
+            "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(c.id)),
             "contact": _d(cp.contact_person if cp else ""),
             "email": _d(cp.email if cp else ""),
             "siteIds": site_ids, "workers": wcount,
@@ -2582,10 +2588,12 @@ def _employer_approvals(user):
             "site": site_name, "submittedAt": _dts(a.requested_at),
             "checks": checks, "status": status_label.get(str(a.status).upper(), "Pending"),
         })
-    # Incoming contractor <-> employer engagement requests (contractor scanned
-    # this employer's QR or a site QR) — surfaced on the Binding Requests page.
-    for e in (ContractorEmployerBinding.objects
-              .filter(employer=user, binding_status="PENDING").order_by("-created_at")):
+    # Contractor <-> employer engagements (contractor scanned this employer's QR
+    # or a site QR). Every status is surfaced so accepted/rejected requests stay
+    # visible in the Binding Requests register instead of disappearing.
+    engagement_status = {"PENDING": "Pending", "ACCEPTED": "Accepted",
+                         "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
+    for e in ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at"):
         cp = getattr(e.contractor, "contractor_profile", None)
         sites = [a.site.site_name for a in e.allotments.all() if a.site]
         rows.append({
@@ -2597,7 +2605,7 @@ def _employer_approvals(user):
             "site": ", ".join(sites) if sites else "Sites to be allotted",
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
-            "status": "Pending",
+            "status": engagement_status.get(str(e.binding_status).upper(), "Pending"),
         })
     return rows
 

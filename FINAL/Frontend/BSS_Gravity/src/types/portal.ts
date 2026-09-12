@@ -449,7 +449,7 @@ export type EmployerApproval = {
   site: string;
   submittedAt: string;
   checks: string[];
-  status: 'Pending' | 'Approved' | 'Rejected';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Accepted' | 'Cancelled';
   /** Present on Contractor ↔ Employer engagement rows. */
   engagementId?: string;
 };

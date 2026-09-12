@@ -19,24 +19,28 @@ export default function EmployerQrBindingRequestsPage() {
     setError('');
     setNotice('');
     try {
+      let nextStatus: EmployerApproval['status'] = status;
       if (row.engagementId) {
         const response = await fetch('/api/employer/engagements', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ bindingId: Number(row.engagementId), action: status === 'Approved' ? 'approve-binding' : 'reject' }),
         });
-        const result = await response.json().catch(() => ({})) as { error?: string };
+        const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
         if (!response.ok) throw new Error(result.error || 'Engagement could not be updated.');
+        const returned = String(result.data?.status ?? '').toLowerCase();
+        nextStatus = returned === 'accepted' ? 'Accepted' : returned === 'rejected' ? 'Rejected' : returned === 'cancelled' ? 'Cancelled' : 'Pending';
       } else {
         await mutate('approvals', 'PATCH', { ids: [row.id], status });
       }
+      const approved = nextStatus === 'Approved' || nextStatus === 'Accepted';
       replaceEmployer({
         ...employer,
-        approvals: employer.approvals.map(item => item.id === row.id ? { ...item, status } : item),
-        contractors: employer.contractors.map(item => item.id === row.entityId && row.entityType === 'Contractor' ? { ...item, verified: status === 'Approved', status: status === 'Approved' ? 'Active' : 'Suspended' } : item),
-        workers: employer.workers.map(item => item.id === row.entityId && row.entityType === 'Worker' ? { ...item, verified: status === 'Approved', status: status === 'Approved' ? 'Active' : 'Inactive' } : item),
+        approvals: employer.approvals.map(item => item.id === row.id ? { ...item, status: nextStatus } : item),
+        contractors: employer.contractors.map(item => item.id === row.entityId && row.entityType === 'Contractor' ? { ...item, verified: approved, status: approved ? 'Active' : 'Suspended' } : item),
+        workers: employer.workers.map(item => item.id === row.entityId && row.entityType === 'Worker' ? { ...item, verified: approved, status: approved ? 'Active' : 'Inactive' } : item),
       });
-      setNotice(`${row.name} ${status.toLowerCase()}.`);
+      setNotice(`${row.name} ${nextStatus.toLowerCase()}.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -47,7 +51,7 @@ export default function EmployerQrBindingRequestsPage() {
     { id:'site', header:'Site', value:row => row.site },
     { id:'through', header:'Connected through', value:row => row.contractor ?? 'Direct contractor request' },
     { id:'submitted', header:'Requested', value:row => row.submittedAt.slice(0, 10) },
-    { id:'status', header:'Relationship', value:row => row.status, render:row => <span className={row.status === 'Approved' ? 'text-green-700' : row.status === 'Rejected' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
+    { id:'status', header:'Relationship', value:row => row.status, render:row => <span className={row.status === 'Approved' || row.status === 'Accepted' ? 'text-green-700' : row.status === 'Rejected' || row.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:row => row.status === 'Pending' ? <div className="flex gap-2"><button disabled={busy} onClick={() => decide(row, 'Approved')} className="text-green-700 font-semibold">Approve</button><button disabled={busy} onClick={() => decide(row, 'Rejected')} className="text-red-700 font-semibold">Reject</button></div> : <span className="text-gray-400">—</span> },
   ];
   const rows: Row[] = employer.approvals;
