@@ -5,6 +5,7 @@ each resource. Custom business endpoints (consent, attendance punch,
 wage payment, token issue) live in api/views.py.
 """
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
@@ -469,12 +470,19 @@ class DigiLockerProfileSerializer(serializers.ModelSerializer):
 
 
 class DigiLockerDocumentSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
     class Meta:
         model = DigiLockerDocument
         fields = ("id", "profile", "user", "uri", "doctype", "issuer", "doc_date",
-                  "file_path", "file_name", "pan_number", "status", "downloaded_at",
+                  "file_path", "file_name", "file_url", "pan_number", "status", "downloaded_at",
                   "created_at")
-        read_only_fields = ("id", "file_path", "file_name", "status", "downloaded_at", "created_at")
+        read_only_fields = ("id", "file_path", "file_name", "file_url", "status", "downloaded_at", "created_at")
+
+    def get_file_url(self, obj):
+        if not obj.file_name:
+            return ""
+        return f"{settings.MEDIA_URL.rstrip('/')}/digilocker/{obj.file_name}"
 
 
 class DigiLockerStartSerializer(serializers.Serializer):

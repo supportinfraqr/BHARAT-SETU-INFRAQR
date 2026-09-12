@@ -4,6 +4,9 @@ set -e
 echo "== Applying migrations =="
 python manage.py migrate --noinput
 
+echo "== Ensuring document master catalog (mandatory seed) =="
+python manage.py seed_document_master || echo "WARNING: seed_document_master failed"
+
 echo "== Collecting static =="
 python manage.py collectstatic --noinput --clear 2>/dev/null || echo "collectstatic skipped"
 

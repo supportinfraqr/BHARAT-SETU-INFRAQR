@@ -2633,6 +2633,12 @@ def worker_documents(request):
         return Response({"error": "Unknown document type."},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    # Aadhaar / PAN / UAN / Educational documents are pulled from the worker's
+    # linked DigiLocker account — they are read-only here (no upload/replace).
+    if master.code in {"AADHAR", "PAN", "UAN", "EDU"}:
+        return Response({"error": "This document is fetched automatically from DigiLocker and cannot be uploaded or replaced."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(
         user=user, document=master,

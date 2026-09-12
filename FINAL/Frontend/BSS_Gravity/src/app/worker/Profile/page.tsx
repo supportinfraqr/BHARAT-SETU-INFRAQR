@@ -143,10 +143,16 @@ export default function WorkerProfilePage() {
   }, []);
 
   // ── DigiLocker document wallet ──────────────────────────────────────────
-  type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; status?: string };
+  type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; file_url?: string; status?: string };
   const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
   const [digilockerStatus, setDigilockerStatus] = useState<'idle' | 'linking' | 'linked' | 'error'>('idle');
   const [digilockerMessage, setDigilockerMessage] = useState('');
+  const digilockerBlob = digilockerDocs.map(d => `${d.doctype ?? ''} ${d.file_name ?? ''}`).join(' ').toUpperCase();
+  const digilockerKinds = {
+    aadhaar: digilockerBlob.includes('AADHAAR') || digilockerBlob.includes('ADHAR'),
+    pan: digilockerBlob.includes('PAN'),
+    epfo: /EPFO|UAN|PRFND|PASSBOOK|PROVIDENT/.test(digilockerBlob),
+  };
 
   const loadDigilockerDocs = useCallback(async () => {
     try {
@@ -1543,6 +1549,13 @@ export default function WorkerProfilePage() {
                     <div className="flex-1">
                       <h4 className="text-[15px] font-bold text-gray-900">DigiLocker — Fetch Issued Documents</h4>
                       <p className="text-[13px] text-gray-500 mb-3">Link your DigiLocker account to pull your government-issued documents (Aadhaar, PAN, certificates) into BSS.</p>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {([['Aadhaar', digilockerKinds.aadhaar], ['PAN', digilockerKinds.pan], ['EPFO / UAN', digilockerKinds.epfo]] as const).map(([label, ok]) => (
+                          <span key={label} className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border ${ok ? 'text-green-700 bg-green-50 border-green-100' : 'text-gray-500 bg-white border-gray-200'}`}>
+                            {ok ? <CheckCircle size={12}/> : <Clock size={12}/>} {label}
+                          </span>
+                        ))}
+                      </div>
                       {digilockerStatus === 'linked' && (
                         <p className="text-[12px] text-[#2F9E67] font-semibold mb-2">DigiLocker linked — fetching documents…</p>
                       )}
@@ -1557,7 +1570,10 @@ export default function WorkerProfilePage() {
                                 <p className="text-[13px] font-semibold text-gray-800 truncate">{doc.doctype || 'Document'}</p>
                                 <p className="text-[11px] text-gray-500 truncate">{[doc.issuer, doc.doc_date].filter(Boolean).join(' · ')}</p>
                               </div>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${doc.status === 'DOWNLOADED' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{doc.status || '—'}</span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {doc.file_url && <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-sky-700 hover:underline">View</a>}
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${doc.status === 'DOWNLOADED' ? 'bg-green-100 text-[#2F9E67]' : 'bg-orange-100 text-[#F47A32]'}`}>{doc.status || '—'}</span>
+                              </div>
                             </div>
                           ))}
                         </div>

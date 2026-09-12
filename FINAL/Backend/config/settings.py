@@ -197,13 +197,21 @@ DIGILOCKER_USER_URL = os.environ.get(
 DIGILOCKER_ISSUED_DOCS_URL = os.environ.get(
     "DIGILOCKER_ISSUED_DOCS_URL",
     "https://digilocker.meripehchaan.gov.in/public/oauth2/2/files/issued")
+DIGILOCKER_UPLOADED_DOCS_URL = os.environ.get(
+    "DIGILOCKER_UPLOADED_DOCS_URL",
+    "https://digilocker.meripehchaan.gov.in/public/oauth2/2/files/uploaded")
+DIGILOCKER_EAADHAAR_URL = os.environ.get(
+    "DIGILOCKER_EAADHAAR_URL",
+    "https://digilocker.meripehchaan.gov.in/public/oauth2/3/xml/eaadhaar")
 DIGILOCKER_FILE_URL = os.environ.get(
     "DIGILOCKER_FILE_URL", "https://digilocker.meripehchaan.gov.in/public/oauth2/1/file/")
 # "aadhaar", "pan", "mobile", "user_alias", "email", "digilockerid"
-DIGILOCKER_ACR = os.environ.get("DIGILOCKER_ACR", "pan+aadhaar+mobile+user_alias")
-DIGILOCKER_AMR = os.environ.get("DIGILOCKER_AMR", "aadhaar+pan")
+# DigiLocker accepts a SINGLE acr value: "aadhaar", "pan" or "driving_licence".
+# A list made DigiLocker fall back to the first token (pan); default to Aadhaar.
+DIGILOCKER_ACR = os.environ.get("DIGILOCKER_ACR", "aadhaar")
+DIGILOCKER_AMR = os.environ.get("DIGILOCKER_AMR", "aadhaar")
 DIGILOCKER_SCOPE = os.environ.get(
-    "DIGILOCKER_SCOPE", "files.issueddocs+userdetails+address+picture+avs")
+    "DIGILOCKER_SCOPE", "files.issueddocs+files.uploadeddocs+userdetails+address+picture+avs")
 DIGILOCKER_SESSION_TTL_MIN = int(os.environ.get("DIGILOCKER_SESSION_TTL_MIN", "10"))
 DIGILOCKER_DOC_DIR = os.environ.get("DIGILOCKER_DOC_DIR", str(BASE_DIR / "media/digilocker"))
 

@@ -59,6 +59,10 @@ services:
       DIGILOCKER_CLIENT_ID: ${DIGILOCKER_CLIENT_ID:?DIGILOCKER_CLIENT_ID is required in deploy-prod/.env}
       DIGILOCKER_CLIENT_SECRET: ${DIGILOCKER_CLIENT_SECRET:?DIGILOCKER_CLIENT_SECRET is required in deploy-prod/.env}
       DIGILOCKER_REDIRECT_URI: ${DIGILOCKER_REDIRECT_URI:-https://login.bharatshramsetu.com/Return/Digilocker}
+      DIGILOCKER_ACR: ${DIGILOCKER_ACR:-aadhaar}
+      DIGILOCKER_AMR: ${DIGILOCKER_AMR:-aadhaar}
+      DIGILOCKER_SCOPE: ${DIGILOCKER_SCOPE:-files.issueddocs+files.uploadeddocs+userdetails+address+picture+avs}
+      DIGILOCKER_EAADHAAR_URL: ${DIGILOCKER_EAADHAAR_URL:-https://digilocker.meripehchaan.gov.in/public/oauth2/3/xml/eaadhaar}
       DIGILOCKER_DOC_DIR: /data/media/digilocker
       BSS_DEMO_OTP: ${BSS_DEMO_OTP:-}
       BSS_DEMO_OTP_MOBILES: ${BSS_DEMO_OTP_MOBILES:-}

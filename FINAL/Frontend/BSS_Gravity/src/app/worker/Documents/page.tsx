@@ -27,6 +27,10 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: 'Expired',
 };
 
+// Document types that BSS pulls automatically from DigiLocker — manual upload is
+// disabled for these (the file comes from the linked DigiLocker account).
+const DIGILOCKER_FETCHED_CODES = new Set(['AADHAR', 'PAN', 'UAN', 'EDU']);
+
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   const d = new Date(value);
@@ -135,13 +139,22 @@ export default function DocumentsModule() {
     { id: 'date', header: 'Upload Date', value: d => formatDate(d.date) ?? '-' },
     { id: 'expiry', header: 'Expiry Date', value: d => formatDate(d.expiry) ?? '-', render: d => d.expiry ? <span className={`text-xs font-semibold ${label(d.status) === 'Expired' ? 'text-orange-600' : 'text-gray-700'}`}>{formatDate(d.expiry)}</span> : <span className="text-gray-300">—</span> },
     {
-      id: 'actions', header: 'Actions', filterable: false, value: d => label(d.status), render: d => <div className="flex gap-1.5 items-center">
-        {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="View Document"><Eye size={15} /></button>}
-        {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Download"><Download size={15} /></a>}
-        {d.owner !== 'System' && d.id && <button onClick={() => chooseFile(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Replace Document"><RefreshCcw size={15} /></button>}
-        {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#073B67] text-white px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1 disabled:opacity-60"><Upload size={14} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
-        {d.owner !== 'System' && d.id && <button onClick={() => remove(d)} className="p-1.5 text-gray-300 hover:text-red-600 bg-gray-50 rounded border" title="Delete Document"><Trash2 size={15} /></button>}
-      </div>,
+      id: 'actions', header: 'Actions', filterable: false, value: d => label(d.status), render: d => {
+        const digilockerFetched = DIGILOCKER_FETCHED_CODES.has(d.code);
+        return <div className="flex gap-1.5 items-center">
+          {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="View Document"><Eye size={15} /></button>}
+          {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Download"><Download size={15} /></a>}
+          {digilockerFetched ? (
+            <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2 py-1 rounded" title="Fetched automatically from DigiLocker — manual upload disabled">DigiLocker</span>
+          ) : (
+            <>
+              {d.owner !== 'System' && d.id && <button onClick={() => chooseFile(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Replace Document"><RefreshCcw size={15} /></button>}
+              {d.owner !== 'System' && !d.id && <button onClick={() => chooseFile(d)} disabled={busy === d.code} className="bg-[#073B67] text-white px-3 py-1.5 rounded font-bold text-xs flex items-center gap-1 disabled:opacity-60"><Upload size={14} />{busy === d.code ? 'Uploading…' : 'Upload'}</button>}
+            </>
+          )}
+          {d.owner !== 'System' && d.id && <button onClick={() => remove(d)} className="p-1.5 text-gray-300 hover:text-red-600 bg-gray-50 rounded border" title="Delete Document"><Trash2 size={15} /></button>}
+        </div>;
+      },
     },
   ];
 
@@ -164,7 +177,7 @@ export default function DocumentsModule() {
 
       <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
         <p className="text-xs text-gray-600">
-          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
+          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed. <strong>Aadhaar, PAN, UAN and Educational certificates are fetched automatically from your linked DigiLocker account</strong> and cannot be uploaded manually. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
         </p>
       </section>
 

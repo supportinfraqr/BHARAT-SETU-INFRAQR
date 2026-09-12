@@ -712,15 +712,168 @@ class QrAccessActionViewSet(viewsets.GenericViewSet):
 # ---------------------------------------------------------------------------
 # DigiLocker OAuth2 (backend-only, ported from EesassinErp)
 # ---------------------------------------------------------------------------
+def _digilocker_doc_kind(item):
+    """Classify a DigiLocker file into the BSS identity it can fill."""
+    blob = " ".join(str(item.get(k) or "") for k in ("doctype", "name", "uri")).upper()
+    if "PAN" in blob:
+        return "pan"
+    if "AADHAAR" in blob or "ADHAR" in blob:
+        return "aadhaar"
+    if any(k in blob for k in ("EPFO", "UAN", "PRFND", "PASSBOOK", "PROVIDENT")):
+        return "uan"
+    return ""
+
+
+def _first_12_digit(*texts):
+    import re as _re
+    for text in texts:
+        m = _re.search(r"(?<!\d)(\d{4})\s?(\d{4})\s?(\d{4})(?!\d)", str(text or ""))
+        if m:
+            return "".join(m.groups())
+    return ""
+
+
+def _apply_digilocker_documents(user, items):
+    """Fill Aadhaar / PAN / UAN on the worker profile from fetched DigiLocker
+    files. Never overwrites a value that is already present."""
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    social = WorkerSocialSecurity.objects.filter(user=user).first()
+    identity_dirty = False
+    for item in items:
+        kind = _digilocker_doc_kind(item)
+        if not kind:
+            continue
+        uri, name = item.get("uri") or "", item.get("name") or ""
+        if kind == "pan" and identity and not identity.pan:
+            pan = dl.extract_pan(uri) or dl.extract_pan(name)
+            if pan:
+                identity.pan = pan
+                identity_dirty = True
+        elif kind == "aadhaar" and identity and not identity.aadhaar:
+            num = _first_12_digit(uri, name)
+            if num:
+                identity.aadhaar = num
+                identity_dirty = True
+        elif kind == "uan":
+            if social is None:
+                social, _ = WorkerSocialSecurity.objects.get_or_create(user=user)
+            if social and not social.epfo_uan:
+                uan = _first_12_digit(uri, name)
+                if uan:
+                    social.epfo_uan = uan
+                    social.save(update_fields=["epfo_uan", "updated_at"])
+    if identity_dirty and identity:
+        identity.save()
+
+
+def _store_eaadhaar(profile, user, xml_text):
+    """Persist the DigiLocker e-Aadhaar XML as an ADHAR document and fill the
+    worker's Aadhaar number/name when the signed XML carries them."""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return
+    uid_data = root if root.tag == "UidData" else root.find(".//UidData")
+    if uid_data is None:
+        return
+    uid = str(uid_data.get("uid") or "").strip()
+    folder = dl.ensure_doc_dir()
+    fname = "eaadhaar-" + (profile.digilocker_id or str(profile.id)) + ".xml"
+    fpath = os.path.join(folder, fname)
+    try:
+        with open(fpath, "w", encoding="utf-8") as f:
+            f.write(xml_text)
+    except OSError:
+        fpath = ""
+    uri = f"in.gov.uidai-ADHAR-{profile.digilocker_id}"
+    DigiLockerDocument.objects.update_or_create(
+        profile=profile, uri=uri,
+        defaults={"user": user, "doctype": "ADHAR",
+                  "issuer": "Aadhaar, Unique Identification Authority of India",
+                  "file_path": fpath, "file_name": fname or f"{uri}.xml",
+                  "status": "DOWNLOADED", "downloaded_at": tz.now()})
+    try:
+        _sync_document_register(user, "AADHAR", xml_text.encode("utf-8"),
+                                fname or "eaadhaar.xml", "application/xml")
+    except Exception:
+        pass
+    identity = WorkerIdentity.objects.filter(user=user).first()
+    if identity:
+        dirty = False
+        if uid.isdigit() and len(uid) == 12 and not identity.aadhaar:
+            identity.aadhaar = uid
+            dirty = True
+        if not identity.name and uid_data.get("name"):
+            identity.name = uid_data.get("name")
+            dirty = True
+        if dirty:
+            identity.save()
+
+
+def _digilocker_master_code(item):
+    """Map a DigiLocker file to a WorkerDocumentMaster code (or None)."""
+    blob = " ".join(str(item.get(k) or "") for k in ("doctype", "name", "uri")).upper()
+    if "PAN" in blob:
+        return "PAN"
+    if "AADHAAR" in blob or "ADHAR" in blob:
+        return "AADHAR"
+    if any(k in blob for k in ("UAN", "EPFO", "PRFND", "PASSBOOK", "PROVIDENT")):
+        return "UAN"
+    if any(k in blob for k in ("SSCER", "HSCER", "ABCID", "MARKSHEET", "CERTIFICATE", "MARKS STATEMENT")):
+        return "EDU"
+    return None
+
+
+def _sync_document_register(user, master_code, file_bytes, filename, mime=""):
+    """Attach a fetched DigiLocker file to the worker's document register so the
+    Documents checklist shows it as present instead of Missing."""
+    from django.core.files.base import ContentFile
+    from bss_core.models import WorkerDocument, WorkerDocumentMaster
+    master = WorkerDocumentMaster.objects.filter(code=master_code).first()
+    if master is None:
+        return
+    doc = WorkerDocument.objects.filter(user=user, document=master).first()
+    if doc is None:
+        doc = WorkerDocument(user=user, document=master)
+    doc.file_name = filename
+    doc.file_size = len(file_bytes)
+    doc.mime_type = mime or ("application/pdf" if filename.lower().endswith(".pdf")
+                             else "application/octet-stream")
+    doc.status = "VERIFIED"
+    doc.is_mandatory = master.is_mandatory
+    doc.owner_role = "worker"
+    doc.auto_generated = True
+    doc.file.save(filename, ContentFile(file_bytes), save=False)
+    doc.file_path = doc.file.name
+    doc.save()
+
+
 def _background_fetch_documents(session, access_token, profile, user):
     """Download issued docs in the background; failures recorded per doc so the
     sync response stays fast."""
     try:
-        items = dl.list_issued_documents(access_token)
+        items = []
+        for loader in (dl.list_issued_documents, dl.list_uploaded_documents):
+            try:
+                items += loader(access_token)
+            except dl.DigiLockerError:
+                pass
+        try:
+            _apply_digilocker_documents(user, items)
+        except Exception:
+            pass
+        if (profile.eaadhaar or "").strip().upper() == "Y":
+            try:
+                _store_eaadhaar(profile, user, dl.fetch_eaadhaar(access_token))
+            except dl.DigiLockerError:
+                pass
+        seen = set()
         for item in items:
             uri = item.get("uri") or ""
-            if not uri:
+            if not uri or uri in seen:
                 continue
+            seen.add(uri)
             existing = DigiLockerDocument.objects.filter(profile=profile, uri=uri).first()
             if existing:
                 continue
@@ -740,6 +893,12 @@ def _background_fetch_documents(session, access_token, profile, user):
                     file_path=fpath, file_name=fname,
                     pan_number=(dl.extract_pan(uri) or dl.extract_pan(item.get("name") or "")),
                     status="DOWNLOADED", downloaded_at=tz.now())
+                master_code = _digilocker_master_code(item)
+                if master_code:
+                    try:
+                        _sync_document_register(user, master_code, file_bytes, fname, "application/pdf")
+                    except Exception:
+                        pass
             except Exception:
                 DigiLockerDocument.objects.get_or_create(
                     profile=profile, uri=uri,

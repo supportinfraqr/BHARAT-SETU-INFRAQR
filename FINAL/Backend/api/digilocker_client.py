@@ -110,6 +110,33 @@ def list_issued_documents(access_token: str) -> list:
     return resp.json().get("items") or []
 
 
+def list_uploaded_documents(access_token: str) -> list:
+    """Uploaded files (DigiLocker Drive) — separate scope/endpoint from issued
+    documents. Failures here must not break the issued-doc fetch."""
+    resp = requests.get(
+        settings.DIGILOCKER_UPLOADED_DOCS_URL,
+        headers={"Authorization": f"Bearer {access_token}",
+                 "Accept": "application/json"},
+        timeout=20,
+    )
+    if resp.status_code != 200:
+        raise DigiLockerError(f"uploaded documents failed: {resp.status_code} {resp.text[:300]}")
+    return resp.json().get("items") or []
+
+
+def fetch_eaadhaar(access_token: str) -> str:
+    """GET /public/oauth2/3/xml/eaadhaar → signed e-Aadhaar XML text. Only
+    meaningful when the user profile reports eaadhaar = Y."""
+    resp = requests.get(
+        settings.DIGILOCKER_EAADHAAR_URL,
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=30,
+    )
+    if resp.status_code != 200:
+        raise DigiLockerError(f"e-Aadhaar fetch failed: {resp.status_code} {resp.text[:200]}")
+    return resp.text
+
+
 def download_document(access_token: str, uri: str) -> bytes:
     url = settings.DIGILOCKER_FILE_URL + _url_quote(uri)
     resp = requests.get(
