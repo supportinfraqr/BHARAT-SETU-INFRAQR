@@ -637,9 +637,25 @@ def aadhaar_otp(request):
 
     ref_id = (result.get("data") or {}).get("reference_id")
     if result.get("code") != 200 or not ref_id:
-        msg = (result.get("data") or {}).get("message") or \
+        msg = str((result.get("data") or {}).get("message") or "").strip() or \
             "Aadhaar verification service is currently experiencing delays."
-        return Response({"error": str(msg)}, status=status.HTTP_502_BAD_GATEWAY)
+        # Sandbox rate-limits OTP generation ("...please try after 45 seconds").
+        # If an OTP was already sent for this Aadhaar and its reference is still
+        # live, reuse it so the worker can enter the OTP they already received
+        # instead of hitting a dead end.
+        recent = (AadhaarChallenge.objects
+                  .filter(aadhaar_number=aadhaar, expires_at__gt=timezone.now())
+                  .exclude(reference_id__isnull=True).exclude(reference_id="")
+                  .order_by("-created_at").first())
+        if recent is not None:
+            remaining = max(0, int((recent.expires_at - timezone.now()).total_seconds()))
+            return Response({
+                "referenceId": recent.reference_id,
+                "expiresIn": remaining,
+                "message": msg,
+                "reused": True,
+            }, status=status.HTTP_200_OK)
+        return Response({"error": msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
     challenge = AadhaarChallenge.objects.filter(
         aadhaar_number=aadhaar, status__in=["INITIATED", "OTP_SENT"]).first()
