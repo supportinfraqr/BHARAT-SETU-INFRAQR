@@ -68,12 +68,21 @@ summary,
 }
 
 button:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled,
 [aria-disabled="true"],
 .cursor-not-allowed {
   cursor: not-allowed !important;
+}
+
+/* Non-editable form fields (read-only or disabled) must never show the text
+   I-beam — show the default arrow so it's obvious they cannot be edited. */
+input:disabled,
+select:disabled,
+textarea:disabled,
+input[readonly],
+textarea[readonly],
+input[aria-readonly="true"],
+textarea[aria-readonly="true"] {
+  cursor: default !important;
 }
 
 button:focus-visible,
