@@ -63,7 +63,7 @@ summary,
     display: flex;
     flex-direction: column;
     padding: 20px 40px;
-    background: url("https://login.bharatshramsetu.com/Content/NewLogin/images/login-bg.jpg");
+    background: url("/login-bg.png");
     background-position: center bottom;
     background-repeat: no-repeat;
     background-size: cover;
