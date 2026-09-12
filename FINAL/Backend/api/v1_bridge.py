@@ -2767,15 +2767,17 @@ def worker_bindings(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def binding_otp(request, binding_id):
-    """Send a binding OTP to the WORKER's mobile so a non-smartphone worker can
-    dictate it to the contractor to complete the binding. OTP support exists
-    only for worker<->contractor bindings, and only the worker receives it."""
+    """Send a binding OTP to the WORKER's mobile. Only the contractor may trigger
+    this: the OTP goes to the worker's phone and the worker reads it back to the
+    contractor, who enters it to record the worker's consent. This lets a
+    non-smartphone worker approve a binding without operating the app."""
     from bss_core.models import WorkerContractorBinding
     b = WorkerContractorBinding.objects.filter(pk=binding_id).first()
     if b is None:
         return Response({"error": "Binding not found."}, status=status.HTTP_404_NOT_FOUND)
-    if request.user not in (b.worker, b.contractor):
-        return Response({"error": "Not your binding."}, status=status.HTTP_403_FORBIDDEN)
+    if request.user != b.contractor:
+        return Response({"error": "Only the contractor can send a binding OTP to the worker."},
+                        status=status.HTTP_403_FORBIDDEN)
     if not _binding_enabled(b.worker):
         return Response({"error": "Binding is disabled in the worker's settings."},
                         status=status.HTTP_403_FORBIDDEN)
