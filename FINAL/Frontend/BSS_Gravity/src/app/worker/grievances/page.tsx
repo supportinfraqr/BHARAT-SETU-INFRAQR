@@ -423,7 +423,7 @@ export default function GrievancePage() {
             </div>
             <div className="flex justify-between items-center border-b border-gray-200 pb-2">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Raised By</span>
-              <span className="font-semibold text-gray-800">Ravi Kumar (Self)</span>
+              <span className="font-semibold text-gray-800">{worker.identity.name?.trim() ? `${worker.identity.name} (Self)` : 'You (Self)'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Status</span>
