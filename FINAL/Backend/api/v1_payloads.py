@@ -611,7 +611,7 @@ def _worker_contact_section(user, identity):
     p = UserPreference.objects.filter(user=user).first()
     comm = (p.communication_prefs or {}) if p else {}
     return {
-        "mobile": _identity_display(identity, "mobile_number") or _d(user.username),
+        "mobile": _identity_display(identity, "mobile_number"),
         "alternateMobile": _identity_display(identity, "alternate_mobile"),
         "email": _identity_display(identity, "email"),
         "preferredLanguage": (p.interface_language or "hi") if p else "hi",

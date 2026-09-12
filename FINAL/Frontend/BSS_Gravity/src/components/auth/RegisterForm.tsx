@@ -65,6 +65,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const startAadhaar = () => {
     setError("");
     if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
+    if (!/^[6-9]\d{9}$/.test(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number — it is your login and contact number.");
     setStep("aadhaar");
   };
   const sendAadhaarOtp = async () => {
@@ -84,7 +85,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     if (aadhaarOtp.length !== 6) return setError("Enter the six-digit verification code.");
     setError(""); setIsCreating(true);
     try {
-      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, acceptedTerms: agreedToTerms }) });
+      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, acceptedTerms: agreedToTerms, contact: contact.trim() }) });
       const result = (await response.json()) as { bssId?: string; redirectTo?: string; error?: string };
       if (!response.ok || !result.bssId) throw new Error(result.error || "Worker ID could not be issued.");
       router.replace(result.redirectTo ?? "/worker/Profile");

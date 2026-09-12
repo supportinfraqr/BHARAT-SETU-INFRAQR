@@ -651,6 +651,16 @@ def aadhaar_verify(request):
             UserCredential.objects.create(user=user, identity_type="aadhaar",
                                           identity_value=aadhaar,
                                           is_primary=False, verified=True)
+            # UIDAI oKYC never returns the real mobile number, so capture the one
+            # the worker typed at signup — otherwise the profile has no contact
+            # and would wrongly fall back to the Aadhaar-based username.
+            contact = "".join(ch for ch in str(body.get("contact") or "") if ch.isdigit())
+            if len(contact) == 10 and contact[0] in "6789":
+                identity.mobile_number = contact
+                identity.save(update_fields=["mobile_number"])
+                UserCredential.objects.get_or_create(
+                    user=user, identity_type="mobile", identity_value=contact,
+                    defaults={"is_primary": True, "verified": True})
             challenge.user = user
             challenge.name = data.get("name") or ""
             challenge.gender = data.get("gender") or ""
