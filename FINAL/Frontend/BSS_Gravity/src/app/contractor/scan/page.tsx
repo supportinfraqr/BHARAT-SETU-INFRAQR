@@ -22,6 +22,7 @@ export default function ContractorScanPage() {
   const [result, setResult] = useState<Record<string, any> | null>(null);
   const [entity, setEntity] = useState<ScannedEntity | null>(null);
   const [requestSent, setRequestSent] = useState(false);
+  const [alreadyPending, setAlreadyPending] = useState(false);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
 
@@ -32,6 +33,7 @@ export default function ContractorScanPage() {
       const p = JSON.parse(text) as Payload;
       if (p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
       setScanned(p);
+      setAlreadyPending(false);
       const bssId = p.bssId ?? "";
       if (p.type === "BSS_SITE") {
         setEntity({ kind: 'employer', bssId: p.siteToken ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site engagement' });
@@ -53,17 +55,19 @@ export default function ContractorScanPage() {
       if (p.type === "BSS_WORKER" || bssId.startsWith("BSS-W")) {
         // Worker QR → identify worker, show relationship, request binding (never auto-bind)
         const known = contractor.workers.find(w => w.bssId === bssId);
+        const pending = contractor.bindingRequests.find(b => b.bssId === bssId && b.status === 'Pending');
         setEntity({
           kind: 'worker', bssId,
-          name: known?.name ?? 'BSS Worker ' + bssId.slice(-4),
+          name: known?.name ?? pending?.entityName ?? 'BSS Worker ' + bssId.slice(-4),
           employer: known?.employer ?? contractor.principalEmployer.name,
-          site: known?.site ?? contractor.sites[0]?.name ?? 'Unassigned site',
-          designation: known?.designation ?? 'Not disclosed',
+          site: known?.site ?? pending?.site ?? contractor.sites[0]?.name ?? 'Unassigned site',
+          designation: known?.designation ?? pending?.designation ?? 'Not disclosed',
         });
         setRequestSent(false);
+        setAlreadyPending(Boolean(pending));
         setAttendanceMarked(false);
         setState("binding");
-        setMessage(known ? "Worker is bound to you — mark today's attendance." : "Worker identified — review current relationship before requesting binding");
+        setMessage(known ? "Worker is bound to you — mark today's attendance." : pending ? "Binding request already sent — awaiting the worker's approval." : "Worker identified — review current relationship before requesting binding");
       } else {
         setEntity({ kind: 'employer', bssId, name: 'BSS Contractor ' + bssId.slice(-4), employer: 'Contractor', site: '—', designation: 'Contractor credential' });
         setRequestSent(false);
@@ -168,16 +172,18 @@ export default function ContractorScanPage() {
                 <div><dt className="text-gray-400">Principal employer</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.employer}</dd></div>
                 <div><dt className="text-gray-400">Site</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.site}</dd></div>
                 <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.designation}</dd></div>
-                <div><dt className="text-gray-400">Current relationship</dt><dd className="font-semibold text-gray-800 mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : 'Not bound — request required'}</dd></div>
+                <div><dt className="text-gray-400">Current relationship</dt><dd className="font-semibold text-gray-800 mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
               </dl>
-              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
                 ? (attendanceMarked
                     ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
                     : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>)
-                : requestSent
-                  ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
-                  : <button onClick={sendBinding} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                : alreadyPending
+                  ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
+                  : requestSent
+                    ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
+                    : <button onClick={sendBinding} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
             </div>
           ):result?(
             <div className="space-y-5">
