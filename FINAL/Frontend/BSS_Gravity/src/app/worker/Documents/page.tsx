@@ -198,7 +198,7 @@ export default function DocumentsModule() {
         <p className="text-sm text-gray-500">Loading documents…</p>
       ) : (
         <div id="missing-documents">
-          <EnterpriseDataTable title="Document records" rows={documents} columns={columns} rowKey={d => `${d.code}-${d.id ?? 'x'}`} filename="bss-worker-documents" defaultPageSize={15} />
+          <EnterpriseDataTable title="Document records" rows={documents} columns={columns} rowKey={d => `${d.code}-${d.id ?? 'x'}`} filename="bss-worker-documents" defaultPageSize={15} showShare={false} />
         </div>
       )}
     </div>
