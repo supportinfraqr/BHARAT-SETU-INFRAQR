@@ -1450,19 +1450,27 @@ def _persist_mutation(user, role_path, resource, method, body):
                 "seAvgDaysPerWeek": "se_avg_days_per_week",
                 "seNumEmployees": "se_num_employees",
                 "seEmployerOrBusinessName": "se_employer_or_business_name",
-                "seasonJobWorkType": "season_job_work_type",
-                "seasonStartDate": "season_start_date",
-                "seasonEndDate": "season_end_date",
-                "seasonAvgHoursPerDay": "season_avg_hours_per_day",
-                "seasonAvgDaysPerWeek": "season_avg_days_per_week",
-                "seasonWorkLocation": "season_work_location",
-                "seasonExpectedIncome": "season_expected_income",
-                "seasonPaymentFrequency": "season_payment_frequency",
+                "seasonalJobType": "season_job_work_type",
+                "seasonalStartDate": "season_start_date",
+                "seasonalEndDate": "season_end_date",
+                "seasonalAvgHoursPerDay": "season_avg_hours_per_day",
+                "seasonalAvgDaysPerWeek": "season_avg_days_per_week",
+                "seasonalLocation": "season_work_location",
+                "seasonalExpectedIncome": "season_expected_income",
+                "paymentFrequency": "season_payment_frequency",
                 "paymentMode": "payment_mode",
             }
+            date_fields = {"gig_date_joined_platform", "gig_dl_expiry", "se_start_date",
+                           "season_start_date", "season_end_date"}
             for fe_key, fld in cls_map.items():
-                if cls_patch.get(fe_key) is not None:
-                    setattr(wc, fld, cls_patch.get(fe_key))
+                v = cls_patch.get(fe_key)
+                if v is None:
+                    continue
+                # Empty <input type="date"> posts "" — a DateField rejects that,
+                # so coerce blank dates to NULL.
+                if fld in date_fields:
+                    v = str(v).strip() or None
+                setattr(wc, fld, v)
             wc.save()
 
         # Skills & education — self-declared manual entry. Certification (name/

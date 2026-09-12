@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, Trash2, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
 
@@ -41,6 +42,7 @@ function formatDate(value: string | null): string | null {
 
 export default function DocumentsModule() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -162,9 +164,19 @@ export default function DocumentsModule() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#062D4F]">{t('nav.documents')}</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage all your mandatory KYC, compliance, and system-generated credentials.</p>
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={() => { if (window.history.length > 1) router.back(); else router.push('/worker/Profile'); }}
+            aria-label="Go back"
+            className="mt-1 w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-600 hover:text-[#073B67] hover:border-[#073B67] transition-all"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-[#062D4F]">{t('nav.documents')}</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage all your mandatory KYC, compliance, and system-generated credentials.</p>
+          </div>
         </div>
         <button type="button" onClick={() => void load()} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-gray-300">
           <RefreshCcw size={15} className={loading ? 'animate-spin' : ''} /> Refresh

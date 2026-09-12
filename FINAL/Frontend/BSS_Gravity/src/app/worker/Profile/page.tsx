@@ -935,33 +935,33 @@ export default function WorkerProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Job / Work Type</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seasonalJobType" type="text" defaultValue={worker.classification?.seasonalJobType} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Season Start</label>
-                        <input type="date" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                        <input name="classification.seasonalStartDate" type="date" defaultValue={worker.classification?.seasonalStartDate} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Season End</label>
-                        <input type="date" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                        <input name="classification.seasonalEndDate" type="date" defaultValue={worker.classification?.seasonalEndDate} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours/Day</label>
-                      <input type="number" placeholder="Hours" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seasonalAvgHoursPerDay" type="number" defaultValue={worker.classification?.seasonalAvgHoursPerDay} placeholder="Hours" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days/Week</label>
-                      <input type="number" placeholder="Days" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seasonalAvgDaysPerWeek" type="number" defaultValue={worker.classification?.seasonalAvgDaysPerWeek} placeholder="Days" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Work Location / Service Area</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seasonalLocation" type="text" defaultValue={worker.classification?.seasonalLocation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Expected Seasonal Income</label>
-                      <input type="text" placeholder="₹" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seasonalExpectedIncome" type="text" defaultValue={worker.classification?.seasonalExpectedIncome} placeholder="₹" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                   </div>
                 </div>

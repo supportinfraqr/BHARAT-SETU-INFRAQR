@@ -92,6 +92,9 @@ export type WorkerRecord = {
   classification: {
     workerCategory?: string; sector?: string; industry?: string; occupation?: string; skill?: string;
     currentEmploymentStatus?: string; totalWorkerExperience?: string; paymentFrequency?: string; paymentMode?: string;
+    seasonalJobType?: string; seasonalStartDate?: string; seasonalEndDate?: string;
+    seasonalAvgHoursPerDay?: string; seasonalAvgDaysPerWeek?: string;
+    seasonalLocation?: string; seasonalExpectedIncome?: string;
   };
   welfare?: {
     ppeRequired?: boolean; typesOfPpeGiven?: string; safetyTrainingCompleted?: boolean;
