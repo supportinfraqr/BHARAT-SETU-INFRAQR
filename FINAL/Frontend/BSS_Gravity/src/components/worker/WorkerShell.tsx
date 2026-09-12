@@ -76,7 +76,7 @@ export default function WorkerShell({ children }: { children:React.ReactNode }) 
           <div className="relative">
             <button type="button" aria-label={t('nav.profile')} aria-expanded={profile} onClick={()=>setProfile(value=>!value)} className="cursor-pointer w-9 h-9 p-0.5 rounded-full overflow-hidden border-2 border-white shadow-sm ring-1 ring-black/5 bg-slate-100 flex items-center justify-center">
               {worker.identity.photoUrl && worker.identity.photoUrl !== '/worker-profile.png' ? (
-                <Image src={worker.identity.photoUrl} width={36} height={36} unoptimized className="w-full h-full rounded-full object-cover" alt="" />
+                <img src={worker.identity.photoUrl} className="w-full h-full rounded-full object-cover" alt="" />
               ) : (
                 <UserRound size={18} className="text-slate-600" />
               )}
