@@ -438,9 +438,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Gender</label>
-                    <select name="identity.gender" defaultValue={worker.identity.gender} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
-                      {BssTaxonomies.Gender.map(g => <option key={g} value={g}>{g}</option>)}
-                    </select>
+                    <input name="identity.gender" type="text" defaultValue={worker.identity.gender} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Place of Birth <span className="text-[#FF3B30]">*</span></label>
@@ -449,7 +447,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
-                    <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
+                    <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                  </div>

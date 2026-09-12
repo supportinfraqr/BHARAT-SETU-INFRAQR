@@ -1280,8 +1280,9 @@ def _persist_mutation(user, role_path, resource, method, body):
             if v is not None:
                 setattr(identity, fld, v)
         # personal section fields live on the same WorkerIdentity row.
-        # Aadhaar-owned (Freeze): maritalStatus, fatherName are NOT writable.
+        # Aadhaar-owned (Freeze): fatherName is NOT writable.
         personal_map = {
+            "maritalStatus": "marital_status",
             "motherName": "mother_name",
             "spouseName": "spouse_name",
             "disabilityStatus": "disability_status",
