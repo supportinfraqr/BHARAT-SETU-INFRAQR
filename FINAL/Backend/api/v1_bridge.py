@@ -626,12 +626,49 @@ def aadhaar_otp(request):
         return Response({"error": "Enter a valid 12-digit Aadhaar number"},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    def _reuse_recent(window_minutes, message=""):
+        """Return a still-recent OTP reference so a repeated request reuses the
+        OTP already delivered instead of tripping Sandbox's rate limit."""
+        recent = (AadhaarChallenge.objects
+                  .filter(aadhaar_number=aadhaar,
+                          status__in=["INITIATED", "OTP_SENT"],
+                          created_at__gte=timezone.now() - timedelta(minutes=window_minutes))
+                  .exclude(reference_id__isnull=True).exclude(reference_id="")
+                  .order_by("-created_at").first())
+        if recent is None:
+            return None
+        expires = recent.expires_at or (recent.created_at + timedelta(minutes=settings.AADHAAR_OTP_TTL_MIN))
+        payload = {
+            "referenceId": recent.reference_id,
+            "expiresIn": max(0, int((expires - timezone.now()).total_seconds())),
+            "reused": True,
+        }
+        if message:
+            payload["message"] = message
+        return Response(payload, status=status.HTTP_200_OK)
+
+    # Reuse an OTP generated within the last minute (Sandbox blocks regeneration
+    # for ~45s) rather than calling Sandbox and getting rate-limited.
+    live = _reuse_recent(1)
+    if live is not None:
+        return live
+
     try:
         result = aadhaar_client.generate_otp(aadhaar)
     except aadhaar_client.SandboxError as exc:
         sb_status = getattr(exc, "status", 502)
         if 400 <= sb_status < 500:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            # Already-generated / rate-limited: reuse a recent reference if we
+            # have one (the OTP was already delivered), else ask them to wait.
+            msg = str(exc)
+            fallback = _reuse_recent(15, msg)
+            if fallback is not None:
+                return fallback
+            rate_limited = (sb_status == 429 or "try after" in msg.lower()
+                            or "already" in msg.lower())
+            return Response({"error": msg},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS if rate_limited
+                            else status.HTTP_400_BAD_REQUEST)
         return Response({"error": f"Aadhaar (UIDAI) service is temporarily unavailable — {str(exc)}. Please try again later."},
                         status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
@@ -639,22 +676,9 @@ def aadhaar_otp(request):
     if result.get("code") != 200 or not ref_id:
         msg = str((result.get("data") or {}).get("message") or "").strip() or \
             "Aadhaar verification service is currently experiencing delays."
-        # Sandbox rate-limits OTP generation ("...please try after 45 seconds").
-        # If an OTP was already sent for this Aadhaar and its reference is still
-        # live, reuse it so the worker can enter the OTP they already received
-        # instead of hitting a dead end.
-        recent = (AadhaarChallenge.objects
-                  .filter(aadhaar_number=aadhaar, expires_at__gt=timezone.now())
-                  .exclude(reference_id__isnull=True).exclude(reference_id="")
-                  .order_by("-created_at").first())
-        if recent is not None:
-            remaining = max(0, int((recent.expires_at - timezone.now()).total_seconds()))
-            return Response({
-                "referenceId": recent.reference_id,
-                "expiresIn": remaining,
-                "message": msg,
-                "reused": True,
-            }, status=status.HTTP_200_OK)
+        fallback = _reuse_recent(15, msg)
+        if fallback is not None:
+            return fallback
         return Response({"error": msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
     challenge = AadhaarChallenge.objects.filter(
@@ -725,11 +749,19 @@ def aadhaar_verify(request):
 
     data = result.get("data") or {}
     if result.get("code") != 200 or data.get("message") != "Aadhaar Card Exists":
-        msg = data.get("message") or "Aadhaar verification failed. Check the OTP and try again."
+        msg = str(data.get("message") or "").strip() or "Aadhaar verification failed. Check the OTP and try again."
+        # Sandbox reports a bad/expired OTP as HTTP 200 with this message. Mark
+        # the challenge expired so a resend issues a fresh OTP instead of the
+        # reuse path handing back the same dead reference.
+        if "invalid otp" in msg.lower() or "expired" in msg.lower():
+            challenge.status = "EXPIRED"
+            challenge.save(update_fields=["status", "updated_at"])
+            return Response({"error": "Invalid or expired OTP. Tap 'Resend OTP' to get a new one."},
+                            status=status.HTTP_400_BAD_REQUEST)
         if challenge.otp_attempts >= challenge.max_attempts:
             challenge.status = "FAILED"
             challenge.save(update_fields=["status", "updated_at"])
-        return Response({"error": str(msg)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
 
     photo_url = ""
     user = None
@@ -2646,6 +2678,9 @@ def worker_documents(request):
     if master.code in {"AADHAR", "PAN", "UAN", "EDU"}:
         return Response({"error": "This document is fetched automatically from DigiLocker and cannot be uploaded or replaced."},
                         status=status.HTTP_400_BAD_REQUEST)
+    if WorkerDocument.objects.filter(user=user, document=master, auto_generated=True).exists():
+        return Response({"error": "This document is fetched from DigiLocker and cannot be uploaded or replaced."},
+                        status=status.HTTP_400_BAD_REQUEST)
 
     WorkerDocument.objects.filter(user=user, document=master).delete()
     doc = WorkerDocument(
@@ -2680,6 +2715,9 @@ def worker_document_detail(request, document_id):
     if doc is None:
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
     if request.method == "DELETE":
+        if doc.auto_generated:
+            return Response({"error": "This document is fetched from DigiLocker and cannot be deleted."},
+                            status=status.HTTP_400_BAD_REQUEST)
         if doc.file:
             doc.file.delete(save=False)
         doc.delete()

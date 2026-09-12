@@ -8,6 +8,7 @@ never trips over a missing key.
 
 import datetime
 import hashlib
+import re
 
 from django.utils import timezone
 
@@ -1022,9 +1023,25 @@ def _doc_owner_label(value):
         (value or "").strip().lower(), "Worker")
 
 
+_DIGILOCKER_DOC_CODES = {"AADHAR", "PAN", "UAN", "EDU"}
+
+
+def _doc_name_key(name):
+    """Normalised key for merging duplicate catalog rows (e.g. legacy 'WM0x'
+    rows vs the canonical 'AADHAR'/'PAN' codes)."""
+    key = re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
+    return key.replace("educational", "education")
+
+
+def _doc_row_rank(row):
+    """Prefer a row that actually has a stored file, then a DigiLocker code."""
+    return (1 if row["id"] else 0, 1 if row["code"] in _DIGILOCKER_DOC_CODES else 0)
+
+
 def _worker_documents_display(user):
     """The worker's document register: the master catalog merged with the
-    worker's own uploads (uploads override catalog rows)."""
+    worker's own uploads (uploads override catalog rows). Duplicate catalog
+    entries with the same document name are collapsed to one row."""
     uploads = {
         d.document_id: d
         for d in WorkerDocument.objects.select_related("document").filter(user=user)
@@ -1047,6 +1064,7 @@ def _worker_documents_display(user):
                 "expiry": _dts(d.expiry_date) if d.expiry_date else None,
                 "fileName": _d(d.file_name),
                 "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+                "locked": bool(d.auto_generated),
             })
         else:
             rows.append({
@@ -1060,6 +1078,7 @@ def _worker_documents_display(user):
                 "expiry": None,
                 "fileName": "",
                 "downloadUrl": "",
+                "locked": False,
             })
     for d in uploads.values():
         if d.id in seen:
@@ -1075,8 +1094,20 @@ def _worker_documents_display(user):
             "expiry": _dts(d.expiry_date) if d.expiry_date else None,
             "fileName": _d(d.file_name),
             "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
+            "locked": bool(d.auto_generated),
         })
-    return rows
+
+    # Collapse duplicate names, keeping the best row in its original position.
+    best = {}
+    order = []
+    for row in rows:
+        key = _doc_name_key(row["name"])
+        if key not in best:
+            best[key] = row
+            order.append(key)
+        elif _doc_row_rank(row) > _doc_row_rank(best[key]):
+            best[key] = row
+    return [best[k] for k in order]
 
 
 def _worker_job_requests(user):
