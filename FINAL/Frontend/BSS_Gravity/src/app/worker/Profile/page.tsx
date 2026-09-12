@@ -502,17 +502,17 @@ export default function WorkerProfilePage() {
               <div className="pt-6 border-t border-black/5">
                 <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-1">Emergency Contact</h3>
                 <p className="text-[13px] text-[#86868B] mb-4">Used by the site medical officer and safety team in case of an emergency.</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
+                <div className="grid grid-cols-3 items-end gap-x-6 gap-y-6">
                   <div>
-                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Name</label>
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Name</label>
                      <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
-                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Number</label>
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Number</label>
                      <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
-                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Relationship</label>
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Relationship</label>
                      <select name="identity.emergencyContactRelation" defaultValue={worker.identity.emergencyContactRelation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                        {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
                      </select>
