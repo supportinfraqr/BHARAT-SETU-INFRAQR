@@ -1,0 +1,122 @@
+name: bss
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bss
+      POSTGRES_PASSWORD: ${BSS_PG_PASSWORD:?BSS_PG_PASSWORD is required in deploy-prod/.env}
+      POSTGRES_DB: bss_prod
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/bss_final.sql:/docker-entrypoint-initdb.d/01_bss_final.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bss -d bss_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ../Backend
+      dockerfile: ../deploy-prod/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      BSS_DEBUG: "False"
+      BSS_SECRET_KEY: ${BSS_SECRET_KEY:?BSS_SECRET_KEY is required in deploy-prod/.env}
+      BSS_PG_DB: bss_prod
+      BSS_PG_USER: bss
+      BSS_PG_PASSWORD: ${BSS_PG_PASSWORD:?BSS_PG_PASSWORD is required in deploy-prod/.env}
+      BSS_PG_HOST: db
+      BSS_PG_PORT: "5432"
+      BSS_REDIS_URL: redis://redis:6379/0
+      BSS_AADHAAR_BASE_URL: ${BSS_AADHAAR_BASE_URL:-https://api.sandbox.co.in}
+      BSS_AADHAAR_API_KEY: ${BSS_AADHAAR_API_KEY:?BSS_AADHAAR_API_KEY is required in deploy-prod/.env}
+      BSS_AADHAAR_API_SECRET: ${BSS_AADHAAR_API_SECRET:?BSS_AADHAAR_API_SECRET is required in deploy-prod/.env}
+      BSS_AADHAAR_API_VERSION: ${BSS_AADHAAR_API_VERSION:-1.0}
+      BSS_AADHAAR_OTP_TTL_MIN: ${BSS_AADHAAR_OTP_TTL_MIN:-10}
+      BSS_AADHAAR_MAX_ATTEMPTS: ${BSS_AADHAAR_MAX_ATTEMPTS:-5}
+      BSS_AADHAAR_PHOTO_DIR: /data/media/aadhaar
+      DIGILOCKER_CLIENT_ID: ${DIGILOCKER_CLIENT_ID:?DIGILOCKER_CLIENT_ID is required in deploy-prod/.env}
+      DIGILOCKER_CLIENT_SECRET: ${DIGILOCKER_CLIENT_SECRET:?DIGILOCKER_CLIENT_SECRET is required in deploy-prod/.env}
+      DIGILOCKER_REDIRECT_URI: ${DIGILOCKER_REDIRECT_URI:-https://login.bharatshramsetu.com/Return/Digilocker}
+      DIGILOCKER_DOC_DIR: /data/media/digilocker
+      BSS_DEMO_OTP: ${BSS_DEMO_OTP:-}
+      BSS_DEMO_OTP_MOBILES: ${BSS_DEMO_OTP_MOBILES:-}
+      GUPSHUP_API_KEY: ${GUPSHUP_API_KEY:?GUPSHUP_API_KEY is required in deploy-prod/.env}
+      GUPSHUP_SOURCE: ${GUPSHUP_SOURCE:-919650887008}
+      GUPSHUP_SRC_NAME: ${GUPSHUP_SRC_NAME:-Bharat Shram Setu}
+      GUPSHUP_OTP_TEMPLATE_ID: ${GUPSHUP_OTP_TEMPLATE_ID:-}
+      GUPSHUP_ENABLED: ${GUPSHUP_ENABLED:-false}
+      BSS_OTP_CHANNEL: ${BSS_OTP_CHANNEL:-sms}
+      SMS_2FACTOR_API_KEY: ${SMS_2FACTOR_API_KEY:?SMS_2FACTOR_API_KEY is required in deploy-prod/.env}
+      SMS_2FACTOR_ENABLED: ${SMS_2FACTOR_ENABLED:-true}
+      SMS_2FACTOR_TEMPLATE: ${SMS_2FACTOR_TEMPLATE:-Login OTP}
+      BSS_TIME_ZONE: Asia/Kolkata
+      BSS_JWT_ACCESS_MIN: "60"
+      BSS_JWT_REFRESH_DAYS: "7"
+      BSS_CORS_ALLOW_ALL: "True"
+      BSS_ALLOWED_HOSTS: "*"
+      BSS_STATIC_ROOT: /data/static
+      BSS_MEDIA_ROOT: /data/media
+    volumes:
+      - media_data:/data/media
+      - static_data:/data/static
+
+  frontend:
+    build:
+      context: ../Frontend/BSS_Gravity
+      dockerfile: Dockerfile
+      args:
+        - NEXT_TELEMETRY_DISABLED=1
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BSS_DATA_MODE: remote
+      BSS_API_BASE_URL: https://login.bharatshramsetu.com
+      BSS_AUTH_API_URL: https://login.bharatshramsetu.com
+      BSS_APP_ORIGIN: https://login.bharatshramsetu.com
+      BSS_PAYMENT_HOSTS: checkout.razorpay.com,secure.payu.in
+      BSS_SESSION_SECRET: ${BSS_SESSION_SECRET:?BSS_SESSION_SECRET is required in deploy-prod/.env}
+      BSS_API_TIMEOUT_MS: "15000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - media_data:/data/media:ro
+      - static_data:/data/static:ro
+
+volumes:
+  pgdata:
+  media_data:
+  static_data:
+  redis_data:

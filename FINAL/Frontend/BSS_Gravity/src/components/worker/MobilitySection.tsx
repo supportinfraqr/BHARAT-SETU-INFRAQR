@@ -164,13 +164,14 @@ function AddressEditor({ title, kind, prefix = '', address, reference, disabled 
   const states = Object.keys(reference);
   const districts = Object.keys(reference[address.state] || {});
   const places = reference[address.state]?.[address.district] || [];
-  const cities = [...new Set(places.map(place => place.city))];
+  // City suggestions span the whole selected state so the worker can pick one or
+  // simply type their own — it is never forced to equal the district.
+  const cities = [...new Set(Object.values(reference[address.state] || {}).flatMap(list => list.map(place => place.city)))];
   const pins = places.find(place => place.city === address.city)?.pins || [];
   const id = kind.replace('Address', '');
   const frozen = `${inputClass} bg-[#F5F5F7] text-gray-500 cursor-not-allowed`;
-  const selectState = (state: string) => { const district = Object.keys(reference[state] || {})[0] || ''; const place = reference[state]?.[district]?.[0]; onChange({ ...address, state, district, city: place?.city || '', pin: place?.pins[0] || '' }); };
-  const selectDistrict = (district: string) => { const place = reference[address.state]?.[district]?.[0]; onChange({ ...address, district, city: place?.city || '', pin: place?.pins[0] || '' }); };
-  const selectCity = (city: string) => { const place = places.find(entry => entry.city === city); onChange({ ...address, city, pin: place?.pins[0] || '' }); };
+  const selectState = (state: string) => { const district = Object.keys(reference[state] || {})[0] || ''; onChange({ ...address, state, district, city: '', pin: '' }); };
+  const selectDistrict = (district: string) => { onChange({ ...address, district }); };
   const resolvePin = async () => {
     if (!/^\d{6}$/.test(address.pin)) return;
     const response = await fetch(`/api/geography?pin=${encodeURIComponent(address.pin)}`);
@@ -183,7 +184,7 @@ function AddressEditor({ title, kind, prefix = '', address, reference, disabled 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Field label={label('State')}>{readOnly ? <input readOnly value={address.state} placeholder="—" className={frozen}/> : <select value={address.state} onChange={event => selectState(event.target.value)} disabled={disabled || !states.length} className={inputClass}>{!states.length ? <option value="">Loading…</option> : <><option value="">Select state</option>{states.map(state => <option key={state}>{state}</option>)}</>}</select>}</Field>
       <Field label={label('District')}>{readOnly ? <input readOnly value={address.district} placeholder="—" className={frozen}/> : <select value={address.district} onChange={event => selectDistrict(event.target.value)} disabled={disabled || !districts.length} className={inputClass}><option value="">Select district</option>{districts.map(district => <option key={district}>{district}</option>)}</select>}</Field>
-      <Field label={label('City')}>{readOnly ? <input readOnly value={address.city} placeholder="—" className={frozen}/> : <select value={address.city} onChange={event => selectCity(event.target.value)} disabled={disabled || !cities.length} className={inputClass}><option value="">Select city</option>{cities.map(city => <option key={city}>{city}</option>)}</select>}</Field>
+      <Field label={label('City')}>{readOnly ? <input readOnly value={address.city} placeholder="—" className={frozen}/> : <><input list={`${id}-cities`} value={address.city} onChange={event => onChange({ ...address, city: event.target.value })} disabled={disabled} placeholder="Type or select city" className={inputClass}/><datalist id={`${id}-cities`}>{cities.map(city => <option key={city} value={city}/>)}</datalist></>}</Field>
       <Field label={label('PIN Code')}>{readOnly ? <input readOnly value={address.pin} placeholder="—" className={frozen}/> : <div className="relative"><input list={`${id}-pins`} inputMode="numeric" value={address.pin} onChange={event => onChange({ ...address, pin: event.target.value.replace(/\D/g, '').slice(0, 6) })} onBlur={resolvePin} disabled={disabled} className={`${inputClass} pr-10`}/><RefreshCw size={15} className="absolute right-3.5 top-3.5 text-gray-400"/><datalist id={`${id}-pins`}>{pins.map(pin => <option key={pin} value={pin}/>)}</datalist></div>}</Field>
     </div>
     {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
