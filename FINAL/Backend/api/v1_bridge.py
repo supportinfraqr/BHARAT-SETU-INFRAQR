@@ -1057,6 +1057,10 @@ def _persist_mutation(user, role_path, resource, method, body):
                 attr = label_map.get(label)
                 if not attr or not hasattr(prof, attr):
                     continue
+                if attr == "mobile":
+                    # The registered mobile is the login identity — immutable for
+                    # every role. Ignore any attempt to change it.
+                    continue
                 setattr(prof, attr, (field.get("value") or "").strip())
             prof.save()
             return prof.id

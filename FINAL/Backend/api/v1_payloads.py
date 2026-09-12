@@ -2192,7 +2192,7 @@ def _contractor_profile_sections(user):
             _f("Trade / Brand Name", getattr(cp, "trade_name", "") if cp else "", "Contractor"),
             _f("Entity Constitution", getattr(cp, "constitution", "") if cp else "", "Contractor"),
             _f("Authorised Person Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
-            _f("Mobile Number", getattr(cp, "mobile", "") if cp else "", "Contractor"),
+            _f("Mobile Number", getattr(cp, "mobile", "") if cp else "", "Auth identity — locked", sensitive=True),
             _f("Email ID", getattr(cp, "email", "") if cp else "", "Contractor"),
             _f("Age of Company", getattr(cp, "company_age", "") if cp else "", "System-calculated"),
             _f("Activity", getattr(cp, "activity", "") if cp else "", "Contractor"),
@@ -2215,7 +2215,7 @@ def _contractor_profile_sections(user):
         ],
         "contact": [
             _f("Primary Contact Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
-            _f("Primary Contact Mobile", getattr(cp, "mobile", "") if cp else "", "Contractor"),
+            _f("Primary Contact Mobile", getattr(cp, "mobile", "") if cp else "", "Auth identity — locked", sensitive=True),
             _f("Primary Contact Email", getattr(cp, "email", "") if cp else "", "Contractor"),
         ],
         "financial": [
@@ -2283,7 +2283,7 @@ def _employer_profile_sections(user):
         ],
         "contacts": [
             _f("Authorised Signatory Name", getattr(ep, "contact_person", "") if ep else "", "Employer"),
-            _f("Official Mobile", getattr(ep, "mobile", "") if ep else "", "Employer"),
+            _f("Official Mobile", getattr(ep, "mobile", "") if ep else "", "Auth identity — locked", sensitive=True),
             _f("Official Email", getattr(ep, "email", "") if ep else "", "Employer"),
         ],
         "address": [
