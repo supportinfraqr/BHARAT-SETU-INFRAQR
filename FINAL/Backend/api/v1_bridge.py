@@ -642,15 +642,17 @@ def aadhaar_verify(request):
             challenge.save(update_fields=["user", "name", "gender", "date_of_birth",
                                           "care_of", "full_address", "state", "district",
                                           "pincode", "photo_path", "updated_at"])
-            # Populate the Aadhaar-owned (frozen) current-address block.
+            # The Aadhaar (UIDAI) address is the worker's PERMANENT, Aadhaar-owned
+            # address (frozen). The current address is entered/changed by the
+            # worker themselves and is never overwritten by Aadhaar.
             WorkerAddressMobility.objects.get_or_create(
                 user=user,
                 defaults={
-                    "current_address": data.get("full_address") or "",
-                    "current_state": addr.get("state") or "",
-                    "current_district": addr.get("district") or "",
-                    "current_city": addr.get("vtc") or addr.get("city") or "",
-                    "current_pincode": str(addr.get("pincode") or ""),
+                    "permanent_address": data.get("full_address") or "",
+                    "permanent_state": addr.get("state") or "",
+                    "permanent_district": addr.get("district") or "",
+                    "permanent_city": addr.get("vtc") or addr.get("city") or "",
+                    "permanent_pincode": str(addr.get("pincode") or ""),
                 },
             )
     else:
