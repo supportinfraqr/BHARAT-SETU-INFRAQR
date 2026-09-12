@@ -1402,8 +1402,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                 if not _contractor_engaged_at_site(user, site.id):
                     raise ValidationError(
                         "You are not engaged at this site. Ask the employer to allot this site to you first.")
-                binding, _ = WorkerContractorBinding.objects.get_or_create(
-                    worker=w, contractor=user, site=site)
+                binding = _request_worker_binding(w, user, site)
                 if binding.binding_status != "ACCEPTED":
                     # Two-sided: the contractor consents now, the worker accepts (app/OTP).
                     binding.binding_status = "PENDING"
@@ -2223,8 +2222,7 @@ def _handle_rozgar_apply(user, body):
     # contractor (worker-initiated consent). The contractor accepts it in
     # Binding Requests; the binding completes only after both sides consent.
     if job.site_id and job.contractor_id:
-        binding, _ = WorkerContractorBinding.objects.get_or_create(
-            worker=user, contractor=job.contractor, site=job.site)
+        binding = _request_worker_binding(user, job.contractor, job.site)
         if binding.binding_status != "ACCEPTED":
             binding.binding_status = "PENDING"
             binding.consent_worker = True
@@ -2631,6 +2629,30 @@ def _binding_enabled(user):
     return bool(p.binding_enabled) if p else True
 
 
+def _active_worker_binding(worker, contractor, site):
+    """The single live binding (PENDING/ACCEPTED) for a
+    worker<->contractor<->site tuple, or None when prior rows are all terminal
+    (rejected/cancelled/expired)."""
+    from bss_core.models import WorkerContractorBinding
+    return (WorkerContractorBinding.objects
+            .filter(worker=worker, contractor=contractor, site=site,
+                    binding_status__in=("PENDING", "ACCEPTED"))
+            .order_by("-created_at").first())
+
+
+def _request_worker_binding(worker, contractor, site, **defaults):
+    """Reuse the live binding for the tuple, or create a fresh PENDING row when
+    the previous request was declined/cancelled/expired. This keeps the declined
+    request as history instead of overwriting it."""
+    from bss_core.models import WorkerContractorBinding
+    binding = _active_worker_binding(worker, contractor, site)
+    if binding is None:
+        binding = WorkerContractorBinding.objects.create(
+            worker=worker, contractor=contractor, site=site,
+            binding_status="PENDING", **defaults)
+    return binding
+
+
 def _apply_binding_terms(binding, data):
     """Capture the offered terms (designation/department/shift/offered wage) at
     bind time. These drive the worker's Current Employment Details."""
@@ -2724,10 +2746,11 @@ def worker_bindings(request):
     if not _binding_enabled(worker):
         return Response({"error": "This worker has disabled binding requests in their settings."},
                         status=status.HTTP_403_FORBIDDEN)
-    b, _ = WorkerContractorBinding.objects.get_or_create(worker=worker, contractor=user, site=site)
-    if b.binding_status == "ACCEPTED":
+    b = _active_worker_binding(worker, user, site)
+    if b is not None and b.binding_status == "ACCEPTED":
         return Response({"error": "Already bound to this worker at this site."},
                         status=status.HTTP_400_BAD_REQUEST)
+    b = _request_worker_binding(worker, user, site)
     b.binding_status = "PENDING"
     b.consent_worker = False
     b.consent_contractor = False
@@ -2910,8 +2933,7 @@ def engagement_scan(request):
         if WorkerContractorBinding.objects.filter(worker=worker_user, binding_status="ACCEPTED").exists():
             return Response({"error": "This worker is already bound to a contractor."},
                             status=status.HTTP_409_CONFLICT)
-        binding, _ = WorkerContractorBinding.objects.get_or_create(
-            worker=worker_user, contractor=user, site=site)
+        binding = _request_worker_binding(worker_user, user, site)
         binding.binding_status = "PENDING"
         binding.consent_contractor = True
         binding.consent_worker = False
@@ -2927,12 +2949,15 @@ def engagement_scan(request):
         return Response({"error": "Binding is disabled in one party's settings."},
                         status=status.HTTP_403_FORBIDDEN)
 
-    binding, _ = ContractorEmployerBinding.objects.get_or_create(
-        contractor=contractor, employer=employer)
-    if binding.binding_status in ("CANCELLED", "REJECTED"):
-        binding.binding_status = "PENDING"
-        binding.consent_contractor = False
-        binding.consent_employer = False
+    binding = (ContractorEmployerBinding.objects
+               .filter(contractor=contractor, employer=employer,
+                       binding_status__in=("PENDING", "ACCEPTED"))
+               .order_by("-created_at").first())
+    if binding is None:
+        # Previous request(s) were rejected/cancelled — keep them as history and
+        # open a fresh PENDING request rather than overwriting the decline.
+        binding = ContractorEmployerBinding.objects.create(
+            contractor=contractor, employer=employer, binding_status="PENDING")
     binding.source = source
     if user == contractor:
         binding.consent_contractor = True

@@ -518,8 +518,14 @@ class WorkerContractorBinding(models.Model):
     class Meta:
         db_table = "worker_contractor_binding"
         constraints = [
+            # Only one *live* request per (worker, contractor, site) at a time.
+            # Terminal rows (rejected/cancelled/expired) are kept as history, so a
+            # fresh request after a decline creates a new PENDING row instead of
+            # overwriting the declined one.
             models.UniqueConstraint(
-                fields=["worker", "contractor", "site"], name="uq_binding_ecsw_tuple"
+                fields=["worker", "contractor", "site"],
+                condition=models.Q(binding_status__in=["PENDING", "ACCEPTED"]),
+                name="uq_binding_ecsw_active",
             ),
         ]
         indexes = [
@@ -562,8 +568,11 @@ class ContractorEmployerBinding(models.Model):
     class Meta:
         db_table = "contractor_employer_binding"
         constraints = [
+            # Only one live request per contractor<->employer; rejected/cancelled
+            # rows are preserved so a re-request creates a new PENDING row.
             models.UniqueConstraint(fields=["contractor", "employer"],
-                                    name="uq_contractor_employer_binding"),
+                                    condition=models.Q(binding_status__in=["PENDING", "ACCEPTED"]),
+                                    name="uq_contractor_employer_active"),
         ]
 
     def __str__(self):
