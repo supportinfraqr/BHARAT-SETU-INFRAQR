@@ -502,18 +502,18 @@ export default function WorkerProfilePage() {
               <div className="pt-6 border-t border-black/5">
                 <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-1">Emergency Contact</h3>
                 <p className="text-[13px] text-[#86868B] mb-4">Used by the site medical officer and safety team in case of an emergency.</p>
-                <div className="grid grid-cols-3 items-end gap-x-6 gap-y-6">
+                <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Name</label>
-                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Emergency Contact Name</p>
+                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
-                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Number</label>
-                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Emergency Contact Number</p>
+                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
-                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Relationship</label>
-                     <select name="identity.emergencyContactRelation" defaultValue={worker.identity.emergencyContactRelation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Emergency Contact Relationship</p>
+                     <select name="identity.emergencyContactRelation" defaultValue={worker.identity.emergencyContactRelation} className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]">
                        {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
                      </select>
                   </div>
