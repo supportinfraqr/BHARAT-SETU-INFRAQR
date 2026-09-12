@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Award, BookOpenCheck, CheckCircle2, ChevronLeft, Clock3, FilePen, GraduationCap, Plus, Send, Sparkles, Trash2, Users, Video, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
-import { contractorCourses, courseCategories, courseDurations, type ContractorCourse, type ContractorCourseModule } from '@/data/contractorCourses';
+import { contractorCourses, courseCategories, courseDurations, type ContractorCourse } from '@/data/contractorCourses';
+import { useContractor } from '@/contexts/ContractorContext';
 
 type Tab = 'dashboard' | 'history';
 
@@ -20,6 +21,10 @@ type CourseDraft = {
 };
 
 export default function ContractorSkillsPage() {
+  const { contractor: portal, employerScope } = useContractor();
+  const boundWorkers = employerScope === 'all' ? portal.workers : portal.workers.filter(w => w.employer === employerScope);
+  const boundWorkersCount = boundWorkers.length;
+
   const [courses, setCourses] = useState<ContractorCourse[]>(contractorCourses);
   const [tab, setTab] = useState<Tab>('dashboard');
   const [createOpen, setCreateOpen] = useState(false);
@@ -27,12 +32,21 @@ export default function ContractorSkillsPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [draft, setDraft] = useState<CourseDraft>({ title:'', category:'Safety', provider:'RK Buildcon Skilling Academy', duration:'4 Hours', instructor:'', certification:'', description:'', modules:[{ title:'', duration:'45 mins' }] });
+  const [draft, setDraft] = useState<CourseDraft>({
+    title: '',
+    category: 'Safety',
+    provider: portal.identity.company || portal.identity.name || 'BSS Skilling Academy',
+    duration: '4 Hours',
+    instructor: '',
+    certification: '',
+    description: '',
+    modules: [{ title: '', duration: '45 mins' }]
+  });
 
   const published = courses.filter(c => c.status === 'Published');
   const totalModules = courses.reduce((sum, c) => sum + c.modules.length, 0);
   const totalCertificates = courses.reduce((sum, c) => sum + c.certificatesIssued, 0);
-  const totalLearners = courses.reduce((sum, c) => sum + c.learners, 0);
+  const totalLearners = boundWorkersCount;
 
   function setModule(index: number, key: 'title' | 'duration', value: string) {
     setDraft(current => ({ ...current, modules: current.modules.map((m, i) => i === index ? { ...m, [key]: value } : m) }));

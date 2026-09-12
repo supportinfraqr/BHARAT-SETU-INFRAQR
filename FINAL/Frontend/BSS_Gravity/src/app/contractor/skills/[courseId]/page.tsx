@@ -7,8 +7,12 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Award, Check, CheckCircle2, Clock3, Download, Play, PlayCircle, Sparkles, Users, Video, X } from 'lucide-react';
 import { contractorCourses } from '@/data/contractorCourses';
 
+import { useContractor } from '@/contexts/ContractorContext';
+
 export default function ContractorCoursePage({ params }: { params: Promise<{ courseId: string }> }) {
   const { courseId } = use(params);
+  const { contractor: portal, employerScope } = useContractor();
+  const boundWorkersCount = employerScope === 'all' ? portal.workers.length : portal.workers.filter(w => w.employer === employerScope).length;
   const course = contractorCourses.find(item => item.id === courseId) ?? notFound();
   const [completed, setCompleted] = useState<boolean[]>(() => course.modules.map(item => item.completed));
   const [activeModule, setActiveModule] = useState(0);
@@ -36,7 +40,7 @@ export default function ContractorCoursePage({ params }: { params: Promise<{ cou
   return <div className="space-y-5 pb-12">
     <header className="flex gap-3 items-start">
       <Link href="/contractor/skills" className="w-9 h-9 border rounded-lg grid place-items-center mt-0.5"><ArrowLeft size={16}/></Link>
-      <div><p className="text-xs text-blue-700 font-semibold">{course.category} · {course.provider}</p><h1 className="text-2xl font-bold">{course.title}</h1><p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${course.status === 'Published' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>{course.status}</span><span className="inline-flex items-center gap-1"><Users size={12}/>{course.learners} learners · {course.certificatesIssued} certificates issued</span></p></div>
+      <div><p className="text-xs text-blue-700 font-semibold">{course.category} · {portal.identity.company || course.provider}</p><h1 className="text-2xl font-bold">{course.title}</h1><p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${course.status === 'Published' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>{course.status}</span><span className="inline-flex items-center gap-1"><Users size={12}/>{boundWorkersCount} bound workers · {course.certificatesIssued} certificates issued</span></p></div>
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
