@@ -7,6 +7,22 @@ export class UpstreamError extends Error {
   constructor(message: string, public readonly status = 502, public readonly details?: unknown) { super(message); }
 }
 
+/**
+ * True when the upstream rejected the request because the *session* is no longer
+ * valid (missing/expired token, or the account no longer exists) — as opposed to
+ * a genuine role/permission denial. Such requests should send the user to login.
+ */
+export function isStaleSessionError(error: unknown): boolean {
+  if (!(error instanceof UpstreamError)) return false;
+  if (error.status === 401) return true;
+  if (error.status !== 403) return false;
+  const message = error.message.toLowerCase();
+  return message.includes('authentication credentials')
+    || message.includes('credentials were not provided')
+    || message.includes('not valid')
+    || message.includes('token');
+}
+
 function upstreamErrorMessage(responseStatus: number, payload: unknown, fallback: string): string {
   if (typeof payload === 'string' && payload.trim()) {
     const maybe = `${responseStatus} ${payload.trim()}`.replace(/^[45]\d\d /, '');

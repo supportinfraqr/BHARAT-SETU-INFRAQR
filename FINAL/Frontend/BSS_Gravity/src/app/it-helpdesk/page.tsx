@@ -1,13 +1,9 @@
-import ItOperationsDashboard from '@/components/support/ItOperationsDashboard';
-import { getOperationsSnapshot } from '@/server/operations';
-import { requireSession } from '@/server/session';
-import type { PortalRole } from '@/types/portal';
+import { redirect } from 'next/navigation';
 
-// See layout.tsx — legacy help-desk role guard (retired role, redirect-only).
-const LEGACY_HELPDESK_ROLE = 'IT Help Desk' as PortalRole;
-
-export default async function ItHelpDeskPage() {
-  const session = await requireSession(LEGACY_HELPDESK_ROLE);
-  const snapshot = await getOperationsSnapshot(session);
-  return <ItOperationsDashboard initialSnapshot={snapshot}/>;
+// Legacy help-desk route. "IT Help Desk" is a retired role (consolidated into
+// BSS Staff), so this route only ever redirects. It must NOT call the operations
+// upstream — doing so raised a Server Component error when the session could not
+// be authenticated upstream.
+export default function ItHelpDeskPage(): never {
+  redirect('/?reason=session');
 }

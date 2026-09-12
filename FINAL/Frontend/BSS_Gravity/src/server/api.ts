@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { UpstreamError } from '@/server/http';
+import { UpstreamError, isStaleSessionError } from '@/server/http';
+import { SESSION_COOKIE } from '@/server/session';
 
 type RateBucket = { count: number; resetAt: number };
 const rateLimitGlobal = globalThis as typeof globalThis & { __bssRateBuckets?: Map<string, RateBucket> };
@@ -9,6 +10,16 @@ const rateBuckets = rateLimitGlobal.__bssRateBuckets ??= new Map<string, RateBuc
 
 export function apiError(error: unknown, fallback = 'The request could not be completed.') {
   if (error instanceof UpstreamError) {
+    if (isStaleSessionError(error)) {
+      const response = NextResponse.json(
+        { error: 'Your session is no longer valid. Please sign in again.', reauth: true },
+        { status: 401 },
+      );
+      response.cookies.set(SESSION_COOKIE, '', {
+        httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 0,
+      });
+      return response;
+    }
     if (error.status >= 500) console.error(fallback, error);
     return NextResponse.json({ error:error.message }, { status:error.status });
   }

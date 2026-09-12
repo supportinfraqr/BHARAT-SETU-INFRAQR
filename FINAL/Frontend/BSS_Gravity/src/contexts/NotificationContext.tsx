@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { WorkerNotification } from '@/lib/notifications';
 
 type NotificationUpdate = 'read' | 'unread' | 'resolve';
@@ -21,12 +21,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<WorkerNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
   const portalScope = pathname.split('/')[1] ?? '';
 
   useEffect(() => {
     let active = true;
     fetch('/api/notifications')
       .then(async response => {
+        if (response.status === 401) {
+          if (active) router.push('/?reason=session');
+          return;
+        }
         const result = await response.json() as { data?: WorkerNotification[] };
         if (!response.ok || !result.data) throw new Error('Notification feed could not be loaded.');
         if (active) setNotifications(result.data);
@@ -34,7 +39,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       .catch(() => { if (active) setNotifications([]); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [portalScope]);
+  }, [portalScope, router]);
 
   const updateNotification = useCallback(async (id: string, action: NotificationUpdate) => {
     const existing = notifications.find(item => item.id === id);
