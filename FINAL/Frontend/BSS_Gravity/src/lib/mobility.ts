@@ -9,6 +9,8 @@ export type MobilityAddress = {
   state: string;
   district: string;
   city: string;
+  /** Locality / area / mohalla (UIDAI `vtc`) — distinct from the city. */
+  locality: string;
   pin: string;
 };
 
@@ -67,6 +69,7 @@ export function normalizeMobilityPayload(payload: MobilityPayload): MobilityPayl
     state: address.state.trim(),
     district: address.district.trim(),
     city: address.city.trim(),
+    locality: (address.locality ?? '').trim(),
     pin: address.pin.trim(),
   });
   return {

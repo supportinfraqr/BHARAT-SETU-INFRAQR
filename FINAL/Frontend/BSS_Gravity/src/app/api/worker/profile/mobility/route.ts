@@ -12,7 +12,7 @@ function isPayload(value: unknown): value is MobilityPayload {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   const isAddress = (address: unknown) => Boolean(address && typeof address === 'object' &&
-    ['line', 'state', 'district', 'city', 'pin'].every(key => typeof (address as Record<string, unknown>)[key] === 'string'));
+    ['line', 'state', 'district', 'city', 'locality', 'pin'].every(key => typeof (address as Record<string, unknown>)[key] === 'string'));
   return ['email', 'mobile', 'alternateMobile'].every(key => typeof candidate[key] === 'string') &&
     isAddress(candidate.currentAddress) && isAddress(candidate.permanentAddress);
 }

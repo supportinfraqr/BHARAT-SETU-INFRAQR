@@ -503,6 +503,29 @@ def _save_aadhaar_photo(aadhaar, photo):
     return f"/media/aadhaar/{rel_name}"
 
 
+def _aadhaar_address_parts(data):
+    """Normalise a UIDAI oKYC address into BSS address parts.
+
+    UIDAI has no explicit "city" field: ``vtc`` (village/town/city) is the
+    locality/area in urban addresses (e.g. "Jamia Nagar"), so it is stored as the
+    LOCALITY. The district (the next administrative level) is used as the CITY so
+    a residential area is never mistaken for the city.
+    """
+    addr = data.get("address") or {}
+    state = str(addr.get("state") or "").strip()
+    district = str(addr.get("district") or "").strip()
+    locality = str(addr.get("vtc") or addr.get("loc") or "").strip()
+    city = str(addr.get("city") or "").strip() or district or state
+    return {
+        "full": str(data.get("full_address") or "").strip(),
+        "state": state,
+        "district": district,
+        "locality": locality,
+        "city": city,
+        "pincode": str(addr.get("pincode") or "").strip(),
+    }
+
+
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -645,14 +668,16 @@ def aadhaar_verify(request):
             # The Aadhaar (UIDAI) address is the worker's PERMANENT, Aadhaar-owned
             # address (frozen). The current address is entered/changed by the
             # worker themselves and is never overwritten by Aadhaar.
+            parts = _aadhaar_address_parts(data)
             WorkerAddressMobility.objects.get_or_create(
                 user=user,
                 defaults={
-                    "permanent_address": data.get("full_address") or "",
-                    "permanent_state": addr.get("state") or "",
-                    "permanent_district": addr.get("district") or "",
-                    "permanent_city": addr.get("vtc") or addr.get("city") or "",
-                    "permanent_pincode": str(addr.get("pincode") or ""),
+                    "permanent_address": parts["full"],
+                    "permanent_state": parts["state"],
+                    "permanent_district": parts["district"],
+                    "permanent_city": parts["city"],
+                    "permanent_locality": parts["locality"],
+                    "permanent_pincode": parts["pincode"],
                 },
             )
     else:
@@ -749,12 +774,14 @@ def worker_link_aadhaar(request):
     identity.save()
 
     a, _ = WorkerAddressMobility.objects.get_or_create(user=user)
-    a.permanent_address = data.get("full_address") or a.permanent_address
-    a.permanent_state = addr.get("state") or a.permanent_state
-    a.permanent_district = addr.get("district") or a.permanent_district
-    a.permanent_city = addr.get("vtc") or addr.get("city") or a.permanent_city
-    if addr.get("pincode"):
-        a.permanent_pincode = str(addr.get("pincode"))
+    parts = _aadhaar_address_parts(data)
+    a.permanent_address = parts["full"] or a.permanent_address
+    a.permanent_state = parts["state"] or a.permanent_state
+    a.permanent_district = parts["district"] or a.permanent_district
+    a.permanent_city = parts["city"] or a.permanent_city
+    a.permanent_locality = parts["locality"] or a.permanent_locality
+    if parts["pincode"]:
+        a.permanent_pincode = parts["pincode"]
     a.save()
 
     UserCredential.objects.get_or_create(
@@ -1089,6 +1116,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                 a.current_state = ca.get("state", a.current_state)
                 a.current_district = ca.get("district", a.current_district)
                 a.current_city = ca.get("city", a.current_city)
+                a.current_locality = ca.get("locality", a.current_locality)
                 a.current_pincode = ca.get("pin", a.current_pincode)
             if values.get("migrationType") is not None:
                 a.migration_type = values.get("migrationType")
@@ -1144,6 +1172,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                 "currentState": "current_state",
                 "currentDistrict": "current_district",
                 "currentCity": "current_city",
+                "currentLocality": "current_locality",
                 "currentPin": "current_pincode",
                 "migrationType": "migration_type",
             }

@@ -26,8 +26,8 @@ function fromWorker(worker: WorkerRecord): MobilityPayload {
     email: worker.contact.email,
     mobile: worker.contact.mobile,
     alternateMobile: worker.contact.alternateMobile,
-    currentAddress: { line: worker.address.current, state: worker.address.currentState, district: worker.address.currentDistrict, city: worker.address.currentCity, pin: worker.address.currentPin },
-    permanentAddress: { line: worker.address.permanent, state: worker.address.permanentState, district: worker.address.permanentDistrict, city: worker.address.permanentCity, pin: worker.address.permanentPin },
+    currentAddress: { line: worker.address.current, state: worker.address.currentState, district: worker.address.currentDistrict, city: worker.address.currentCity, locality: worker.address.currentLocality, pin: worker.address.currentPin },
+    permanentAddress: { line: worker.address.permanent, state: worker.address.permanentState, district: worker.address.permanentDistrict, city: worker.address.permanentCity, locality: worker.address.permanentLocality, pin: worker.address.permanentPin },
   };
 }
 
@@ -87,11 +87,13 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
           currentState: data.currentAddress.state,
           currentDistrict: data.currentAddress.district,
           currentCity: data.currentAddress.city,
+          currentLocality: data.currentAddress.locality,
           currentPin: data.currentAddress.pin,
           permanent: data.permanentAddress.line,
           permanentState: data.permanentAddress.state,
           permanentDistrict: data.permanentAddress.district,
           permanentCity: data.permanentAddress.city,
+          permanentLocality: data.permanentAddress.locality,
           permanentPin: data.permanentAddress.pin,
           migrant: data.migrant,
           migrationType: data.migrationType,
@@ -185,6 +187,7 @@ function AddressEditor({ title, kind, prefix = '', address, reference, disabled 
       <Field label={label('State')}>{readOnly ? <input readOnly value={address.state} placeholder="—" className={frozen}/> : <select value={address.state} onChange={event => selectState(event.target.value)} disabled={disabled || !states.length} className={inputClass}>{!states.length ? <option value="">Loading…</option> : <><option value="">Select state</option>{states.map(state => <option key={state}>{state}</option>)}</>}</select>}</Field>
       <Field label={label('District')}>{readOnly ? <input readOnly value={address.district} placeholder="—" className={frozen}/> : <select value={address.district} onChange={event => selectDistrict(event.target.value)} disabled={disabled || !districts.length} className={inputClass}><option value="">Select district</option>{districts.map(district => <option key={district}>{district}</option>)}</select>}</Field>
       <Field label={label('City')}>{readOnly ? <input readOnly value={address.city} placeholder="—" className={frozen}/> : <><input list={`${id}-cities`} value={address.city} onChange={event => onChange({ ...address, city: event.target.value })} disabled={disabled} placeholder="Type or select city" className={inputClass}/><datalist id={`${id}-cities`}>{cities.map(city => <option key={city} value={city}/>)}</datalist></>}</Field>
+      <Field label={label('Locality / Area')}>{readOnly ? <input readOnly value={address.locality} placeholder="—" className={frozen}/> : <input value={address.locality} onChange={event => onChange({ ...address, locality: event.target.value })} disabled={disabled} placeholder="Locality / area / mohalla" className={inputClass}/>}</Field>
       <Field label={label('PIN Code')}>{readOnly ? <input readOnly value={address.pin} placeholder="—" className={frozen}/> : <div className="relative"><input list={`${id}-pins`} inputMode="numeric" value={address.pin} onChange={event => onChange({ ...address, pin: event.target.value.replace(/\D/g, '').slice(0, 6) })} onBlur={resolvePin} disabled={disabled} className={`${inputClass} pr-10`}/><RefreshCw size={15} className="absolute right-3.5 top-3.5 text-gray-400"/><datalist id={`${id}-pins`}>{pins.map(pin => <option key={pin} value={pin}/>)}</datalist></div>}</Field>
     </div>
     {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
