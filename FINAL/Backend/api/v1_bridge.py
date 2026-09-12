@@ -1455,6 +1455,8 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_advance_contractor(user, body)
     if resource == "benefits" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_benefits(user, body)
+    if resource == "grievances" and role_path in ("contractor", "employer") and method in ("POST", "PATCH"):
+        return _handle_grievance(user, body)
     if resource == "gratuity" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_gratuity_apply(user, body)
     if resource == "bank-verify" and role_path == "worker" and method in ("POST", "PATCH"):
@@ -1491,6 +1493,55 @@ def _handle_bank_verify(user, body):
         "amountDeposited": data.get("amount_deposited") or "",
         "message": data.get("message") or ("Account verified" if exists else "Account not found"),
     }
+
+
+def _handle_grievance(user, body):
+    """Contractor / employer replies to, resolves or reopens a worker grievance.
+
+    The contractor must be bound to the worker; the employer must own the
+    worker's site. Both share the same conversation thread (GrievanceResponse).
+    """
+    from bss_core.models import GrievanceResponse, WorkerContractorBinding, WorkerGrievance
+
+    grievance = WorkerGrievance.objects.filter(pk=body.get("id")).first()
+    if grievance is None:
+        raise PortalMutationError("Grievance not found.", 404)
+    if user.role == "contractor":
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=grievance.worker, contractor=user, binding_status="ACCEPTED")
+                   .select_related("contractor", "site", "site__employer").first())
+    else:
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=grievance.worker, site__employer=user, binding_status="ACCEPTED")
+                   .select_related("contractor", "site", "site__employer").first())
+    if binding is None:
+        raise PortalMutationError("This grievance is not linked to your account.", 403)
+
+    action = str(body.get("action") or "").strip().lower()
+    if action in ("reply", "respond") or (not action and body.get("body")):
+        text = str(body.get("body") or "").strip()[:2000]
+        if not text:
+            raise PortalMutationError("Write a reply before sending.", 400)
+        GrievanceResponse.objects.create(grievance=grievance, actor=user,
+                                         actor_role=user.role, body=text)
+        if grievance.status != "RESOLVED":
+            grievance.status = "IN_PROGRESS"
+            grievance.save(update_fields=["status", "updated_at"])
+    elif action == "resolve":
+        grievance.status = "RESOLVED"
+        grievance.resolved_at = timezone.now()
+        grievance.save(update_fields=["status", "resolved_at", "updated_at"])
+    elif action == "reopen":
+        grievance.status = "REOPENED"
+        grievance.reopened_at = timezone.now()
+        grievance.save(update_fields=["status", "reopened_at", "updated_at"])
+    elif action == "view":
+        if grievance.status in ("RECORDED", "SUBMITTED"):
+            grievance.status = "VIEWED_ON_DASHBOARD"
+            grievance.save(update_fields=["status", "updated_at"])
+    else:
+        raise PortalMutationError("Unknown grievance action.", 400)
+    return payloads._grievance_row(grievance, binding)
 
 
 def _handle_benefits(user, body):
@@ -2492,7 +2543,7 @@ def _grievance_category_label(category):
 
 def _grievance_payload(g):
     latest = g.responses.order_by("-created_at").first() if hasattr(g, "responses") else None
-    assigned = g.assigned_to.get_full_name() if g.assigned_to else ""
+    assigned = payloads._party_name(g.assigned_to) if g.assigned_to else ""
     return {
         "id": g.id,
         "ref": payloads._d(g.ticket_no),
@@ -2538,9 +2589,12 @@ def worker_grievances(request):
     if not text and not audio:
         return Response({"error": "Describe your concern or record audio."},
                         status=status.HTTP_400_BAD_REQUEST)
+    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+               .select_related("contractor").first())
     g = WorkerGrievance(
         worker=user, category=category, language=language, body=text,
         attachment_file=attachment, status="SUBMITTED", submitted_at=timezone.now(),
+        assigned_to=binding.contractor if binding else None,
     )
     try:
         if body.get("duration") is not None:
@@ -2830,6 +2884,40 @@ def engagement_scan(request):
             return Response({"error": "Only employers can scan a contractor QR."},
                             status=status.HTTP_403_FORBIDDEN)
         contractor, employer, source = cp.user, user, "contractor_qr"
+    elif qr_type == "BSS_WORKER":
+        # Contractor scans a worker's ID-card QR -> worker binding request (PENDING).
+        if user.role != "contractor":
+            return Response({"error": "Only contractors can bind workers."},
+                            status=status.HTTP_403_FORBIDDEN)
+        wi = WorkerIdentity.objects.filter(bss_worker_id=str(body.get("bssId") or "")).first()
+        if wi is None:
+            return Response({"error": "Unknown worker."}, status=status.HTTP_404_NOT_FOUND)
+        worker_user = wi.user
+        # Resolve the site: explicit name, else a site the contractor is bound to,
+        # else an approved allotment.
+        site = Site.objects.filter(site_name__iexact=str(body.get("site") or "")).first() if body.get("site") else None
+        if site is None:
+            site = Site.objects.filter(bindings__contractor=user).first()
+        if site is None:
+            site = Site.objects.filter(contractor_allotments__binding__contractor=user,
+                                       contractor_allotments__status="APPROVED").first()
+        if site is None:
+            return Response({"error": "No site available for this binding. Ask the employer to allot a site first."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not _binding_enabled(worker_user) or not _binding_enabled(user):
+            return Response({"error": "Binding is disabled in one party's settings."},
+                            status=status.HTTP_403_FORBIDDEN)
+        if WorkerContractorBinding.objects.filter(worker=worker_user, binding_status="ACCEPTED").exists():
+            return Response({"error": "This worker is already bound to a contractor."},
+                            status=status.HTTP_409_CONFLICT)
+        binding, _ = WorkerContractorBinding.objects.get_or_create(
+            worker=worker_user, contractor=user, site=site)
+        binding.binding_status = "PENDING"
+        binding.consent_contractor = True
+        binding.consent_worker = False
+        binding.consent_method = "app"
+        binding.save()
+        return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
     else:
         return Response({"error": "Unsupported QR."}, status=status.HTTP_400_BAD_REQUEST)
 

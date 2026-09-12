@@ -85,7 +85,7 @@ export default function ContractorScanPage() {
       const response = await fetch('/api/engagements/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken }),
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.site }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Engagement request could not be created.');

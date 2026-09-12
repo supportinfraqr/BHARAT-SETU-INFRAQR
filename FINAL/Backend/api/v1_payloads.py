@@ -1408,6 +1408,76 @@ def _worker_grievances(user):
     return {"openCount": open_count, "recent": recent_item}
 
 
+_GRIEVANCE_UI_STATUS = {
+    "RECORDED": "Open", "SUBMITTED": "Open", "VIEWED_ON_DASHBOARD": "Open",
+    "OPEN": "Open", "IN_PROGRESS": "In Progress", "RESOLVED": "Resolved",
+    "REOPENED": "Reopened",
+}
+_GRIEVANCE_ACTOR = {"worker": "Worker", "contractor": "Contractor", "employer": "Employer"}
+
+
+def _grievance_row(g, binding=None):
+    """Contractor/employer grievance register row (shared by both portals)."""
+    wi = _get_identity(g.worker)
+    site = binding.site if binding else None
+    employer_name = contractor_name = ""
+    if binding:
+        cp = getattr(binding.contractor, "contractor_profile", None)
+        contractor_name = _d(cp.contractor_name if cp and cp.contractor_name else binding.contractor.username)
+        if site and site.employer:
+            ep = getattr(site.employer, "employer_profile", None)
+            employer_name = _d(ep.employer_name if ep and ep.employer_name else site.employer.username)
+    replies = [{
+        "by": _GRIEVANCE_ACTOR.get((getattr(r.actor, "role", "") or r.actor_role or "").lower(), "Worker"),
+        "text": _d(r.body),
+        "at": _dts(r.created_at),
+    } for r in g.responses.order_by("created_at")]
+    return {
+        "id": str(g.id),
+        "ref": _d(g.ticket_no),
+        "category": {"WAGES": "Wages", "SAFETY": "Safety", "HARASSMENT": "Harassment",
+                     "ACCOMMODATION": "Accommodation", "BENEFITS": "Benefits",
+                     "OTHER": "Other"}.get(str(g.category).upper(), "Other"),
+        "status": _GRIEVANCE_UI_STATUS.get(str(g.status).upper(), "Open"),
+        "worker": _d(wi.name if wi and wi.name else g.worker.username),
+        "workerId": _d(wi.bss_worker_id if wi else ""),
+        "site": site.site_name if site else "",
+        "employer": employer_name,
+        "contractor": contractor_name,
+        "raisedAt": _dts(g.created_at),
+        "updatedAt": _dts(g.updated_at),
+        "description": _d(g.body),
+        "audioAvailable": bool(g.audio),
+        "attachment": _d(g.attachment_file) or None,
+        "replyHistory": replies,
+        "resolutionConfirmed": False,
+    }
+
+
+def _grievances_for_bindings(bindings):
+    rows = []
+    for b in bindings:
+        for g in (WorkerGrievance.objects.filter(worker=b.worker)
+                  .select_related("worker").prefetch_related("responses", "responses__actor")[:30]):
+            rows.append(_grievance_row(g, b))
+    rows.sort(key=lambda r: r["raisedAt"] or "", reverse=True)
+    return rows
+
+
+def _contractor_grievances(user):
+    bindings = (WorkerContractorBinding.objects
+                .filter(contractor=user, binding_status="ACCEPTED")
+                .select_related("worker", "contractor", "site", "site__employer"))
+    return _grievances_for_bindings(bindings)
+
+
+def _employer_grievances(user):
+    bindings = (WorkerContractorBinding.objects
+                .filter(site__employer=user, binding_status="ACCEPTED")
+                .select_related("worker", "contractor", "site", "site__employer"))
+    return _grievances_for_bindings(bindings)
+
+
 def _worker_geography():
     return dict(GEOGRAPHY)
 
@@ -1983,10 +2053,6 @@ def _contractor_audit_reports(user):
             "actWise": items,
         })
     return rows
-
-
-def _contractor_grievances(user):
-    return []
 
 
 def _contractor_payroll_config(user):
@@ -2607,6 +2673,7 @@ def build_employer_portal(user):
         "sites": _employer_sites(user),
         "contractors": _employer_contractors(user),
         "workers": _employer_workers(user),
+        "grievances": _employer_grievances(user),
         "approvals": _employer_approvals(user),
         "engagements": _employer_engagements(user),
         "gatePasses": _employer_gate_passes(user),

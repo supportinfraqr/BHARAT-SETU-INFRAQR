@@ -188,7 +188,7 @@ export type ContractorAuditReport = {
 
 export type ContractorGrievance = {
   id: string; ref: string; category: string; status: 'Open' | 'In Progress' | 'Resolved' | 'Reopened';
-  worker: string; workerId: string; site: string; employer: string; raisedAt: string; updatedAt: string; description: string;
+  worker: string; workerId: string; site: string; employer: string; contractor: string; raisedAt: string; updatedAt: string; description: string;
   audioAvailable: boolean; attachment: string | null; replyHistory: Array<{ by: 'Contractor' | 'Employer' | 'Worker'; text: string; at: string }>; resolutionConfirmed: boolean;
 };
 
@@ -489,6 +489,7 @@ export type EmployerPortalData = {
   sites: EmployerSite[];
   contractors: EmployerContractor[];
   workers: EmployerWorker[];
+  grievances: ContractorGrievance[];
   approvals: EmployerApproval[];
   engagements: EmployerEngagement[];
   gatePasses: EmployerGatePass[];

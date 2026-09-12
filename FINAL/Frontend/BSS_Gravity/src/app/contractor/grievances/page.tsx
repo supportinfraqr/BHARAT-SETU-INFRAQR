@@ -30,27 +30,29 @@ export default function ContractorGrievancesPage() {
     reopened: grievances.filter(g => g.status === 'Reopened').length,
   };
 
-  async function patch(updates: Partial<ContractorGrievance>) {
-    if (!selected) return;
+  async function applyAction(action: 'reply' | 'resolve' | 'reopen', body?: string) {
+    if (!selected) return null;
     setBusy(true); setError(''); setNotice('');
     try {
-      await mutate('grievances', 'PATCH', { id: selected.id, ...updates });
-      replaceContractor({ ...contractor, grievances: contractor.grievances.map(g => g.id === selected.id ? { ...g, ...updates } : g) });
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Grievance could not be updated.'); }
+      const result = await mutate<{ data: ContractorGrievance }>('grievances', 'PATCH', { id: selected.id, action, ...(body ? { body } : {}) });
+      replaceContractor({ ...contractor, grievances: contractor.grievances.map(g => g.id === selected.id ? result.data : g) });
+      return result.data;
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Grievance could not be updated.'); return null; }
     finally { setBusy(false); }
   }
 
   async function sendReply() {
     if (!selected || !reply.trim()) return;
-    const at = new Date().toISOString();
-    await patch({ replyHistory: [...selected.replyHistory, { by:'Contractor', text: reply.trim(), at }], status: selected.status === 'Open' ? 'In Progress' : selected.status, updatedAt: at });
-    setReply('');
-    setNotice(`Reply recorded on ${selected.ref}. The worker can see the conversation in their portal.`);
+    const updated = await applyAction('reply', reply.trim());
+    if (updated) {
+      setReply('');
+      setNotice(`Reply recorded on ${selected.ref}. The worker can see the conversation in their portal.`);
+    }
   }
 
   async function resolveGrievance() {
-    await patch({ status:'Resolved', updatedAt:new Date().toISOString() });
-    setNotice(`${selected.ref} marked resolved — awaiting worker resolution confirmation.`);
+    const updated = await applyAction('resolve');
+    if (updated) setNotice(`${selected.ref} marked resolved — awaiting worker resolution confirmation.`);
   }
 
   const columns: DataColumn<ContractorGrievance>[] = [

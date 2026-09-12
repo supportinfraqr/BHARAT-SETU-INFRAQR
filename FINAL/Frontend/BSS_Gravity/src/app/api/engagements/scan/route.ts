@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     assertRateLimit(`engagement-scan:${session.sessionId}`, 30, 60_000);
     const body = await readJsonObject(request);
     const type = typeof body.type === 'string' ? body.type : '';
-    if (!['BSS_EMPLOYER', 'BSS_CONTRACTOR', 'BSS_SITE'].includes(type)) {
+    if (!['BSS_EMPLOYER', 'BSS_CONTRACTOR', 'BSS_SITE', 'BSS_WORKER'].includes(type)) {
       return NextResponse.json({ error: 'Unsupported QR.' }, { status: 400 });
     }
     const config = getRuntimeConfig();
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
         type,
         bssId: typeof body.bssId === 'string' ? body.bssId : '',
         siteToken: typeof body.siteToken === 'string' ? body.siteToken : '',
+        site: typeof body.site === 'string' ? body.site : '',
       }),
     });
     return NextResponse.json(result, { status: 200 });

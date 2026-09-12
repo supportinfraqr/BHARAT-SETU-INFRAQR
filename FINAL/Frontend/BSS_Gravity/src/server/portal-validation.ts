@@ -60,6 +60,12 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (role === 'Contractor' && resource === 'worker-compliance' && method !== 'DELETE') {
     requiredString(body, 'workerId', 20);
   }
+  if ((role === 'Contractor' || role === 'Employer') && resource === 'grievances' && method !== 'DELETE') {
+    requiredString(body, 'id', 40);
+    const gAction = String(body.action ?? '').toLowerCase();
+    if (!['reply', 'resolve', 'reopen', 'view'].includes(gAction)) fail('Unsupported grievance action.');
+    if (gAction === 'reply') requiredString(body, 'body', 2_000);
+  }
   if (role === 'Worker' && resource === 'gratuity' && method === 'POST') {
     if (body.reason !== undefined) requiredString(body, 'reason', 500);
   }
