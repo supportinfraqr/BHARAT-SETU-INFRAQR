@@ -14,13 +14,19 @@ export class UpstreamError extends Error {
  */
 export function isStaleSessionError(error: unknown): boolean {
   if (!(error instanceof UpstreamError)) return false;
-  if (error.status === 401) return true;
-  if (error.status !== 403) return false;
   const message = error.message.toLowerCase();
-  return message.includes('authentication credentials')
-    || message.includes('credentials were not provided')
-    || message.includes('not valid')
-    || message.includes('token');
+  if (error.status === 403) {
+    return message.includes('authentication credentials')
+      || message.includes('credentials were not provided');
+  }
+  if (error.status === 401) {
+    // Only genuine token/session problems. A normal failed login ("Invalid
+    // credentials") must surface as-is, not as an expired session.
+    return message.includes('token')
+      || message.includes('not valid')
+      || message.includes('authentication credentials');
+  }
+  return false;
 }
 
 function upstreamErrorMessage(responseStatus: number, payload: unknown, fallback: string): string {
