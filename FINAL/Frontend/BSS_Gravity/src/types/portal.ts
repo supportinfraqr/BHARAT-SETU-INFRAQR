@@ -172,6 +172,8 @@ export type ContractorBindingRequest = {
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired';
   consentWorker?: boolean; consentContractor?: boolean;
   unbindRequested?: boolean; unbindConsentWorker?: boolean; unbindConsentContractor?: boolean;
+  /** Present on Contractor ↔ Employer engagement rows. */
+  engagementId?: number;
 };
 
 export type ContractorRegister = {
@@ -448,6 +450,8 @@ export type EmployerApproval = {
   submittedAt: string;
   checks: string[];
   status: 'Pending' | 'Approved' | 'Rejected';
+  /** Present on Contractor ↔ Employer engagement rows. */
+  engagementId?: string;
 };
 
 export type EmployerComplianceReport = {

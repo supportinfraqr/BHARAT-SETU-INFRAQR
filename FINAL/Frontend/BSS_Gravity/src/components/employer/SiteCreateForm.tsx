@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Building2, MapPin, X } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 import type { SiteGeo } from '@/components/employer/SiteMap';
 
 const SiteMapPicker = dynamic(() => import('@/components/employer/SiteMap').then(m => m.default), { ssr: false });
@@ -378,8 +378,35 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   initial?: Record<string, unknown> | null;
 }) {
   const [geo, setGeo] = useState<SiteGeo | null>(() => initial && initial.latitude ? { lat: Number(initial.latitude), lng: Number(initial.longitude), label: 'Saved site location' } : null);
+  const [location, setLocation] = useState(String(initial?.location ?? ''));
+  const [state, setState] = useState(String(initial?.state ?? ''));
+  const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
   const [tab, setTab] = useState(SECTIONS[0].title);
   const section = useMemo(() => SECTIONS.find(s => s.title === tab) ?? SECTIONS[0], [tab]);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/geography')
+      .then(response => response.json())
+      .then((result: { data?: Record<string, Record<string, { city: string; pins: string[] }[]>> }) => { if (active && result.data) setGeography(result.data); })
+      .catch(() => { /* suggestions are optional */ });
+    return () => { active = false; };
+  }, []);
+
+  const stateOptions = useMemo(() => Object.keys(geography), [geography]);
+  const cityOptions = useMemo(() => {
+    const districts = geography[state] ?? {};
+    const cities = new Set<string>();
+    for (const key of Object.keys(districts)) for (const place of districts[key]) cities.add(place.city);
+    return [...cities].sort((a, b) => a.localeCompare(b));
+  }, [geography, state]);
+
+  // Pin/search on the map auto-fills City/location + State.
+  function handleGeoPick(place: SiteGeo) {
+    setGeo(place);
+    if (place.city || place.label) setLocation(place.city || place.label);
+    if (place.state) setState(place.state);
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -388,8 +415,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (initial?.id !== undefined && initial.id !== null && initial.id !== '') payload.id = initial.id;
     payload.name = String(form.get('name') || '');
     payload.code = String(form.get('code') || '').toUpperCase();
-    payload.location = String(form.get('location') || '');
-    payload.state = geo?.state ?? String(form.get('state') || '');
+    payload.location = location.trim();
+    payload.state = state.trim() || geo?.state || '';
     payload.startDate = String(form.get('startDate') || '');
     payload.endDate = String(form.get('endDate') || '');
     payload.status = String(form.get('status') || 'Active');
@@ -429,8 +456,10 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
           <div className="grid sm:grid-cols-2 gap-4">
             <label className="text-xs font-semibold text-gray-700">Site name<input required name="name" defaultValue={String(initial?.site_name ?? initial?.name ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
             <label className="text-xs font-semibold text-gray-700">Site code<input required name="code" defaultValue={String(initial?.site_code ?? initial?.code ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">City / location<input name="location" defaultValue={String(initial?.location ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input name="state" defaultValue={String(initial?.state ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
+            <label className="text-xs font-semibold text-gray-700">City / location<input list="site-city-options" name="location" value={location} onChange={event => setLocation(event.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
+            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input list="site-state-options" name="state" value={state} onChange={event => setState(event.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
+            <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
+            <datalist id="site-state-options">{stateOptions.map(name => <option key={name} value={name} />)}</datalist>
             <label className="text-xs font-semibold text-gray-700">Start date<input name="startDate" type="date" defaultValue={String(initial?.site_start_date ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
             <label className="text-xs font-semibold text-gray-700">End date<input name="endDate" type="date" defaultValue={String(initial?.expected_end_date ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
             <label className="text-xs font-semibold text-gray-700">Status<select name="status" defaultValue={String(initial?.site_status ?? 'Active')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm"><option>Active</option><option>Planned</option></select></label>
@@ -438,7 +467,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
 
           <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="flex items-center gap-2 mb-3"><MapPin size={15} className="text-[#073B67]" /><p className="text-xs font-bold uppercase tracking-wider text-gray-500">Identify site on OpenStreetMap</p></div>
-            <SiteMapPicker initial={geo ? { lat: geo.lat, lng: geo.lng } : undefined} onPick={setGeo} />
+            <SiteMapPicker initial={geo ? { lat: geo.lat, lng: geo.lng } : undefined} onPick={handleGeoPick} />
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-4">

@@ -34,7 +34,6 @@ const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.myContractors','/employer/qr/contractors'],
   ['nav.bindingRequests','/employer/qr/requests'],
   ['nav.qrMySites','/employer/qr/sites'],
-  ['nav.ecswBindings','/employer/bindings'],
   ['nav.idCard','/employer/idcard'],
   ['nav.scanQr','/employer/scan'],
 ] };

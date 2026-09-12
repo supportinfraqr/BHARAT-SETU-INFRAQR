@@ -1256,10 +1256,10 @@ def _engagement_row(b):
     return {
         "id": b.id,
         "ref": f"CEB-2026-{b.id:03d}",
-        "contractor": _d(cp.contractor_name if cp else b.contractor.username),
-        "contractorCode": _d(cp.contractor_code if cp else _bss_contractor_code(b.contractor_id)),
-        "employer": _d(ep.employer_name if ep else b.employer.username),
-        "employerCode": _d(ep.employer_code if ep else _bss_employer_code(b.employer_id)),
+        "contractor": _d(cp.contractor_name if cp else "", b.contractor.username),
+        "contractorCode": _d(cp.contractor_code if cp else "", _bss_contractor_code(b.contractor_id)),
+        "employer": _d(ep.employer_name if ep else "", b.employer.username),
+        "employerCode": _d(ep.employer_code if ep else "", _bss_employer_code(b.employer_id)),
         "status": status_map.get(str(b.binding_status).upper(), "Pending"),
         "consentContractor": bool(b.consent_contractor),
         "consentEmployer": bool(b.consent_employer),
@@ -1995,7 +1995,7 @@ def _contractor_binding_requests(user):
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
         ep = getattr(b.site.employer, "employer_profile", None) if b.site and b.site.employer else None
         rows.append({
-            "id": b.id, "type": "worker",
+            "id": b.id, "type": "Worker",
             "entityName": _d(wi.name if wi else b.worker.username),
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "site": b.site.site_name if b.site else "",
@@ -2012,6 +2012,30 @@ def _contractor_binding_requests(user):
             "unbindConsentWorker": bool(b.unbind_consent_worker),
             "unbindConsentContractor": bool(b.unbind_consent_contractor),
         })
+    # Contractor <-> employer engagements (scanning an employer/site QR).
+    for e in ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at"):
+        ep = getattr(e.employer, "employer_profile", None)
+        sites = [a.site.site_name for a in e.allotments.all() if a.site]
+        rows.append({
+            "id": f"ce-{e.id}", "engagementId": e.id, "type": "Employer",
+            "entityName": _d(ep.employer_name if ep else "", e.employer.username),
+            "bssId": _d(ep.employer_code if ep else "", _bss_employer_code(e.employer_id)),
+            "site": ", ".join(sites) if sites else "Sites to be allotted",
+            "employer": _d(ep.employer_name if ep else "", e.employer.username),
+            "designation": "Principal employer engagement",
+            "wage": 0,
+            "requestedOn": _dts(e.created_at),
+            "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
+                       "CANCELLED": "Cancelled"}.get(str(e.binding_status).upper(), "Pending"),
+            # The contractor's own consent is consentContractor; the employer's
+            # consent occupies the "worker" slot so the shared row shape works.
+            "consentWorker": bool(e.consent_employer),
+            "consentContractor": bool(e.consent_contractor),
+            "unbindRequested": False,
+            "unbindConsentWorker": False,
+            "unbindConsentContractor": False,
+        })
+    rows.sort(key=lambda row: str(row.get("requestedOn") or ""), reverse=True)
     return rows
 
 
@@ -2557,6 +2581,23 @@ def _employer_approvals(user):
             "bssId": bss_id, "contractor": contractor_name or None,
             "site": site_name, "submittedAt": _dts(a.requested_at),
             "checks": checks, "status": status_label.get(str(a.status).upper(), "Pending"),
+        })
+    # Incoming contractor <-> employer engagement requests (contractor scanned
+    # this employer's QR or a site QR) — surfaced on the Binding Requests page.
+    for e in (ContractorEmployerBinding.objects
+              .filter(employer=user, binding_status="PENDING").order_by("-created_at")):
+        cp = getattr(e.contractor, "contractor_profile", None)
+        sites = [a.site.site_name for a in e.allotments.all() if a.site]
+        rows.append({
+            "id": f"ce-{e.id}", "engagementId": str(e.id),
+            "entityType": "Contractor", "entityId": str(e.contractor_id),
+            "name": _d(cp.contractor_name if cp else "", e.contractor.username),
+            "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(e.contractor_id)),
+            "contractor": None,
+            "site": ", ".join(sites) if sites else "Sites to be allotted",
+            "submittedAt": _dts(e.created_at),
+            "checks": ["KYC", "Licence"],
+            "status": "Pending",
         })
     return rows
 

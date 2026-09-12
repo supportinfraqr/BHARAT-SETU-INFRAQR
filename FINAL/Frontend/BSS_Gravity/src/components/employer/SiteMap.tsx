@@ -50,50 +50,29 @@ function pinIcon() {
 const OSM_TILE = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
 
+// Geocoding is proxied through /api/geocode (the Next.js server) because the
+// public Nominatim endpoint does not send CORS headers, which blocks direct
+// browser requests, and because it enforces a usage policy.
 async function reverseGeocode(lat: number, lng: number): Promise<Partial<SiteGeo>> {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&addressdetails=1&zoom=18`;
-  const response = await fetch(url);
-  if (!response.ok) return {};
-  const data = (await response.json()) as {
-    display_name?: string;
-    address?: Record<string, string>;
-  };
-  const address = data.address ?? {};
-  return {
-    address: data.display_name ?? "",
-    label: data.display_name?.split(",")[0] ?? `Selected point (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
-    state: address.state ?? address.state_district ?? "",
-    district: address.county ?? address.state_district ?? address.suburb ?? "",
-    city: address.city ?? address.town ?? address.village ?? address.suburb ?? address.municipality ?? "",
-    pin: address.postcode ?? "",
-    country: address.country ?? "",
-  };
+  try {
+    const response = await fetch(`/api/geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
+    if (!response.ok) return {};
+    const result = (await response.json()) as { data?: SiteGeo | null };
+    return result.data ?? {};
+  } catch {
+    return {};
+  }
 }
 
 async function searchPlaces(query: string): Promise<SiteGeo[]> {
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&q=${encodeURIComponent(query)}`;
-  const response = await fetch(url);
-  if (!response.ok) return [];
-  const data = (await response.json()) as Array<{
-    lat: string;
-    lon: string;
-    display_name: string;
-    address?: Record<string, string>;
-  }>;
-  return data.map(item => {
-    const address = item.address ?? {};
-    return {
-      lat: Number(item.lat),
-      lng: Number(item.lon),
-      label: item.display_name?.split(",")[0] ?? item.display_name,
-      address: item.display_name,
-      state: address.state ?? address.state_district ?? "",
-      district: address.county ?? address.state_district ?? "",
-      city: address.city ?? address.town ?? address.village ?? address.suburb ?? "",
-      pin: address.postcode ?? "",
-      country: address.country ?? "",
-    };
-  });
+  try {
+    const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+    if (!response.ok) return [];
+    const result = (await response.json()) as { data?: SiteGeo[] };
+    return result.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -113,6 +92,9 @@ export default function SiteMapPicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  // Keep the latest onPick without re-initialising the Leaflet map.
+  const onPickRef = useRef(onPick);
+  useEffect(() => { onPickRef.current = onPick; }, [onPick]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SiteGeo[]>([]);
   const [searching, setSearching] = useState(false);
@@ -128,17 +110,29 @@ export default function SiteMapPicker({
     const map = L.map(containerRef.current, { center, zoom: initial ? 15 : 5, attributionControl: true });
     L.tileLayer(OSM_TILE, { maxZoom: 19, attribution: OSM_ATTRIBUTION }).addTo(map);
     mapRef.current = map;
+
+    if (initial && Number.isFinite(initial.lat) && Number.isFinite(initial.lng)) {
+      placeMarker([initial.lat, initial.lng]);
+    }
+
     const onMapClick = async (event: L.LeafletMouseEvent) => {
       const { lat, lng } = event.latlng;
       placeMarker([lat, lng]);
       const extra = await reverseGeocode(lat, lng);
       const place: SiteGeo = { lat, lng, label: extra.label ?? `Point (${lat.toFixed(5)}, ${lng.toFixed(5)})`, ...extra };
       setPicked(place);
-      onPick(place);
+      onPickRef.current(place);
     };
     map.on("click", onMapClick);
-    setTimeout(() => map.invalidateSize(), 120);
-    return () => { map.off("click", onMapClick); map.remove(); mapRef.current = null; };
+    const timer1 = setTimeout(() => map.invalidateSize(), 100);
+    const timer2 = setTimeout(() => map.invalidateSize(), 500);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      map.off("click", onMapClick);
+      map.remove();
+      mapRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -152,14 +146,27 @@ export default function SiteMapPicker({
       const extra = await reverseGeocode(latlng.lat, latlng.lng);
       const place: SiteGeo = { lat: latlng.lat, lng: latlng.lng, label: extra.label ?? "Selected point", ...extra };
       setPicked(place);
-      onPick(place);
+      onPickRef.current(place);
     });
   }
 
-  async function runSearch(event: React.FormEvent) {
-    event.preventDefault();
+  // Search-as-you-type: debounce keystrokes and suggest matching places.
+  useEffect(() => {
     const term = query.trim();
-    if (!term || !mapRef.current) return;
+    if (term.length < 3) return;
+    const handle = setTimeout(async () => {
+      setSearching(true);
+      const found = await searchPlaces(term);
+      setResults(found);
+      setSearching(false);
+      if (found.length) setNotice("");
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [query]);
+
+  async function runSearch() {
+    const term = query.trim();
+    if (!term) return;
     setSearching(true);
     setNotice("");
     try {
@@ -175,8 +182,9 @@ export default function SiteMapPicker({
 
   function chooseResult(place: SiteGeo) {
     setResults([]);
+    setNotice("");
     setPicked(place);
-    onPick(place);
+    onPickRef.current(place);
     if (mapRef.current) {
       mapRef.current.setView([place.lat, place.lng], 16);
       placeMarker([place.lat, place.lng]);
@@ -193,30 +201,31 @@ export default function SiteMapPicker({
       const extra = await reverseGeocode(lat, lng);
       const place: SiteGeo = { lat, lng, label: extra.label ?? "My location", ...extra };
       setPicked(place);
-      onPick(place);
+      onPickRef.current(place);
       setNotice("");
     }, () => setNotice("Could not read your location — search for the place or click the map."), { enableHighAccuracy: true, timeout: 12000 });
   }
 
   return (
     <div className="space-y-2">
-      <form onSubmit={runSearch} className="flex gap-2" role="search">
+      <div className="flex gap-2" role="search">
         <label className="relative flex-1">
           <span className="sr-only">Search place</span>
           <input
             value={query}
-            onChange={event => setQuery(event.target.value)}
+            onChange={event => { const value = event.target.value; setQuery(value); if (value.trim().length < 3) setResults([]); }}
+            onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void runSearch(); } }}
             placeholder="Search site location — project, landmark, city or PIN…"
             className="w-full h-10 rounded-lg border border-gray-200 px-3 pr-9 text-sm"
           />
         </label>
-        <button type="submit" disabled={searching} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-50">
+        <button type="button" onClick={() => void runSearch()} disabled={searching} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold disabled:opacity-50">
           {searching ? "Searching…" : "Search"}
         </button>
         <button type="button" onClick={locateMe} className="h-10 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 hover:bg-gray-50" title="Use my current location">
           Use my location
         </button>
-      </form>
+      </div>
 
       {results.length > 0 && (
         <ul className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-44 overflow-y-auto divide-y divide-gray-100">
@@ -257,8 +266,14 @@ export function SiteMapView({ lat, lng, name = "Works site" }: { lat: number | n
     const map = L.map(containerRef.current, { center: [lat!, lng!], zoom: 15, attributionControl: true });
     L.tileLayer(OSM_TILE, { maxZoom: 19, attribution: OSM_ATTRIBUTION }).addTo(map);
     const marker = L.marker([lat!, lng!], { icon: pinIcon() }).addTo(map).bindPopup(`<strong>${name}</strong>`);
-    setTimeout(() => { map.invalidateSize(); }, 120);
-    return () => { map.remove(); marker.remove(); };
+    const timer1 = setTimeout(() => { map.invalidateSize(); }, 100);
+    const timer2 = setTimeout(() => { map.invalidateSize(); }, 500);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      map.remove();
+      marker.remove();
+    };
   }, [lat, lng, name]);
 
   if (lat === null || lng === null) return null;

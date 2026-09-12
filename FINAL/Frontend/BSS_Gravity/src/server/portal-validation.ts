@@ -178,12 +178,15 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (role === 'Employer' && resource === 'sites' && method === 'POST') {
     requiredString(body, 'name', 200);
     requiredString(body, 'code', 40);
-    requiredString(body, 'location', 200);
-    requiredString(body, 'state', 120);
-    const startDate = requiredString(body, 'startDate', 10);
-    const endDate = requiredString(body, 'endDate', 10);
-    if (!isoDate.test(startDate) || !isoDate.test(endDate) || startDate > endDate) fail('Enter a valid project date range.');
-    if (!['Active', 'Planned'].includes(String(body.status))) fail('Select a valid site status.');
+    const location = typeof body.location === 'string' ? body.location.trim() : '';
+    const state = typeof body.state === 'string' ? body.state.trim() : '';
+    if (location.length > 200 || state.length > 120) fail('Site location is too long.');
+    const startDate = typeof body.startDate === 'string' ? body.startDate.trim() : '';
+    const endDate = typeof body.endDate === 'string' ? body.endDate.trim() : '';
+    if (startDate && !isoDate.test(startDate)) fail('Enter a valid start date.');
+    if (endDate && !isoDate.test(endDate)) fail('Enter a valid end date.');
+    if (startDate && endDate && startDate > endDate) fail('End date cannot be before the start date.');
+    if (body.status && !['Active', 'Planned'].includes(String(body.status))) fail('Select a valid site status.');
   }
   if (role === 'Employer' && resource === 'approvals' && method === 'PATCH') {
     if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some(id => typeof id !== 'string' || !id.trim())) {

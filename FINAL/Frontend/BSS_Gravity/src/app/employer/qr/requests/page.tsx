@@ -19,7 +19,17 @@ export default function EmployerQrBindingRequestsPage() {
     setError('');
     setNotice('');
     try {
-      await mutate('approvals', 'PATCH', { ids: [row.id], status });
+      if (row.engagementId) {
+        const response = await fetch('/api/employer/engagements', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bindingId: Number(row.engagementId), action: status === 'Approved' ? 'approve-binding' : 'reject' }),
+        });
+        const result = await response.json().catch(() => ({})) as { error?: string };
+        if (!response.ok) throw new Error(result.error || 'Engagement could not be updated.');
+      } else {
+        await mutate('approvals', 'PATCH', { ids: [row.id], status });
+      }
       replaceEmployer({
         ...employer,
         approvals: employer.approvals.map(item => item.id === row.id ? { ...item, status } : item),

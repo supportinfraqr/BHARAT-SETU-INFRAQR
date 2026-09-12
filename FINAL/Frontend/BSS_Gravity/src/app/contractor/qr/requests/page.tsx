@@ -70,6 +70,20 @@ export default function ContractorBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
+  async function decideEngagement(row: ContractorBindingRequest, action: 'approve-binding' | 'reject') {
+    if (!row.engagementId) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/contractor/engagements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: row.engagementId, action }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Engagement could not be updated.');
+      const accepted = action === 'approve-binding';
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.engagementId === row.engagementId ? { ...item, status: (accepted ? 'Accepted' : 'Rejected') as ContractorBindingRequest['status'], consentContractor: accepted ? true : item.consentContractor } : item) });
+      setNotice(accepted ? `Engagement with ${row.entityName} accepted.` : `Engagement with ${row.entityName} declined.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Engagement could not be updated.'); }
+    finally { setBusy(false); }
+  }
+
   const columns: DataColumn<ContractorBindingRequest>[] = [
     { id:'entity', header:'Entity', value:r => r.entityName, render:r => <div><strong className="text-gray-900">{r.entityName}</strong><p className="font-mono text-[10px] text-gray-400">{r.bssId}</p></div> },
     { id:'type', header:'Request type', value:r => r.type, render:r => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${r.type === 'Employer' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{r.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker'}</span> },
@@ -79,6 +93,12 @@ export default function ContractorBindingRequestsPage() {
     { id:'requested', header:'Requested', value:r => r.requestedOn },
     { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-green-700' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{r.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => {
+      if (r.type === 'Employer') {
+        if (r.status === 'Pending' && !r.consentContractor) return <div className="flex gap-2"><button disabled={busy} onClick={() => void decideEngagement(r, 'approve-binding')} className="text-green-700 font-semibold">Accept engagement</button><button disabled={busy} onClick={() => void decideEngagement(r, 'reject')} className="text-red-700 font-semibold">Decline</button></div>;
+        if (r.status === 'Pending') return <span className="text-orange-700">Awaiting employer</span>;
+        if (r.status === 'Accepted') return <span className="text-green-700">Active</span>;
+        return <span className="text-gray-400">—</span>;
+      }
       if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => void consentUnbind(r)} className="text-red-700 font-semibold">Confirm unbind</button>;
       if (r.status === 'Accepted' && r.unbindRequested) return <span className="text-orange-700">Awaiting worker</span>;
       if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <button disabled={busy} onClick={() => void accept(r)} className="text-green-700 font-semibold">Accept binding</button>;
