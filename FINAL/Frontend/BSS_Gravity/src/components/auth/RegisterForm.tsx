@@ -33,6 +33,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const [aadhaarRef, setAadhaarRef] = useState("");
   const [step, setStep] = useState<"details" | "otp" | "aadhaar" | "aadhaar-otp">("details");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const isSelfService = ['Worker', 'Contractor', 'Employer'].includes(selectedRole);
@@ -70,12 +71,13 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const sendAadhaarOtp = async () => {
     if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
     if (!/^\d{12}$/.test(aadhaar)) return setError("Enter a valid 12-digit Aadhaar number.");
-    setError(""); setIsCreating(true);
+    setError(""); setNotice(""); setIsCreating(true);
     try {
       const response = await fetch('/api/auth/aadhaar/otp', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ aadhaar }) });
-      const result = await response.json() as { referenceId?: string; error?: string };
+      const result = await response.json() as { referenceId?: string; error?: string; message?: string; reused?: boolean };
       if (!response.ok || !result.referenceId) throw new Error(result.error ?? 'Aadhaar OTP could not be sent.');
       setAadhaarRef(result.referenceId);
+      if (result.reused) setNotice("An OTP was already sent to your Aadhaar-linked mobile. Enter it below — no need to resend.");
       setStep("aadhaar-otp");
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Aadhaar OTP could not be sent.'); }
     finally { setIsCreating(false); }
@@ -193,6 +195,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
             )}
 
             {error && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+            {notice && <p role="status" className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg p-2.5">{notice}</p>}
             
             <div className="flex items-start gap-2 mt-2">
               <input 
