@@ -3,6 +3,8 @@ EesassinErp integration. Basic flow: POST /authenticate -> access_token,
 POST /kyc/aadhaar/okyc/otp (generate), POST /kyc/aadhaar/okyc/otp/verify.
 Kept as plain functions so views stay thin and testable."""
 
+import time
+
 import requests
 from django.conf import settings
 
@@ -11,6 +13,28 @@ class SandboxError(Exception):
     def __init__(self, message, status=502):
         super().__init__(message)
         self.status = status
+
+
+# Sandbox returns 503 ("Source system unavailable") / 5xx for transient upstream
+# (UIDAI) outages. These are retryable, so we retry a few times before failing.
+_RETRY_STATUS = {429, 500, 502, 503, 504}
+
+
+def _post_with_retry(url, *, json=None, headers=None, timeout=20, attempts=3):
+    resp = None
+    for attempt in range(attempts):
+        try:
+            resp = requests.post(url, json=json, headers=headers, timeout=timeout)
+        except requests.RequestException as exc:
+            if attempt == attempts - 1:
+                raise SandboxError(f"request failed: {exc}") from exc
+            time.sleep(1.2 * (attempt + 1))
+            continue
+        if resp.status_code in _RETRY_STATUS and attempt < attempts - 1:
+            time.sleep(1.2 * (attempt + 1))
+            continue
+        return resp
+    return resp
 
 
 def _error_message(resp) -> str:
@@ -30,7 +54,7 @@ def _error_message(resp) -> str:
 
 def get_access_token() -> str:
     """POST /authenticate with the API key pair -> data.access_token."""
-    resp = requests.post(
+    resp = _post_with_retry(
         f"{settings.AADHAAR_BASE_URL}/authenticate",
         headers={
             "x-api-key": settings.AADHAAR_API_KEY,
@@ -60,7 +84,7 @@ def _authed_headers(token: str, include_version: bool = False) -> dict:
 def generate_otp(aadhaar_number: str) -> dict:
     """POST /kyc/aadhaar/okyc/otp -> { code, data: { reference_id, ... } }"""
     token = get_access_token()
-    resp = requests.post(
+    resp = _post_with_retry(
         f"{settings.AADHAAR_BASE_URL}/kyc/aadhaar/okyc/otp",
         json={
             "@entity": "in.co.sandbox.kyc.aadhaar.okyc.otp.request",
@@ -80,7 +104,7 @@ def verify_otp(reference_id: str, otp: str) -> dict:
     """POST /kyc/aadhaar/okyc/otp/verify -> { code, data: { message, name,
     gender, date_of_birth, care_of, full_address, photo, address... } }"""
     token = get_access_token()
-    resp = requests.post(
+    resp = _post_with_retry(
         f"{settings.AADHAAR_BASE_URL}/kyc/aadhaar/okyc/otp/verify",
         json={
             "@entity": "in.co.sandbox.kyc.aadhaar.okyc.request",

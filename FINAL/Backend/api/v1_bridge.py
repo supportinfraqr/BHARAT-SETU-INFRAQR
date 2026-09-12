@@ -526,6 +526,28 @@ def _parse_dob(value):
     return None
 
 
+def _id_card_validity(issue):
+    """A worker ID card is valid for one year from its issue date (29 Feb is
+    clamped to 28 Feb in non-leap years)."""
+    try:
+        return issue.replace(year=issue.year + 1)
+    except ValueError:
+        return issue.replace(year=issue.year + 1, day=28)
+
+
+def _ensure_id_card_dates(user, issue=None):
+    """Create/refresh the worker's ID-card issue and validity dates on their
+    WorkerEmployment row, without clobbering an existing issue date."""
+    issue = issue or timezone.now().date()
+    emp, _ = WorkerEmployment.objects.get_or_create(user=user)
+    if not emp.id_card_issue_date:
+        emp.id_card_issue_date = issue
+    if not emp.id_card_validity_till:
+        emp.id_card_validity_till = _id_card_validity(emp.id_card_issue_date)
+    emp.save(update_fields=["id_card_issue_date", "id_card_validity_till", "updated_at"])
+    return emp
+
+
 def _save_aadhaar_photo(aadhaar, photo):
     """Decode the base64 oKYC photo into AADHAAR_PHOTO_DIR; returns the
     media URL for the worker identity photo field (or "" on failure)."""
@@ -718,6 +740,7 @@ def aadhaar_verify(request):
             )
             WorkerOther.objects.get_or_create(user=user)
             _record_registration_consent(user)
+            _ensure_id_card_dates(user)
             UserCredential.objects.create(user=user, identity_type="aadhaar",
                                           identity_value=aadhaar,
                                           is_primary=False, verified=True)
@@ -934,6 +957,7 @@ def _register_account(request, role):
                 name="", mobile_number=contact)
             WorkerOther.objects.get_or_create(user=user)
             _record_registration_consent(user)
+            _ensure_id_card_dates(user)
             bss_id = identity.bss_worker_id
         elif role == "contractor":
             profile = ContractorProfile.objects.create(
@@ -2813,6 +2837,11 @@ def _sync_employment_from_binding(binding):
     if binding.accepted_at and not emp.doj:
         emp.doj = binding.accepted_at.date()
     emp.status = "Active"
+    if not emp.id_card_issue_date:
+        emp.id_card_issue_date = (binding.accepted_at.date() if binding.accepted_at
+                                  else timezone.now().date())
+    if not emp.id_card_validity_till:
+        emp.id_card_validity_till = _id_card_validity(emp.id_card_issue_date)
     emp.save()
 
 
