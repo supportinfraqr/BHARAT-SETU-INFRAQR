@@ -65,7 +65,7 @@ export default function WorkerProfilePage() {
   const splitEqually = () => {
     if (!nominees.length) return;
     const base = Math.floor(100 / nominees.length);
-    let remainder = 100 - base * nominees.length;
+    const remainder = 100 - base * nominees.length;
     setNominees(current => current.map((n, index) => ({ ...n, percent: base + (index === current.length - 1 ? remainder : 0) })));
     void remainder;
   };
@@ -112,6 +112,25 @@ export default function WorkerProfilePage() {
       setAadhaarLink({ aadhaar: '', referenceId: '', otp: '', sent: false, busy: false, error: '', notice: '' });
     } catch (error) {
       setAadhaarLink(s => ({ ...s, busy: false, error: error instanceof Error ? error.message : 'Aadhaar verification failed.' }));
+    }
+  };
+
+  // ── NPCI Penny Drop bank verification (Sandbox.co.in) ───────────────────
+  const [bankVerify, setBankVerify] = useState<{ busy: boolean; message: string; error: string }>({ busy: false, message: '', error: '' });
+  const verifyBank = async () => {
+    setBankVerify({ busy: true, message: '', error: '' });
+    try {
+      const response = await fetch('/api/portal/bank-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const result = await response.json() as { data?: { verified?: boolean; nameAtBank?: string; utr?: string; message?: string }; error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error || 'Verification failed.');
+      if (result.data.verified) {
+        updateWorker({ banking: { ...worker.banking, verificationStatus: 'Verified', holderName: result.data.nameAtBank || worker.banking.holderName } });
+        setBankVerify({ busy: false, message: `Verified — account holder ${result.data.nameAtBank || worker.banking.holderName}${result.data.utr ? ` · UTR ${result.data.utr}` : ''}.`, error: '' });
+      } else {
+        setBankVerify({ busy: false, message: '', error: result.data.message || 'Account could not be verified.' });
+      }
+    } catch (error) {
+      setBankVerify({ busy: false, message: '', error: error instanceof Error ? error.message : 'Verification failed.' });
     }
   };
 
@@ -1598,6 +1617,14 @@ export default function WorkerProfilePage() {
                           <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">UPI</p><p className="font-semibold text-gray-800 mt-0.5">{worker.banking.upiEnabled ? 'Enabled' : 'Not enabled'}</p></div>
                         </div>
                       </div>
+                      {!bankVerified && (
+                        <div className="space-y-2">
+                          <button type="button" onClick={verifyBank} disabled={bankVerify.busy || !worker.banking.accountNumber || !worker.banking.ifsc} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-[13px] font-bold inline-flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{bankVerify.busy ? 'Verifying…' : 'Verify via Penny Drop (₹1)'}</button>
+                          <p className="text-[11px] text-gray-400">A ₹1 test credit is sent to your account to confirm the account number and holder name (NPCI, via Sandbox.co.in).</p>
+                        </div>
+                      )}
+                      {bankVerify.message && <p role="status" className="text-[12px] text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{bankVerify.message}</p>}
+                      {bankVerify.error && <p role="alert" className="text-[12px] text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{bankVerify.error}</p>}
                     </div>
                   </div>
 

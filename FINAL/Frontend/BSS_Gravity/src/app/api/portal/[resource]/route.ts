@@ -5,7 +5,7 @@ import { requireApiSession } from '@/server/session';
 import { validatePortalMutation } from '@/server/portal-validation';
 
 const resourcesByRole = {
-  Worker: new Set(['profile','notifications','documents','grievances','availability','leave','applications','advances','gratuity','card-orders','settings','courses']),
+  Worker: new Set(['profile','notifications','documents','grievances','availability','leave','applications','advances','gratuity','bank-verify','card-orders','settings','courses']),
   Contractor: new Set(['workers','compliances','salaries','gate-passes','applications','job-postings','attendance','leave','site-calendar','worker-compliance','advances','submissions','benefits','profile','notifications','settings']),
   Employer: new Set(['contractors','workers','sites','approvals','gate-passes','compliances','submissions','reports','profile','notifications','settings']),
   'BSS Admin': new Set(['notifications','settings','bindings']),

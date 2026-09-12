@@ -93,3 +93,20 @@ def verify_otp(reference_id: str, otp: str) -> dict:
     if resp.status_code != 200:
         raise SandboxError(_error_message(resp), resp.status_code)
     return resp.json()
+
+
+def verify_bank_account(ifsc: str, account_number: str) -> dict:
+    """GET /bank/{ifsc}/accounts/{account_number}/verify (Penny Drop).
+
+    Returns the Sandbox response: { code, transaction_id,
+    data: { message, account_exists, name_at_bank, utr, amount_deposited } }.
+    """
+    token = get_access_token()
+    resp = requests.get(
+        f"{settings.AADHAAR_BASE_URL}/bank/{ifsc}/accounts/{account_number}/verify",
+        headers=_authed_headers(token, include_version=True),
+        timeout=45,
+    )
+    if resp.status_code != 200:
+        raise SandboxError(_error_message(resp), resp.status_code)
+    return resp.json()

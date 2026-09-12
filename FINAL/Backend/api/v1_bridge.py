@@ -1457,9 +1457,40 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_benefits(user, body)
     if resource == "gratuity" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_gratuity_apply(user, body)
+    if resource == "bank-verify" and role_path == "worker" and method in ("POST", "PATCH"):
+        return _handle_bank_verify(user, body)
     if resource == "courses" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_course_action(user, body)
     return int(uuid.uuid4().int % 10**10)
+
+
+def _handle_bank_verify(user, body):
+    """Verify the worker's salary account via Sandbox.co.in Penny Drop (NPCI)."""
+    from bss_core.models import WorkerBanking
+
+    bank = WorkerBanking.objects.filter(user=user).first()
+    if bank is None or not (bank.bank_account_number or "").strip() or not (bank.ifsc_code or "").strip():
+        raise PortalMutationError("Add your bank account number and IFSC in the Banking tab first.", 400)
+    ifsc = bank.ifsc_code.strip().upper()
+    account = bank.bank_account_number.strip()
+    try:
+        result = aadhaar_client.verify_bank_account(ifsc, account)
+    except aadhaar_client.SandboxError as exc:
+        raise PortalMutationError(f"Bank verification could not be completed: {exc}", 502)
+
+    data = result.get("data") or {}
+    exists = bool(data.get("account_exists"))
+    bank.bank_verification_status = "Verified" if exists else "Failed"
+    if exists and data.get("name_at_bank"):
+        bank.bank_account_holder_name = str(data.get("name_at_bank"))[:120]
+    bank.save(update_fields=["bank_verification_status", "bank_account_holder_name", "updated_at"])
+    return {
+        "verified": exists,
+        "nameAtBank": data.get("name_at_bank") or "",
+        "utr": data.get("utr") or "",
+        "amountDeposited": data.get("amount_deposited") or "",
+        "message": data.get("message") or ("Account verified" if exists else "Account not found"),
+    }
 
 
 def _handle_benefits(user, body):

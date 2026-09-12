@@ -760,6 +760,16 @@ class DigiLockerViewSet(viewsets.GenericViewSet):
 
     serializer_class = DigiLockerStartSerializer
 
+    def get_authenticators(self):
+        # The OAuth callback is a top-level browser redirect with no session; the
+        # FE forwards it with the service token, which the default JWT auth would
+        # reject ("Given token not valid for any token type"). Skip auth here —
+        # the DigiLocker session (state) identifies the user.
+        # NOTE: self.action is not set yet at this point, so inspect action_map.
+        if "callback" in getattr(self, "action_map", {}).values():
+            return []
+        return super().get_authenticators()
+
     def get_permissions(self):
         from rest_framework.permissions import AllowAny, IsAuthenticated
         if self.action in ("start", "callback", "status"):
