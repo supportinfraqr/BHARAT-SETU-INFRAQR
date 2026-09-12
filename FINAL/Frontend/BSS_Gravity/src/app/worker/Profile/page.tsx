@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { BssTaxonomies } from '@/data/taxonomies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
@@ -19,7 +18,6 @@ import {
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
   const { worker, portal, updateWorker, saveWorker } = useWorker();
-  const router = useRouter();
   const mobilityRef = useRef<MobilitySectionHandle>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
@@ -229,12 +227,21 @@ export default function WorkerProfilePage() {
   const updateSkill = (index: number, key: 'name' | 'experienceYears', value: string) => setSkillsForm(current => ({ ...current, items: current.items.map((s, i) => i === index ? { ...s, [key]: value } : s) }));
   const removeSkill = (index: number) => setSkillsForm(current => ({ ...current, items: current.items.filter((_, i) => i !== index) }));
 
+  // On a successful save: show the success toast, jump to the top, then hard
+  // reload the whole portal so every screen reflects the freshly saved data.
+  const finishSave = useCallback(() => {
+    setShowSuccess(true);
+    setProfileError('');
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.setTimeout(() => window.location.reload(), 1200);
+  }, []);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (activeTab === 'contact') {
       await mobilityRef.current?.save();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      router.refresh();
+      finishSave();
       return;
     }
     if (activeTab === 'skills') {
@@ -251,10 +258,7 @@ export default function WorkerProfilePage() {
               .map(s => ({ name: s.name, experienceYears: s.experienceYears })),
           },
         });
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        router.refresh();
+        finishSave();
       } catch {
         setShowSuccess(false);
       } finally {
@@ -290,10 +294,7 @@ export default function WorkerProfilePage() {
         };
       }
       await saveWorker(patch as Partial<WorkerRecord>);
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      router.refresh();
+      finishSave();
     } catch (err) {
       setShowSuccess(false);
       setProfileError(err instanceof Error ? err.message : 'Profile could not be saved.');
