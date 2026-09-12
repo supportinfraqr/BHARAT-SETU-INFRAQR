@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { BssTaxonomies } from '@/data/taxonomies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
@@ -18,6 +19,7 @@ import {
 export default function WorkerProfilePage() {
   const { t } = useLanguage();
   const { worker, portal, updateWorker, saveWorker } = useWorker();
+  const router = useRouter();
   const mobilityRef = useRef<MobilitySectionHandle>(null);
   const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
@@ -231,6 +233,8 @@ export default function WorkerProfilePage() {
     e.preventDefault();
     if (activeTab === 'contact') {
       await mobilityRef.current?.save();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      router.refresh();
       return;
     }
     if (activeTab === 'skills') {
@@ -249,6 +253,8 @@ export default function WorkerProfilePage() {
         });
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 3000);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        router.refresh();
       } catch {
         setShowSuccess(false);
       } finally {
@@ -286,6 +292,8 @@ export default function WorkerProfilePage() {
       await saveWorker(patch as Partial<WorkerRecord>);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      router.refresh();
     } catch (err) {
       setShowSuccess(false);
       setProfileError(err instanceof Error ? err.message : 'Profile could not be saved.');
@@ -435,7 +443,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Place of Birth <span className="text-[#FF3B30]">*</span></label>
-                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || ''} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || worker.address.permanentState || ''} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                    <p className="text-[10px] text-[#86868B] mt-1">Used with your Aadhaar-verified work address to map migrant flows for state policy.</p>
                  </div>
                  <div>

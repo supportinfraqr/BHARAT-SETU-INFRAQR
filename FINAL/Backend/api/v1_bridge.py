@@ -743,6 +743,7 @@ def aadhaar_verify(request):
                                             is_verified=True, is_active=True)
             photo_url = _save_aadhaar_photo(aadhaar, data.get("photo"))
             care_father, care_spouse = _aadhaar_care_of_parts(data.get("care_of"))
+            parts = _aadhaar_address_parts(data)
             identity = WorkerIdentity.objects.create(
                 user=user,
                 bss_worker_id=bss_ids.new_bss_worker_id(),
@@ -753,6 +754,9 @@ def aadhaar_verify(request):
                 photo=photo_url,
                 father_name=care_father,
                 spouse_name=care_spouse,
+                # Place of Birth is seeded from the Aadhaar state so it is never
+                # empty; the worker can change it later from their profile.
+                place_of_birth=parts["state"] or "",
             )
             WorkerOther.objects.get_or_create(user=user)
             _record_registration_consent(user)
@@ -787,7 +791,6 @@ def aadhaar_verify(request):
             # The Aadhaar (UIDAI) address is the worker's PERMANENT, Aadhaar-owned
             # address (frozen). The current address is entered/changed by the
             # worker themselves and is never overwritten by Aadhaar.
-            parts = _aadhaar_address_parts(data)
             WorkerAddressMobility.objects.get_or_create(
                 user=user,
                 defaults={
@@ -895,10 +898,14 @@ def worker_link_aadhaar(request):
         identity.father_name = care_father
     if care_spouse:
         identity.spouse_name = care_spouse
+    parts = _aadhaar_address_parts(data)
+    # Place of Birth is seeded from the Aadhaar state and must never be empty;
+    # the worker can still edit it later.
+    if not (identity.place_of_birth or "").strip():
+        identity.place_of_birth = parts["state"] or ""
     identity.save()
 
     a, _ = WorkerAddressMobility.objects.get_or_create(user=user)
-    parts = _aadhaar_address_parts(data)
     a.permanent_address = parts["full"] or a.permanent_address
     a.permanent_state = parts["state"] or a.permanent_state
     a.permanent_district = parts["district"] or a.permanent_district
