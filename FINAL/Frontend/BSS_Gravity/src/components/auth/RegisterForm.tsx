@@ -35,14 +35,15 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+  const isSelfService = ['Worker', 'Contractor', 'Employer'].includes(selectedRole);
 
   const requestOtp = async () => {
     setError("");
-    if (selectedRole !== "Worker") return setError("This delivery includes worker onboarding. Organisation roles require administrator approval.");
+    if (!isSelfService) return setError("This role requires administrator approval. Please contact BSS support.");
     if (!/^[6-9]\d{9}$/.test(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number.");
     setIsCreating(true);
     try {
-      const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:'Worker', identifier:contact }) });
+      const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:selectedRole, identifier:contact }) });
       const result = await response.json() as { error?:string };
       if (!response.ok) throw new Error(result.error ?? 'OTP could not be sent.');
       setStep("otp");
@@ -53,21 +54,21 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     if (otp.length !== 6) return setError("Enter the six-digit verification code.");
     setError(""); setIsCreating(true);
     try {
-      const response = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role:'Worker', contact, otp, acceptedTerms:agreedToTerms }) });
+      const response = await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role:selectedRole, contact, otp, acceptedTerms:agreedToTerms }) });
       const result = (await response.json()) as { bssId?: string; redirectTo?:string; error?: string };
-      if (!response.ok || !result.bssId) throw new Error(result.error || "Worker ID could not be issued.");
-      router.replace(result.redirectTo ?? "/worker/Profile");
+      if (!response.ok || !result.bssId) throw new Error(result.error || `${selectedRole} ID could not be issued.`);
+      router.replace(result.redirectTo ?? "/");
       router.refresh();
-    } catch (issuanceError) { setError(issuanceError instanceof Error ? issuanceError.message : "Worker ID could not be issued."); }
+    } catch (issuanceError) { setError(issuanceError instanceof Error ? issuanceError.message : "Registration could not be completed."); }
     finally { setIsCreating(false); }
   };
   const startAadhaar = () => {
     setError("");
-    if (selectedRole !== "Worker") return setError("This delivery includes worker onboarding. Organisation roles require administrator approval.");
+    if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
     setStep("aadhaar");
   };
   const sendAadhaarOtp = async () => {
-    if (selectedRole !== "Worker") return setError("This delivery includes worker onboarding. Organisation roles require administrator approval.");
+    if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
     if (!/^\d{12}$/.test(aadhaar)) return setError("Enter a valid 12-digit Aadhaar number.");
     setError(""); setIsCreating(true);
     try {
@@ -127,7 +128,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
             {roles.map((r) => (
               <button 
                 key={r.id} 
-                onClick={() => setSelectedRole(r.id)}
+                onClick={() => { setSelectedRole(r.id); setStep("details"); setError(""); setOtp(""); }}
                 className={`cursor-pointer flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 ${
                   selectedRole === r.id 
                     ? 'border-[#1E3A8A]/40 bg-gradient-to-b from-blue-50 to-[#e0e7ff] text-[#1E3A8A] shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] transform translate-y-[2px]' 
@@ -216,7 +217,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                   : "bg-gray-400 cursor-not-allowed"
               }`}
             >
-              {isCreating ? "Please wait…" : step === "details" ? t('sendOtp') : step === "otp" ? "Verify & create Worker ID" : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile" : "Verify Aadhaar & create Worker ID"}
+              {isCreating ? "Please wait…" : step === "details" ? t('sendOtp') : step === "otp" ? `Verify & create ${selectedRole} ID` : step === "aadhaar" ? "Send OTP to Aadhaar-linked mobile" : "Verify Aadhaar & create Worker ID"}
               <span className="ml-2 relative flex items-center justify-center h-4 w-4">
                 <ArrowRight className="h-4 w-4 absolute transition-all duration-300 group-hover:opacity-0 group-hover:scale-50" />
                 <Fingerprint className="h-4 w-4 absolute text-emerald-300 opacity-0 scale-75 rotate-12 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 group-hover:rotate-0" />

@@ -1,0 +1,334 @@
+"use client";
+
+import { use, useMemo, useState, useEffect } from 'react';
+import Link from 'next/link';
+import { notFound, useRouter } from 'next/navigation';
+import { ArrowLeft, Award, Check, CheckCircle2, AlertTriangle, Clock, HelpCircle, Lock, ShieldCheck, FileText, Send, Sparkles, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useWorker } from '@/contexts/WorkerContext';
+import type { CourseAssignmentView, CourseModuleView } from '@/types/portal';
+
+type CourseSummary = {
+  progress?: number;
+  status?: string;
+  certificateNo?: string;
+  skillAwarded?: string;
+  completedLessonIds?: string[];
+  assignmentScores?: Record<string, number>;
+  assignmentFailedAt?: Record<string, string>;
+  modules?: Array<{ moduleId: string; completed: boolean }>;
+};
+
+export default function AssignmentPage({ params }: { params: Promise<{ courseId: string; assignmentId: string }> }) {
+  const { courseId, assignmentId } = use(params);
+  const router = useRouter();
+  const { portal, worker } = useWorker();
+
+  const course = portal.courses.find(c => c.id === courseId) ?? notFound();
+  
+  let targetModule: CourseModuleView | undefined;
+  let assignment: CourseAssignmentView | undefined;
+
+  for (const m of course.modules) {
+    const found = m.assignments.find(a => a.id === assignmentId);
+    if (found) {
+      targetModule = m;
+      assignment = found;
+      break;
+    }
+  }
+
+  if (!assignment || !targetModule) {
+    notFound();
+  }
+
+  const [currentScore, setCurrentScore] = useState<number | null>(assignment.score);
+  const [isPassed, setIsPassed] = useState<boolean>(assignment.passed);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [writing, setWriting] = useState(assignment.submission?.content ?? '');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [successNotice, setSuccessNotice] = useState('');
+  const [cooldownRemaining, setCooldownRemaining] = useState<string | null>(null);
+
+  // Calculate cooldown state if worker previously failed this assignment
+  const failedAtIso = course.assignmentFailedAt?.[assignment.id];
+
+  useEffect(() => {
+    if (!failedAtIso || isPassed) {
+      setCooldownRemaining(null);
+      return;
+    }
+
+    function checkCooldown() {
+      const failedTime = new Date(failedAtIso!).getTime();
+      const now = Date.now();
+      const cooldownMs = 8 * 60 * 60 * 1000;
+      const timeRemaining = (failedTime + cooldownMs) - now;
+
+      if (timeRemaining <= 0) {
+        setCooldownRemaining(null);
+      } else {
+        const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+        const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+        setCooldownRemaining(`${hours}h ${minutes}m ${seconds}s`);
+      }
+    }
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [failedAtIso, isPassed]);
+
+  const questions = assignment.questions || [];
+  const totalQuestions = questions.length;
+  const currentQuestion = questions[currentQuestionIndex];
+
+  async function submitAssignment() {
+    if (!assignment) return;
+    if (cooldownRemaining) return;
+
+    setBusy(true);
+    setError('');
+    setSuccessNotice('');
+
+    try {
+      const payload = assignment.type === 'QUIZ'
+        ? { action: 'submit-assignment', courseId, assignmentId: assignment.id, answers }
+        : { action: 'submit-assignment', courseId, assignmentId: assignment.id, content: writing };
+
+      const response = await fetch('/api/portal/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json().catch(() => ({})) as { data?: CourseSummary; error?: string };
+
+      if (!response.ok || !result.data) {
+        throw new Error(result.error ?? 'Assignment submission failed.');
+      }
+
+      const score = result.data.assignmentScores?.[assignment.id] ?? null;
+      const passed = score !== null && score >= assignment.passScore;
+
+      setCurrentScore(score);
+      setIsPassed(passed);
+
+      if (passed) {
+        setSuccessNotice(`Congratulations! You passed with a score of ${score}%.`);
+      } else {
+        setError(`Your score was ${score}%. A minimum score of ${assignment.passScore}% is required to pass. An 8-hour cooldown limit has been initiated.`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Assignment submission failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto pb-16 animate-in fade-in duration-300">
+      <header className="flex items-center justify-between gap-4 border-b border-gray-200 pb-4">
+        <div className="flex items-center gap-3">
+          <Link href={`/worker/Skills/${courseId}`} className="w-9 h-9 border border-gray-200 rounded-lg grid place-items-center bg-white text-gray-600 hover:bg-gray-50 transition-colors">
+            <ArrowLeft size={18} />
+          </Link>
+          <div>
+            <p className="text-xs font-semibold text-blue-700">{course.title} · {targetModule.title}</p>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-950 mt-0.5">{assignment.title}</h1>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+            isPassed
+              ? 'bg-green-100 text-green-800 border border-green-200'
+              : currentScore !== null
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                : 'bg-gray-100 text-gray-700 border border-gray-200'
+          }`}>
+            {isPassed ? `Passed (${currentScore}%)` : currentScore !== null ? `Score: ${currentScore}%` : 'Not Attempted'}
+          </span>
+        </div>
+      </header>
+
+      {/* 8-Hour Cooldown Banner */}
+      {cooldownRemaining && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3 text-amber-900 shadow-sm">
+          <Clock size={22} className="text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-amber-900">Quiz Retry Limit Active (8-Hour Limit)</h3>
+            <p className="text-xs text-amber-700 mt-1">
+              You did not pass this quiz on your previous attempt. To ensure thorough learning, retakes are locked for 8 hours after a failed attempt.
+            </p>
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-300 text-xs font-mono font-bold text-amber-900">
+              <span>Time remaining until retry:</span>
+              <strong className="text-amber-950">{cooldownRemaining}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification */}
+      {successNotice && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-start gap-3 text-green-900 shadow-sm">
+          <CheckCircle2 size={22} className="text-green-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-green-900">Assignment Passed!</h3>
+            <p className="text-xs text-green-700 mt-1">{successNotice}</p>
+            <div className="mt-4 flex gap-3">
+              <Link href={`/worker/Skills/${courseId}`} className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5">
+                Back to Course Lessons
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 text-red-700 text-sm">
+          <AlertTriangle size={18} className="shrink-0 text-red-600" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Assignment Workspace */}
+      <main className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        {/* Instructions */}
+        {assignment.instructions && (
+          <div className="p-5 bg-blue-50/50 border-b border-gray-100 flex gap-3">
+            <HelpCircle size={18} className="text-blue-700 shrink-0 mt-0.5" />
+            <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-line">
+              <strong className="font-semibold text-gray-900 block mb-1">Instructions:</strong>
+              {assignment.instructions}
+            </div>
+          </div>
+        )}
+
+        {/* QUIZ INTERFACE */}
+        {assignment.type === 'QUIZ' ? (
+          totalQuestions > 0 ? (
+            <div className="p-6 space-y-6">
+              {/* Question Navigation Header */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  Question {currentQuestionIndex + 1} of {totalQuestions}
+                </span>
+                <span className="text-xs font-semibold text-gray-500">
+                  Pass Mark: {assignment.passScore}%
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-[#073B67] transition-all duration-300 rounded-full" style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }} />
+              </div>
+
+              {/* Current Question */}
+              <div className="py-2 space-y-4">
+                <h3 className="text-base font-semibold text-gray-900 leading-snug">
+                  {currentQuestionIndex + 1}. {currentQuestion.question}
+                </h3>
+
+                <div className="grid gap-3 pt-2">
+                  {currentQuestion.options.map((option, oi) => {
+                    const selected = answers[currentQuestion.id] === oi;
+                    return (
+                      <label
+                        key={oi}
+                        className={`flex items-start gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                          selected
+                            ? 'border-[#073B67] bg-blue-50/60 shadow-sm'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        } ${cooldownRemaining ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      >
+                        <input
+                          type="radio"
+                          name={`q-${currentQuestion.id}`}
+                          disabled={!!cooldownRemaining}
+                          checked={selected}
+                          onChange={() => setAnswers(cur => ({ ...cur, [currentQuestion.id]: oi }))}
+                          className="mt-0.5 h-4 w-4 text-[#073B67] border-gray-300 focus:ring-[#073B67]"
+                        />
+                        <span className="text-sm font-medium text-gray-800 leading-tight">{option}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Question Navigation Controls */}
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  disabled={currentQuestionIndex === 0}
+                  onClick={() => setCurrentQuestionIndex(i => i - 1)}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1.5"
+                >
+                  <ChevronLeft size={16} /> Previous
+                </button>
+
+                <div className="flex gap-2">
+                  {currentQuestionIndex < totalQuestions - 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setCurrentQuestionIndex(i => i + 1)}
+                      className="px-5 py-2.5 bg-[#073B67] text-white rounded-lg text-xs font-bold hover:bg-[#062D4F] flex items-center gap-1.5"
+                    >
+                      Next Question <ChevronRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy || !!cooldownRemaining || Object.keys(answers).length < totalQuestions}
+                      onClick={submitAssignment}
+                      className="px-6 py-2.5 bg-[#2F9E67] text-white rounded-lg text-xs font-bold hover:bg-[#247c51] disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                    >
+                      {busy ? 'Submitting...' : isPassed ? 'Re-submit Quiz' : 'Submit Quiz'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="p-8 text-center text-sm text-gray-500">No questions published for this quiz yet.</p>
+          )
+        ) : (
+          /* WRITTEN / UPLOAD INTERFACE */
+          <div className="p-6 space-y-4">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Your Written Answer / Response
+            </label>
+            <textarea
+              rows={8}
+              disabled={!!cooldownRemaining}
+              value={writing}
+              onChange={e => setWriting(e.target.value)}
+              placeholder="Type your response here in detail..."
+              className="w-full border border-gray-200 rounded-xl p-4 text-sm text-gray-900 focus:ring-2 focus:ring-[#073B67] focus:border-transparent outline-none transition-all disabled:opacity-60"
+            />
+            {assignment.submission && (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-600 flex items-center justify-between">
+                <span>Submitted on {assignment.submission.submittedAt.slice(0, 10)} · Status: <strong>{assignment.submission.status}</strong></span>
+                {assignment.submission.feedback && <span>Feedback: <em>{assignment.submission.feedback}</em></span>}
+              </div>
+            )}
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                disabled={busy || !!cooldownRemaining || writing.trim().length === 0}
+                onClick={submitAssignment}
+                className="px-6 py-2.5 bg-[#073B67] text-white rounded-lg text-xs font-bold hover:bg-[#062D4F] disabled:opacity-50 flex items-center gap-2"
+              >
+                {busy ? 'Submitting...' : 'Submit Written Response'}
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

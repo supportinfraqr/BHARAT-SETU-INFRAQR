@@ -3,8 +3,8 @@ import 'server-only';
 import type { PortalRole } from '@/types/portal';
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
-const bssId = /^(?:BSS-W\d{10}|BSS\d{12})$/;
-const contractorBssId = /^(?:BSS-C\d{10}|BSSC\d{12})$/;
+const bssId = /^(?:BSS-W[A-Z0-9]{10}|BSS\d{12})$/;
+const contractorBssId = /^(?:BSS-C[A-Z0-9]{10}|BSSC\d{12})$/;
 
 function fail(message: string): never {
   throw Object.assign(new Error(message), { status: 422 });
@@ -43,12 +43,48 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     const allowed = role === 'Worker' ? ['Accepted', 'Rejected'] : ['Shortlisted', 'Hired', 'Rejected'];
     if (!allowed.includes(String(body.status))) fail('The requested application status is not allowed.');
   }
-  if (resource === 'leave' && method === 'POST') {
+  if (resource === 'leave' && method === 'POST' && role === 'Worker') {
     requiredString(body, 'type', 120);
-    requiredString(body, 'reason', 2_000);
     const from = requiredString(body, 'from', 10);
     const to = requiredString(body, 'to', 10);
     if (!isoDate.test(from) || !isoDate.test(to) || from > to) fail('Enter a valid leave date range.');
+  }
+  if (role === 'Contractor' && resource === 'leave' && method === 'PATCH') {
+    requiredString(body, 'id', 40);
+    if (!['Approved', 'Rejected'].includes(String(body.status))) fail('Select a valid leave decision.');
+  }
+  if (role === 'Worker' && resource === 'courses' && method === 'POST') {
+    requiredString(body, 'courseId', 40);
+    if (!['complete-lesson', 'submit-assignment'].includes(String(body.action ?? '').toLowerCase())) fail('Unsupported course action.');
+  }
+  if (role === 'Contractor' && resource === 'worker-compliance' && method !== 'DELETE') {
+    requiredString(body, 'workerId', 20);
+  }
+  if (role === 'Worker' && resource === 'gratuity' && method === 'POST') {
+    if (body.reason !== undefined) requiredString(body, 'reason', 500);
+  }
+  if (role === 'Contractor' && resource === 'benefits' && method !== 'DELETE') {
+    if (Array.isArray(body.bulk)) {
+      if (!body.bulk.length || body.bulk.length > 500) fail('Provide between 1 and 500 benefit records.');
+    } else {
+      requiredString(body, 'workerId', 20);
+    }
+  }
+  if (resource === 'advances' && method !== 'DELETE') {
+    const advanceAction = requiredString(body, 'action', 30).toLowerCase();
+    if (advanceAction === 'request') {
+      const amount = Number(body.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000) fail('Enter a valid advance amount.');
+    }
+    if (advanceAction !== 'request') requiredString(body, 'id', 40);
+  }
+  if (role === 'Contractor' && resource === 'site-calendar' && method !== 'DELETE') {
+    if (String(body.kind ?? 'holiday').toLowerCase() === 'leavepolicy') {
+      requiredString(body, 'leaveType', 80);
+    } else {
+      requiredString(body, 'name', 120);
+      if (!isoDate.test(requiredString(body, 'date', 10))) fail('Enter a valid holiday date.');
+    }
   }
   if (resource === 'workers' && method === 'POST') {
     const rows = Array.isArray(body.bulk) ? body.bulk : [body];
@@ -83,7 +119,8 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (resource === 'gate-passes') {
     if (method === 'PATCH') {
       if (role === 'Employer') {
-        if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some(id => typeof id !== 'string' || !id.trim())) {
+        if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100
+          || body.ids.some(id => (typeof id !== 'string' && typeof id !== 'number') || !String(id).trim())) {
           fail('Select one or more valid gate passes.');
         }
       } else {
@@ -91,10 +128,16 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
       }
       if (!['Approved', 'Rejected'].includes(String(body.status))) fail('The requested gate-pass status is not allowed.');
     } else if (method === 'POST') {
-      if (!bssId.test(requiredString(body, 'workerId', 15))) fail('Enter a valid worker BSS ID.');
-      if (!['Temporary', 'Permanent'].includes(String(body.type))) fail('Select a valid gate-pass type.');
-      const from = requiredString(body, 'validFrom', 10); const to = requiredString(body, 'validTo', 10);
-      if (!isoDate.test(from) || !isoDate.test(to) || from > to) fail('Enter a valid gate-pass date range.');
+      const check = (row: Record<string, unknown>) => {
+        if (!bssId.test(String(row.workerId ?? ''))) fail('Enter a valid worker BSS ID.');
+        if (!['Temporary', 'Permanent'].includes(String(row.type))) fail('Select a valid gate-pass type.');
+      };
+      if (Array.isArray(body.bulk)) {
+        if (!body.bulk.length || body.bulk.length > 500) fail('Select one or more workers.');
+        body.bulk.forEach(row => check((row ?? {}) as Record<string, unknown>));
+      } else {
+        check(body as Record<string, unknown>);
+      }
     }
   }
   if (resource === 'benefits' && method === 'POST') {
@@ -115,6 +158,9 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     requiredString(body, 'title'); requiredString(body, 'trade'); requiredString(body, 'site');
     const vacancies = Number(body.vacancies); const wage = Number(body.wage);
     if (!Number.isInteger(vacancies) || vacancies < 1 || vacancies > 100_000 || !Number.isFinite(wage) || wage <= 0) fail('Enter valid vacancy and wage values.');
+  }
+  if (role === 'Contractor' && resource === 'attendance' && method === 'POST') {
+    if (!bssId.test(requiredString(body, 'bssId', 20))) fail('Enter a valid worker BSS ID.');
   }
   if (role === 'Employer' && resource === 'contractors' && method === 'POST') {
     requiredString(body, 'name', 200);

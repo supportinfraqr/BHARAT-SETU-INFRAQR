@@ -11,7 +11,7 @@ import {
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   CalendarDays, ChevronDown, ChevronUp, Clock,
   Database, Fingerprint, RefreshCw, CheckCircle, HardHat,
-  Plus, Trash2, Percent, Upload
+  Plus, Trash2, Percent, Upload, X
 } from 'lucide-react';
 
 export default function WorkerProfilePage() {
@@ -183,6 +183,7 @@ export default function WorkerProfilePage() {
 
   // Skills & Education — self-declared manual-entry fields (editable).
   // System-verified certifications are read-only (issued via course completion).
+  const [activeCert, setActiveCert] = useState<{ name: string; authority: string; number: string; expiry: string } | null>(null);
   const [skillsForm, setSkillsForm] = useState({
     educations: (worker.skills?.educations?.length
       ? worker.skills.educations.map(e => ({ qualificationCourse: e.qualificationCourse ?? '', boardUniversity: e.boardUniversity ?? '', passingYear: e.passingYear ?? '' }))
@@ -1300,6 +1301,20 @@ export default function WorkerProfilePage() {
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Validity</p>
                               <p className="text-xs font-semibold text-gray-800">{s.certification?.expiry || '—'}</p>
                             </div>
+                            <div className="col-span-4 pt-2 border-t border-[#2F9E67]/20 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setActiveCert({
+                                  name: s.certification?.name || s.name || 'Verified Skill',
+                                  authority: s.certification?.authority || 'Bharat Shram Setu',
+                                  number: s.certification?.number || 'BSS-CERT-VERIFIED',
+                                  expiry: s.certification?.expiry || 'Lifetime Verified'
+                                })}
+                                className="px-3 py-1.5 rounded-lg bg-[#073B67] hover:bg-[#062D4F] text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
+                              >
+                                <Upload size={13} className="rotate-180" /> View & Print Certificate
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1646,6 +1661,37 @@ export default function WorkerProfilePage() {
         </form>
         </div>
       </div>
+
+      {/* Certificate modal */}
+      {activeCert && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setActiveCert(null)}>
+          <div className="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl border border-gray-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50 no-print">
+              <h2 className="text-sm font-bold text-gray-900">Official BSS Skill Certificate</h2>
+              <button onClick={() => setActiveCert(null)} className="w-8 h-8 grid place-items-center rounded-full hover:bg-gray-200"><X size={16}/></button>
+            </div>
+            <div className="p-8 text-center bg-gradient-to-b from-white to-blue-50/30 border-b border-gray-100" id="bss-certificate-print-area">
+              <div className="w-20 h-20 rounded-2xl bg-[#073B67] text-white flex items-center justify-center mx-auto shadow-md"><Award size={40}/></div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#073B67] mt-5">Bharat Shram Setu National Skill Registry</p>
+              <h3 className="text-2xl font-extrabold text-gray-950 mt-2">{activeCert.name}</h3>
+              <p className="text-xs text-gray-600 mt-3">This official certificate is proudly awarded to</p>
+              <p className="text-xl font-extrabold text-[#073B67] mt-1">{worker.identity.name}</p>
+              <p className="text-xs text-gray-500 mt-1">BSS ID: <span className="font-mono font-semibold">{worker.identity.bssId}</span></p>
+              <div className="my-6 pt-5 border-t border-gray-200/80 max-w-md mx-auto grid grid-cols-2 gap-4 text-left bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Issued By</p><p className="text-xs font-semibold text-gray-800 mt-0.5">{activeCert.authority}</p></div>
+                <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Validity</p><p className="text-xs font-semibold text-gray-800 mt-0.5">{activeCert.expiry}</p></div>
+                <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Certificate No.</p><p className="text-xs font-mono font-semibold text-[#073B67] mt-0.5">{activeCert.number}</p></div>
+                <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Verified Skill</p><p className="text-xs font-semibold text-green-700 mt-0.5">{activeCert.name}</p></div>
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-green-800 bg-green-100/80 border border-green-200 px-4 py-1.5 rounded-full"><CheckCircle size={14}/>Cryptographically Verified on BSS Trust Registry</div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 bg-gray-50 no-print">
+              <button onClick={() => window.print()} className="flex-1 h-10 rounded-xl bg-[#073B67] text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] transition-colors"><Upload size={15} className="rotate-180"/>Print / Save PDF Certificate</button>
+              <button onClick={() => setActiveCert(null)} className="h-10 px-5 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-100">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -57,7 +57,7 @@ from bss_core.models import (
     WorkerSocialSecurity,
     WorkerWelfareSafety,
 )
-from . import aadhaar_client, ocr_client, v1_payloads as payloads
+from . import aadhaar_client, bss_ids, ocr_client, v1_payloads as payloads
 
 
 def _bss_worker_id(user_id):
@@ -281,14 +281,17 @@ def _find_user(identifier):
     cred = UserCredential.objects.filter(identity_value=identifier).first()
     if cred:
         return cred.user
-    # BSS ID lookup (worker / contractor / employer)
-    wi = WorkerIdentity.objects.filter(bss_worker_id=identifier).first()
+    # BSS ID lookup (worker / contractor / employer). Codes are stored
+    # uppercase (random alphanumeric); tolerate lowercase / surrounding
+    # whitespace from manual entry and legacy numeric IDs.
+    bss_id = identifier.strip().upper()
+    wi = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
     if wi:
         return wi.user
-    cp = ContractorProfile.objects.filter(contractor_code=identifier).first()
+    cp = ContractorProfile.objects.filter(contractor_code=bss_id).first()
     if cp:
         return cp.user
-    ep = EmployerProfile.objects.filter(employer_code=identifier).first()
+    ep = EmployerProfile.objects.filter(employer_code=bss_id).first()
     if ep:
         return ep.user
     return None
@@ -403,6 +406,53 @@ def _verify_login_otp(contact, credential):
     otp.verified = True
     otp.save(update_fields=["verified"])
     return True
+
+
+_MPIN_RE = re.compile(r"^\d{4,6}$")
+
+
+def _mobile_credential_for(user):
+    cred = user.credentials.filter(identity_type__in=("mobile", "phone")).first()
+    if cred is None:
+        cred = UserCredential.objects.create(
+            user=user, identity_type="mobile", identity_value=_user_mobile(user),
+            is_primary=True, verified=False)
+    return cred
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def mpin_set(request):
+    """Set/replace the caller's MPIN (hashed) on their mobile credential."""
+    mpin = str(request.data.get("mpin") or "").strip()
+    if not _MPIN_RE.fullmatch(mpin):
+        return Response({"error": "MPIN must be 4-6 digits."}, status=status.HTTP_400_BAD_REQUEST)
+    cred = _mobile_credential_for(request.user)
+    cred.mpin_hash = make_password(mpin)
+    cred.save(update_fields=["mpin_hash"])
+    return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([AllowAny])
+def mpin_reset(request):
+    """Reset an MPIN after verifying a LOGIN OTP (forgot-MPIN path)."""
+    identifier = str(request.data.get("identifier") or "").strip()
+    otp_value = str(request.data.get("otp") or "").strip()
+    mpin = str(request.data.get("mpin") or "").strip()
+    if not _MPIN_RE.fullmatch(mpin):
+        return Response({"error": "MPIN must be 4-6 digits."}, status=status.HTTP_400_BAD_REQUEST)
+    user = _find_user(identifier)
+    if user is None:
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not _verify_login_otp(_user_mobile(user), otp_value):
+        return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+    cred = _mobile_credential_for(user)
+    cred.mpin_hash = make_password(mpin)
+    cred.save(update_fields=["mpin_hash"])
+    return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
 # ---------------------------------------------------------------------------
@@ -566,7 +616,7 @@ def aadhaar_verify(request):
             photo_url = _save_aadhaar_photo(aadhaar, data.get("photo"))
             identity = WorkerIdentity.objects.create(
                 user=user,
-                bss_worker_id=_bss_worker_id(user.id),
+                bss_worker_id=bss_ids.new_bss_worker_id(),
                 name=data.get("name") or "",
                 gender=(data.get("gender") or "").upper() or "",
                 date_of_birth=_parse_dob(data.get("date_of_birth")),
@@ -682,7 +732,7 @@ def worker_link_aadhaar(request):
 
     identity = WorkerIdentity.objects.filter(user=user).first()
     if not identity:
-        identity = WorkerIdentity.objects.create(user=user, bss_worker_id=_bss_worker_id(user.id))
+        identity = WorkerIdentity.objects.create(user=user, bss_worker_id=bss_ids.new_bss_worker_id())
 
     addr = data.get("address") or {}
     identity.name = data.get("name") or identity.name
@@ -727,16 +777,26 @@ def worker_link_aadhaar(request):
     return Response({"success": True, "aadhaarVerified": True}, status=status.HTTP_200_OK)
 
 
-@api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def register_worker(request):
+_REGISTRATION = {
+    "worker": {"password": "Bss@Worker123"},
+    "contractor": {"password": "Bss@Contractor123"},
+    "employer": {"password": "Bss@Employer123"},
+}
+
+
+def _register_account(request, role):
+    """Shared self-registration for worker / contractor / employer.
+
+    Mirrors the worker flow for organisation roles: verified contact + OTP,
+    creates the User + role profile with a random BSS ID, and returns the same
+    session payload so the frontend can sign the account in immediately.
+    """
     body = request.data or {}
+    role = role.lower()
+    if role not in _REGISTRATION:
+        return Response({"error": "unsupported role"}, status=status.HTTP_400_BAD_REQUEST)
     contact = (body.get("contact") or "").strip()
-    role = body.get("role")
     accepted = body.get("acceptedTerms", False)
-    if (role or "").lower() != "worker":
-        return Response({"error": "role must be Worker"}, status=status.HTTP_400_BAD_REQUEST)
     if not accepted:
         return Response({"error": "terms must be accepted"}, status=status.HTTP_400_BAD_REQUEST)
     if not contact:
@@ -746,30 +806,60 @@ def register_worker(request):
     if otp_value and not _verify_login_otp(contact, otp_value):
         return Response({"error": "invalid or expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    identifier = f"worker_{contact[-10:]}" if len(contact) > 10 else f"worker_{contact}"
+    identifier = f"{role}_{contact[-10:]}" if len(contact) > 10 else f"{role}_{contact}"
     if User.objects.filter(username=identifier).exists():
-        identifier = f"worker_{contact[-10:]}_{uuid.uuid4().hex[:4]}"
+        identifier = f"{role}_{contact[-10:]}_{uuid.uuid4().hex[:4]}"
 
     with transaction.atomic():
-        user = User.objects.create_user(username=identifier, password="Bss@Worker123",
-                                        role="worker", account_active=True,
-                                        is_verified=True, is_active=True)
-        identity = WorkerIdentity.objects.create(
-            user=user,
-            bss_worker_id=_bss_worker_id(user.id),
-                name="",
-                mobile_number=contact,
-        )
-        WorkerOther.objects.get_or_create(user=user)
-        _record_registration_consent(user)
-        cred, _ = UserCredential.objects.get_or_create(
+        user = User.objects.create_user(
+            username=identifier, password=_REGISTRATION[role]["password"],
+            role=role, account_active=True, is_verified=True, is_active=True)
+        if role == "worker":
+            identity = WorkerIdentity.objects.create(
+                user=user, bss_worker_id=bss_ids.new_bss_worker_id(),
+                name="", mobile_number=contact)
+            WorkerOther.objects.get_or_create(user=user)
+            _record_registration_consent(user)
+            bss_id = identity.bss_worker_id
+        elif role == "contractor":
+            profile = ContractorProfile.objects.create(
+                user=user, contractor_name="", contractor_code=bss_ids.new_bss_contractor_code(),
+                approval_status="PENDING", mobile=contact)
+            bss_id = profile.contractor_code
+        else:  # employer
+            profile = EmployerProfile.objects.create(
+                user=user, employer_name="", employer_code=bss_ids.new_bss_employer_code(),
+                approval_status="PENDING", mobile=contact)
+            bss_id = profile.employer_code
+        UserCredential.objects.get_or_create(
             identity_type="mobile", identity_value=contact,
             defaults={"user": user, "is_primary": True, "verified": True})
 
     payload = _make_session_payload(user)
-    payload["bssId"] = identity.bss_worker_id
+    payload["bssId"] = bss_id
     payload["subject"] = user.username
     return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def register_worker(request):
+    return _register_account(request, "worker")
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def register_contractor(request):
+    return _register_account(request, "contractor")
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def register_employer(request):
+    return _register_account(request, "employer")
 
 
 # ---------------------------------------------------------------------------
@@ -914,20 +1004,37 @@ def notifications(request, role_path):
 # ---------------------------------------------------------------------------
 # Resource mutations (POST/PATCH/DELETE /v1/<rolePath>/<resource>)
 # ---------------------------------------------------------------------------
+class PortalMutationError(Exception):
+    """Raised by resource handlers to reject a mutation with a clear message."""
+
+    def __init__(self, message, status_code=400):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+
+
 @api_view(["POST", "PATCH", "DELETE"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def mutate_portal(request, role_path, resource):
     user = request.user
     body = request.data or {}
-    generated_id = _persist_mutation(user, role_path, resource, request.method, body)
+    try:
+        result = _persist_mutation(user, role_path, resource, request.method, body)
+    except PortalMutationError as exc:
+        return Response({"error": exc.message}, status=exc.status_code)
 
     if request.method == "DELETE":
-        return Response({"success": True, "deleted": True, "id": generated_id},
+        return Response({"success": True, "deleted": True, "id": result},
+                        status=status.HTTP_200_OK)
+
+    if isinstance(result, (dict, list)):
+        # Handler returned fully-serialised record(s) (leave, gate passes) — pass through.
+        return Response({"success": True, "data": result, "updatedAt": payloads._dts(timezone.now())},
                         status=status.HTTP_200_OK)
 
     out = dict(body or {})
-    out["id"] = generated_id
+    out["id"] = result
     updated_at = payloads._dts(timezone.now())
     return Response({"success": True, "data": out, "updatedAt": updated_at},
                     status=status.HTTP_200_OK)
@@ -959,7 +1066,7 @@ def _persist_mutation(user, role_path, resource, method, body):
         identity = WorkerIdentity.objects.filter(user=user).first()
         if not identity:
             identity = WorkerIdentity.objects.create(
-                user=user, bss_worker_id=_bss_worker_id(user.id),
+                user=user, bss_worker_id=bss_ids.new_bss_worker_id(),
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
                 name=user.get_full_name() or "")
         if body.get("section") == "mobility":
@@ -1289,7 +1396,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                 username = f"worker_{uuid.uuid4().hex[:8]}"
                 w = User.objects.create_user(username=username, password="Bss@Worker123",
                                              role="worker", account_active=True, is_active=True)
-                WorkerIdentity.objects.create(user=w, bss_worker_id=bss_id or _bss_worker_id(w.id),
+                WorkerIdentity.objects.create(user=w, bss_worker_id=bss_id or bss_ids.new_bss_worker_id(),
                                               name=name, mobile_number=mobile)
             if user.role == "contractor" and site:
                 if not _contractor_engaged_at_site(user, site.id):
@@ -1326,7 +1433,739 @@ def _persist_mutation(user, role_path, resource, method, body):
             Site.objects.filter(pk=site_id, employer=user).delete()
             return site_id
         return None
+    if resource == "job-postings" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_job_posting(user, body, method)
+    if resource == "applications" and role_path == "worker" and method == "POST":
+        return _handle_rozgar_apply(user, body)
+    if resource == "applications" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_rozgar_respond(user, body)
+    if resource == "attendance" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_mark_attendance(user, body)
+    if resource == "leave" and role_path == "worker" and method == "POST":
+        return _handle_leave_apply(user, body)
+    if resource == "leave" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_leave_decide(user, body)
+    if resource == "site-calendar" and role_path == "contractor" and method in ("POST", "PATCH", "DELETE"):
+        return _handle_site_calendar(user, body, method)
+    if resource == "worker-compliance" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_worker_compliance(user, body)
+    if resource == "advances" and role_path == "worker" and method in ("POST", "PATCH"):
+        return _handle_advance_worker(user, body)
+    if resource == "advances" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_advance_contractor(user, body)
+    if resource == "benefits" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_benefits(user, body)
+    if resource == "gratuity" and role_path == "worker" and method in ("POST", "PATCH"):
+        return _handle_gratuity_apply(user, body)
+    if resource == "courses" and role_path == "worker" and method in ("POST", "PATCH"):
+        return _handle_course_action(user, body)
     return int(uuid.uuid4().int % 10**10)
+
+
+def _handle_benefits(user, body):
+    """Contractor uploads Bonus / Leave Encashment records for bound workers."""
+    from bss_core.models import WorkerBenefitRecord, WorkerContractorBinding, WorkerIdentity
+
+    kind = str(body.get("kind") or "BONUS").strip().upper().replace("-", "_")
+    kind = {"LEAVEENCASHMENT": "LEAVE_ENCASHMENT", "LEAVE_ENCASHMENT": "LEAVE_ENCASHMENT",
+            "BONUS": "BONUS", "PF": "PF"}.get(kind, "BONUS")
+    rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
+    created = []
+    for row in rows_in:
+        row = row if isinstance(row, dict) else {}
+        bss_id = str(row.get("workerId") or "").strip().upper()
+        identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first() if bss_id else None
+        if identity is None:
+            raise PortalMutationError("Worker not found for that BSS ID.", 404)
+        worker = identity.user
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=worker, contractor=user, binding_status="ACCEPTED")
+                   .select_related("site").first())
+        if binding is None:
+            raise PortalMutationError("This worker is not bound to you.", 403)
+        try:
+            amount = float(row.get("amount") or 0)
+        except (TypeError, ValueError):
+            amount = 0
+        if amount <= 0:
+            raise PortalMutationError("Enter a valid benefit amount.", 400)
+        rec = WorkerBenefitRecord.objects.create(
+            worker=worker, contractor=user, site=binding.site, kind=kind,
+            period=str(row.get("period") or "")[:40], amount=amount,
+            days=row.get("days") or None, rate=row.get("rate") or None,
+            reason=str(row.get("reason") or "")[:120], status="RECORDED",
+            paid_on=_parse_iso_date(row.get("paidOn")), created_by=user)
+        created.append(rec)
+    return [payloads._benefit_row(r) for r in created]
+
+
+def _handle_gratuity_apply(user, body):
+    """Worker applies for gratuity; routed to the bound contractor/employer."""
+    from bss_core.models import GratuityApplication, WorkerContractorBinding
+
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site", "site__employer", "contractor").first())
+    if binding is None:
+        raise PortalMutationError("Gratuity is available once you are bound to a contractor and site.", 403)
+    existing = GratuityApplication.objects.filter(worker=user).exclude(status__in=("REJECTED", "DISBURSED")).first()
+    if existing:
+        return payloads._worker_gratuity(user)
+    application = GratuityApplication.objects.create(
+        worker=user, contractor=binding.contractor, site=binding.site,
+        reference=f"GRT-{uuid.uuid4().hex[:8].upper()}",
+        reason=str(body.get("reason") or "")[:500], status="SUBMITTED")
+    return {
+        "reference": application.reference,
+        "submittedOn": payloads._dts(application.submitted_on),
+        "status": "Submitted",
+        "gratuity": payloads._worker_gratuity(user),
+    }
+
+
+def _handle_advance_worker(user, body):
+    """Worker requests a salary advance, or accepts a disbursement."""
+    from bss_core.models import SalaryAdvance, WorkerContractorBinding
+
+    action = str(body.get("action") or "").strip().lower().replace("_", "-")
+    if action in ("request", "apply"):
+        try:
+            amount = float(body.get("amount") or 0)
+        except (TypeError, ValueError):
+            amount = 0
+        if amount <= 0:
+            raise PortalMutationError("Enter a valid advance amount.", 400)
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=user, binding_status="ACCEPTED")
+                   .select_related("site", "contractor").first())
+        advance = SalaryAdvance.objects.create(
+            worker=user, contractor=binding.contractor if binding else None,
+            site=binding.site if binding else None, amount=amount,
+            reason=str(body.get("reason") or "")[:255], status="REQUESTED")
+        return payloads._advance_row(advance)
+    if action in ("accept", "confirm"):
+        advance = SalaryAdvance.objects.filter(pk=body.get("id"), worker=user).first()
+        if advance is None:
+            raise PortalMutationError("Advance not found.", 404)
+        advance.status = "ACCEPTED"
+        advance.accepted_at = timezone.now()
+        advance.save(update_fields=["status", "accepted_at", "updated_at"])
+        return payloads._advance_row(advance)
+    raise PortalMutationError("Unknown advance action.", 400)
+
+
+def _handle_advance_contractor(user, body):
+    """Contractor approves / rejects / disburses / adjusts an advance request."""
+    from bss_core.models import SalaryAdvance
+
+    advance = SalaryAdvance.objects.filter(pk=body.get("id"), contractor=user).first()
+    if advance is None:
+        raise PortalMutationError("Advance request not found for your account.", 404)
+    action = str(body.get("action") or "").strip().lower().replace("_", "-")
+    if action in ("approve", "approved"):
+        advance.status = "APPROVED"
+        advance.approved_at = timezone.now()
+        advance.approved_by = user
+    elif action in ("reject", "rejected"):
+        advance.status = "REJECTED"
+        advance.approved_at = timezone.now()
+        advance.approved_by = user
+    elif action in ("disburse", "disbursed"):
+        advance.status = "DISBURSED"
+        advance.disbursed_at = timezone.now()
+        advance.mode = "CASH" if str(body.get("mode") or "ONLINE").upper() == "CASH" else "ONLINE"
+        advance.reference = str(body.get("reference") or "")[:80]
+    elif action in ("adjust", "adjusted"):
+        advance.status = "ADJUSTED"
+        advance.adjusted_at = timezone.now()
+        advance.payroll_period = str(body.get("payrollPeriod") or "")[:40]
+    else:
+        raise PortalMutationError("Unknown advance action.", 400)
+    advance.save()
+    return payloads._advance_row(advance)
+
+
+def _handle_worker_compliance(user, body):
+    """Contractor records a bound worker's compliance / welfare details
+    (Medical, Safety Kit/PPE, Safety Training, Site Induction, Insurance,
+    Accommodation, Police Verification)."""
+    from bss_core.models import WorkerContractorBinding, WorkerIdentity, WorkerWelfareSafety
+
+    bss_id = str(body.get("workerId") or "").strip().upper()
+    identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
+    if identity is None:
+        raise PortalMutationError("Worker not found for that BSS ID.", 404)
+    worker = identity.user
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=worker, contractor=user, binding_status="ACCEPTED")
+               .select_related("site").first())
+    if binding is None:
+        raise PortalMutationError("This worker is not bound to you.", 403)
+
+    ws, _ = WorkerWelfareSafety.objects.get_or_create(user=worker)
+    text_fields = {
+        "medicalExaminationStatus": ("medical_examination_status", 40),
+        "medicalFitnessStatus": ("medical_fitness_status", 40),
+        "typesOfPpeGiven": ("types_of_ppe_given", 120),
+        "siteInductionStatus": ("site_induction_status", 40),
+        "insuranceStatus": ("insurance_status", 40),
+        "accommodationProvided": ("accomodation_provided", 120),
+        "policeVerification": ("police_verification", 80),
+        "trainerName": ("trainer_name", 120),
+    }
+    for key, (attr, length) in text_fields.items():
+        if body.get(key) is not None:
+            setattr(ws, attr, str(body.get(key) or "")[:length])
+    bool_fields = {"ppeRequired": "ppe_required", "safetyTrainingCompleted": "safety_training_completed"}
+    for key, attr in bool_fields.items():
+        if body.get(key) is not None:
+            setattr(ws, attr, bool(body.get(key)))
+    date_fields = {"lastMedicalExamination": "last_medical_examination",
+                   "nextMedicalDue": "next_medical_due", "trainingDate": "training_date"}
+    for key, attr in date_fields.items():
+        if body.get(key) is not None:
+            setattr(ws, attr, _parse_iso_date(body.get(key)))
+    ws.save()
+    return payloads._contractor_compliance_row(binding)
+
+
+def _award_course_skill(user, course, certificate_no):
+    """Add / verify a WorkerSkill (the certificate) when a course is completed."""
+    from bss_core.models import WorkerSkill
+
+    skill_name = (course.skill_name or course.title).strip()[:80]
+    certification = (course.certification or course.title).strip()
+    authority = (course.provider or "Bharat Shram Setu").strip()
+
+    existing = WorkerSkill.objects.filter(user=user, name=skill_name).first()
+    if existing is None:
+        WorkerSkill.objects.create(
+            user=user, name=skill_name, verified=True,
+            certification_name=certification, certification_number=certificate_no,
+            certification_authority=authority)
+    else:
+        existing.verified = True
+        existing.certification_name = certification
+        existing.certification_number = certificate_no
+        existing.certification_authority = authority
+        existing.save(update_fields=["verified", "certification_name",
+                                     "certification_number", "certification_authority"])
+
+
+def _course_state(course, enrollment):
+    """Per-module and overall completion for a course enrollment."""
+    completed_ids = {str(x) for x in (enrollment.completed_lesson_ids or [])}
+    scores = {str(k): v for k, v in (enrollment.assignment_scores or {}).items()}
+    total_items = done_items = 0
+    modules = []
+    for m in course.modules.all():
+        lessons = list(m.lessons.all())
+        assignments = list(m.assignments.all())
+        lessons_done = all(str(l.id) in completed_ids for l in lessons) if lessons else True
+        assignments_passed = all(
+            scores.get(str(a.id)) is not None and scores[str(a.id)] >= a.pass_score
+            for a in assignments) if assignments else True
+        module_complete = bool(lessons or assignments) and lessons_done and assignments_passed
+        total_items += len(lessons) + len(assignments)
+        done_items += (sum(1 for l in lessons if str(l.id) in completed_ids)
+                       + sum(1 for a in assignments if scores.get(str(a.id)) is not None
+                             and scores[str(a.id)] >= a.pass_score))
+        modules.append({
+            "moduleId": str(m.id), "completed": module_complete,
+            "lessonsDone": lessons_done, "assignmentsPassed": assignments_passed,
+        })
+    all_complete = bool(modules) and all(m["completed"] for m in modules)
+    progress = 100 if enrollment.status == "COMPLETED" else (
+        round(done_items / total_items * 100) if total_items else 0)
+    return {
+        "completedLessonIds": sorted(completed_ids, key=lambda x: int(x) if str(x).isdigit() else 0),
+        "assignmentScores": scores,
+        "modules": modules,
+        "progress": progress,
+        "allComplete": all_complete,
+    }
+
+
+def _course_summary(user, course, enrollment):
+    state = _course_state(course, enrollment)
+    return {
+        "courseId": str(course.id),
+        "completedLessonIds": state["completedLessonIds"],
+        "assignmentScores": state["assignmentScores"],
+        "assignmentFailedAt": enrollment.assignment_failed_at or {},
+        "progress": state["progress"],
+        "status": ("Completed" if enrollment.status == "COMPLETED"
+                   else ("In progress" if state["progress"] > 0 else "Not started")),
+        "certificateReady": enrollment.status == "COMPLETED",
+        "certificateNo": enrollment.certificate_no,
+        "skillAwarded": (course.skill_name or course.title) if enrollment.status == "COMPLETED" else "",
+        "modules": state["modules"],
+    }
+
+
+def _handle_course_action(user, body):
+    """Worker course progress: mark a lesson complete or submit an assignment.
+
+    A module is complete when all its lessons are watched and all its
+    assignments are passed; the course (and certificate) completes when every
+    module is complete. The certificate is added to the worker's verified skills.
+    """
+    from bss_core.models import Course, CourseAssignment, CourseEnrollment
+
+    raw_id = str(body.get("courseId") or "").replace("course-", "").strip()
+    course = Course.objects.filter(pk=raw_id, is_active=True).first() if raw_id.isdigit() else None
+    if course is None:
+        raise PortalMutationError("Course not found.", 404)
+
+    enrollment, _ = CourseEnrollment.objects.get_or_create(worker=user, course=course)
+    action = str(body.get("action") or "").strip().lower().replace("_", "-")
+
+    if action in ("complete-lesson", "lesson"):
+        lesson_id = str(body.get("lessonId") or "")
+        completed = {str(x) for x in (enrollment.completed_lesson_ids or [])}
+        completed.add(lesson_id)
+        enrollment.completed_lesson_ids = sorted(
+            completed, key=lambda x: int(x) if str(x).isdigit() else 0)
+        enrollment.save(update_fields=["completed_lesson_ids", "updated_at"])
+    elif action in ("submit-assignment", "assignment", "submit-quiz", "quiz"):
+        from bss_core.models import CourseSubmission
+
+        assignment_id = str(body.get("assignmentId") or body.get("quizId") or "")
+        assignment = (CourseAssignment.objects
+                      .filter(pk=assignment_id, module__course=course).first()
+                      if assignment_id.isdigit() else None)
+        if assignment is None:
+            raise PortalMutationError("Assignment not found.", 404)
+        scores = {str(k): v for k, v in (enrollment.assignment_scores or {}).items()}
+
+        if assignment.assignment_type == "QUIZ":
+            from datetime import timedelta
+            from django.utils import timezone
+
+            failed_map = dict(enrollment.assignment_failed_at or {})
+            last_failed_str = failed_map.get(str(assignment.id))
+            if last_failed_str:
+                try:
+                    last_failed_time = timezone.datetime.fromisoformat(last_failed_str)
+                    if timezone.is_naive(last_failed_time):
+                        last_failed_time = timezone.make_aware(last_failed_time)
+                    time_passed = timezone.now() - last_failed_time
+                    if time_passed < timedelta(hours=8):
+                        remaining_seconds = int((timedelta(hours=8) - time_passed).total_seconds())
+                        hours_left = remaining_seconds // 3600
+                        mins_left = (remaining_seconds % 3600) // 60
+                        raise PortalMutationError(
+                            f"Quiz cooldown active. You can retry this quiz in {hours_left}h {mins_left}m.", 429
+                        )
+                except PortalMutationError:
+                    raise
+                except Exception:
+                    pass
+
+            answers = body.get("answers") or {}
+            questions = list(assignment.questions.all())
+            correct = 0
+            for question in questions:
+                given = answers.get(str(question.id), answers.get(question.id))
+                try:
+                    if given is not None and int(given) == question.correct_index:
+                        correct += 1
+                except (TypeError, ValueError):
+                    pass
+            score = round(correct / len(questions) * 100) if questions else 100
+            previous = scores.get(str(assignment.id))
+            if previous is None or score > previous:
+                scores[str(assignment.id)] = score
+            enrollment.assignment_scores = scores
+            enrollment.quiz_score = score
+            
+            # If worker failed to reach pass score, record failed timestamp for 8-hour cooldown
+            if score < assignment.pass_score:
+                failed_map[str(assignment.id)] = timezone.now().isoformat()
+                enrollment.assignment_failed_at = failed_map
+                enrollment.save(update_fields=["assignment_scores", "assignment_failed_at", "quiz_score", "updated_at"])
+            else:
+                # Passed! Remove any active cooldown entry for this quiz
+                if str(assignment.id) in failed_map:
+                    del failed_map[str(assignment.id)]
+                    enrollment.assignment_failed_at = failed_map
+                    enrollment.save(update_fields=["assignment_scores", "assignment_failed_at", "quiz_score", "updated_at"])
+                else:
+                    enrollment.save(update_fields=["assignment_scores", "quiz_score", "updated_at"])
+        else:
+            # Written / upload assignment — store the response. A reviewer can
+            # grade it; until then it is accepted at the pass mark so the module
+            # can complete.
+            content = str(body.get("content") or "")[:5000]
+            file_url = str(body.get("fileUrl") or "")[:255]
+            if not content and not file_url:
+                raise PortalMutationError("Add your response before submitting.", 400)
+            submission, _ = CourseSubmission.objects.update_or_create(
+                worker=user, assignment=assignment,
+                defaults={"content": content, "file_url": file_url, "status": "SUBMITTED"})
+            score = submission.score if submission.score is not None else assignment.pass_score
+            previous = scores.get(str(assignment.id))
+            if previous is None or score > previous:
+                scores[str(assignment.id)] = score
+            enrollment.assignment_scores = scores
+            enrollment.save(update_fields=["assignment_scores", "updated_at"])
+    elif action in ("grade-submission", "grade"):
+        from bss_core.models import CourseSubmission
+
+        if user.role not in ("contractor", "bss_staff", "bss_admin"):
+            raise PortalMutationError("Only a reviewer can grade submissions.", 403)
+        submission = CourseSubmission.objects.filter(pk=body.get("submissionId")).first()
+        if submission is None:
+            raise PortalMutationError("Submission not found.", 404)
+        submission.score = max(0, min(100, int(body.get("score") or 0)))
+        submission.feedback = str(body.get("feedback") or "")[:500]
+        submission.status = "GRADED"
+        submission.reviewer = user
+        submission.reviewed_at = timezone.now()
+        submission.save(update_fields=["score", "feedback", "status", "reviewer", "reviewed_at"])
+        worker_enrollment, _ = CourseEnrollment.objects.get_or_create(
+            worker=submission.worker, course=course)
+        sc = {str(k): v for k, v in (worker_enrollment.assignment_scores or {}).items()}
+        sc[str(submission.assignment_id)] = submission.score
+        worker_enrollment.assignment_scores = sc
+        worker_enrollment.save(update_fields=["assignment_scores", "updated_at"])
+        state = _course_state(course, worker_enrollment)
+        if state["allComplete"] and worker_enrollment.status != "COMPLETED":
+            worker_enrollment.status = "COMPLETED"
+            worker_enrollment.certificate_issued = True
+            if not worker_enrollment.certificate_no:
+                worker_enrollment.certificate_no = f"BSS-CERT-{course.id}-{submission.worker_id}"
+            worker_enrollment.completed_at = timezone.now()
+            worker_enrollment.save(update_fields=["status", "certificate_issued", "certificate_no",
+                                                  "completed_at", "updated_at"])
+            _award_course_skill(submission.worker, course, worker_enrollment.certificate_no)
+        return {"submissionId": str(submission.id), "score": submission.score,
+                "workerComplete": worker_enrollment.status == "COMPLETED"}
+    else:
+        raise PortalMutationError("Unknown course action.", 400)
+
+    # Completion gate across all modules → issue the certificate.
+    state = _course_state(course, enrollment)
+    if state["allComplete"] and enrollment.status != "COMPLETED":
+        enrollment.status = "COMPLETED"
+        enrollment.certificate_issued = True
+        if not enrollment.certificate_no:
+            enrollment.certificate_no = f"BSS-CERT-{course.id}-{user.id}"
+        enrollment.completed_at = timezone.now()
+        enrollment.save(update_fields=["status", "certificate_issued", "certificate_no",
+                                       "completed_at", "updated_at"])
+        _award_course_skill(user, course, enrollment.certificate_no)
+
+    return _course_summary(user, course, enrollment)
+
+
+def _contractor_site_ids(user):
+    ids = set(WorkerContractorBinding.objects.filter(contractor=user)
+              .values_list("site_id", flat=True))
+    ids.update(ContractorSiteAllotment.objects.filter(
+        binding__contractor=user, status="APPROVED").values_list("site_id", flat=True))
+    return ids
+
+
+def _handle_site_calendar(user, body, method):
+    """Contractor manages a site's holiday calendar + leave policy.
+
+    Workers bound to the site inherit both. ``kind`` selects what is edited:
+    ``holiday`` (default) or ``leavePolicy``.
+    """
+    from bss_core.models import LeaveType, SiteHoliday, SiteLeavePolicy
+
+    site_id = body.get("siteId")
+    if site_id not in _contractor_site_ids(user):
+        raise PortalMutationError("This site is not allotted to you.", 403)
+    site = Site.objects.filter(pk=site_id).first()
+    if site is None:
+        raise PortalMutationError("Site not found.", 404)
+
+    kind = str(body.get("kind") or "holiday").strip().lower()
+    record_id = body.get("id")
+
+    if method == "DELETE":
+        if kind in ("leavepolicy", "leave-policy", "policy"):
+            SiteLeavePolicy.objects.filter(pk=record_id, site=site).delete()
+        else:
+            SiteHoliday.objects.filter(pk=record_id, site=site).delete()
+        return record_id
+
+    if kind in ("leavepolicy", "leave-policy", "policy"):
+        leave_type = None
+        if body.get("leaveTypeId"):
+            leave_type = LeaveType.objects.filter(pk=body.get("leaveTypeId")).first()
+        if leave_type is None and body.get("leaveType"):
+            leave_type = LeaveType.objects.filter(name__iexact=str(body.get("leaveType")).strip()).first()
+        if leave_type is None:
+            raise PortalMutationError("Select a valid leave type.", 400)
+        policy, _ = SiteLeavePolicy.objects.update_or_create(
+            site=site, leave_type=leave_type,
+            defaults={
+                "annual_entitlement": int(body.get("annualEntitlement") or 12),
+                "opening_balance": int(body.get("openingBalance") or 0),
+                "is_active": bool(body.get("isActive", True)),
+            },
+        )
+        return policy.id
+
+    # Holiday entry
+    holiday = SiteHoliday.objects.filter(pk=record_id, site=site).first() if record_id else None
+    if holiday is None:
+        holiday = SiteHoliday(site=site)
+    new_date = _parse_iso_date(body.get("date"))
+    if new_date:
+        holiday.date = new_date
+    if body.get("name") is not None:
+        holiday.name = str(body.get("name") or "").strip()[:120]
+    holiday_type = str(body.get("holidayType") or "").strip().upper()
+    if holiday_type in dict(SiteHoliday.TYPES):
+        holiday.holiday_type = holiday_type
+    if body.get("isPaid") is not None:
+        holiday.is_paid = bool(body.get("isPaid"))
+    if body.get("note") is not None:
+        holiday.note = str(body.get("note") or "")[:255]
+    if not holiday.date or not holiday.name:
+        raise PortalMutationError("A holiday needs a date and a name.", 400)
+    holiday.save()
+    return holiday.id
+
+
+def _handle_leave_apply(user, body):
+    """Worker leave application -> LeaveRequest (PENDING, approved by bound contractor)."""
+    from bss_core.models import LeaveRequest, LeaveType
+
+    type_name = str(body.get("type") or "").strip()
+    leave_type = LeaveType.objects.filter(name__iexact=type_name, is_active=True).first()
+    if leave_type is None:
+        leave_type = LeaveType.objects.filter(is_active=True).first()
+    if leave_type is None:
+        raise PortalMutationError("No leave types are configured.", 400)
+
+    from_date = _parse_iso_date(body.get("from"))
+    to_date = _parse_iso_date(body.get("to"))
+    if not from_date or not to_date or to_date < from_date:
+        raise PortalMutationError("Enter a valid leave date range.", 400)
+    days = (to_date - from_date).days + 1
+
+    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site").first())
+    if binding is None or binding.site is None:
+        raise PortalMutationError(
+            "Leave is available once you are bound to a contractor and site.", 403)
+    request_obj = LeaveRequest.objects.create(
+        worker=user,
+        leave_type=leave_type,
+        site=binding.site,
+        contractor=binding.contractor,
+        from_date=from_date,
+        to_date=to_date,
+        days=days,
+        reason=str(body.get("reason") or "")[:2000],
+        attachment_id=str(body.get("attachmentId") or "")[:80],
+        status="PENDING",
+    )
+    return payloads._leave_row(request_obj)
+
+
+def _handle_leave_decide(user, body):
+    """Bound contractor approves / rejects a worker's LeaveRequest."""
+    from bss_core.models import LeaveRequest
+
+    request_obj = LeaveRequest.objects.filter(pk=body.get("id"), contractor=user).first()
+    if request_obj is None:
+        raise PortalMutationError("Leave request not found for your account.", 404)
+    decision = str(body.get("status") or "").strip().upper()
+    mapping = {"APPROVED": "APPROVED", "APPROVE": "APPROVED", "ACCEPTED": "APPROVED",
+               "REJECTED": "REJECTED", "REJECT": "REJECTED", "CANCELLED": "CANCELLED"}
+    if decision in mapping:
+        request_obj.status = mapping[decision]
+        request_obj.approver = user
+        request_obj.decided_at = timezone.now()
+        if body.get("comment") is not None:
+            request_obj.comment = str(body.get("comment") or "")[:500]
+        request_obj.save(update_fields=["status", "approver", "decided_at", "comment", "updated_at"])
+    return payloads._leave_row(request_obj)
+
+
+def _handle_mark_attendance(user, body):
+    """Contractor marks attendance for a worker after scanning their QR.
+
+    Only allowed when the worker has an ACCEPTED binding with this contractor;
+    writes to the shared Attendance table that drives /worker/Attendance.
+    """
+    from bss_core.models import Attendance, WorkerIdentity, WorkerContractorBinding
+
+    bss_id = str(body.get("bssId") or "").strip().upper()
+    worker_identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
+    if worker_identity is None:
+        raise PortalMutationError("No worker found for that BSS ID.", 404)
+    worker = worker_identity.user
+
+    binding = (
+        WorkerContractorBinding.objects.filter(
+            worker=worker, contractor=user, binding_status="ACCEPTED"
+        )
+        .select_related("site")
+        .first()
+    )
+    if binding is None or binding.site is None:
+        raise PortalMutationError(
+            "This worker is not bound to you, so attendance cannot be marked.", 403)
+
+    site = binding.site
+    today = timezone.localdate()
+    now = timezone.now()
+    status = str(body.get("status") or "PRESENT").strip().upper()
+    if status not in dict(Attendance.STATUS):
+        status = "PRESENT"
+
+    attendance, created = Attendance.objects.get_or_create(
+        worker=worker, site=site, attendance_date=today,
+        defaults={
+            "contractor": user,
+            "capture_method": "QR",
+            "verification_type": "qr_worker",
+            "status": status,
+            "check_in_time": now,
+            "is_verified": True,
+            "verified_by": user,
+            "verified_at": now,
+            "remarks": str(body.get("remarks") or "Marked via contractor QR scan")[:255],
+        },
+    )
+    if not created:
+        attendance.status = status
+        attendance.check_out_time = now
+        attendance.save(update_fields=["status", "check_out_time", "updated_at"])
+    return attendance.id
+
+
+def _parse_iso_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _handle_job_posting(user, body, method):
+    """Contractor job posting -> ContractorJob (Rozgar Setu job management)."""
+    from bss_core.models import ContractorJob
+
+    job = None
+    job_id = body.get("id")
+    if job_id and str(job_id).isdigit():
+        job = ContractorJob.objects.filter(pk=job_id, contractor=user).first()
+    if job is None:
+        job = ContractorJob(contractor=user)
+
+    def text(key, current=""):
+        value = body.get(key)
+        return str(value).strip() if value is not None else (current or "")
+
+    job.job_title = text("title", job.job_title) or job.job_title
+    job.job_description = text("description", job.job_description)
+    job.wage_offered = text("monthlyWage", job.wage_offered)
+    job.designation = text("designation", job.designation) or job.job_title
+    job.trade = text("trade", job.trade)
+    job.category = text("category", job.category)
+    job.workplace_type = text("workplaceType", job.workplace_type) or "On-site"
+    job.state = text("state", job.state)
+    job.city = text("city", job.city)
+    job.experience = text("experience", job.experience)
+    job.dob_limit = text("dobLimit", job.dob_limit)
+    job.salary_visibility = text("salaryVisibility", job.salary_visibility) or "Visible to all"
+    job.visibility = text("visibility", job.visibility) or "Public"
+    job.duration = text("duration", job.duration)
+    if isinstance(body.get("skills"), list):
+        job.skills = [str(s) for s in body.get("skills")]
+    if body.get("vacancies") is not None:
+        try:
+            job.vacancies = max(1, int(body.get("vacancies")))
+        except (TypeError, ValueError):
+            pass
+    for src, field in (("minSalary", "min_salary"), ("maxSalary", "max_salary")):
+        if body.get(src) not in (None, ""):
+            try:
+                setattr(job, field, body.get(src))
+            except (TypeError, ValueError):
+                pass
+    if body.get("closingDate") is not None:
+        job.validity_until = _parse_iso_date(body.get("closingDate"))
+    site_name = text("site", "")
+    if site_name:
+        site = Site.objects.filter(site_name__iexact=site_name).first()
+        if site:
+            job.site = site
+    status = str(body.get("status") or "").strip().upper()
+    job.status = {"DRAFT": "DRAFT", "CLOSED": "CLOSED"}.get(status, "SUBMITTED")
+    job.is_active = job.status != "DRAFT"
+    job.save()
+    return job.id
+
+
+def _handle_rozgar_apply(user, body):
+    """Worker applies to a job -> RozgarRequest (pending)."""
+    from bss_core.models import ContractorJob, RozgarRequest
+
+    # A worker can only be bound to one contractor at a time — if already bound
+    # they must unbind before applying to another contractor's job.
+    active = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+              .select_related("contractor", "site").first())
+    if active is not None:
+        cp = getattr(active.contractor, "contractor_profile", None)
+        contractor_name = (cp.contractor_name if cp and cp.contractor_name else active.contractor.username)
+        site_name = active.site.site_name if active.site else ""
+        raise PortalMutationError(
+            f"You are already bound to {contractor_name}"
+            f"{f' at {site_name}' if site_name else ''}. "
+            "Unbind first before applying to another contractor.", 409)
+
+    raw_id = body.get("jobId") or body.get("id") or body.get("job")
+    job = None
+    if raw_id is not None:
+        jid = str(raw_id).replace("JOB-", "").strip()
+        if jid.isdigit():
+            job = ContractorJob.objects.filter(pk=jid, is_active=True).first()
+    if job is None:
+        return None
+    req, _created = RozgarRequest.objects.get_or_create(
+        job=job, worker=user,
+        defaults={"contractor": job.contractor, "status": "PENDING",
+                  "notes": str(body.get("notes") or "")[:500]},
+    )
+    # Applying also raises a site-specific binding request to the job's
+    # contractor (worker-initiated consent). The contractor accepts it in
+    # Binding Requests; the binding completes only after both sides consent.
+    if job.site_id and job.contractor_id:
+        binding, _ = WorkerContractorBinding.objects.get_or_create(
+            worker=user, contractor=job.contractor, site=job.site)
+        if binding.binding_status != "ACCEPTED":
+            binding.binding_status = "PENDING"
+            binding.consent_worker = True
+            binding.save(update_fields=["binding_status", "consent_worker"])
+    return req.id
+
+
+def _handle_rozgar_respond(user, body):
+    """Contractor responds to a RozgarRequest (Hired/Accepted/Rejected)."""
+    from bss_core.models import RozgarRequest
+
+    req_id = body.get("id")
+    req = RozgarRequest.objects.filter(pk=req_id, contractor=user).first()
+    if req is None:
+        return None
+    status = str(body.get("status") or "").strip().upper()
+    mapping = {"HIRED": "ACCEPTED", "ACCEPTED": "ACCEPTED", "REJECTED": "REJECTED",
+               "CANCELLED": "CANCELLED", "PENDING": "PENDING"}
+    if status in mapping:
+        req.status = mapping[status]
+        req.responded_at = timezone.now()
+        req.save(update_fields=["status", "responded_at", "updated_at"])
+    return req.id
 
 
 # Editable scalar columns of the Site model (everything except the employer FK,
@@ -1421,16 +2260,82 @@ def _parse_date(value):
 
 
 def _handle_gate_pass(user, body):
-    worker_id = body.get("workerId")
-    site_id = body.get("siteId")
-    worker = User.objects.filter(pk=worker_id).first() if worker_id else user
-    site = Site.objects.filter(pk=site_id).first() if site_id else None
-    gp = WorkerGatePass.objects.create(
-        worker=worker, site=site, gate_pass_type=body.get("type") or "TGP",
-        gate_pass_no=body.get("gatePassNo") or f"GP-{uuid.uuid4().hex[:8].upper()}",
-        status=body.get("status") or "PENDING", issued_by=user,
-    )
-    return gp.id
+    """Gate pass workflow.
+
+    * Contractor: request single / bulk temporary or permanent passes for their
+      bound workers (created PENDING, awaiting the principal employer).
+    * Employer: approve / reject requests for sites they own; approval sets the
+      validity window (TGP 30 days, PGP 365 days) and activates the pass.
+    """
+    from bss_core.models import WorkerGatePass, WorkerIdentity, WorkerContractorBinding
+
+    if user.role == "employer":
+        ids = body.get("ids") or ([body.get("id")] if body.get("id") else [])
+        decision = str(body.get("status") or "").strip().lower()
+        today = timezone.localdate()
+        updated = []
+        for gp in WorkerGatePass.objects.filter(pk__in=ids, site__employer=user):
+            if decision in ("approved", "approve"):
+                gp.status = "ACTIVE"
+                gp.start_date = today
+                gp.end_date = today + timedelta(days=365 if gp.gate_pass_type == "PGP" else 30)
+                gp.approved_by = user
+                gp.approved_at = timezone.now()
+            elif decision in ("rejected", "reject"):
+                gp.status = "REJECTED"
+                gp.approved_by = user
+                gp.approved_at = timezone.now()
+                gp.remarks = str(body.get("remarks") or "")[:255]
+            else:
+                raise PortalMutationError("Select approve or reject.", 400)
+            gp.save()
+            updated.append(gp.id)
+        if not updated:
+            raise PortalMutationError("No gate pass requests matched.", 404)
+        rows = [payloads._employer_gate_pass_row(g)
+                for g in WorkerGatePass.objects.filter(pk__in=updated)]
+        return rows[0] if len(rows) == 1 else rows
+
+    # Contractor: request single / bulk
+    rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
+    created = []
+    for row in rows_in:
+        row = row if isinstance(row, dict) else {}
+        bss_id = str(row.get("workerId") or row.get("bssId") or "").strip().upper()
+        identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first() if bss_id else None
+        if identity is None:
+            raise PortalMutationError("Worker not found for that BSS ID.", 404)
+        worker = identity.user
+        binding = (WorkerContractorBinding.objects.filter(
+            worker=worker, contractor=user, binding_status="ACCEPTED")
+            .select_related("site").first())
+        if binding is None:
+            raise PortalMutationError("This worker is not bound to you.", 403)
+        gp_type = "PGP" if str(row.get("type") or "").lower().startswith("perm") else "TGP"
+        eligibility = payloads._gate_pass_eligibility(worker)
+        if gp_type == "PGP" and not (eligibility["medical"] == "Done"
+                                     and eligibility["healthSafety"] == "Done"
+                                     and eligibility["compliance"] == "Done"):
+            raise PortalMutationError(
+                "This worker is not eligible for a Permanent Gate Pass — Medical, "
+                "Health & Safety and Compliance must all be Done.", 400)
+        if gp_type == "TGP" and not (eligibility["medical"] == "Done"
+                                     and eligibility["healthSafety"] == "Done"):
+            raise PortalMutationError(
+                "This worker is not eligible for a Temporary Gate Pass — Medical and "
+                "Health & Safety must be Done.", 400)
+        existing = WorkerGatePass.objects.filter(
+            worker=worker, gate_pass_type=gp_type, status__in=("PENDING", "ACTIVE")).first()
+        if existing:
+            created.append(existing)
+            continue
+        gp = WorkerGatePass.objects.create(
+            worker=worker, site=binding.site, gate_pass_type=gp_type,
+            gate_pass_no=f"{gp_type}-{uuid.uuid4().hex[:8].upper()}",
+            status="PENDING", issued_by=user, source="CONTRACTOR_GATE_PASS")
+        created.append(gp)
+    out = [payloads._contractor_gate_pass_row(g) for g in created]
+    return out[0] if len(out) == 1 else out
 
 
 def _handle_document_upload(user, body):
@@ -2049,7 +2954,7 @@ def worker_verify_document(request):
         identity = WorkerIdentity.objects.filter(user=user).first()
         if identity is None:
             identity = WorkerIdentity.objects.create(
-                user=user, bss_worker_id=_bss_worker_id(user.id),
+                user=user, bss_worker_id=bss_ids.new_bss_worker_id(),
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
                 name=user.get_full_name() or "")
         if number:

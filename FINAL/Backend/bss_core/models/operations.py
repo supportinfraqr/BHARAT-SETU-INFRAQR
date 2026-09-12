@@ -173,6 +173,10 @@ class WorkerGatePass(models.Model):
     end_date = models.DateField(null=True, blank=True)
     issued_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                   related_name="+")
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="+")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    remarks = models.CharField(max_length=255, blank=True)
     source = models.CharField(max_length=20, choices=SOURCE, default="CONTRACTOR_GATE_PASS")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -301,3 +305,211 @@ class DocumentAccessToken(models.Model):
 
     def __str__(self):
         return f"{self.token_type} {self.status}"
+
+
+class LeaveType(models.Model):
+    """Configurable leave category (master). Entitlement drives the ledger."""
+
+    code = models.CharField(max_length=40, unique=True)
+    name = models.CharField(max_length=80)
+    annual_entitlement = models.PositiveIntegerField(default=12)
+    opening_balance = models.PositiveIntegerField(default=0)
+    is_paid = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "leave_type"
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.name
+
+
+class LeaveRequest(models.Model):
+    """Worker leave application + approval lifecycle (contractor approves)."""
+
+    STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"),
+              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled")]
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="leave_requests")
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.PROTECT, related_name="requests")
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="leave_requests")
+    contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="leave_approvals")
+    from_date = models.DateField()
+    to_date = models.DateField()
+    days = models.PositiveIntegerField(default=1)
+    reason = models.CharField(max_length=2000, blank=True)
+    attachment_id = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="leave_decisions")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    comment = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "leave_request"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["worker", "status"], name="idx_leave_worker_status"),
+            models.Index(fields=["contractor", "status"], name="idx_leave_contractor_status"),
+        ]
+
+    def __str__(self):
+        return f"{self.worker_id} {self.leave_type_id} {self.from_date}..{self.to_date} ({self.status})"
+
+
+class WorkerBenefitRecord(models.Model):
+    """Worker benefit records: PF contributions (autofetched) and Bonus /
+    Leave Encashment (uploaded by the contractor)."""
+
+    KIND = [("PF", "Provident Fund"), ("BONUS", "Bonus"), ("LEAVE_ENCASHMENT", "Leave Encashment")]
+    STATUS = [("RECORDED", "Recorded"), ("CREDITED", "Credited"),
+              ("PROCESSING", "Processing"), ("PAID", "Paid")]
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="benefit_records")
+    contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="benefit_uploads")
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="benefit_records")
+    kind = models.CharField(max_length=20, choices=KIND)
+    period = models.CharField(max_length=40, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    days = models.DecimalField(max_digits=6, decimal_places=1, null=True, blank=True)
+    rate = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    employee_contribution = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    employer_contribution = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    reason = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="RECORDED")
+    paid_on = models.DateField(null=True, blank=True)
+    credited_on = models.DateField(null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "worker_benefit_record"
+        ordering = ["-period", "-id"]
+
+    def __str__(self):
+        return f"{self.worker_id} {self.kind} {self.period}"
+
+
+class GratuityApplication(models.Model):
+    """Worker-initiated gratuity application, verified by the contractor/employer."""
+
+    STATUS = [("SUBMITTED", "Submitted"), ("UNDER_EXAMINATION", "Under examination"),
+              ("APPROVED", "Approved"), ("DISBURSED", "Disbursed"), ("REJECTED", "Rejected")]
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gratuity_applications")
+    contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="gratuity_requests")
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="gratuity_applications")
+    reference = models.CharField(max_length=40, unique=True)
+    reason = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS, default="SUBMITTED")
+    submitted_on = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "gratuity_application"
+        ordering = ["-submitted_on"]
+
+    def __str__(self):
+        return f"{self.reference} {self.worker_id} {self.status}"
+
+
+class SalaryAdvance(models.Model):
+    """Worker salary-advance lifecycle: worker requests → contractor approves and
+    disburses (Cash/Online) → worker accepts → recovered/adjusted in payroll."""
+
+    STATUS = [("REQUESTED", "Requested"), ("APPROVED", "Approved"),
+              ("DISBURSED", "Disbursed"), ("ACCEPTED", "Accepted"),
+              ("ADJUSTED", "Adjusted"), ("REJECTED", "Rejected")]
+    MODE = [("CASH", "Cash"), ("ONLINE", "Online")]
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="salary_advances")
+    contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="advance_requests")
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="advances")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    reason = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="REQUESTED")
+    mode = models.CharField(max_length=10, choices=MODE, blank=True)
+    reference = models.CharField(max_length=80, blank=True)
+    payroll_period = models.CharField(max_length=40, blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    disbursed_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    adjusted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "salary_advance"
+        ordering = ["-requested_at"]
+
+    def __str__(self):
+        return f"ADV-{self.id} {self.worker_id} {self.status}"
+
+
+class SiteLeavePolicy(models.Model):
+    """Per-site leave entitlement. Workers bound to the site inherit this policy
+    (set up by the contractor) instead of the global LeaveType defaults."""
+
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="leave_policies")
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE, related_name="site_policies")
+    annual_entitlement = models.PositiveIntegerField(default=12)
+    opening_balance = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "site_leave_policy"
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(fields=["site", "leave_type"], name="uq_site_leave_policy"),
+        ]
+
+    def __str__(self):
+        return f"{self.site_id}:{self.leave_type_id}"
+
+
+class SiteHoliday(models.Model):
+    """Per-site holiday calendar entry (public / restricted / annual / sick etc.).
+    Workers bound to the site inherit the calendar."""
+
+    TYPES = [("PUBLIC", "Public holiday"), ("ANNUAL", "Annual holiday"),
+             ("RESTRICTED", "Restricted holiday"), ("SICK", "Sick leave day"),
+             ("WEEKLY_OFF", "Weekly off"), ("OPTIONAL", "Optional holiday"),
+             ("OTHER", "Other")]
+
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="holidays")
+    date = models.DateField()
+    name = models.CharField(max_length=120)
+    holiday_type = models.CharField(max_length=20, choices=TYPES, default="PUBLIC")
+    is_paid = models.BooleanField(default=True)
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "site_holiday"
+        ordering = ["date", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["site", "date", "name"], name="uq_site_holiday"),
+        ]
+
+    def __str__(self):
+        return f"{self.site_id} {self.date} {self.name}"

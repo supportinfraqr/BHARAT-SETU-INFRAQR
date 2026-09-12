@@ -28,18 +28,25 @@ export default function BenefitsPage() {
   const [applyNotice, setApplyNotice] = useState('');
   const schemeEnabled = (portal.gratuity.schemeStatus ?? 'Enabled') === 'Enabled';
 
-  const submitApplication = () => {
+  const submitApplication = async () => {
     if (applying) return;
     setApplying(true);
-    window.setTimeout(() => {
-      const reference = `GRT-2026-${String(1000 + Math.floor(Math.random() * 9000))}`;
-      const submittedOn = new Date().toISOString();
-      setApplication({ reference, submittedOn, status: 'Submitted' });
+    try {
+      const response = await fetch('/api/portal/gratuity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: applyReason.trim() }) });
+      const result = await response.json() as { data?: { reference?: string; submittedOn?: string; status?: string }; error?: string };
+      if (!response.ok || !result.data?.reference) throw new Error(result.error || 'Application could not be submitted.');
+      const reference = result.data.reference;
+      const submittedOn = result.data.submittedOn || new Date().toISOString();
+      setApplication({ reference, submittedOn, status: (result.data.status || 'Submitted') as 'Submitted' | 'Under examination' | 'Approved' | 'Disbursed' | 'Rejected' });
       setApplying(false); setApplyOpen(false); setApplyReason('');
       setApplyNotice(`Gratuity application ${reference} submitted — your contractor and employer have been notified for processing.`);
       window.setTimeout(() => setApplyNotice(''), 8000);
       addNotification({ id:`grat-${reference}`, entityId:reference, category:'Benefits', title:'Gratuity application submitted', message:`Your gratuity application ${reference} was forwarded to ${worker.employment.contractor} and ${worker.employment.employer} for verification and processing.`, createdAt:submittedOn, href:'/worker/Benefits', actionLabel:'View application', priority:'high', requiresAction:false, read:false, resolved:false });
-    }, 1200);
+    } catch (reason) {
+      setApplying(false);
+      setApplyNotice(reason instanceof Error ? reason.message : 'Application could not be submitted.');
+      window.setTimeout(() => setApplyNotice(''), 8000);
+    }
   };
 
   const applicationStatusTone: Record<string, string> = { Submitted:'bg-orange-50 text-orange-700', 'Under examination':'bg-blue-50 text-blue-700', Approved:'bg-green-50 text-green-700', Disbursed:'bg-green-50 text-green-700', Rejected:'bg-red-50 text-red-600' };

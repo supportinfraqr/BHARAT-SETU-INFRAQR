@@ -101,6 +101,8 @@ export type WorkerRecord = {
     permanentGatePassStatus?: string; pgpNo?: string; permanentGatePassStart?: string; permanentGatePassEnd?: string;
     medicalExaminationStatus?: string; lastMedicalExamination?: string; medicalFitnessStatus?: string; nextMedicalDue?: string;
   };
+  gatePasses?: Array<{ id:number; type:string; number:string; site:string; validFrom:string; validTo:string; status:string; requestedAt:string; requestedBy?:string; approvedBy?:string; approvedAt?:string }>;
+  complianceRecords?: Array<{ date:string; record:string; detail:string; ref:string; result:string }>;
   other?: {
     registrationSource?: string; registeredBy?: string; registrationDate?: string;
     consentDate?: string; consentRegistration?: boolean; consentVerification?: boolean;
@@ -116,12 +118,13 @@ export type ContractorWorker = {
   designation: string; doj: string; compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Active' | 'Inactive'; verified: boolean;
   refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
+  eligibility?: GatePassEligibility;
 };
 
 export type ContractorBenefitRecord = {
   id: string; worker: string; workerId: string; employer: string; period: string; amount: number; days?: number;
-  reason?: string; paidOn: string; fileUrl?: string; fileName?: string;
-  status: 'Pending verification' | 'Verified' | 'Returned'; source: 'contractor' | 'govt-auto';
+  reason?: string; paidOn: string; fileUrl?: string; fileName?: string; kind?: string;
+  status: 'Pending verification' | 'Verified' | 'Returned' | 'Recorded' | 'Credited' | 'Processing' | 'Paid'; source: 'contractor' | 'govt-auto';
 };
 
 export type ContractorSalaryRecord = {
@@ -144,7 +147,12 @@ export type ContractorWorkerDocument = {
 };
 
 export type ContractorWorkerComplianceStatus = {
-  worker: string; workerId: string; gatePass: 'Active' | 'Pending' | 'Expired'; medical: 'Done' | 'Pending' | 'Expired'; healthSafety: 'Done' | 'Pending';
+  worker: string; workerId: string; site: string; gatePass: 'Active' | 'Pending' | 'Expired'; medical: 'Done' | 'Pending' | 'Expired'; healthSafety: 'Done' | 'Pending';
+  details: {
+    medicalExaminationStatus: string; medicalFitnessStatus: string; lastMedicalExamination: string; nextMedicalDue: string;
+    ppeRequired: boolean; typesOfPpeGiven: string; safetyTrainingCompleted: boolean; siteInductionStatus: string;
+    insuranceStatus: string; accommodationProvided: string; policeVerification: string; trainingDate: string; trainerName: string;
+  };
 };
 
 export type ContractorGrowthPoint = { month: string; workers: number };
@@ -235,6 +243,16 @@ export type PayrollWorkerRecord = {
 export type PayrollSource = 'Employer' | 'Contractor';
 export type PayrollMatchState = 'Employer Provided' | 'Contractor Entered' | 'Matched' | 'Needs Review';
 
+export type GatePassEligibility = { medical:'Done'|'Pending'|'Expired'; healthSafety:'Done'|'Pending'; compliance:'Done'|'Pending'; safetyKit:'Done'|'Pending'; safetyTraining:'Done'|'Pending'; siteInduction:'Done'|'Pending'; aadhaar:'Done'|'Pending'; bank:'Done'|'Pending'; uan:'Done'|'Pending'; esi:'Done'|'Pending' };
+export type AdvanceStatus = 'Requested'|'Approved'|'Disbursed'|'Accepted'|'Adjusted'|'Rejected';
+export type WorkerAdvance = { id:string; advanceId:number; amount:number; reason:string; requestedOn:string; status:AdvanceStatus; approvedOn?:string; disbursedOn?:string; mode?:string; reference?:string; payrollPeriod?:string };
+export type ContractorAdvance = WorkerAdvance & { worker:string; workerId:string };
+export type ContractorLeaveApproval = { id:string; worker:string; bssId:string; type:string; from:string; to:string; days:number; reason:string; status:'Pending'|'Approved'|'Rejected'|'Cancelled'; requestedOn:string };
+export type SiteCalendar = {
+  siteId:number; siteName:string;
+  holidays: Array<{id:number;date:string;name:string;holidayType:string;holidayTypeCode:string;isPaid:boolean;note:string}>;
+  leavePolicies: Array<{id:number;leaveTypeId:number;leaveType:string;annualEntitlement:number;openingBalance:number;isActive:boolean}>;
+};
 export type ContractorPortalData = {
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
@@ -243,7 +261,7 @@ export type ContractorPortalData = {
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;
   complianceReports: Array<{ id: string; site: string; employer: string; period: string; type: string; status: 'Compliant' | 'Pending' | 'Non-compliant' }>;
-  gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected' }>;
+  gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; eligibility?: GatePassEligibility }>;
   applications: Array<{ id: string; workerName: string; workerId: string; employer: string; trade: string; experience: string; expectedWage: number; location: string; status: 'Pending' | 'Shortlisted' | 'Hired' | 'Rejected'; dateApplied: string; matchScore: number }>;
   employers: Array<{ id: string; name: string; employerId: string; sites: string[]; status: 'Active' | 'Inactive'; boundSince: string }>;
   submissions: {
@@ -260,6 +278,10 @@ export type ContractorPortalData = {
   applicability: Array<{ act: string; applies: boolean; note: string }>;
   complianceHistory: ContractorComplianceHistory[];
   jobHistory: ContractorJobPosting[];
+  leaveApprovals: ContractorLeaveApproval[];
+  advances: ContractorAdvance[];
+  siteCalendars: SiteCalendar[];
+  leaveTypeCatalog: string[];
   bindingRequests: ContractorBindingRequest[];
   registers: ContractorRegister[];
   complianceBatches: ContractorComplianceBatch[];
@@ -316,6 +338,12 @@ export type EmployerGatePass = {
   validFrom: string;
   validTo: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  contact?: string;
+  skill?: string;
+  requestedBy?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  eligibility?: GatePassEligibility;
 };
 
 export type EmployerSubmission = {
@@ -498,15 +526,21 @@ export type LeaveEncashmentRecord = { id:string; period:string; days:number; rat
 
 export type WorkerDocument = { name:string; mandatory:boolean; owner:'Worker'|'Contractor'|'System'; status:string; date:string|null; downloadUrl?:string };
 export type WorkerJobRequest = { id:string; employer:string; contractor:string; site:string; designation:string; wage:number; currency:string; payPeriod:string; duration:string; facilities:string[]; status:'Pending'|'Accepted'|'Rejected'|'Cancelled'|'Expired'; dateReceived:string };
+export type WorkerAvailableJob = { id:string; jobId:number; title:string; subTitle:string; employer:string; postedDate:string; description:string; wage:string; state:string; city:string; designation:string; experience:string; dobLimit:string; vacancies:number; matchBadge:boolean };
 export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
 export type EmployerLabourCompliance = { ruleId: import('@/lib/labour-compliance').RuleId; scope: import('@/lib/labour-compliance').GovtScope; status: import('@/lib/labour-compliance').RuleStatus; note: string; verifiedAt: string };
-export type LearningCourse = { id:string; title:string; provider:string; duration:string; rating:number; progress:number; image:string; badge:string; category:string; description:string; modules:Array<{id:string;title:string;duration:string;completed:boolean}>; instructor:string; certification:string };
+export type CourseSubmissionView = { content:string; fileUrl:string; status:string; score:number|null; feedback:string; submittedAt:string };
+export type CourseAssignmentView = { id:string; title:string; passScore:number; score:number|null; passed:boolean; type:'QUIZ'|'WRITING'|'UPLOAD'; instructions:string; questions:Array<{id:string;question:string;options:string[]}>; submission:CourseSubmissionView|null };
+export type CourseReadingView = { id:string; title:string; body:string; url:string; duration:string };
+export type CourseModuleView = { id:string; title:string; completed:boolean; lessons:Array<{id:string;title:string;duration:string;completed:boolean;videoUrl?:string}>; assignments:CourseAssignmentView[]; readings:CourseReadingView[] };
+export type LearningCourse = { id:string; title:string; provider:string; duration:string; rating:number; progress:number; image:string; badge:string; category:string; description:string; instructor:string; certification:string; skillAwarded:string; status:'Not started'|'In progress'|'Completed'; certificateReady:boolean; certificateNo:string; assignmentFailedAt?:Record<string, string>; modules:CourseModuleView[] };
 export type WorkerPortalData = {
   dataMode: 'demo' | 'remote';
   worker: WorkerRecord;
   govtScope: import('@/lib/labour-compliance').GovtScope;
   labourLaw: LabourLawItem[];
   wages: DataState<WageRecord>;
+  advances: WorkerAdvance[];
   attendance: DataState<AttendanceRecord>;
   providentFund: DataState<BenefitRecord>;
   bonus: DataState<BonusRecord>;
@@ -517,10 +551,13 @@ export type WorkerPortalData = {
   courses: LearningCourse[];
   documents: WorkerDocument[];
   jobRequests: WorkerJobRequest[];
+  availableJobs: WorkerAvailableJob[];
   bindings: WorkerBindingRequest[];
   availability: boolean;
   leaveTypes: string[];
   leaveRecords: Array<{id:string;type:string;from:string;to:string;reason:string;submitted:string;status:'Pending'|'Approved'|'Rejected'|'Cancelled';approver?:string;comment?:string}>;
+  leaveBalance: Array<{type:string;opening:number;accrued:number;availed:number;pending:number;balance:number}>;
+  leaveEnabled: boolean;
   cardProduct: { productId:string; cardFee:number; deliveryFee:number; currency:string; paymentProviders:Array<'razorpay'|'payu'> };
   geography: Record<string, Record<string, ReadonlyArray<{city:string;pins:readonly string[]}>>>;
 };

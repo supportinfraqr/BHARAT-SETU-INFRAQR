@@ -14,7 +14,7 @@ import uuid
 
 from django.core.management.base import BaseCommand
 
-from bss_core.models import Site, User, WorkerContractorBinding, WorkerEmployment
+from bss_core.models import Site, User, WorkerContractorBinding, WorkerEmployment, WorkerIdentity
 from api import v1_bridge as bridge
 from api import v1_payloads as payloads
 
@@ -40,6 +40,8 @@ class Command(BaseCommand):
         worker = self._user(WORKER_PHONE, "worker")
         if not (employer and contractor and worker):
             return
+        worker_identity = WorkerIdentity.objects.filter(user=worker).first()
+        worker_bss_id = worker_identity.bss_worker_id if worker_identity else ""
 
         # ── Setup: employer site + contractor<->worker binding ──────────────
         site, _ = Site.objects.get_or_create(
@@ -116,7 +118,7 @@ class Command(BaseCommand):
         contractor_workers = payloads._contractor_workers(contractor)
         results.append((
             "contractor sees the bound worker",
-            any(w["bssId"] == "BSS-W0000000004" and w["employer"] == "Adani Infra Pvt Ltd"
+            any(w["bssId"] == worker_bss_id and w["employer"] == "Adani Infra Pvt Ltd"
                 and w["site"] == "Demo Metro Site" for w in contractor_workers),
         ))
 

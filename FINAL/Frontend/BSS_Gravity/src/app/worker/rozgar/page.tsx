@@ -6,22 +6,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useWorker } from '@/contexts/WorkerContext';
-
-type JobListing = {
-  id: string;
-  title: string;
-  subTitle: string;
-  employer: string;
-  postedDate: string;
-  description: string;
-  wage: string;
-  state: string;
-  city: string;
-  designation: string;
-  experience: string;
-  dobLimit: string;
-  matchBadge: boolean;
-};
+import type { WorkerAvailableJob } from '@/types/portal';
 
 export default function WorkerRozgarSetuPage() {
   const { worker, portal } = useWorker();
@@ -30,53 +15,29 @@ export default function WorkerRozgarSetuPage() {
   const [notice, setNotice] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  const jobs: JobListing[] = [
-    {
-      id: 'JOB-11824',
-      title: 'Electrician',
-      subTitle: 'High-Rise Electrification',
-      employer: 'Tata Projects Ltd.',
-      postedDate: 'Posted 26 Aug 2026',
-      description: 'Site electrification, wiring and panel installation for a residential high-rise. PPE and site induction provided. Weekly wage settlement.',
-      wage: '₹26,000 / month',
-      state: 'Maharashtra',
-      city: 'Pune',
-      designation: 'Electrician',
-      experience: '3–6 years',
-      dobLimit: 'On or after 01 Jan 1980',
-      matchBadge: true,
-    },
-    {
-      id: 'JOB-11819',
-      title: 'Bar Bender',
-      subTitle: 'Metro Depot Works',
-      employer: 'Larsen & Toubro Construction',
-      postedDate: 'Posted 24 Aug 2026',
-      description: 'Rebar cutting, bending, cage fabrication for metro depot beam & column structures. Safety gear & site accommodation provided.',
-      wage: '₹25,500 / month',
-      state: 'Maharashtra',
-      city: 'Mumbai',
-      designation: 'Bar Bender',
-      experience: '2–5 years',
-      dobLimit: 'On or after 01 Jan 1982',
-      matchBadge: true,
-    },
-    {
-      id: 'JOB-11790',
-      title: 'Scaffolder / Rigger',
-      subTitle: 'Industrial Plant Maintenance',
-      employer: 'Shapoorji Pallonji',
-      postedDate: 'Posted 18 Aug 2026',
-      description: 'Heavy scaffolding erection and dismantling for refinery shutdown maintenance. Mandatory safety kit & daily attendance log.',
-      wage: '₹27,000 / month',
-      state: 'Gujarat',
-      city: 'Surat',
-      designation: 'Scaffolder',
-      experience: '4+ years',
-      dobLimit: 'On or after 01 Jan 1978',
-      matchBadge: false,
+  const jobs: WorkerAvailableJob[] = portal?.availableJobs ?? [];
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
+  // A worker can only be bound to one contractor at a time; while bound, job
+  // applications / binding requests are disabled until they unbind.
+  const activeBinding = portal.bindings.find(b => b.status === 'Accepted');
+
+  const handleApply = async (job: WorkerAvailableJob) => {
+    setError('');
+    try {
+      const response = await fetch('/api/portal/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.jobId })
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Application could not be sent.');
+      setAppliedJobs(current => current.includes(job.id) ? current : [...current, job.id]);
+      setNotice(`Application and binding request submitted for ${job.title} at ${job.employer}.`);
+      setTimeout(() => setNotice(''), 5000);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not submit the application.');
     }
-  ];
+  };
 
   const handleAvailabilityToggle = async (value: boolean) => {
     setBusy(true);
@@ -91,7 +52,7 @@ export default function WorkerRozgarSetuPage() {
       setAvailableForWork(value);
       setNotice(value ? 'Availability set to ON — employers can discover your profile.' : 'Availability set to OFF.');
       setTimeout(() => setNotice(''), 4000);
-    } catch (err) {
+    } catch {
       setError('Could not update availability.');
     } finally {
       setBusy(false);
@@ -138,6 +99,13 @@ export default function WorkerRozgarSetuPage() {
           </button>
         </div>
       </div>
+
+      {activeBinding && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p><strong>You are already bound to {activeBinding.contractor}</strong>{activeBinding.site ? ` at ${activeBinding.site}` : ''}. A worker can be bound to only one contractor at a time — unbind first to apply to another contractor.</p>
+          <Link href="/worker/binding" className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center justify-center shrink-0 hover:bg-[#062D4F]">Manage binding</Link>
+        </div>
+      )}
 
       {/* Available Jobs Header */}
       <div className="flex items-center justify-between pt-2">
@@ -201,14 +169,14 @@ export default function WorkerRozgarSetuPage() {
 
             {/* Actions */}
             <div className="pt-2 flex flex-wrap items-center gap-3">
-              <button 
-                onClick={() => {
-                  setNotice(`Application and binding request submitted for ${job.title} at ${job.employer}.`);
-                  setTimeout(() => setNotice(''), 5000);
-                }}
-                className="h-11 px-5 rounded-xl bg-[#0B192C] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#062D4F] shadow-sm transition-all"
+              <button
+                type="button"
+                disabled={!!activeBinding || appliedJobs.includes(job.id)}
+                onClick={() => handleApply(job)}
+                title={activeBinding ? 'Unbind from your current contractor first' : undefined}
+                className="h-11 px-5 rounded-xl bg-[#0B192C] text-white text-xs font-bold flex items-center gap-2 hover:bg-[#062D4F] shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Link2 size={16} /> Apply & send binding request
+                <Link2 size={16} /> {activeBinding ? 'Already bound — unbind to apply' : appliedJobs.includes(job.id) ? 'Application sent' : 'Apply & send binding request'}
               </button>
               <Link 
                 href="/worker/binding" 
@@ -219,6 +187,11 @@ export default function WorkerRozgarSetuPage() {
             </div>
           </div>
         ))}
+        {jobs.length === 0 && (
+          <p className="p-6 bg-white border border-gray-200 rounded-3xl text-sm text-gray-500 text-center">
+            No job postings are available right now. Please check back later.
+          </p>
+        )}
       </div>
 
       {/* Floating Voice Guide */}

@@ -36,6 +36,42 @@ export default function OriginalLoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
+  const [recoveryOtp, setRecoveryOtp] = useState('');
+  const [recoveryMpin, setRecoveryMpin] = useState('');
+  const [recoveryOtpSent, setRecoveryOtpSent] = useState(false);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
+  const [recoveryNotice, setRecoveryNotice] = useState('');
+
+  const sendRecoveryOtp = async () => {
+    setRecoveryError(''); setRecoveryNotice('');
+    if (!recoveryIdentifier.trim()) return setRecoveryError('Enter your registered BSS ID or mobile number.');
+    setRecoveryBusy(true);
+    try {
+      const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:selectedRole, identifier:recoveryIdentifier }) });
+      const result = await response.json() as { error?:string };
+      if (!response.ok) throw new Error(result.error ?? 'OTP could not be sent.');
+      setRecoveryOtpSent(true);
+      setRecoveryNotice('OTP sent. Enter it below with your new MPIN.');
+    } catch (error) { setRecoveryError(error instanceof Error ? error.message : 'OTP could not be sent.'); }
+    finally { setRecoveryBusy(false); }
+  };
+
+  const resetMpin = async () => {
+    setRecoveryError(''); setRecoveryNotice('');
+    if (recoveryOtp.length !== 6) return setRecoveryError('Enter the six-digit OTP.');
+    if (!/^\d{4,6}$/.test(recoveryMpin)) return setRecoveryError('MPIN must be 4-6 digits.');
+    setRecoveryBusy(true);
+    try {
+      const response = await fetch('/api/auth/mpin/reset', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ identifier:recoveryIdentifier, otp:recoveryOtp, mpin:recoveryMpin }) });
+      const result = await response.json() as { error?:string };
+      if (!response.ok) throw new Error(result.error ?? 'MPIN could not be reset.');
+      setRecoveryNotice('MPIN set. You can now log in with your BSS ID / mobile and MPIN.');
+      setRecoveryOtpSent(false); setRecoveryOtp(''); setRecoveryMpin('');
+    } catch (error) { setRecoveryError(error instanceof Error ? error.message : 'MPIN could not be reset.'); }
+    finally { setRecoveryBusy(false); }
+  };
   
   const authenticate = async (method: 'otp' | 'mpin' | 'password', identifier: string, credential: string) => {
     if (!['Worker', 'Contractor', 'Employer', 'Government', 'BSS Staff', 'BSS Admin'].includes(selectedRole)) throw new Error('Select a valid portal role.');
@@ -69,7 +105,7 @@ export default function OriginalLoginPage() {
 
   const handleMpinLogin = async () => {
     setLoginError('');
-    if (!loginIdentifier.trim() || mpin.length !== 4) return setLoginError('Enter your registered ID and four-digit MPIN.');
+    if (!loginIdentifier.trim() || mpin.length < 4) return setLoginError('Enter your registered ID and MPIN.');
     try { await authenticate('mpin', loginIdentifier, mpin); }
     catch (error) { setLoginError(error instanceof Error ? error.message : 'Authentication failed.'); }
   };
@@ -266,11 +302,22 @@ export default function OriginalLoginPage() {
                           <div className="flex flex-col gap-4">
                             <input 
                               type="text" 
-                              className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800" 
+                              value={recoveryIdentifier}
+                              onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                              disabled={recoveryOtpSent}
+                              className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800 disabled:opacity-70" 
                               placeholder="Enter BSS ID or Mobile" 
                             />
-                            <button className="cursor-pointer mt-2 w-full bg-[#1E3A8A] hover:bg-[#152960] text-white rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold tracking-wide flex items-center justify-center transition-all shadow-[0_4px_14px_0_rgba(30,58,138,0.39)] hover:shadow-[0_6px_20px_rgba(30,58,138,0.23)] hover:-translate-y-[1px] active:scale-[0.98]">
-                              Send Reset OTP <ArrowRight className="ml-2 h-5 w-5" />
+                            {recoveryOtpSent && (
+                              <>
+                                <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={recoveryOtp} onChange={(e) => setRecoveryOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] text-center tracking-[0.4em] font-bold outline-none focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10" placeholder="Six-digit OTP" />
+                                <input type="password" inputMode="numeric" maxLength={6} value={recoveryMpin} onChange={(e) => setRecoveryMpin(e.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] text-center tracking-[0.4em] font-bold outline-none focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10" placeholder="New MPIN (4-6 digits)" />
+                              </>
+                            )}
+                            {recoveryError && <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">{recoveryError}</p>}
+                            {recoveryNotice && <p role="status" className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg p-2.5">{recoveryNotice}</p>}
+                            <button onClick={() => void (recoveryOtpSent ? resetMpin() : sendRecoveryOtp())} disabled={recoveryBusy} className="cursor-pointer mt-2 w-full bg-[#1E3A8A] hover:bg-[#152960] text-white rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold tracking-wide flex items-center justify-center transition-all shadow-[0_4px_14px_0_rgba(30,58,138,0.39)] hover:shadow-[0_6px_20px_rgba(30,58,138,0.23)] hover:-translate-y-[1px] active:scale-[0.98] disabled:opacity-60">
+                              {recoveryBusy ? 'Please wait…' : recoveryOtpSent ? 'Set MPIN' : 'Send Reset OTP'} <ArrowRight className="ml-2 h-5 w-5" />
                             </button>
                           </div>
                         </div>

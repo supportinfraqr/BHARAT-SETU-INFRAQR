@@ -12,9 +12,16 @@ export default function AttendancePage() {
   const records=attendanceData.records;
   const count=(presence:string)=>records.filter(r=>r.presence===presence).length;
 
-  // Build a complete August 2026 calendar grid from the recorded days.
-  const daysInMonth=31, firstWeekday=6; // 1 Aug 2026 is a Saturday
+  // Calendar grid for the selected month, populated from the recorded days.
+  const anchor = records[0]?.date ? new Date(records[0].date) : new Date();
+  const [month,setMonth]=useState(anchor.getMonth());
+  const [year,setYear]=useState(anchor.getFullYear());
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const firstWeekday=new Date(year,month,1).getDay();
+  const monthKey=`${year}-${String(month+1).padStart(2,'0')}`;
   const byDate=useMemo(()=>new Map(records.map(r=>[r.date,r])),[records]);
+  const todayKey=new Date().toISOString().slice(0,10);
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const methodCounts={
     qr:records.filter(r=>r.method?.includes('QR Scan')).length,
     cctv:records.filter(r=>r.method?.includes('CCTV')).length,
@@ -49,7 +56,7 @@ export default function AttendancePage() {
     </div>
 
     <div className="bg-white border border-gray-200 rounded-xl p-3 flex flex-wrap justify-between gap-3">
-      <div className="flex gap-2"><select className={fieldClass} aria-label="Month"><option>August</option></select><select className={fieldClass} aria-label="Year"><option>2026</option></select></div>
+      <div className="flex gap-2"><select className={fieldClass} aria-label="Month" value={month} onChange={e=>setMonth(Number(e.target.value))}>{monthNames.map((m,i)=><option key={m} value={i}>{m}</option>)}</select><select className={fieldClass} aria-label="Year" value={year} onChange={e=>setYear(Number(e.target.value))}>{[year-1,year,year+1].map(y=><option key={y} value={y}>{y}</option>)}</select></div>
       <div className="flex rounded-lg bg-gray-100 p-1"><button onClick={()=>setView('calendar')} className={`px-3 py-1.5 rounded-md text-xs flex gap-1.5 items-center ${view==='calendar'?'bg-white shadow-sm font-semibold':''}`}><CalendarDays size={14}/>Calendar</button><button onClick={()=>setView('history')} className={`px-3 py-1.5 rounded-md text-xs flex gap-1.5 items-center ${view==='history'?'bg-white shadow-sm font-semibold':''}`}><List size={14}/>History</button></div>
     </div>
 
@@ -61,11 +68,11 @@ export default function AttendancePage() {
         <div className="grid grid-cols-7 gap-px bg-gray-100">
           {Array.from({length:firstWeekday},(_,i)=><div key={`pad-${i}`} className="bg-white p-2 min-h-[4.5rem]"/>)}
           {Array.from({length:daysInMonth},(_,i)=>{
-            const day=i+1; const date=`2026-08-${String(day).padStart(2,'0')}`;
+            const day=i+1; const date=`${monthKey}-${String(day).padStart(2,'0')}`;
             const rec=byDate.get(date);
-            const today=day===28;
-            return <div key={date} className={`bg-white p-2 min-h-[4.5rem] flex flex-col ${today?'ring-2 ring-inset ring-[#073B67]/40':''}`}>
-              <span className={`text-xs font-bold ${rec?rec.presence==='Present'?'text-[#2F9E67]':rec.presence==='Absent'?'text-red-600':'text-gray-600':today?'text-[#073B67]':'text-gray-300'}`}>{day}</span>
+            const isToday=date===todayKey;
+            return <div key={date} className={`bg-white p-2 min-h-[4.5rem] flex flex-col ${isToday?'ring-2 ring-inset ring-[#073B67]/40':''}`}>
+              <span className={`text-xs font-bold ${rec?rec.presence==='Present'?'text-[#2F9E67]':rec.presence==='Absent'?'text-red-600':'text-gray-600':isToday?'text-[#073B67]':'text-gray-300'}`}>{day}</span>
               {rec?<span className={`mt-1.5 inline-flex items-center justify-center text-[9px] font-bold px-1.5 py-1 rounded border ${statusStyle(rec.presence)}`}>{rec.presence}{rec.presence==='Present'&&rec.checkIn?` · ${rec.checkIn}`:''}</span>:<span className="mt-1.5 text-[9px] text-gray-300">—</span>}
               {rec?.method&&rec.method!=='—'&&<span className="mt-1 text-[8.5px] font-mono text-gray-400 truncate">{rec.method}</span>}
             </div>;

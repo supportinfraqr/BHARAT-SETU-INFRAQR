@@ -55,6 +55,23 @@ from .operations import (
     WorkerGrievance,
     GrievanceResponse,
     DocumentAccessToken,
+    LeaveType,
+    LeaveRequest,
+    SalaryAdvance,
+    WorkerBenefitRecord,
+    GratuityApplication,
+    SiteLeavePolicy,
+    SiteHoliday,
+)
+from .learning import (
+    Course,
+    CourseModule,
+    CourseLesson,
+    CourseAssignment,
+    CourseReading,
+    CourseSubmission,
+    CourseQuestion,
+    CourseEnrollment,
 )
 from .submissions import SubmissionEvidence
 from .aadhaar import AadhaarChallenge

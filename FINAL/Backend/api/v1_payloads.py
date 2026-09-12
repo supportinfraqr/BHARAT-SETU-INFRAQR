@@ -16,14 +16,26 @@ from django.db.models import Q
 
 from bss_core.models import (
     Attendance,
+    Course,
+    CourseEnrollment,
+    CourseLesson,
+    CourseQuestion,
+    CourseSubmission,
     ContractorEmployerBinding,
     ContractorProfile,
     ContractorSiteAllotment,
     EmployerProfile,
+    LeaveRequest,
+    LeaveType,
+    SiteHoliday,
+    SiteLeavePolicy,
     User,
     Notification,
+    GratuityApplication,
     PayrollConfig,
+    SalaryAdvance,
     SubmissionEvidence,
+    WorkerBenefitRecord,
     Site,
     WagePayment,
     WorkerAddressMobility,
@@ -456,11 +468,55 @@ def _worker_wages_section(user):
     }
 
 
+def _advance_row(a):
+    wi = _get_identity(a.worker)
+    return {
+        "id": f"ADV-{a.id:04d}",
+        "advanceId": a.id,
+        "worker": _d(wi.name if wi and wi.name else a.worker.username),
+        "workerId": _d(wi.bss_worker_id if wi else ""),
+        "amount": _num(a.amount),
+        "reason": _d(a.reason),
+        "requestedOn": _dts(a.requested_at.date()) if a.requested_at else "",
+        "status": {"REQUESTED": "Requested", "APPROVED": "Approved",
+                   "DISBURSED": "Disbursed", "ACCEPTED": "Accepted",
+                   "ADJUSTED": "Adjusted", "REJECTED": "Rejected"}.get(a.status, a.status),
+        "approvedOn": _dts(a.approved_at.date()) if a.approved_at else "",
+        "disbursedOn": _dts(a.disbursed_at.date()) if a.disbursed_at else "",
+        "mode": a.get_mode_display() if a.mode else "",
+        "reference": _d(a.reference),
+        "payrollPeriod": _d(a.payroll_period),
+    }
+
+
+def _worker_advances(user):
+    """Salary advances: worker requests → contractor approves/disburses → worker
+    accepts → adjusted in payroll."""
+    advances = SalaryAdvance.objects.filter(worker=user).select_related("worker")[:20]
+    return [_advance_row(a) for a in advances]
+
+
+def _contractor_advances(user):
+    advances = (SalaryAdvance.objects.filter(contractor=user)
+                .select_related("worker").order_by("-requested_at")[:100])
+    return [_advance_row(a) for a in advances]
+
+
 def _worker_attendance_section(user):
-    rows = Attendance.objects.filter(worker=user).order_by("-attendance_date")[:20]
+    rows = Attendance.objects.filter(worker=user).order_by("-attendance_date")[:60]
     title = {"PRESENT": "Present", "ABSENT": "Absent", "LEAVE": "Leave",
              "HOLIDAY": "Holiday", "EXPECTED": "Present", "LATE": "Late",
              "HALF_DAY": "Half Day"}
+    method_label = {"QR": "QR Scan", "NFC": "RFID", "CAMERA": "CCTV"}
+
+    def clock(value):
+        if not value:
+            return None
+        try:
+            return timezone.localtime(value).strftime("%H:%M")
+        except Exception:
+            return _dts(value)
+
     records = []
     for a in rows:
         raw = _d(a.status)
@@ -469,37 +525,86 @@ def _worker_attendance_section(user):
             "presence": title.get(raw, raw),
             "shift": "",
             "site": a.site.site_name if a.site else "",
-            "checkIn": _dts(a.check_in_time),
-            "checkOut": _dts(a.check_out_time),
+            "checkIn": clock(a.check_in_time),
+            "checkOut": clock(a.check_out_time),
             "status": raw,
-            "method": _d(a.capture_method),
+            "method": method_label.get(_d(a.capture_method), _d(a.capture_method)),
         })
     return {"source": "BSS Attendance", "records": records, "syncedAt": _dts(timezone.now())}
 
 
 def _worker_financial_records(user, kind):
+    """Real PF / Bonus / Leave-Encashment records for the worker.
+
+    PF is autofetched (source EPFO); Bonus and Leave Encashment are uploaded by
+    the contractor.
+    """
     if kind == "providentFund":
-        return {
-            "source": "EPFO",
-            "records": [
-                {"period": "Aug 2026", "employeeContribution": 1800,
-                 "employerContribution": 1800, "creditedOn": "2026-09-05"},
-            ],
-            "syncedAt": _dts(timezone.now()),
-        }
+        rows = []
+        for r in WorkerBenefitRecord.objects.filter(worker=user, kind="PF").order_by("-period", "-id")[:24]:
+            rows.append({
+                "period": _d(r.period),
+                "employeeContribution": _num(r.employee_contribution),
+                "employerContribution": _num(r.employer_contribution),
+                "creditedOn": _dts(r.credited_on) if r.credited_on else _dts(r.created_at.date()),
+            })
+        return {"source": "EPFO", "records": rows, "syncedAt": _dts(timezone.now())}
     if kind == "bonus":
-        return {
-            "source": "Employer",
-            "records": [],
-            "syncedAt": _dts(timezone.now()),
-        }
+        rows = []
+        for r in WorkerBenefitRecord.objects.filter(worker=user, kind="BONUS").order_by("-period", "-id")[:24]:
+            rows.append({
+                "id": r.id, "period": _d(r.period), "reason": _d(r.reason),
+                "amount": _num(r.amount), "paidOn": _dts(r.paid_on) if r.paid_on else "",
+                "status": {"RECORDED": "Recorded", "CREDITED": "Credited",
+                           "PROCESSING": "Processing", "PAID": "Paid"}.get(r.status, r.status),
+            })
+        return {"source": "Contractor", "records": rows, "syncedAt": _dts(timezone.now())}
     if kind == "leaveEncashment":
-        return {
-            "source": "Employer",
-            "records": [],
-            "syncedAt": _dts(timezone.now()),
-        }
+        rows = []
+        for r in WorkerBenefitRecord.objects.filter(worker=user, kind="LEAVE_ENCASHMENT").order_by("-period", "-id")[:24]:
+            rows.append({
+                "id": r.id, "period": _d(r.period), "days": _num(r.days),
+                "rate": _num(r.rate), "amount": _num(r.amount),
+                "paidOn": _dts(r.paid_on) if r.paid_on else "",
+                "status": {"RECORDED": "Recorded", "CREDITED": "Credited",
+                           "PROCESSING": "Processing", "PAID": "Paid"}.get(r.status, r.status),
+            })
+        return {"source": "Contractor", "records": rows, "syncedAt": _dts(timezone.now())}
     return {"source": "", "records": [], "syncedAt": _dts(timezone.now())}
+
+
+def _worker_gratuity(user):
+    """Gratuity: service derived from the accepted binding + latest application."""
+    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site", "site__employer").first())
+    service_start = None
+    if binding:
+        service_start = (binding.accepted_at.date() if binding.accepted_at else binding.created_at.date())
+    years = 0
+    if service_start:
+        today = timezone.localdate()
+        years = (today - service_start).days // 365
+    latest_wage = WorkerWages.objects.filter(worker=user).order_by("-period_end").first()
+    monthly = float(latest_wage.net_wage or 0) if latest_wage else 0
+    indicative = round(monthly * 15 / 26 * years) if years else 0
+    application = (GratuityApplication.objects.filter(worker=user).order_by("-submitted_on").first())
+    scheme_status = "Enabled" if binding else "Non-enabled"
+    return {
+        "serviceStart": _dts(service_start) if service_start else "",
+        "completedService": years,
+        "calculationBasis": "15 days' wages per completed year of service",
+        "indicativeAmount": indicative,
+        "eligibilityStatus": ("eligible" if years >= 5 else ("not_eligible" if binding else "no_binding")),
+        "lastUpdated": _dts(timezone.now()),
+        "schemeStatus": scheme_status,
+        "application": ({
+            "reference": _d(application.reference),
+            "submittedOn": _dts(application.submitted_on),
+            "status": {"SUBMITTED": "Submitted", "UNDER_EXAMINATION": "Under examination",
+                       "APPROVED": "Approved", "DISBURSED": "Disbursed",
+                       "REJECTED": "Rejected"}.get(application.status, application.status),
+        } if application else None),
+    }
 
 
 def _worker_contact_section(user, identity):
@@ -557,8 +662,75 @@ def _worker_banking_section(user):
     }
 
 
+_GP_WELFARE_LABEL = {"ACTIVE": "Active", "PENDING": "Pending Approval", "REJECTED": "Rejected",
+                     "EXPIRED": "Expired", "REVOKED": "Revoked"}
+
+
+def _latest_gate_pass(user, gp_type):
+    return (WorkerGatePass.objects.filter(worker=user, gate_pass_type=gp_type)
+            .order_by("-created_at").first())
+
+
+def _worker_gate_passes(user):
+    """The worker's own gate passes (requested by the contractor, approved by
+    the principal employer)."""
+    rows = []
+    for g in WorkerGatePass.objects.filter(worker=user).order_by("-created_at"):
+        rows.append({
+            "id": g.id,
+            "type": _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type)),
+            "number": _d(g.gate_pass_no),
+            "site": g.site.site_name if g.site else "",
+            "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
+            "status": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+            "requestedAt": _dts(g.created_at),
+            "requestedBy": _party_name(g.issued_by),
+            "approvedBy": _party_name(g.approved_by),
+            "approvedAt": _dts(g.approved_at),
+        })
+    return rows
+
+
+def _worker_compliance_records(user):
+    """Historical compliance records derived from the worker's own records
+    (gate passes + medical / training on the welfare record)."""
+    rows = []
+    for g in WorkerGatePass.objects.filter(worker=user).order_by("-created_at"):
+        label = "Permanent Gate Pass" if g.gate_pass_type == "PGP" else "Temporary Gate Pass"
+        event_date = (g.approved_at.date() if g.approved_at else g.created_at.date())
+        rows.append({
+            "date": _dts(event_date),
+            "record": f"{label} issued" if g.status == "ACTIVE" else f"{label} {_GP_STATUS_LABEL.get(_d(g.status), g.status).lower()}",
+            "detail": f"{_d(g.gate_pass_no)}" + (f" · {g.site.site_name}" if g.site else ""),
+            "ref": _d(g.gate_pass_no),
+            "result": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        })
+    ws = WorkerWelfareSafety.objects.filter(user=user).first()
+    if ws:
+        if ws.last_medical_examination:
+            rows.append({
+                "date": _dts(ws.last_medical_examination),
+                "record": "Medical examination",
+                "detail": _d(ws.medical_fitness_status or ws.medical_examination_status) or "Fitness check",
+                "ref": "",
+                "result": _d(ws.medical_fitness_status or ws.medical_examination_status or "Done"),
+            })
+        if ws.training_date:
+            rows.append({
+                "date": _dts(ws.training_date),
+                "record": "Safety training",
+                "detail": _d(ws.trainer_name) or "Safety training",
+                "ref": "",
+                "result": "Completed" if ws.safety_training_completed else "Pending",
+            })
+    rows.sort(key=lambda r: r["date"] or "", reverse=True)
+    return rows
+
+
 def _worker_welfare_section(user):
     ws = WorkerWelfareSafety.objects.filter(user=user).first()
+    tgp = _latest_gate_pass(user, "TGP")
+    pgp = _latest_gate_pass(user, "PGP")
     return {
         "ppeRequired": bool(ws and ws.ppe_required),
         "typesOfPpeGiven": _d(ws.types_of_ppe_given) if ws else "",
@@ -569,14 +741,14 @@ def _worker_welfare_section(user):
         "policeVerification": _d(ws.police_verification) if ws else "",
         "trainingDate": _dts(ws.training_date) if ws and ws.training_date else "",
         "trainerName": _d(ws.trainer_name) if ws else "",
-        "tempGatePassStatus": _d(ws.temp_gatepass_status) if ws else "",
-        "tgpNo": _d(ws.tgp_no) if ws else "",
-        "tempGatePassStart": _dts(ws.temp_gatepass_start_date) if ws and ws.temp_gatepass_start_date else "",
-        "tempGatePassEnd": _dts(ws.temp_gatepass_end_date) if ws and ws.temp_gatepass_end_date else "",
-        "permanentGatePassStatus": _d(ws.permanent_gatepass_status) if ws else "",
-        "pgpNo": _d(ws.pgp_no) if ws else "",
-        "permanentGatePassStart": _dts(ws.permanent_gatepass_start_date) if ws and ws.permanent_gatepass_start_date else "",
-        "permanentGatePassEnd": _dts(ws.permanent_gatepass_end_date) if ws and ws.permanent_gatepass_end_date else "",
+        "tempGatePassStatus": _GP_WELFARE_LABEL.get(tgp.status, "") if tgp else (_d(ws.temp_gatepass_status) if ws else ""),
+        "tgpNo": _d(tgp.gate_pass_no) if tgp else (_d(ws.tgp_no) if ws else ""),
+        "tempGatePassStart": _dts(tgp.start_date) if tgp and tgp.start_date else (_dts(ws.temp_gatepass_start_date) if ws and ws.temp_gatepass_start_date else ""),
+        "tempGatePassEnd": _dts(tgp.end_date) if tgp and tgp.end_date else (_dts(ws.temp_gatepass_end_date) if ws and ws.temp_gatepass_end_date else ""),
+        "permanentGatePassStatus": _GP_WELFARE_LABEL.get(pgp.status, "") if pgp else (_d(ws.permanent_gatepass_status) if ws else ""),
+        "pgpNo": _d(pgp.gate_pass_no) if pgp else (_d(ws.pgp_no) if ws else ""),
+        "permanentGatePassStart": _dts(pgp.start_date) if pgp and pgp.start_date else (_dts(ws.permanent_gatepass_start_date) if ws and ws.permanent_gatepass_start_date else ""),
+        "permanentGatePassEnd": _dts(pgp.end_date) if pgp and pgp.end_date else (_dts(ws.permanent_gatepass_end_date) if ws and ws.permanent_gatepass_end_date else ""),
         "medicalExaminationStatus": _d(ws.medical_examination_status) if ws else "",
         "lastMedicalExamination": _dts(ws.last_medical_examination) if ws and ws.last_medical_examination else "",
         "medicalFitnessStatus": _d(ws.medical_fitness_status) if ws else "",
@@ -704,9 +876,47 @@ def _worker_labour_law():
     return []
 
 
-def _worker_holidays():
-    # No holiday master table exists yet (gap analysis §D).
-    return []
+def _worker_holidays(user=None):
+    """Holiday calendar the worker inherits from their bound site."""
+    site = _worker_bound_site(user)
+    if site is None:
+        return []
+    rows = []
+    for h in SiteHoliday.objects.filter(site=site).order_by("date"):
+        rows.append({
+            "date": _dts(h.date),
+            "name": _d(h.name),
+            "type": h.get_holiday_type_display(),
+            "appliesTo": _d(site.site_name),
+            "isPaid": h.is_paid,
+        })
+    return rows
+
+
+def _contractor_site_calendars(user):
+    """Per-site holiday calendar + leave policy the contractor manages; workers
+    bound to each site inherit them."""
+    site_ids = set(WorkerContractorBinding.objects.filter(contractor=user)
+                   .values_list("site_id", flat=True))
+    site_ids.update(ContractorSiteAllotment.objects.filter(
+        binding__contractor=user, status="APPROVED").values_list("site_id", flat=True))
+    out = []
+    for site in Site.objects.filter(id__in=site_ids).order_by("id"):
+        holidays = [{
+            "id": h.id, "date": _dts(h.date), "name": _d(h.name),
+            "holidayType": h.get_holiday_type_display(), "holidayTypeCode": h.holiday_type,
+            "isPaid": h.is_paid, "note": _d(h.note),
+        } for h in site.holidays.all()]
+        policies = [{
+            "id": p.id, "leaveTypeId": p.leave_type_id, "leaveType": p.leave_type.name,
+            "annualEntitlement": p.annual_entitlement, "openingBalance": p.opening_balance,
+            "isActive": p.is_active,
+        } for p in site.leave_policies.select_related("leave_type").all()]
+        out.append({
+            "siteId": site.id, "siteName": _d(site.site_name),
+            "holidays": holidays, "leavePolicies": policies,
+        })
+    return out
 
 
 def _worker_announcements():
@@ -714,18 +924,95 @@ def _worker_announcements():
     return []
 
 
-def _worker_courses():
-    # Course catalog has no DB table yet (gap analysis §D); return the seeded
-    # demo course so the Skills screen (featured + detail + catalog) renders.
-    return [
-        {"id": "1", "title": "Construction Safety Basics",
-         "provider": "BSS Learning", "duration": "2h", "rating": 4.5,
-         "progress": 40, "image": "", "badge": "", "category": "safety",
-         "description": "Fundamentals of site safety for construction workers.",
-         "modules": [{"id": "1", "title": "Introduction", "duration": "0.5h", "completed": True},
-                     {"id": "2", "title": "PPE", "duration": "1h", "completed": False}],
-         "instructor": "BSS Safety Team", "certification": "Verified"},
-    ]
+def _worker_courses(user=None):
+    """Course catalog + the worker's progress.
+
+    Shape: course -> modules -> (video lessons + assignments with pass marks).
+    A module is complete when every lesson is watched and every assignment is
+    passed; the course is complete (certificate issued) when all modules are.
+    """
+    enrollments = {}
+    if user is not None:
+        enrollments = {e.course_id: e for e in CourseEnrollment.objects.filter(worker=user)}
+    rows = []
+    for c in Course.objects.filter(is_active=True).prefetch_related(
+            "modules__lessons", "modules__readings", "modules__assignments__questions"):
+        enrollment = enrollments.get(c.id)
+        completed_ids = {str(x) for x in (enrollment.completed_lesson_ids or [])} if enrollment else set()
+        scores = {str(k): v for k, v in (enrollment.assignment_scores or {}).items()} if enrollment else {}
+        submissions = ({s.assignment_id: s for s in CourseSubmission.objects.filter(worker=user)}
+                       if user is not None else {})
+
+        modules = []
+        total_items = done_items = 0
+        for m in c.modules.all():
+            lessons = list(m.lessons.all())
+            assignments = list(m.assignments.all())
+            lesson_rows = [{
+                "id": str(l.id), "title": _d(l.title), "duration": _d(l.duration),
+                "completed": str(l.id) in completed_ids, "videoUrl": _d(l.youtube_url),
+            } for l in lessons]
+            assignment_rows = []
+            for a in assignments:
+                score = scores.get(str(a.id))
+                passed = score is not None and score >= a.pass_score
+                submission = submissions.get(a.id)
+                assignment_rows.append({
+                    "id": str(a.id), "title": _d(a.title), "passScore": a.pass_score,
+                    "type": a.assignment_type, "instructions": _d(a.instructions),
+                    "score": score, "passed": passed,
+                    # Correct answers are never sent to the client (server-side grading).
+                    "questions": [{"id": str(q.id), "question": _d(q.question),
+                                   "options": list(q.options or [])} for q in a.questions.all()],
+                    "submission": ({
+                        "content": _d(submission.content), "fileUrl": _d(submission.file_url),
+                        "status": submission.get_status_display(), "score": submission.score,
+                        "feedback": _d(submission.feedback),
+                        "submittedAt": _dts(submission.submitted_at),
+                    } if submission else None),
+                })
+            lessons_done = all(str(l.id) in completed_ids for l in lessons) if lessons else True
+            assignments_passed = all(
+                scores.get(str(a.id)) is not None and scores[str(a.id)] >= a.pass_score
+                for a in assignments) if assignments else True
+            module_complete = bool(lessons or assignments) and lessons_done and assignments_passed
+            total_items += len(lessons) + len(assignments)
+            done_items += (sum(1 for l in lessons if str(l.id) in completed_ids)
+                           + sum(1 for a in assignments if scores.get(str(a.id)) is not None
+                                 and scores[str(a.id)] >= a.pass_score))
+            reading_rows = [{
+                "id": str(r.id), "title": _d(r.title), "body": _d(r.body),
+                "url": _d(r.resource_url), "duration": _d(r.duration),
+            } for r in m.readings.all()]
+            modules.append({
+                "id": str(m.id), "title": _d(m.title),
+                "lessons": lesson_rows, "assignments": assignment_rows,
+                "readings": reading_rows,
+                "completed": module_complete,
+            })
+
+        completed = bool(enrollment and enrollment.status == "COMPLETED")
+        progress = 100 if completed else (round(done_items / total_items * 100) if total_items else 0)
+        rows.append({
+            "id": str(c.id),
+            "title": _d(c.title),
+            "provider": _d(c.provider),
+            "duration": _d(c.duration),
+            "rating": float(c.rating or 0),
+            "progress": progress,
+            "image": _d(c.image_url),
+            "badge": _d(c.badge),
+            "category": _d(c.category),
+            "description": _d(c.description),
+            "instructor": _d(c.instructor),
+            "certification": _d(c.certification),
+            "skillAwarded": _d(c.skill_name or c.title),
+            "status": ("Completed" if completed else ("In progress" if progress > 0 else "Not started")),
+            "certificateReady": completed,
+            "certificateNo": _d(enrollment.certificate_no) if enrollment else "",
+            "modules": modules,
+        })
+    return rows
 
 
 def _doc_owner_label(value):
@@ -815,6 +1102,78 @@ def _worker_job_requests(user):
             "facilities": [],
             "status": status_map.get(str(r.status).upper(), "Pending"),
             "dateReceived": _dts(r.requested_at),
+        })
+    return rows
+
+
+def _worker_available_jobs(user):
+    """Active ContractorJob postings shown on /worker/rozgar (Available Jobs).
+
+    Field set mirrors BSS_Feature_Comparison.xlsx (Worker > Rozgar Setu):
+    State, City, Designation, Experience, DOB limit, Description, View/Apply.
+    """
+    from bss_core.models import ContractorJob
+
+    applied_job_ids = set()
+    if hasattr(user, "rozgar_applications"):
+        applied_job_ids = set(user.rozgar_applications.values_list("job_id", flat=True))
+
+    worker_skills = set()
+    if hasattr(user, "worker_skills"):
+        worker_skills = {str(getattr(s, "name", "") or "").strip().lower() for s in user.worker_skills.all()}
+    primary = getattr(getattr(user, "skills", None), "primary_skill", "") or ""
+    if primary:
+        worker_skills.add(str(primary).strip().lower())
+
+    addr = getattr(user, "worker_address", None)
+    worker_state = str(
+        getattr(addr, "current_state", "") or getattr(addr, "permanent_state", "") or ""
+    ).strip().lower()
+
+    qs = (
+        ContractorJob.objects.filter(is_active=True)
+        .exclude(status="CLOSED")
+        .select_related("site", "contractor")
+        .order_by("-created_at")[:50]
+    )
+    rows = []
+    for j in qs:
+        if j.id in applied_job_ids:
+            continue
+        cp = getattr(j.contractor, "contractor_profile", None)
+        site = j.site
+        state = _d(j.state or (site.state if site else ""))
+        city = _d(j.city or (site.city if site else ""))
+        skills = {str(s).strip().lower() for s in (j.skills or [])}
+        if not worker_skills or not skills:
+            # Nothing to compare against -> don't hide the posting.
+            match = True
+        else:
+            match = bool(worker_skills & skills) or bool(
+                worker_state and state and worker_state == state.strip().lower()
+            )
+        posted = j.created_at.strftime("%d %b %Y") if j.created_at else ""
+        raw_wage = _d(j.wage_offered)
+        try:
+            wage_display = f"₹{int(float(raw_wage)):,} / month"
+        except (TypeError, ValueError):
+            wage_display = raw_wage
+        rows.append({
+            "id": f"JOB-{j.id}",
+            "jobId": j.id,
+            "title": _d(j.job_title),
+            "subTitle": _d(j.trade or j.category),
+            "employer": _d(cp.contractor_name if cp else j.contractor.username),
+            "postedDate": (f"Posted {posted}" if posted else ""),
+            "description": _d(j.job_description),
+            "wage": wage_display,
+            "state": state,
+            "city": city,
+            "designation": _d(j.designation or j.job_title),
+            "experience": _d(j.experience),
+            "dobLimit": _d(j.dob_limit),
+            "vacancies": j.vacancies or 1,
+            "matchBadge": bool(match),
         })
     return rows
 
@@ -920,13 +1279,119 @@ def _contractor_engagements(user):
     return [_engagement_row(b) for b in qs]
 
 
-def _worker_leave_types():
-    # No leave-type master table exists yet (gap analysis §D).
-    return []
+def _worker_bound_site(user):
+    if user is None:
+        return None
+    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site").first())
+    return binding.site if binding and binding.site else None
+
+
+def _site_leave_policies(site):
+    if site is None:
+        return []
+    return list(SiteLeavePolicy.objects.filter(site=site, is_active=True)
+                .select_related("leave_type"))
+
+
+def _worker_leave_types(user=None):
+    """Leave types the worker inherits: the bound site's policy if configured,
+    otherwise the global master. Empty until the worker is bound to a site."""
+    site = _worker_bound_site(user)
+    if site is None:
+        return []
+    policies = _site_leave_policies(site)
+    if policies:
+        return [p.leave_type.name for p in policies]
+    return [lt.name for lt in LeaveType.objects.filter(is_active=True)]
+
+
+def _leave_row(request_obj):
+    approver_name = ""
+    if request_obj.approver:
+        cp = getattr(request_obj.approver, "contractor_profile", None)
+        approver_name = _d(cp.contractor_name if cp else request_obj.approver.username)
+    return {
+        "id": str(request_obj.id),
+        "type": request_obj.leave_type.name if request_obj.leave_type else "",
+        "from": _dts(request_obj.from_date),
+        "to": _dts(request_obj.to_date),
+        "reason": _d(request_obj.reason),
+        "submitted": _dts(request_obj.created_at),
+        "status": {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected",
+                   "CANCELLED": "Cancelled"}.get(str(request_obj.status).upper(), "Pending"),
+        "approver": approver_name,
+        "comment": _d(request_obj.comment),
+    }
 
 
 def _worker_leave_records(user):
-    return []
+    rows = (LeaveRequest.objects.filter(worker=user)
+            .select_related("leave_type", "approver")[:50])
+    return [_leave_row(r) for r in rows]
+
+
+def _worker_leave_balance(user):
+    """Per-type leave ledger for the current financial year (1 Apr – 31 Mar).
+
+    Leave is deducted as soon as it is applied for (PENDING) and released if the
+    request is rejected/cancelled, so the balance reflects committed days.
+    """
+    today = timezone.localdate()
+    fy_start_year = today.year if today.month >= 4 else today.year - 1
+    fy_start = datetime.date(fy_start_year, 4, 1)
+    months_elapsed = (today.year - fy_start.year) * 12 + (today.month - fy_start.month) + 1
+    months_elapsed = max(1, min(12, months_elapsed))
+    committed = LeaveRequest.objects.filter(worker=user, status__in=("PENDING", "APPROVED"))
+    pending_qs = LeaveRequest.objects.filter(worker=user, status="PENDING")
+    site = _worker_bound_site(user)
+    if site is None:
+        return []
+    policies = _site_leave_policies(site)
+    if policies:
+        plan = [(p.leave_type, p.annual_entitlement, p.opening_balance) for p in policies]
+    else:
+        plan = [(lt, lt.annual_entitlement, lt.opening_balance)
+                for lt in LeaveType.objects.filter(is_active=True)]
+    out = []
+    for lt, annual, opening in plan:
+        def days(qs):
+            return sum(r.days or 0 for r in qs
+                       if r.leave_type_id == lt.id and r.from_date and r.from_date >= fy_start)
+        availed = days(committed)   # pending + approved are both held
+        pending = days(pending_qs)
+        accrued = round((annual / 12) * months_elapsed)
+        out.append({
+            "type": lt.name,
+            "opening": opening,
+            "accrued": accrued,
+            "availed": availed,
+            "pending": pending,
+            "balance": max(0, opening + accrued - availed),
+        })
+    return out
+
+
+def _contractor_leave_approvals(user):
+    rows = (LeaveRequest.objects.filter(contractor=user)
+            .select_related("leave_type", "worker")[:100])
+    out = []
+    for r in rows:
+        wi = _get_identity(r.worker)
+        out.append({
+            "id": str(r.id),
+            "worker": _d(wi.name if wi and wi.name else r.worker.username),
+            "bssId": _d(wi.bss_worker_id if wi else ""),
+            "type": r.leave_type.name if r.leave_type else "",
+            "from": _dts(r.from_date),
+            "to": _dts(r.to_date),
+            "days": r.days,
+            "reason": _d(r.reason),
+            "status": {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected",
+                       "CANCELLED": "Cancelled"}.get(str(r.status).upper(), "Pending"),
+            "requestedOn": _dts(r.created_at),
+        })
+    return out
 
 
 def _worker_grievances(user):
@@ -955,6 +1420,8 @@ def build_worker_portal(user):
             "identity": _worker_identity_section(identity),
             "employment": _worker_employment_section(user, identity),
             "compliance": _worker_compliance_section(user),
+            "gatePasses": _worker_gate_passes(user),
+            "complianceRecords": _worker_compliance_records(user),
             "skills": _worker_skills_section(user),
             "socialSecurity": _worker_social_security_section(user),
             "documents": _worker_documents_section(user),
@@ -974,29 +1441,24 @@ def build_worker_portal(user):
         "govtScope": "central",
         "labourLaw": _worker_labour_law(),
         "wages": _worker_wages_section(user),
+        "advances": _worker_advances(user),
         "attendance": _worker_attendance_section(user),
         "providentFund": _worker_financial_records(user, "providentFund"),
         "bonus": _worker_financial_records(user, "bonus"),
         "leaveEncashment": _worker_financial_records(user, "leaveEncashment"),
-        "gratuity": {
-            "serviceStart": _dts(timezone.localdate() - datetime.timedelta(days=730)),
-            "completedService": 2,
-            "calculationBasis": "15 days per completed year of service",
-            "indicativeAmount": 0,
-            "eligibilityStatus": "eligible",
-            "lastUpdated": _dts(timezone.now()),
-            "schemeStatus": "not_applicable",
-            "application": None,
-        },
-        "holidays": _worker_holidays(),
+        "gratuity": _worker_gratuity(user),
+        "holidays": _worker_holidays(user),
         "announcements": _worker_announcements(),
-        "courses": _worker_courses(),
+        "courses": _worker_courses(user),
         "documents": _worker_documents_display(user),
         "jobRequests": _worker_job_requests(user),
+        "availableJobs": _worker_available_jobs(user),
         "bindings": _worker_bindings(user),
         "availability": bool(other and other.available_for_work),
-        "leaveTypes": _worker_leave_types(),
+        "leaveTypes": _worker_leave_types(user),
         "leaveRecords": _worker_leave_records(user),
+        "leaveBalance": _worker_leave_balance(user),
+        "leaveEnabled": _worker_bound_site(user) is not None,
         "cardProduct": {
             "productId": "BSS-WORKER-CARD",
             "cardFee": 0,
@@ -1100,6 +1562,7 @@ def _contractor_workers(user):
             "category": "",
             "skills": "",
             "photoUrl": _d(wi.photo if wi else ""),
+            "eligibility": _gate_pass_eligibility(b.worker),
         })
     return rows
 
@@ -1130,21 +1593,102 @@ def _contractor_compliance_reports(user):
     return rows
 
 
+_GP_TYPE_LABEL = {"TGP": "Temporary", "PGP": "Permanent"}
+_GP_STATUS_LABEL = {"ACTIVE": "Approved", "PENDING": "Pending", "REJECTED": "Rejected",
+                    "EXPIRED": "Expired", "REVOKED": "Rejected"}
+
+
+def _gate_pass_eligibility(worker):
+    """Real eligibility for a site gate pass, from the worker's own records.
+
+    Medical / Health & Safety / Compliance (Excel: Contractor > Gate Pass >
+    Gate Pass Register eligibility columns).
+    """
+    ws = WorkerWelfareSafety.objects.filter(user=worker).first()
+    banking = WorkerBanking.objects.filter(user=worker).first()
+    social = WorkerSocialSecurity.objects.filter(user=worker).first()
+    identity = _get_identity(worker)
+
+    def yes(value):
+        return str(value or "").strip().lower() in ("done", "yes", "completed", "fit", "verified", "true")
+
+    medical = bool(ws and (yes(ws.medical_examination_status) or yes(ws.medical_fitness_status)))
+    safety_kit = bool(ws and (ws.ppe_required or (ws.types_of_ppe_given or "").strip()))
+    safety_training = bool(ws and ws.safety_training_completed)
+    site_induction = bool(ws and yes(ws.site_induction_status))
+    health_safety = safety_kit or safety_training or site_induction
+    aadhaar = bool(identity and (identity.aadhaar or "").strip())
+    bank = bool(banking and (banking.bank_account_number or "").strip())
+    uan = bool(social and (social.epfo_uan or "").strip())
+    esi = bool(social and (social.esic_ip_number or "").strip())
+    compliance = aadhaar and bank and uan and esi
+
+    done = "Done"
+    pending = "Pending"
+    return {
+        "medical": done if medical else pending,
+        "healthSafety": done if health_safety else pending,
+        "compliance": done if compliance else pending,
+        "safetyKit": done if safety_kit else pending,
+        "safetyTraining": done if safety_training else pending,
+        "siteInduction": done if site_induction else pending,
+        "aadhaar": done if aadhaar else pending,
+        "bank": done if bank else pending,
+        "uan": done if uan else pending,
+        "esi": done if esi else pending,
+    }
+
+
+def _gate_pass_worker_meta(worker):
+    identity = _get_identity(worker)
+    skills = WorkerSkillsEmployability.objects.filter(user=worker).first()
+    return {
+        "workerName": _d(identity.name if identity and identity.name else worker.username),
+        "workerId": _d(identity.bss_worker_id if identity else ""),
+        "contact": _d(identity.mobile_number if identity else ""),
+        "skill": _d(skills.primary_skill if skills else ""),
+    }
+
+
+def _party_name(user):
+    """Display name of a contractor / employer / worker party."""
+    if user is None:
+        return ""
+    if user.role == "contractor":
+        cp = getattr(user, "contractor_profile", None)
+        return _d(cp.contractor_name if cp and cp.contractor_name else user.username)
+    if user.role == "employer":
+        ep = getattr(user, "employer_profile", None)
+        return _d(ep.employer_name if ep and ep.employer_name else user.username)
+    return user.username
+
+
+def _contractor_gate_pass_row(g):
+    meta = _gate_pass_worker_meta(g.worker)
+    site = g.site
+    employer_name = ""
+    if site and site.employer:
+        ep = getattr(site.employer, "employer_profile", None)
+        employer_name = _d(ep.employer_name if ep else site.employer.username)
+    return {
+        "id": g.id, **meta,
+        "employer": employer_name,
+        "type": _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type)),
+        "site": site.site_name if site else "",
+        "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
+        "requestedAt": _dts(g.created_at),
+        # Ownership: contractor requests, employer approves (Excel Contractor 67-70).
+        "requestedBy": _party_name(g.issued_by),
+        "approvedBy": _party_name(g.approved_by),
+        "approvedAt": _dts(g.approved_at),
+        "status": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        "eligibility": _gate_pass_eligibility(g.worker),
+    }
+
+
 def _contractor_gate_passes(user):
-    rows = []
-    gps = WorkerGatePass.objects.filter(issued_by=user)
-    for g in gps[:20]:
-        wi = WorkerIdentity.objects.filter(user=g.worker).first()
-        rows.append({
-            "id": g.id,
-            "workerName": _d(wi.name if wi else g.worker.username),
-            "workerId": _d(wi.bss_worker_id if wi else ""),
-            "employer": "",
-            "type": _d(g.gate_pass_type), "site": g.site.site_name if g.site else "",
-            "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
-            "status": _d(g.status),
-        })
-    return rows
+    gps = WorkerGatePass.objects.filter(issued_by=user).select_related("worker", "site")[:100]
+    return [_contractor_gate_pass_row(g) for g in gps]
 
 
 def _contractor_applications(user):
@@ -1236,8 +1780,31 @@ def _contractor_submissions(user):
     return {"documents": rows}
 
 
+def _benefit_row(r):
+    wi = _get_identity(r.worker)
+    return {
+        "id": r.id,
+        "worker": _d(wi.name if wi and wi.name else r.worker.username),
+        "workerId": _d(wi.bss_worker_id if wi else ""),
+        "employer": "",
+        "period": _d(r.period),
+        "amount": _num(r.amount),
+        "days": _num(r.days) if r.days is not None else None,
+        "reason": _d(r.reason),
+        "paidOn": _dts(r.paid_on) if r.paid_on else "",
+        "status": {"RECORDED": "Recorded", "CREDITED": "Credited",
+                   "PROCESSING": "Processing", "PAID": "Paid"}.get(r.status, r.status),
+        "source": "contractor",
+    }
+
+
 def _contractor_worker_benefits(user):
-    return {"bonus": [], "leaveEncashment": []}
+    """Bonus / Leave Encashment records this contractor uploaded for its workers."""
+    def rows(kind):
+        return [_benefit_row(r) for r in
+                WorkerBenefitRecord.objects.filter(contractor=user, kind=kind)
+                .select_related("worker")[:200]]
+    return {"bonus": rows("BONUS"), "leaveEncashment": rows("LEAVE_ENCASHMENT")}
 
 
 def _contractor_salaries(user):
@@ -1260,8 +1827,45 @@ def _contractor_worker_documents(user):
     return []
 
 
+def _contractor_compliance_row(binding):
+    """One bound worker's compliance / welfare record (contractor management)."""
+    worker = binding.worker
+    wi = _get_identity(worker)
+    ws = WorkerWelfareSafety.objects.filter(user=worker).first()
+    elig = _gate_pass_eligibility(worker)
+    gp = WorkerGatePass.objects.filter(worker=worker).order_by("-created_at").first()
+    gp_status = {"ACTIVE": "Active", "PENDING": "Pending", "REJECTED": "Expired",
+                 "EXPIRED": "Expired", "REVOKED": "Expired"}.get(gp.status, "Pending") if gp else "Pending"
+    return {
+        "worker": _d(wi.name if wi and wi.name else worker.username),
+        "workerId": _d(wi.bss_worker_id if wi else ""),
+        "site": binding.site.site_name if binding.site else "",
+        "gatePass": gp_status,
+        "medical": elig["medical"],
+        "healthSafety": elig["healthSafety"],
+        "details": {
+            "medicalExaminationStatus": _d(ws.medical_examination_status) if ws else "",
+            "medicalFitnessStatus": _d(ws.medical_fitness_status) if ws else "",
+            "lastMedicalExamination": _dts(ws.last_medical_examination) if ws and ws.last_medical_examination else "",
+            "nextMedicalDue": _dts(ws.next_medical_due) if ws and ws.next_medical_due else "",
+            "ppeRequired": bool(ws and ws.ppe_required),
+            "typesOfPpeGiven": _d(ws.types_of_ppe_given) if ws else "",
+            "safetyTrainingCompleted": bool(ws and ws.safety_training_completed),
+            "siteInductionStatus": _d(ws.site_induction_status) if ws else "",
+            "insuranceStatus": _d(ws.insurance_status) if ws else "",
+            "accommodationProvided": _d(ws.accomodation_provided) if ws else "",
+            "policeVerification": _d(ws.police_verification) if ws else "",
+            "trainingDate": _dts(ws.training_date) if ws and ws.training_date else "",
+            "trainerName": _d(ws.trainer_name) if ws else "",
+        },
+    }
+
+
 def _contractor_worker_compliance(user):
-    return []
+    bindings = (WorkerContractorBinding.objects
+                .filter(contractor=user, binding_status="ACCEPTED")
+                .select_related("worker", "site"))
+    return [_contractor_compliance_row(b) for b in bindings]
 
 
 def _contractor_workforce_growth():
@@ -1288,21 +1892,29 @@ def _contractor_compliance_history(user):
 
 def _contractor_job_history(user):
     rows = []
-    for j in user.jobs.all()[:20] if hasattr(user, "jobs") else []:
+    for j in user.jobs.all()[:50] if hasattr(user, "jobs") else []:
+        site = j.site
+        applications = j.requests.count() if hasattr(j, "requests") else 0
+        hires = j.requests.filter(status="ACCEPTED").count() if hasattr(j, "requests") else 0
         rows.append({
-            "id": j.id, "title": _d(j.job_title), "trade": "",
-            "category": "", "workplaceType": "",
-            "state": j.site.state if j.site else "",
-            "city": j.site.city if j.site else "",
-            "site": j.site.site_name if j.site else "",
-            "description": _d(j.job_description), "skills": [],
-            "experience": "", "minSalary": 0, "maxSalary": 0,
-            "salaryVisibility": "public", "vacancies": 1, "monthlyWage": 0,
-            "closingDate": _dts(j.validity_until), "duration": "",
-            "visibility": "public" if j.is_active else "hidden",
-            "status": "ACTIVE" if j.is_active else "CLOSED",
+            "id": j.id, "title": _d(j.job_title),
+            "trade": _d(j.trade), "category": _d(j.category),
+            "workplaceType": _d(j.workplace_type, "On-site"),
+            "state": _d(j.state or (site.state if site else "")),
+            "city": _d(j.city or (site.city if site else "")),
+            "site": site.site_name if site else "",
+            "description": _d(j.job_description), "skills": j.skills or [],
+            "experience": _d(j.experience),
+            "minSalary": _num(j.min_salary), "maxSalary": _num(j.max_salary),
+            "salaryVisibility": _d(j.salary_visibility, "Visible to all"),
+            "vacancies": j.vacancies or 1,
+            "monthlyWage": _num(j.wage_offered),
+            "closingDate": _dts(j.validity_until), "duration": _d(j.duration),
+            "visibility": _d(j.visibility, "Public"),
+            "status": {"DRAFT": "Draft", "SUBMITTED": "Submitted", "APPROVED": "Approved",
+                       "CLOSED": "Closed"}.get(str(j.status).upper(), "Submitted"),
             "postedOn": _dts(j.created_at),
-            "applications": 0, "hires": 0,
+            "applications": applications, "hires": hires,
         })
     return rows
 
@@ -1681,6 +2293,7 @@ def build_contractor_portal(user):
         "compliances": _contractor_compliances(user),
         "complianceReports": _contractor_compliance_reports(user),
         "gatePasses": _contractor_gate_passes(user),
+        "advances": _contractor_advances(user),
         "applications": _contractor_applications(user),
         "employers": _contractor_employers(user),
         "submissions": _contractor_submissions(user),
@@ -1694,6 +2307,9 @@ def build_contractor_portal(user):
         "applicability": _contractor_applicability(),
         "complianceHistory": _contractor_compliance_history(user),
         "jobHistory": _contractor_job_history(user),
+        "leaveApprovals": _contractor_leave_approvals(user),
+        "siteCalendars": _contractor_site_calendars(user),
+        "leaveTypeCatalog": [lt.name for lt in LeaveType.objects.filter(is_active=True)],
         "bindingRequests": _contractor_binding_requests(user),
         "registers": _contractor_registers(user),
         "complianceBatches": _contractor_compliance_batches(user),
@@ -1879,24 +2495,34 @@ def _employer_approvals(user):
     return rows
 
 
+def _employer_gate_pass_row(g):
+    meta = _gate_pass_worker_meta(g.worker)
+    site = g.site
+    contractor_name = ""
+    binding = (WorkerContractorBinding.objects.filter(worker=g.worker, site=site)
+               .select_related("contractor").first())
+    if binding:
+        cp = getattr(binding.contractor, "contractor_profile", None)
+        contractor_name = _d(cp.contractor_name if cp else binding.contractor.username)
+    return {
+        "id": g.id, **meta,
+        "contractor": contractor_name,
+        "site": site.site_name if site else "",
+        "siteId": g.site_id,
+        "type": _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type)),
+        "requestedAt": _dts(g.created_at),
+        "requestedBy": _party_name(g.issued_by) or contractor_name,
+        "approvedBy": _party_name(g.approved_by),
+        "approvedAt": _dts(g.approved_at),
+        "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
+        "status": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        "eligibility": _gate_pass_eligibility(g.worker),
+    }
+
+
 def _employer_gate_passes(user):
-    gps = WorkerGatePass.objects.filter(site__employer=user)
-    rows = []
-    for g in gps[:20]:
-        wi = WorkerIdentity.objects.filter(user=g.worker).first()
-        rows.append({
-            "id": g.id,
-            "workerName": _d(wi.name if wi else g.worker.username),
-            "workerId": _d(wi.bss_worker_id if wi else ""),
-            "contractor": "",
-            "site": g.site.site_name if g.site else "",
-            "siteId": g.site_id,
-            "type": _d(g.gate_pass_type),
-            "requestedAt": _dts(g.created_at),
-            "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
-            "status": _d(g.status),
-        })
-    return rows
+    gps = WorkerGatePass.objects.filter(site__employer=user).select_related("worker", "site")[:100]
+    return [_employer_gate_pass_row(g) for g in gps]
 
 
 def _employer_submissions(user):

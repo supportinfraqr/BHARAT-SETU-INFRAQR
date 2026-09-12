@@ -72,6 +72,7 @@ export default function ContractorBenefitsPage() {
       const payload: Partial<ContractorBenefitRecord> = {
         worker: worker.name, workerId: worker.bssId, employer: worker.employer, period: form.period, paidOn: form.paidOn,
         amount: Number(form.amount), reason: form.reason || undefined, fileName, source: 'contractor',
+        kind: tab === 'bonus' ? 'BONUS' : 'LEAVE_ENCASHMENT',
       };
       if (form.days) payload.days = Number(form.days);
       const result = await mutate<{ data: ContractorBenefitRecord[] }>('benefits', 'POST', payload);
@@ -92,7 +93,7 @@ export default function ContractorBenefitsPage() {
     try {
       const payload = valid.map(row => {
         const worker = contractor.workers.find(item => item.bssId === row.workerId);
-        const record: Partial<ContractorBenefitRecord> = { worker: worker?.name ?? row.worker, workerId: row.workerId, employer: worker?.employer ?? '', period: row.period, paidOn: row.paidOn, amount: Number(row.amount), source: 'contractor' };
+        const record: Partial<ContractorBenefitRecord> = { worker: worker?.name ?? row.worker, workerId: row.workerId, employer: worker?.employer ?? '', period: row.period, paidOn: row.paidOn, amount: Number(row.amount), source: 'contractor', kind: tab === 'bonus' ? 'BONUS' : 'LEAVE_ENCASHMENT' };
         if (row.days) record.days = Number(row.days);
         if (row.reason) record.reason = row.reason;
         return record;

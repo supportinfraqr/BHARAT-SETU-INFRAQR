@@ -9,12 +9,17 @@ Passwords:
     contractors -> Bss@Contractor123
     employers   -> Bss@Employer123
 
-BSS IDs follow the standard format: BSS-W / BSS-C / BSS-E + 10-digit PK.
+BSS IDs are random alphanumeric: BSS-W / BSS-C / BSS-E + 10 chars. Codes are
+assigned only when an account is first created (or its code is blank), so
+re-running never clobbers an already-issued ID.
 """
+
+import uuid
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from api import bss_ids
 from bss_core.models import (
     ContractorProfile,
     EmployerProfile,
@@ -27,6 +32,7 @@ from bss_core.models import (
 WORKER_PASSWORD = "Bss@Worker123"
 CONTRACTOR_PASSWORD = "Bss@Contractor123"
 EMPLOYER_PASSWORD = "Bss@Employer123"
+DEMO_MPIN = "1234"
 
 # (phone, name) — 9999294962 is the real test number; the rest are easy demo ids.
 WORKERS = [
@@ -74,17 +80,260 @@ EMPLOYER_DETAILS = {
                    "address": "L&T House, Ballard Estate, Mumbai 400001"},
 }
 
+# Demo job postings (BSS_Feature_Comparison.xlsx > Rozgar Setu > Available Jobs).
+# Keyed to the demo contractor phone so the worker /worker/rozgar screen shows
+# real, backend-driven listings with State/City/Designation/Experience/DOB.
+DEMO_JOBS = [
+    {
+        "phone": "4444444444", "title": "Electrician", "trade": "High-Rise Electrification",
+        "category": "Electrical", "designation": "Electrician",
+        "state": "Maharashtra", "city": "Pune", "wage": "26000",
+        "experience": "3-6 years", "dob_limit": "On or after 01 Jan 1980", "vacancies": 4,
+        "skills": ["Electrical Wiring", "Panel Installation", "Conduit Laying"],
+        "description": "Site electrification, wiring and panel installation for a residential high-rise. PPE and site induction provided. Weekly wage settlement.",
+    },
+    {
+        "phone": "5555555555", "title": "Bar Bender", "trade": "Metro Depot Works",
+        "category": "Steel / Rebar", "designation": "Bar Bender",
+        "state": "Maharashtra", "city": "Mumbai", "wage": "25500",
+        "experience": "2-5 years", "dob_limit": "On or after 01 Jan 1982", "vacancies": 6,
+        "skills": ["Rebar Cutting", "Cage Fabrication", "BBS Reading"],
+        "description": "Rebar cutting, bending, cage fabrication for metro depot beam & column structures. Safety gear & site accommodation provided.",
+    },
+    {
+        "phone": "6666666666", "title": "Scaffolder / Rigger", "trade": "Industrial Plant Maintenance",
+        "category": "Scaffolding", "designation": "Scaffolder",
+        "state": "Gujarat", "city": "Surat", "wage": "27000",
+        "experience": "4+ years", "dob_limit": "On or after 01 Jan 1978", "vacancies": 3,
+        "skills": ["Scaffolding Erection", "Rigging", "Work at Height"],
+        "description": "Heavy scaffolding erection and dismantling for refinery shutdown maintenance. Mandatory safety kit & daily attendance log.",
+    },
+]
 
-def _bss_worker_id(user_id):
-    return f"BSS-W{user_id:010d}"
+# Leave master (drives the worker Leave ledger: opening + accrued - availed).
+DEMO_LEAVE_TYPES = [
+    {"code": "PERSONAL", "name": "Personal leave", "annual_entitlement": 12, "opening_balance": 2, "sort_order": 1},
+    {"code": "MEDICAL", "name": "Medical leave", "annual_entitlement": 12, "opening_balance": 1, "sort_order": 2},
+    {"code": "OTHER", "name": "Other configured leave", "annual_entitlement": 12, "opening_balance": 0, "sort_order": 3},
+]
 
+# Demo courses (admin-managed catalog). Each lesson embeds a YouTube video;
+# completing all lessons + passing the quiz awards the course's skill.
+DEMO_COURSES = [
+    {
+        "code": "SAFETY-101", "title": "Construction Safety Basics", "provider": "BSS Learning",
+        "category": "Safety", "duration": "2h", "rating": 4.6, "badge": "Mandatory", "sort_order": 1,
+        "description": "Core site-safety rules: PPE, working at height, hazard reporting and emergency response.",
+        "instructor": "BSS Safety Team", "certification": "BSS Safety Badge", "skill_name": "Site Safety",
+        "modules": [
+            {
+                "title": "Module 1 · Safety Foundations",
+                "lessons": [
+                    {"title": "Why site safety matters", "duration": "15 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=construction%20site%20safety%20basics"},
+                    {"title": "Personal Protective Equipment (PPE)", "duration": "20 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=construction%20PPE%20safety%20equipment"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 1 · Safety basics", "pass_score": 60, "questions": [
+                        {"question": "What should you do before starting any task on site?",
+                         "options": ["Start immediately", "Attend the safety briefing and wear PPE", "Wait for a friend", "Skip if experienced"],
+                         "correct_index": 1},
+                        {"question": "PPE stands for…",
+                         "options": ["Personal Protective Equipment", "Public Property Entry", "Pre-Planned Excavation", "Paid Personal Earnings"],
+                         "correct_index": 0},
+                    ]},
+                    {"title": "Written assignment · PPE checklist", "type": "WRITING", "pass_score": 60,
+                     "instructions": "In your own words, list the PPE you must wear for a task at height and explain why each item matters (at least 3 items).",
+                     "questions": []},
+                ],
+            },
+            {
+                "title": "Module 2 · Working at Height",
+                "lessons": [
+                    {"title": "Working at height & fall protection", "duration": "25 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=working%20at%20height%20fall%20protection"},
+                    {"title": "Emergency response on site", "duration": "15 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=construction%20site%20emergency%20response"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 2 · Height & emergencies", "pass_score": 70, "questions": [
+                        {"question": "A safety harness is required when working…",
+                         "options": ["On the ground", "At height where a fall is possible", "Only at night", "Never"],
+                         "correct_index": 1},
+                        {"question": "If you see an unsafe condition you should…",
+                         "options": ["Ignore it", "Report it to your supervisor", "Fix it without training", "Go home"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+        ],
+    },
+    {
+        "code": "FIN-101", "title": "Digital Financial Literacy", "provider": "Bharat Shram Setu",
+        "category": "Life Skills", "duration": "1.5h", "rating": 4.8, "badge": "Recommended", "sort_order": 2,
+        "description": "Digital banking, UPI payments and sending money home safely without falling for scams.",
+        "instructor": "BSS Digital Empowerment Team", "certification": "Digital Citizen Certificate",
+        "skill_name": "Digital Payments",
+        "modules": [
+            {
+                "title": "Module 1 · Digital Banking",
+                "lessons": [
+                    {"title": "Setting up UPI safely", "duration": "20 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=UPI%20payment%20setup%20tutorial%20hindi"},
+                    {"title": "Sending money home securely", "duration": "20 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=send%20money%20UPI%20safely"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 1 · UPI basics", "pass_score": 60, "questions": [
+                        {"question": "Your UPI PIN should be shared with…",
+                         "options": ["Your friend", "Nobody", "The caller from the bank", "The shopkeeper"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+            {
+                "title": "Module 2 · Staying Safe",
+                "lessons": [
+                    {"title": "Spotting scams and frauds", "duration": "20 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=UPI%20fraud%20scam%20awareness"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 2 · Fraud awareness", "pass_score": 70, "questions": [
+                        {"question": "A caller asking for your OTP is likely…",
+                         "options": ["A bank officer", "A fraudster", "A government officer", "Your employer"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+        ],
+    },
+    {
+        "code": "MASON-201", "title": "Modern Masonry Techniques", "provider": "L&T Skilling Institute",
+        "category": "Technical", "duration": "3h", "rating": 4.7, "badge": "", "sort_order": 3,
+        "description": "Correct cement mixing ratios, efficient bricklaying, waterproofing and curing.",
+        "instructor": "Amit Desai, Lead Engineer", "certification": "Advanced Mason (L3)",
+        "skill_name": "Masonry",
+        "modules": [
+            {
+                "title": "Module 1 · Materials & Mix",
+                "lessons": [
+                    {"title": "Understanding modern mix ratios", "duration": "30 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=cement%20mortar%20mix%20ratio%20masonry"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 1 · Mix ratios", "pass_score": 60, "questions": [
+                        {"question": "A common general-purpose mortar mix is…",
+                         "options": ["1:1", "1:6", "1:20", "1:50"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+            {
+                "title": "Module 2 · Technique & Curing",
+                "lessons": [
+                    {"title": "Efficient bricklaying", "duration": "30 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=bricklaying%20techniques%20mason"},
+                    {"title": "Waterproofing & curing", "duration": "30 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=concrete%20curing%20waterproofing"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 2 · Curing", "pass_score": 70, "questions": [
+                        {"question": "Curing of concrete mainly helps to…",
+                         "options": ["Change its colour", "Develop strength and prevent cracks", "Make it cheaper", "Speed up removal"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+        ],
+    },
+    {
+        "code": "SCAFF-301", "title": "Scaffolding Safety", "provider": "NSDC - Skill India",
+        "category": "Safety", "duration": "2.5h", "rating": 4.8, "badge": "", "sort_order": 4,
+        "description": "Safe erection, use and inspection of scaffolding for high-rise and industrial works.",
+        "instructor": "Rajesh Kumar, Safety Officer", "certification": "NSDC Scaffolding Badge",
+        "skill_name": "Scaffolding",
+        "modules": [
+            {
+                "title": "Module 1 · Scaffold Basics",
+                "lessons": [
+                    {"title": "Types of scaffolding", "duration": "25 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=scaffolding%20types%20construction"},
+                    {"title": "Harness and fall protection", "duration": "25 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=scaffolding%20harness%20fall%20protection"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 1 · Scaffold safety", "pass_score": 60, "questions": [
+                        {"question": "Before using a scaffold you should…",
+                         "options": ["Climb quickly", "Check it is tagged and inspected", "Remove some planks", "Ignore the tag"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+            {
+                "title": "Module 2 · Inspection",
+                "lessons": [
+                    {"title": "Pre-use inspection checklist", "duration": "25 min",
+                     "youtube_url": "https://www.youtube.com/embed?listType=search&list=scaffold%20inspection%20checklist"},
+                ],
+                "assignments": [
+                    {"title": "Assignment 2 · Inspection", "pass_score": 70, "questions": [
+                        {"question": "A scaffold tag shows…",
+                         "options": ["The worker's name", "Whether it is safe to use", "The weather", "The wage"],
+                         "correct_index": 1},
+                    ]},
+                ],
+            },
+        ],
+    },
+]
 
-def _bss_contractor_code(user_id):
-    return f"BSS-C{user_id:010d}"
+# Supplementary reading material per module (admin-managed).
+DEMO_READINGS = {
+    ("SAFETY-101", 1): [
+        {"title": "Site safety handbook", "duration": "10 min read",
+         "body": "Key rules for every shift:\n• Always wear the PPE issued for your task (helmet, safety shoes, harness where required).\n• Attend the toolbox talk before starting work.\n• Report every hazard or near-miss to your supervisor immediately.\n• Know the emergency assembly point and first-aid location."},
+        {"title": "PPE quick guide", "duration": "5 min read",
+         "body": "Helmet: protects the head from falling objects.\nSafety shoes: steel toe, always laced.\nHarness: mandatory above 1.8 m, clipped to a certified anchor.\nGloves and goggles: for cutting, grinding and chemical work."},
+    ],
+    ("SAFETY-101", 2): [
+        {"title": "Working-at-height checklist", "duration": "8 min read",
+         "body": "Before working at height:\n1. Is there a safer way to do the job from the ground?\n2. Are guardrails, nets or a harness in place?\n3. Is the anchor point certified and inspected?\n4. Is the area below barricaded?\n5. Is the weather safe (no high wind / lightning)?"},
+    ],
+    ("FIN-101", 1): [
+        {"title": "UPI safety guide", "duration": "6 min read",
+         "body": "• Set your UPI PIN yourself and never share it — not even with someone claiming to be from the bank.\n• Verify the payee name before approving.\n• Check the amount carefully; UPI transfers are instant and hard to reverse.\n• Keep a transaction SMS/email as proof."},
+    ],
+    ("FIN-101", 2): [
+        {"title": "Common fraud patterns", "duration": "6 min read",
+         "body": "• Callers asking for OTP, PIN or CVV are fraudsters.\n• 'Lottery' or 'job deposit' requests are scams.\n• Remote-access apps (AnyDesk/TeamViewer) requested by strangers are dangerous.\n• If in doubt, disconnect and call your bank's official number."},
+    ],
+    ("MASON-201", 1): [
+        {"title": "Mortar mix reference", "duration": "7 min read",
+         "body": "General purpose mortar: 1 part cement : 6 parts sand.\nPlaster (internal): 1:4 to 1:6.\nUse clean, sieved sand and potable water.\nMix only what you can use within ~30 minutes."},
+    ],
+    ("MASON-201", 2): [
+        {"title": "Curing best practices", "duration": "6 min read",
+         "body": "• Cure concrete for at least 7 days (28 days for full strength).\n• Keep the surface damp — cover with wet gunny bags or ponding.\n• Protect from direct sun and fast drying.\n• Waterproofing is applied only after the surface is fully cured and clean."},
+    ],
+    ("SCAFF-301", 1): [
+        {"title": "Scaffold types reference", "duration": "8 min read",
+         "body": "• Independent/tied scaffold: tied to the structure.\n• Mobile scaffold: on castors with brakes, never moved with people on it.\n• Suspended scaffold: hung from overhead, needs certified anchors.\nAll scaffolds must be erected by trained scaffolders."},
+    ],
+    ("SCAFF-301", 2): [
+        {"title": "Pre-use inspection checklist", "duration": "7 min read",
+         "body": "Check daily: base plates on firm ground, verticals plumb, braces in place, planks secured, guardrails and toe-boards fitted, no missing ties, and a valid 'safe to use' tag. If anything is wrong, tag it 'do not use' and report it."},
+    ],
+}
 
-
-def _bss_employer_code(user_id):
-    return f"BSS-E{user_id:010d}"
+# Demo site holiday calendar (inherited by every worker bound to the site).
+DEMO_HOLIDAYS = [
+    {"date": "2026-01-26", "name": "Republic Day", "holiday_type": "PUBLIC", "is_paid": True},
+    {"date": "2026-08-15", "name": "Independence Day", "holiday_type": "PUBLIC", "is_paid": True},
+    {"date": "2026-10-02", "name": "Gandhi Jayanti", "holiday_type": "PUBLIC", "is_paid": True},
+    {"date": "2026-11-08", "name": "Diwali", "holiday_type": "RESTRICTED", "is_paid": True},
+    {"date": "2026-12-25", "name": "Christmas", "holiday_type": "OPTIONAL", "is_paid": True},
+]
 
 
 def _get_or_create_user(username, password, role):
@@ -99,12 +348,16 @@ def _get_or_create_user(username, password, role):
     return user
 
 
-def _set_mobile(user, phone):
+def _set_mobile(user, phone, mpin=None):
     UserCredential.objects.filter(user=user, identity_type="mobile").delete()
-    UserCredential.objects.update_or_create(
+    cred, _ = UserCredential.objects.update_or_create(
         identity_type="mobile", identity_value=phone,
         defaults={"user": user, "is_primary": True, "verified": True},
     )
+    if mpin:
+        from django.contrib.auth.hashers import make_password
+        cred.mpin_hash = make_password(str(mpin))
+        cred.save(update_fields=["mpin_hash"])
 
 
 class Command(BaseCommand):
@@ -114,40 +367,303 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for phone, name in WORKERS:
             user = _get_or_create_user(f"worker_{phone}", WORKER_PASSWORD, "worker")
-            WorkerIdentity.objects.update_or_create(
-                user=user,
-                defaults={"bss_worker_id": _bss_worker_id(user.id), "name": name, "mobile_number": phone},
-            )
-            WorkerOther.objects.get_or_create(user=user)
-            _set_mobile(user, phone)
-            self.stdout.write(f"worker    {phone}  {_bss_worker_id(user.id)}  {name}")
+            ident = WorkerIdentity.objects.filter(user=user).first()
+            if ident is None:
+                ident = WorkerIdentity.objects.create(
+                    user=user, bss_worker_id=bss_ids.new_bss_worker_id(),
+                    name=name, mobile_number=phone)
+            elif not ident.bss_worker_id:
+                ident.bss_worker_id = bss_ids.new_bss_worker_id()
+                ident.save(update_fields=["bss_worker_id"])
+            # Stamp the registration + consent audit record (WorkerOther).
+            from api.v1_bridge import _record_registration_consent
+            _record_registration_consent(user)
+            _set_mobile(user, phone, DEMO_MPIN)
+            self.stdout.write(f"worker    {phone}  {ident.bss_worker_id}  {name}")
 
         for phone, name in CONTRACTORS:
             user = _get_or_create_user(f"contractor_{phone}", CONTRACTOR_PASSWORD, "contractor")
-            ContractorProfile.objects.update_or_create(
-                user=user,
-                defaults={
-                    "contractor_name": name, "trade_name": name,
-                    "contractor_code": _bss_contractor_code(user.id),
-                    "approval_status": "APPROVED", "is_verified_badge": True, "mobile": phone,
-                    **CONTRACTOR_DETAILS.get(phone, {}),
-                },
-            )
-            _set_mobile(user, phone)
-            self.stdout.write(f"contractor {phone}  {_bss_contractor_code(user.id)}  {name}")
+            prof = ContractorProfile.objects.filter(user=user).first()
+            if prof is None:
+                prof = ContractorProfile.objects.create(
+                    user=user, contractor_name=name, trade_name=name,
+                    contractor_code=bss_ids.new_bss_contractor_code(),
+                    approval_status="APPROVED", is_verified_badge=True, mobile=phone,
+                    **CONTRACTOR_DETAILS.get(phone, {}))
+            elif not prof.contractor_code:
+                prof.contractor_code = bss_ids.new_bss_contractor_code()
+                prof.save(update_fields=["contractor_code"])
+            _set_mobile(user, phone, DEMO_MPIN)
+            self.stdout.write(f"contractor {phone}  {prof.contractor_code}  {name}")
 
         for phone, name in EMPLOYERS:
             user = _get_or_create_user(f"employer_{phone}", EMPLOYER_PASSWORD, "employer")
-            EmployerProfile.objects.update_or_create(
-                user=user,
+            prof = EmployerProfile.objects.filter(user=user).first()
+            if prof is None:
+                prof = EmployerProfile.objects.create(
+                    user=user, employer_name=name, trade_name=name,
+                    employer_code=bss_ids.new_bss_employer_code(),
+                    approval_status="APPROVED", mobile=phone,
+                    **EMPLOYER_DETAILS.get(phone, {}))
+            elif not prof.employer_code:
+                prof.employer_code = bss_ids.new_bss_employer_code()
+                prof.save(update_fields=["employer_code"])
+            _set_mobile(user, phone, DEMO_MPIN)
+            self.stdout.write(f"employer  {phone}  {prof.employer_code}  {name}")
+
+        # --- Demo Rozgar job postings (drive /worker/rozgar Available Jobs) ---
+        from bss_core.models import ContractorJob
+
+        for spec in DEMO_JOBS:
+            cuser = User.objects.filter(username=f"contractor_{spec['phone']}").first()
+            if cuser is None:
+                continue
+            job, created = ContractorJob.objects.update_or_create(
+                contractor=cuser, job_title=spec["title"],
                 defaults={
-                    "employer_name": name, "trade_name": name,
-                    "employer_code": _bss_employer_code(user.id),
-                    "approval_status": "APPROVED", "mobile": phone,
-                    **EMPLOYER_DETAILS.get(phone, {}),
+                    "job_description": spec["description"],
+                    "wage_offered": spec["wage"],
+                    "designation": spec["designation"],
+                    "trade": spec["trade"],
+                    "category": spec["category"],
+                    "workplace_type": "On-site",
+                    "state": spec["state"],
+                    "city": spec["city"],
+                    "skills": spec["skills"],
+                    "experience": spec["experience"],
+                    "dob_limit": spec["dob_limit"],
+                    "vacancies": spec.get("vacancies", 1),
+                    "salary_visibility": "Visible to all",
+                    "visibility": "Public",
+                    "status": "SUBMITTED",
+                    "is_active": True,
                 },
             )
-            _set_mobile(user, phone)
-            self.stdout.write(f"employer  {phone}  {_bss_employer_code(user.id)}  {name}")
+            self.stdout.write(f"job       {spec['phone']}  JOB-{job.id}  {job.job_title} @ {job.city}")
 
-        self.stdout.write(self.style.SUCCESS("Demo accounts seeded."))
+        # --- Leave master ---
+        from bss_core.models import LeaveType
+
+        for spec in DEMO_LEAVE_TYPES:
+            LeaveType.objects.update_or_create(
+                code=spec["code"],
+                defaults={
+                    "name": spec["name"],
+                    "annual_entitlement": spec["annual_entitlement"],
+                    "opening_balance": spec["opening_balance"],
+                    "sort_order": spec["sort_order"],
+                    "is_active": True,
+                    "is_paid": True,
+                },
+            )
+        self.stdout.write(f"leave     {len(DEMO_LEAVE_TYPES)} types configured")
+
+        # --- Course catalog (admin-managed): modules -> lessons + assignments ---
+        from bss_core.models import (
+            Course, CourseModule, CourseLesson, CourseAssignment, CourseReading, CourseQuestion,
+        )
+
+        for spec in DEMO_COURSES:
+            course, _ = Course.objects.update_or_create(
+                code=spec["code"],
+                defaults={
+                    "title": spec["title"], "provider": spec["provider"],
+                    "category": spec["category"], "duration": spec["duration"],
+                    "rating": spec["rating"], "description": spec["description"],
+                    "instructor": spec["instructor"], "certification": spec["certification"],
+                    "skill_name": spec["skill_name"], "badge": spec.get("badge", ""),
+                    "sort_order": spec.get("sort_order", 0), "is_active": True,
+                },
+            )
+            for mi, mod in enumerate(spec["modules"], 1):
+                module, _ = CourseModule.objects.update_or_create(
+                    course=course, sort_order=mi, defaults={"title": mod["title"]})
+                for li, lesson in enumerate(mod["lessons"], 1):
+                    CourseLesson.objects.update_or_create(
+                        course=course, module=module, sort_order=li,
+                        defaults={"title": lesson["title"], "duration": lesson["duration"],
+                                  "youtube_url": lesson["youtube_url"]})
+                module.lessons.filter(sort_order__gt=len(mod["lessons"])).delete()
+                for ai, asg in enumerate(mod["assignments"], 1):
+                    assignment, _ = CourseAssignment.objects.update_or_create(
+                        module=module, sort_order=ai,
+                        defaults={"title": asg["title"], "pass_score": asg.get("pass_score", 60),
+                                  "assignment_type": asg.get("type", "QUIZ"),
+                                  "instructions": asg.get("instructions", "")})
+                    for qi, q in enumerate(asg["questions"], 1):
+                        CourseQuestion.objects.update_or_create(
+                            course=course, assignment=assignment, sort_order=qi,
+                            defaults={"question": q["question"], "options": q["options"],
+                                      "correct_index": q["correct_index"]})
+                    assignment.questions.filter(sort_order__gt=len(asg["questions"])).delete()
+                module.assignments.filter(sort_order__gt=len(mod["assignments"])).delete()
+                readings = DEMO_READINGS.get((spec["code"], mi), [])
+                for ri, reading in enumerate(readings, 1):
+                    CourseReading.objects.update_or_create(
+                        module=module, sort_order=ri,
+                        defaults={"title": reading["title"], "body": reading.get("body", ""),
+                                  "resource_url": reading.get("url", ""),
+                                  "duration": reading.get("duration", "")})
+                module.readings.filter(sort_order__gt=len(readings)).delete()
+            course.modules.filter(sort_order__gt=len(spec["modules"])).delete()
+            self.stdout.write(
+                f"course    {course.code}  {course.title}  "
+                f"({len(spec['modules'])} modules)")
+
+        # --- Demo site + accepted binding: prerequisite for contractor QR
+        # attendance marking and worker leave approval on the demo accounts. ---
+        from bss_core.models import Site, WorkerContractorBinding
+
+        employer_user = User.objects.filter(username="employer_7777777777").first()
+        contractor_user = User.objects.filter(username="contractor_4444444444").first()
+        worker_user = User.objects.filter(username="worker_9999294962").first()
+        if employer_user and contractor_user and worker_user:
+            site, _ = Site.objects.get_or_create(
+                site_code="DEMO-SITE-001",
+                defaults={
+                    "employer": employer_user,
+                    "site_name": "Demo Metro Site",
+                    "location": "Sector 21, Navi Mumbai",
+                    "state": "Maharashtra",
+                    "city": "Mumbai",
+                    "site_qr_token": str(uuid.uuid4()),
+                },
+            )
+            # Attach the demo job postings to the demo site so a worker applying
+            # on Rozgar raises a site-specific binding request to the contractor.
+            from bss_core.models import ContractorJob
+            ContractorJob.objects.filter(site__isnull=True).update(site=site)
+
+            binding, _ = WorkerContractorBinding.objects.get_or_create(
+                worker=worker_user, contractor=contractor_user, site=site,
+                defaults={"binding_status": "ACCEPTED", "consent_worker": True,
+                          "consent_contractor": True, "consent_method": "app",
+                          "designation": "Mason", "department": "Civil Works",
+                          "shift": "Day", "offered_wage": 21000},
+            )
+            if binding.binding_status != "ACCEPTED":
+                binding.binding_status = "ACCEPTED"
+                binding.save(update_fields=["binding_status"])
+            # Backdate the demo binding so gratuity service/eligibility is meaningful.
+            import datetime as _bdt
+            from django.utils import timezone as _btz
+            binding.accepted_at = _btz.now() - _bdt.timedelta(days=1180)
+            binding.save(update_fields=["accepted_at"])
+            try:
+                from api import v1_bridge as _bridge
+                _bridge._sync_employment_from_binding(binding)
+            except Exception:
+                pass
+            self.stdout.write(f"binding   worker_9999294962 <-> contractor_4444444444 @ {site.site_name} (ACCEPTED)")
+
+            # Demo eligibility data (Medical / Health & Safety / Compliance) so
+            # gate passes can be requested for the demo worker.
+            from bss_core.models import WorkerBanking, WorkerSocialSecurity, WorkerWelfareSafety
+
+            ws, _ = WorkerWelfareSafety.objects.get_or_create(user=worker_user)
+            ws.medical_examination_status = ws.medical_examination_status or "Done"
+            ws.medical_fitness_status = ws.medical_fitness_status or "Fit"
+            ws.ppe_required = True
+            ws.types_of_ppe_given = ws.types_of_ppe_given or "Helmet, Safety shoes, Harness"
+            ws.safety_training_completed = True
+            ws.site_induction_status = ws.site_induction_status or "Done"
+            ws.save()
+            bank, _ = WorkerBanking.objects.get_or_create(user=worker_user)
+            if not bank.bank_account_number:
+                bank.bank_name = bank.bank_name or "State Bank of India"
+                bank.bank_account_holder_name = bank.bank_account_holder_name or "Syed Yasser Ali"
+                bank.bank_account_number = "XXXXXXXX1234"
+                bank.save()
+            ss, _ = WorkerSocialSecurity.objects.get_or_create(user=worker_user)
+            if not ss.epfo_uan:
+                ss.epfo_uan = "100200300400"
+            if not ss.esic_ip_number:
+                ss.esic_ip_number = "ESIC-IP-0001"
+            ss.save()
+            wi = WorkerIdentity.objects.filter(user=worker_user).first()
+            if wi and not wi.aadhaar:
+                wi.aadhaar = "123412341234"
+                wi.save(update_fields=["aadhaar"])
+            self.stdout.write("eligibility worker_9999294962: Medical Done, Health & Safety Done, Compliance Done")
+
+            # Site calendar the contractor manages; workers bound here inherit it.
+            from bss_core.models import LeaveType, SiteHoliday, SiteLeavePolicy
+
+            for spec in DEMO_HOLIDAYS:
+                SiteHoliday.objects.update_or_create(
+                    site=site, date=spec["date"], name=spec["name"],
+                    defaults={"holiday_type": spec["holiday_type"], "is_paid": spec["is_paid"]},
+                )
+            for spec in DEMO_LEAVE_TYPES:
+                lt = LeaveType.objects.filter(code=spec["code"]).first()
+                if lt:
+                    SiteLeavePolicy.objects.update_or_create(
+                        site=site, leave_type=lt,
+                        defaults={"annual_entitlement": spec["annual_entitlement"],
+                                  "opening_balance": spec["opening_balance"], "is_active": True},
+                    )
+            self.stdout.write(f"calendar  {site.site_name}: {len(DEMO_HOLIDAYS)} holidays, {len(DEMO_LEAVE_TYPES)} leave policies")
+
+            # Demo payroll: wage history + salary advances for the demo worker.
+            import datetime as _dt
+            from django.utils import timezone as _tz
+            from bss_core.models import SalaryAdvance, WorkerWages
+
+            wage_specs = [
+                {"start": _dt.date(2026, 8, 1), "end": _dt.date(2026, 8, 31),
+                 "present": 26, "absent": 0, "gross": 26000, "deductions": 1800, "net": 24200},
+                {"start": _dt.date(2026, 7, 1), "end": _dt.date(2026, 7, 31),
+                 "present": 24, "absent": 1, "gross": 24000, "deductions": 1800, "net": 22200},
+                {"start": _dt.date(2026, 6, 1), "end": _dt.date(2026, 6, 30),
+                 "present": 25, "absent": 0, "gross": 25000, "deductions": 1800, "net": 23200},
+            ]
+            for spec in wage_specs:
+                WorkerWages.objects.update_or_create(
+                    worker=worker_user, period_start=spec["start"], period_end=spec["end"],
+                    defaults={"contractor": contractor_user, "site": site,
+                              "wage_frequency": "MONTHLY", "days_present": spec["present"],
+                              "days_absent": spec["absent"], "daily_wage": 1000,
+                              "base_wage": spec["gross"], "gross_wage": spec["gross"],
+                              "deductions_amount": spec["deductions"], "net_wage": spec["net"],
+                              "status": "PAID", "computed_from_attendance": True},
+                )
+            if not SalaryAdvance.objects.filter(worker=worker_user).exists():
+                SalaryAdvance.objects.create(
+                    worker=worker_user, contractor=contractor_user, site=site,
+                    amount=5000, reason="Medical emergency in family", status="DISBURSED",
+                    mode="ONLINE", reference="UTR-HDFC2608200214",
+                    approved_at=_tz.now(), disbursed_at=_tz.now(), approved_by=contractor_user)
+                SalaryAdvance.objects.create(
+                    worker=worker_user, contractor=contractor_user, site=site,
+                    amount=3000, reason="Travel to hometown", status="ADJUSTED",
+                    mode="CASH", payroll_period="July 2026",
+                    approved_at=_tz.now(), disbursed_at=_tz.now(), accepted_at=_tz.now(),
+                    adjusted_at=_tz.now(), approved_by=contractor_user)
+            self.stdout.write(f"payroll   {len(wage_specs)} wage records + 2 advances for worker_9999294962")
+
+            # Benefits: PF contributions (autofetched) + Bonus + Leave Encashment.
+            from bss_core.models import WorkerBenefitRecord
+
+            for month, credited in [("Jun 2026", _dt.date(2026, 7, 5)),
+                                    ("Jul 2026", _dt.date(2026, 8, 5)),
+                                    ("Aug 2026", _dt.date(2026, 9, 5))]:
+                WorkerBenefitRecord.objects.update_or_create(
+                    worker=worker_user, kind="PF", period=month,
+                    defaults={"contractor": contractor_user, "site": site,
+                              "employee_contribution": 1800, "employer_contribution": 1800,
+                              "amount": 3600, "credited_on": credited, "status": "CREDITED",
+                              "created_by": contractor_user})
+            WorkerBenefitRecord.objects.update_or_create(
+                worker=worker_user, kind="BONUS", period="FY 2025-26",
+                defaults={"contractor": contractor_user, "site": site, "amount": 12500,
+                          "reason": "Statutory bonus (8.33% of basic)", "status": "PAID",
+                          "paid_on": _dt.date(2026, 10, 15), "created_by": contractor_user})
+            WorkerBenefitRecord.objects.update_or_create(
+                worker=worker_user, kind="LEAVE_ENCASHMENT", period="FY 2025-26",
+                defaults={"contractor": contractor_user, "site": site, "days": 5, "rate": 1000,
+                          "amount": 5000, "reason": "Encashment of 5 unused leave days",
+                          "status": "PAID", "paid_on": _dt.date(2026, 4, 20),
+                          "created_by": contractor_user})
+            self.stdout.write("benefits  3 PF + 1 bonus + 1 leave-encashment for worker_9999294962")
+
+        self.stdout.write(self.style.SUCCESS(f"Demo accounts seeded. MPIN for all demo logins: {DEMO_MPIN}"))

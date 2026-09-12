@@ -95,7 +95,7 @@ class ContractorProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="contractor_profile")
     contractor_name = models.CharField(max_length=120, blank=True)
-    contractor_code = models.CharField(max_length=40, blank=True)
+    contractor_code = models.CharField(max_length=40, blank=True, unique=True)
     trade_name = models.CharField(max_length=120, blank=True)
     constitution = models.CharField(max_length=80, blank=True)
     entity_type = models.CharField(max_length=80, blank=True)
@@ -154,7 +154,7 @@ class EmployerProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employer_profile")
     employer_name = models.CharField(max_length=120, blank=True)
-    employer_code = models.CharField(max_length=40, blank=True)
+    employer_code = models.CharField(max_length=40, blank=True, unique=True)
     employer_category = models.CharField(max_length=80, blank=True)
     trade_name = models.CharField(max_length=120, blank=True)
     ownership = models.CharField(max_length=80, blank=True)

@@ -5,10 +5,9 @@ import { Camera, CheckCircle2, Handshake, Home, MapPin, ScanLine, ShieldCheck, U
 import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
 import { useNotifications } from "@/contexts/NotificationContext";
-import RebindAuthModal from "@/components/worker/RebindAuthModal";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 
-type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string };
+type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string; name?: string };
 
 type ScanResult = {
   identity: { name: string; bssId: string; photoUrl: string; category?: string };
@@ -30,10 +29,9 @@ export default function QRScannerWorkflow() {
   const [selectedSite, setSelectedSite] = useState("");
   const [siteDraft, setSiteDraft] = useState("");
   const [bindSent, setBindSent] = useState(false);
-  // Re-binding authentication gate — a worker already bound to a contractor must
-  // authenticate before sending a binding request to a (new) contractor.
+  // A worker can only be bound to one contractor at a time — while bound, a new
+  // binding request is blocked until they unbind.
   const boundContractor = (worker.employment.status === 'Active' && worker.employment.contractor?.trim()) ? worker.employment.contractor : null;
-  const [showAuth, setShowAuth] = useState(false);
 
   // Site-specific binding (E·C·S·W): a worker binds to a contractor AT a site.
   // Candidate sites come from the employer/contractor job requests already on
@@ -57,7 +55,7 @@ export default function QRScannerWorkflow() {
       const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E");
       if (isContractor) {
         // Contractor QR → binding request flow (worker binds with contractor at a site)
-        setContractor({ bssId:p.bssId, name:p.bssId === "BSS-C0000000008" ? "RK Buildcon Pvt. Ltd." : "Contractor " + p.bssId.slice(-4) });
+        setContractor({ bssId:p.bssId, name:p.name || "Contractor " + p.bssId.slice(-4) });
         setSelectedSite(""); setSiteDraft(""); setBindSent(false); setState("binding"); setMessage("Contractor identified — choose the site before sending a binding request");
       } else if (isEmployer) {
         // Principal Employer QR → informational only for workers
@@ -97,12 +95,11 @@ export default function QRScannerWorkflow() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setShowAuth(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setMessage(""); setState("idle"); };
 
   const requestSendBinding = () => {
     if (!siteValue) { setMessage("Choose the site where you will work before sending the binding request."); return; }
-    // Worker already bound to a contractor → warn + authenticate before re-binding.
-    if (boundContractor) { setShowAuth(true); return; }
+    if (boundContractor) { setState("error"); setMessage(`You are already bound to ${boundContractor}. Unbind first before binding with another contractor.`); return; }
     sendBinding();
   };
 
@@ -164,14 +161,5 @@ export default function QRScannerWorkflow() {
       </section>
     </div>
 
-    {showAuth && boundContractor && contractor && (
-      <RebindAuthModal
-        currentContractor={boundContractor}
-        targetContractor={contractor.name}
-        contextLabel={`Work site: ${siteValue || 'to be chosen'} · scanned contractor code ${contractor.bssId}`}
-        onCancel={() => setShowAuth(false)}
-        onAuthenticated={() => { setShowAuth(false); sendBinding(); }}
-      />
-    )}
   </div>;
 }

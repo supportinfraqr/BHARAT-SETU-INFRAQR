@@ -3,13 +3,21 @@ import { apiError, assertRateLimit, assertTrustedMutation, readJsonObject } from
 import { getRuntimeConfig } from '@/server/config';
 import { upstreamRequest } from '@/server/http';
 import { createSession } from '@/server/session';
+import type { PortalRole } from '@/types/portal';
+
+const registrationByRole: Record<string, { path: string; redirectTo: string }> = {
+  Worker: { path: '/v1/auth/register/worker', redirectTo: '/worker/Profile' },
+  Contractor: { path: '/v1/auth/register/contractor', redirectTo: '/contractor/profile' },
+  Employer: { path: '/v1/auth/register/employer', redirectTo: '/employer/profile' },
+};
 
 export async function POST(request: Request) {
   try {
     assertTrustedMutation(request);
     const body = await readJsonObject(request);
-    if (body.role !== 'Worker' || typeof body.contact !== 'string' || typeof body.otp !== 'string' || body.acceptedTerms !== true) {
-      return NextResponse.json({ error: 'Verified worker contact and accepted terms are required.' }, { status: 400 });
+    const spec = typeof body.role === 'string' ? registrationByRole[body.role] : undefined;
+    if (!spec || typeof body.contact !== 'string' || typeof body.otp !== 'string' || body.acceptedTerms !== true) {
+      return NextResponse.json({ error: 'Verified contact and accepted terms are required.' }, { status: 400 });
     }
     const contact = body.contact.trim().toLowerCase();
     if (!/^(?:[6-9]\d{9}|[^\s@]+@[^\s@]+\.[^\s@]+)$/.test(contact)) {
@@ -20,14 +28,14 @@ export async function POST(request: Request) {
 
     const result = await upstreamRequest<{ subject: string; sessionId: string; accessToken?: string; bssId: string }>(
       config.authBaseUrl,
-      '/v1/auth/register/worker',
+      spec.path,
       null,
       { method: 'POST', body: JSON.stringify(body) },
     );
 
-    await createSession({ subject: result.subject, role: 'Worker', sessionId: result.sessionId, accessToken: result.accessToken });
-    return NextResponse.json({ bssId: result.bssId, redirectTo: '/worker/Profile' }, { status: 201 });
+    await createSession({ subject: result.subject, role: body.role as PortalRole, sessionId: result.sessionId, accessToken: result.accessToken });
+    return NextResponse.json({ bssId: result.bssId, redirectTo: spec.redirectTo }, { status: 201 });
   } catch (error) {
-    return apiError(error, 'Worker registration could not be completed.');
+    return apiError(error, 'Registration could not be completed.');
   }
 }

@@ -14,6 +14,19 @@ export default function ContractorBindingRequestsPage() {
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
+  async function accept(row: ContractorBindingRequest) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
+      if (!response.ok) throw new Error(result.error || 'Binding could not be accepted.');
+      const accepted = result.data?.status === 'Accepted';
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: (accepted ? 'Accepted' : 'Pending') as ContractorBindingRequest['status'], consentContractor: true } : item) });
+      setNotice(accepted ? `Bound to ${row.entityName}.` : `Accepted — awaiting the worker's consent.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
+    finally { setBusy(false); }
+  }
+
   async function consentUnbind(row: ContractorBindingRequest) {
     setBusy(true); setError(''); setNotice('');
     try {
@@ -38,6 +51,7 @@ export default function ContractorBindingRequestsPage() {
     { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => {
       if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => void consentUnbind(r)} className="text-red-700 font-semibold">Confirm unbind</button>;
       if (r.status === 'Accepted' && r.unbindRequested) return <span className="text-orange-700">Awaiting worker</span>;
+      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <button disabled={busy} onClick={() => void accept(r)} className="text-green-700 font-semibold">Accept binding</button>;
       if (r.status === 'Pending' && !r.consentWorker) return <span className="text-gray-400">Awaiting worker</span>;
       if (r.status === 'Accepted') return <span className="text-green-700">Active</span>;
       return <span className="text-gray-400">—</span>;

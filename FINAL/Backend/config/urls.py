@@ -37,7 +37,11 @@ def _v1(*routes):
 _v1_patterns = _v1(
     ("auth/login", v1_bridge.login, "v1_login"),
     ("auth/otp", v1_bridge.otp_challenge, "v1_otp"),
+    ("auth/mpin", v1_bridge.mpin_set, "v1_mpin_set"),
+    ("auth/mpin/reset", v1_bridge.mpin_reset, "v1_mpin_reset"),
     ("auth/register/worker", v1_bridge.register_worker, "v1_register_worker"),
+    ("auth/register/contractor", v1_bridge.register_contractor, "v1_register_contractor"),
+    ("auth/register/employer", v1_bridge.register_employer, "v1_register_employer"),
     ("auth/aadhaar/otp", v1_bridge.aadhaar_otp, "v1_aadhaar_otp"),
     ("auth/aadhaar/verify", v1_bridge.aadhaar_verify, "v1_aadhaar_verify"),
     ("reference/geography", v1_bridge.geography, "v1_geography"),

@@ -25,19 +25,11 @@ export default function LeavePage(){
   const [reason,setReason]=useState('');
   const [days,setDays]=useState(0);
 
-  // ── Leave balance ledger · present financial year (1 Apr 2026 – 31 Mar 2027) ──
-  // Feedback format per category: Opening leave → Add: Accrued → Less: Availed → Balance leave.
-  const FY_START='2026-04-01'; const FY_END='2027-03-31';
-  const FY_LABEL='FY 2026-27 · 1 Apr 2026 – 31 Mar 2027';
-  const FY_AS_ON='2026-08-31'; // balance shown as-on the current payroll month (end of August)
-  const FY_AS_ON_LABEL='as on 31 Aug 2026';
-  // Leave policy: annual entitlement (earned monthly) + opening balance brought forward on 1 Apr.
-  const LEAVE_POLICY:Record<string,{annual:number;opening:number}>={'Personal leave':{annual:12,opening:2},'Medical leave':{annual:12,opening:1},'Other configured leave':{annual:12,opening:0}};
-  const FY_START_MONTH=3; // 0-based month of April (financial-year month 1)
-  const asOnMonth=new Date(FY_AS_ON+'T00:00:00').getMonth();
-  const monthsElapsed=Math.max(1,asOnMonth-FY_START_MONTH+1); // Apr→Aug = 5 accrual months
-  const availedDays=(leaveType:string)=>records.filter(r=>r.type===leaveType && r.status==='Approved' && r.from>=FY_START && r.from<=FY_END).reduce((sum,r)=>{const a=new Date(r.from+'T00:00:00');const b=new Date(r.to+'T00:00:00');return sum+(Number.isNaN(a.getTime())||Number.isNaN(b.getTime())?1:Math.max(1,Math.round((b.getTime()-a.getTime())/86400000)+1))},0);
-  const leaveLedger=(leaveType:string)=>{const policy=LEAVE_POLICY[leaveType] ?? {annual:12,opening:0};const opening=policy.opening;const accrued=Math.round((policy.annual/12)*monthsElapsed);const availed=availedDays(leaveType);return {opening,accrued,availed,balance:Math.max(0,opening+accrued-availed)};};
+  // Leave ledger comes from the backend (opening + accrued − availed = balance).
+  const FY_LABEL='Current financial year · 1 Apr – 31 Mar';
+  const FY_AS_ON_LABEL='as on today';
+  const balanceByType=new Map((portal.leaveBalance ?? []).map(b=>[b.type,b]));
+  const leaveLedger=(leaveType:string)=>balanceByType.get(leaveType) ?? {opening:0,accrued:0,availed:0,pending:0,balance:0};
 
 
   const pickType=(t:string)=>{setType(t);};
@@ -49,7 +41,7 @@ export default function LeavePage(){
     if(!type||!from||!to){setError('Please choose a leave type and the dates.');setBusy(false);return}
     if(file instanceof File&&file.size>10*1024*1024){setError('Attachment must be 10 MB or smaller.');setBusy(false);return}
     // Logical guard — never let a worker apply more days than the available balance in that category.
-    if(type && days>0 && days>leaveLedger(type).balance){setError(`Only ${leaveLedger(type).balance} day${leaveLedger(type).balance===1?'':'s'} of ${type} left this financial year — opening + accrued − availed.`);setBusy(false);return}
+    if(type && days>0 && days>leaveLedger(type).balance){setError(`Only ${leaveLedger(type).balance} day${leaveLedger(type).balance===1?'':'s'} of ${type} left this financial year — opening + accrued − applied (pending + approved).`);setBusy(false);return}
     try{
       let attachmentId:string|undefined;
       if(file instanceof File&&file.size){const upload=new FormData();upload.set('file',file);upload.set('type','Leave evidence');upload.set('site',worker.employment.site);upload.set('period',String(from).slice(0,7));const uploadResponse=await fetch('/api/portal/uploads',{method:'POST',body:upload});const uploadResult=await uploadResponse.json() as {data?:{id:string};error?:string};if(!uploadResponse.ok||!uploadResult.data)throw new Error(uploadResult.error??'Leave evidence could not be uploaded.');attachmentId=uploadResult.data.id}
@@ -68,6 +60,17 @@ export default function LeavePage(){
     'Other configured leave':{icon:<Home size={22}/>,hint:'Any other reason — explain below'},
   };
 
+  if(!portal.leaveEnabled){
+    return <ModuleShell title="Leave" description="Leave is available once you are bound to a contractor and site." icon={CalendarPlus}>
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+        <CalendarPlus size={30} className="mx-auto text-[#073B67]"/>
+        <h2 className="text-base font-semibold text-gray-900 mt-3">Leave unlocks after binding</h2>
+        <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">You are not bound to a contractor and site yet. Once a contractor binds you (and you accept the binding request), your site&apos;s leave calendar and entitlements become available here.</p>
+        <a href="/worker/binding" className="mt-5 inline-flex h-10 items-center gap-2 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold hover:bg-[#062D4F]">View binding requests</a>
+      </div>
+    </ModuleShell>;
+  }
+
   return <ModuleShell title="Leave" description="Apply for leave in three simple steps — choose, pick dates, submit." icon={CalendarPlus}>
     {message&&<p role="status" className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-lg flex items-center gap-2"><CheckCircle2 size={16}/>{message}</p>}
     {error&&<p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-lg">{error}</p>}
@@ -81,7 +84,7 @@ export default function LeavePage(){
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-[#073B67]">Leave balance (per category) · {FY_LABEL}</p>
-              <p className="text-[11px] text-gray-500 mt-1">Opening leave + Accrued leave − Availed leave = Balance leave · {FY_AS_ON_LABEL}</p>
+              <p className="text-[11px] text-gray-500 mt-1">Opening leave + Accrued leave − Applied leave = Balance leave · {FY_AS_ON_LABEL}</p>
             </div>
             {type && <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#073B67] bg-white border border-[#073B67]/20 rounded-full px-2.5 py-1"><strong className="mx-0.5 text-[#073B67]">{leaveLedger(type).balance}</strong> {type} days balance left</span>}
           </div>
@@ -93,7 +96,7 @@ export default function LeavePage(){
                 <span className="flex flex-col gap-1 text-[11px]">
                   <span className={`flex justify-between ${type===v?'text-white/80':'text-gray-500'}`}><span>Opening leave</span><strong className={type===v?'text-white':'text-gray-700'}>{ledger.opening}</strong></span>
                   <span className={`flex justify-between ${type===v?'text-white/80':'text-gray-500'}`}><span>Add: Accrued leave</span><strong className={`${type===v?'text-emerald-200':'text-[#2F9E67]'}`}>+ {ledger.accrued}</strong></span>
-                  <span className={`flex justify-between ${type===v?'text-white/80':'text-gray-500'}`}><span>Less: Availed leave</span><strong className={`${type===v?'text-red-200':'text-red-500'}`}>{ledger.availed>0?`− ${ledger.availed}`:'0'}</strong></span>
+                  <span className={`flex justify-between ${type===v?'text-white/80':'text-gray-500'}`}><span>Less: Applied leave{ledger.pending>0?` (${ledger.pending} pending)`:''}</span><strong className={`${type===v?'text-red-200':'text-red-500'}`}>{ledger.availed>0?`− ${ledger.availed}`:'0'}</strong></span>
                   <span className={`flex justify-between pt-1 mt-0.5 border-t ${type===v?'border-white/20':'border-gray-100'} text-xs font-bold`}><span>Balance leave</span><strong className={type===v?'text-[#F47A32]':'text-[#073B67]'}>{ledger.balance}</strong></span>
                 </span>
               </button>;
