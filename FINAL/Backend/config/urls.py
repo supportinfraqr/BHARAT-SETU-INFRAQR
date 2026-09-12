@@ -68,6 +68,7 @@ _v1_patterns = _v1(
     ("contractor/binding-requests/<int:binding_id>/action", v1_bridge.employer_binding_action, "v1_contractor_binding_action"),
     ("worker/verify-document", v1_bridge.worker_verify_document, "v1_worker_verify_document"),
     ("worker/link-aadhaar", v1_bridge.worker_link_aadhaar, "v1_worker_link_aadhaar"),
+    ("worker/claim-mobile", v1_bridge.worker_claim_mobile, "v1_worker_claim_mobile"),
     ("contractor/submissions", v1_bridge.contractor_submissions, "v1_contractor_submissions"),
     ("admin/payroll", v1_bridge.admin_payroll, "v1_admin_payroll"),
     ("worker/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_worker_submission_file", {"role_path": "worker"}),

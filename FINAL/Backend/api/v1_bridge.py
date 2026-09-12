@@ -455,6 +455,53 @@ def mpin_reset(request):
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_claim_mobile(request):
+    """Aadhaar-onboarded workers have no mobile number (UIDAI never returns it).
+    This lets the signed-in worker add their mobile via an SMS OTP; once verified
+    it becomes their login/contact number.
+
+    body: {action:'request-otp'|'verify', mobile, otp?}
+    """
+    if request.user.role != "worker":
+        return Response({"error": "Workers only."}, status=status.HTTP_403_FORBIDDEN)
+    body = request.data or {}
+    action = str(body.get("action") or "request-otp").lower()
+    mobile = "".join(ch for ch in str(body.get("mobile") or "") if ch.isdigit())
+    if len(mobile) != 10 or mobile[0] not in "6789":
+        return Response({"error": "Enter a valid 10-digit Indian mobile number."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    taken = (UserCredential.objects.filter(identity_type="mobile", identity_value=mobile)
+             .exclude(user=request.user).exists())
+    if action == "request-otp":
+        if taken:
+            return Response({"error": "This mobile is already linked to another account."},
+                            status=status.HTTP_409_CONFLICT)
+        _issue_otp(mobile, purpose="LOGIN")
+        return Response({"sent": True, "mobile": ("*" * 6) + mobile[-4:], "expiresIn": 300},
+                        status=status.HTTP_200_OK)
+    if action == "verify":
+        otp_value = str(body.get("otp") or "").strip()
+        if not _verify_login_otp(mobile, otp_value):
+            return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        if taken:
+            return Response({"error": "This mobile is already linked to another account."},
+                            status=status.HTTP_409_CONFLICT)
+        identity = WorkerIdentity.objects.filter(user=request.user).first()
+        if identity is None:
+            identity = WorkerIdentity.objects.create(user=request.user,
+                                                     bss_worker_id=bss_ids.new_bss_worker_id())
+        identity.mobile_number = mobile
+        identity.save(update_fields=["mobile_number"])
+        UserCredential.objects.filter(user=request.user, identity_type="mobile").delete()
+        UserCredential.objects.create(user=request.user, identity_type="mobile",
+                                      identity_value=mobile, is_primary=True, verified=True)
+        return Response({"ok": True, "mobile": mobile}, status=status.HTTP_200_OK)
+    return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ---------------------------------------------------------------------------
 # Aadhaar oKYC signup (Sandbox.co.in)
 # ---------------------------------------------------------------------------

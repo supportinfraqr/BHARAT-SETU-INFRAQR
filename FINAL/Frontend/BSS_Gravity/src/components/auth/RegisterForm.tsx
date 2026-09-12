@@ -69,7 +69,6 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   };
   const sendAadhaarOtp = async () => {
     if (selectedRole !== "Worker") return setError("Aadhaar eKYC onboarding is available for workers. Organisation roles register with mobile OTP.");
-    if (!/^[6-9]\d{9}$/.test(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number — it is your login and contact number.");
     if (!/^\d{12}$/.test(aadhaar)) return setError("Enter a valid 12-digit Aadhaar number.");
     setError(""); setIsCreating(true);
     try {
@@ -85,7 +84,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
     if (aadhaarOtp.length !== 6) return setError("Enter the six-digit verification code.");
     setError(""); setIsCreating(true);
     try {
-      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, acceptedTerms: agreedToTerms, contact: contact.trim() }) });
+      const response = await fetch("/api/auth/aadhaar/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ aadhaar, referenceId: aadhaarRef, otp: aadhaarOtp, acceptedTerms: agreedToTerms }) });
       const result = (await response.json()) as { bssId?: string; redirectTo?: string; error?: string };
       if (!response.ok || !result.bssId) throw new Error(result.error || "Worker ID could not be issued.");
       router.replace(result.redirectTo ?? "/worker/Profile");
@@ -152,15 +151,15 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
           <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">{t('register')}</label>
           
           <div className="flex flex-col gap-3">
-            {(step === "details" || step === "otp" || step === "aadhaar" || step === "aadhaar-otp") && (
+            {(step === "details" || step === "otp") && (
               <>
                 <input 
                   type="text" 
                   className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800" 
-                  placeholder={(step === "aadhaar" || step === "aadhaar-otp") ? "10-digit mobile number" : t('mobileOrEmail')} 
+                  placeholder={t('mobileOrEmail')} 
                   value={contact}
                   onChange={e => setContact(e.target.value)}
-                  disabled={step === "otp" || step === "aadhaar-otp"}
+                  disabled={step === "otp"}
                 />
                 {step === "otp" && (<div className="mb-4"><label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label><input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/></div>)}
               </>
