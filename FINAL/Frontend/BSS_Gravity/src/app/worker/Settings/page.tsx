@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, CheckCircle2, ChevronRight, Download, Eye, Globe2, KeyRound, LockKeyhole, MessageCircle, MonitorCog, PackageCheck, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
@@ -41,7 +41,9 @@ export default function SettingsPage() {
   const { worker, portal, saveWorker, updateWorker } = useWorker();
   const router = useRouter();
   const locale = getLocale(language);
-  const [prefs, setPrefs] = useState(() => initialFromPortal(worker));
+  const portalPrefs = useMemo(() => initialFromPortal(worker), [worker]);
+  const [prefsOverride, setPrefsOverride] = useState<SettingsState | null>(null);
+  const prefs = prefsOverride ?? portalPrefs;
   const [saved, setSaved] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [mpin, setMpin] = useState('');
@@ -66,18 +68,15 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    setPrefs(initialFromPortal(worker));
-  }, [worker.settings, worker.contact, worker.preferences]);
-
-  useEffect(() => {
     document.documentElement.classList.toggle('bss-large-text', prefs.largeText);
     document.documentElement.classList.toggle('bss-high-contrast', prefs.highContrast);
     document.documentElement.classList.toggle('bss-reduce-motion', prefs.reduceMotion);
   }, [prefs.largeText, prefs.highContrast, prefs.reduceMotion]);
 
   const updateSetting = async <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+    const previous = prefs;
     const next = { ...prefs, [key]: value };
-    setPrefs(next);
+    setPrefsOverride(next);
     setProfileError('');
     try {
       const response = await fetch('/api/portal/settings', {
@@ -113,7 +112,7 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
     } catch (err) {
-      setPrefs(prefs);
+      setPrefsOverride(previous);
       setProfileError(err instanceof Error ? err.message : 'Setting update failed.');
     }
   };
@@ -151,7 +150,7 @@ export default function SettingsPage() {
         icon={Globe2}
         title={t('settings.interface_language')}
         subtitle={`${locale.abbreviation} · ${locale.nativeName} · ${locale.name}`}
-        ownerTag="Data Owner: Worker (Row 282)"
+        ownerTag="Source: Worker sheet · Sr. No. 282 · Owner: Worker" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 282 (Data Owner: Worker)"
       >
         <LanguageSelect label={t('settings.interface_language')} />
         <p className="text-xs text-gray-400 mt-3">Used consistently before and after login on this device.</p>
@@ -162,7 +161,7 @@ export default function SettingsPage() {
           icon={Bell}
           title="Notification Preferences"
           subtitle="Choose important worker updates"
-          ownerTag="Data Owner: Worker (Row 283)"
+          ownerTag="Source: Worker sheet · Sr. No. 283 · Owner: Worker" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 283 (Data Owner: Worker)"
         >
           <Toggle label="Job and binding requests" detail="New Rozgar opportunities" checked={prefs.jobAlerts} onChange={v => updateSetting('jobAlerts', v)} />
           <Toggle label="Compliance reminders" detail="Medical, document and pass expiry" checked={prefs.complianceAlerts} onChange={v => updateSetting('complianceAlerts', v)} />
@@ -173,7 +172,7 @@ export default function SettingsPage() {
           icon={MessageCircle}
           title="Communication Preferences"
           subtitle="How BSS should contact you"
-          ownerTag="Data Owner: Worker (Row 284)"
+          ownerTag="Source: Worker sheet · Sr. No. 284 · Owner: Worker" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 284 (Data Owner: Worker)"
         >
           <label className="block text-xs font-semibold text-gray-600">
             Preferred channel
@@ -201,7 +200,7 @@ export default function SettingsPage() {
           icon={Eye}
           title="Accessibility Settings"
           subtitle="Make the portal easier to use"
-          ownerTag="Data Owner: Worker (Row 285)"
+          ownerTag="Source: Worker sheet · Sr. No. 285 · Owner: Worker" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 285 (Data Owner: Worker)"
         >
           <Toggle label="Larger interface text" detail="Increase text throughout the portal" checked={prefs.largeText} onChange={v => updateSetting('largeText', v)} />
           <Toggle label="Higher contrast" detail="Strengthen text and borders" checked={prefs.highContrast} onChange={v => updateSetting('highContrast', v)} />
@@ -212,7 +211,7 @@ export default function SettingsPage() {
           icon={QrCode}
           title="Privacy & QR Sharing"
           subtitle="Control what your public credential shows"
-          ownerTag="Data Owner: Worker (Row 286)"
+          ownerTag="Source: Worker sheet · Sr. No. 286 · Owner: Worker" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 286 (Data Owner: Worker)"
         >
           <Toggle label="Show photo on public verification" detail="Authorised roles remain unaffected" checked={prefs.consentToPublicPhoto} onChange={v => void updateSetting('consentToPublicPhoto', v)} />
           <Toggle label="Allow role-based data sharing" detail="Workbook permissions are always enforced" checked={prefs.consentToDataSharing} onChange={v => void updateSetting('consentToDataSharing', v)} />
@@ -225,7 +224,7 @@ export default function SettingsPage() {
         icon={LockKeyhole}
         title="Security & Sessions"
         subtitle="Protect access to your worker account"
-        ownerTag="Data Owner: System / Aadhaar (Row 287)"
+        ownerTag="Source: Worker sheet · Sr. No. 287 · Owner: System / Aadhaar" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 287 (Data Owner: System / Aadhaar)"
       >
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="p-3 rounded-lg border border-gray-100 bg-white">
@@ -252,7 +251,7 @@ export default function SettingsPage() {
         icon={PackageCheck}
         title="Order Physical BSS Card"
         subtitle="Request printing and secure delivery from the BSS office"
-        ownerTag="Data Owner: System / BSS (Row 288)"
+        ownerTag="Source: Worker sheet · Sr. No. 288 · Owner: System / BSS" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 288 (Data Owner: System / BSS)"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -269,7 +268,7 @@ export default function SettingsPage() {
         icon={ShieldCheck}
         title="Your data"
         subtitle="Portable and worker controlled"
-        ownerTag="Data Owner: Worker (Row 289-290)"
+        ownerTag="Source: Worker sheet · Sr. No. 289–290 · Owner: Worker" ownerTitle="BSS_Feature_Comparison.xlsx · Worker sheet · Sr. No. 289–290 (Data Owner: Worker)"
       >
         <div className="flex flex-col sm:flex-row gap-3">
           <button onClick={exportData} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 transition">
@@ -282,7 +281,7 @@ export default function SettingsPage() {
   );
 }
 
-function SettingSection({ icon: Icon, title, subtitle, ownerTag, children }: { icon: typeof Globe2; title: string; subtitle: string; ownerTag?: string; children: React.ReactNode }) {
+function SettingSection({ icon: Icon, title, subtitle, ownerTag, ownerTitle, children }: { icon: typeof Globe2; title: string; subtitle: string; ownerTag?: string; ownerTitle?: string; children: React.ReactNode }) {
   return (
     <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
       <header className="p-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
@@ -293,7 +292,7 @@ function SettingSection({ icon: Icon, title, subtitle, ownerTag, children }: { i
             <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>
           </div>
         </div>
-        {ownerTag && <span className="text-[10px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5">{ownerTag}</span>}
+        {ownerTag && <span title={ownerTitle ?? ownerTag} className="text-[10px] font-semibold text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-0.5">{ownerTag}</span>}
       </header>
       <div className="p-4">{children}</div>
     </section>
