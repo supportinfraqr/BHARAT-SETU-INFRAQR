@@ -25,7 +25,10 @@ export function isStaleSessionError(error: unknown): boolean {
 
 function upstreamErrorMessage(responseStatus: number, payload: unknown, fallback: string): string {
   if (typeof payload === 'string' && payload.trim()) {
-    const maybe = `${responseStatus} ${payload.trim()}`.replace(/^[45]\d\d /, '');
+    const text = payload.trim();
+    // Never surface a raw HTML error page (nginx / Django 500) to the client.
+    if (/^<!doctype html|^<html|^<head/i.test(text)) return fallback;
+    const maybe = `${responseStatus} ${text}`.replace(/^[45]\d\d /, '');
     if (maybe.trim()) return maybe.trim();
   } else if (payload && typeof payload === 'object') {
     const detail = (payload as Record<string, unknown>).error ?? (payload as Record<string, unknown>).detail ?? (payload as Record<string, unknown>).message;

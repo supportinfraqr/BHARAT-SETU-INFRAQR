@@ -21,7 +21,12 @@ async function mutate(request: Request, context: Context, method: 'POST' | 'PATC
     const { resource } = await context.params;
     if (!resourcesByRole[session.role].has(resource)) return NextResponse.json({ error:'You do not have access to this portal resource.' }, { status:403 });
     assertRateLimit(`portal:${session.sessionId}:${resource}`, 60, 60_000);
-    const body = method === 'DELETE' ? undefined : await readJsonObject(request, 128_000);
+    // DELETEs carry the record id in the JSON body (e.g. {id}) — read it too, so
+    // the upstream can target the right row. A DELETE without a JSON body is
+    // still allowed.
+    const hasJsonBody = (request.headers.get('content-type') ?? '').includes('application/json');
+    const body = hasJsonBody ? await readJsonObject(request, 128_000) : undefined;
+    if (method !== 'DELETE' && !body) return NextResponse.json({ error: 'A JSON request body is required.' }, { status: 400 });
     validatePortalMutation(session.role, resource, method, body);
     const result = await mutatePortal(session, resource, { method, body:body ? JSON.stringify(body) : undefined });
     return NextResponse.json(result, { status:method === 'POST' ? 201 : 200, headers:{ 'Cache-Control':'private, no-store' } });

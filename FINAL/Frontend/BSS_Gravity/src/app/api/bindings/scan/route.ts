@@ -11,14 +11,14 @@ export async function POST(request: Request) {
     assertTrustedMutation(request);
     const session = await requireApiSession().catch(() => null);
     if (!session) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
-    assertRateLimit(`engagement-scan:${session.sessionId}`, 30, 60_000);
+    assertRateLimit(`binding-scan:${session.sessionId}`, 30, 60_000);
     const body = await readJsonObject(request);
     const type = typeof body.type === 'string' ? body.type : '';
     if (!['BSS_EMPLOYER', 'BSS_CONTRACTOR', 'BSS_SITE', 'BSS_WORKER'].includes(type)) {
       return NextResponse.json({ error: 'Unsupported QR.' }, { status: 400 });
     }
     const config = getRuntimeConfig();
-    const result = await upstreamRequest(config.apiBaseUrl, '/v1/engagements/scan', session, {
+    const result = await upstreamRequest(config.apiBaseUrl, '/v1/bindings/scan', session, {
       method: 'POST',
       body: JSON.stringify({
         type,
@@ -29,6 +29,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    return apiError(error, 'Engagement request could not be created.');
+    return apiError(error, 'Binding request could not be created.');
   }
 }

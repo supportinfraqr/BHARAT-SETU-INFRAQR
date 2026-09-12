@@ -172,8 +172,8 @@ export type ContractorBindingRequest = {
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired';
   consentWorker?: boolean; consentContractor?: boolean;
   unbindRequested?: boolean; unbindConsentWorker?: boolean; unbindConsentContractor?: boolean;
-  /** Present on Contractor ↔ Employer engagement rows. */
-  engagementId?: number;
+  /** Present on Contractor ↔ Employer binding rows. */
+  bindingId?: number;
 };
 
 export type ContractorRegister = {
@@ -289,7 +289,6 @@ export type ContractorPortalData = {
   complianceBatches: ContractorComplianceBatch[];
   auditReports: ContractorAuditReport[];
   grievances: ContractorGrievance[];
-  engagements: EmployerEngagement[];
   payroll: {
     config: ContractorPayrollConfig;
     records: PayrollWorkerRecord[];
@@ -450,8 +449,8 @@ export type EmployerApproval = {
   submittedAt: string;
   checks: string[];
   status: 'Pending' | 'Approved' | 'Rejected' | 'Accepted' | 'Cancelled';
-  /** Present on Contractor ↔ Employer engagement rows. */
-  engagementId?: string;
+  /** Present on Contractor ↔ Employer binding rows. */
+  bindingId?: string;
 };
 
 export type EmployerComplianceReport = {
@@ -468,9 +467,6 @@ export type EmployerComplianceReport = {
   score: number;
   status: 'Compliant' | 'Pending' | 'Non-compliant';
 };
-
-export type EngagementAllotment = { id: string; siteId: string; site: string; siteCode: string; status: 'Pending' | 'Approved' | 'Rejected'; source?: string };
-export type EmployerEngagement = { id: string; ref: string; contractor: string; contractorCode: string; employer: string; employerCode: string; status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled'; consentContractor: boolean; consentEmployer: boolean; source: string; requestedOn: string; allotments: EngagementAllotment[] };
 
 export type EmployerPortalData = {
   identity: {
@@ -495,7 +491,6 @@ export type EmployerPortalData = {
   workers: EmployerWorker[];
   grievances: ContractorGrievance[];
   approvals: EmployerApproval[];
-  engagements: EmployerEngagement[];
   gatePasses: EmployerGatePass[];
   submissions: EmployerSubmission[];
   complianceReports: EmployerComplianceReport[];

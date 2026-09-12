@@ -34,9 +34,8 @@ CONTRACTOR_PASSWORD = "Bss@Contractor123"
 EMPLOYER_PASSWORD = "Bss@Employer123"
 DEMO_MPIN = "1234"
 
-# (phone, name) — 9999294962 is the real test number; the rest are easy demo ids.
+# (phone, name) — easy demo ids. 1111111111 is the primary demo worker.
 WORKERS = [
-    ("9999294962", "Syed Yasser Ali"),
     ("1111111111", "Ramesh Kumar"),
     ("2222222222", "Suresh Patel"),
     ("3333333333", "Anita Devi"),
@@ -510,51 +509,119 @@ class Command(BaseCommand):
                 f"course    {course.code}  {course.title}  "
                 f"({len(spec['modules'])} modules)")
 
-        # --- Demo site + accepted binding: prerequisite for contractor QR
-        # attendance marking and worker leave approval on the demo accounts. ---
-        from bss_core.models import Site, WorkerContractorBinding
+        # --- Demo network: link every demo employer <-> contractor <-> worker
+        # through real bindings and approved site allotments so the whole
+        # E-C-S-W chain is populated for the demo accounts. ---
+        from bss_core.models import (
+            Site, WorkerContractorBinding, ContractorEmployerBinding,
+            ContractorSiteAllotment, ContractorJob,
+        )
+        from django.utils import timezone as _btz
+        import datetime as _bdt
 
-        employer_user = User.objects.filter(username="employer_7777777777").first()
-        contractor_user = User.objects.filter(username="contractor_4444444444").first()
-        worker_user = User.objects.filter(username="worker_9999294962").first()
-        if employer_user and contractor_user and worker_user:
+        def _user(username):
+            return User.objects.filter(username=username).first()
+
+        def _site_for(employer, code, name, location, state, city):
             site, _ = Site.objects.get_or_create(
-                site_code="DEMO-SITE-001",
-                defaults={
-                    "employer": employer_user,
-                    "site_name": "Demo Metro Site",
-                    "location": "Sector 21, Navi Mumbai",
-                    "state": "Maharashtra",
-                    "city": "Mumbai",
-                    "site_qr_token": str(uuid.uuid4()),
-                },
+                site_code=code,
+                defaults={"employer": employer, "site_name": name, "location": location,
+                          "state": state, "city": city, "site_qr_token": str(uuid.uuid4())},
             )
-            # Attach the demo job postings to the demo site so a worker applying
-            # on Rozgar raises a site-specific binding request to the contractor.
-            from bss_core.models import ContractorJob
-            ContractorJob.objects.filter(site__isnull=True).update(site=site)
+            if site.employer_id != employer.id:
+                site.employer = employer
+                site.save(update_fields=["employer"])
+            return site
 
-            binding, _ = WorkerContractorBinding.objects.get_or_create(
-                worker=worker_user, contractor=contractor_user, site=site,
-                defaults={"binding_status": "ACCEPTED", "consent_worker": True,
-                          "consent_contractor": True, "consent_method": "app",
-                          "designation": "Mason", "department": "Civil Works",
-                          "shift": "Day", "offered_wage": 21000},
-            )
-            if binding.binding_status != "ACCEPTED":
-                binding.binding_status = "ACCEPTED"
-                binding.save(update_fields=["binding_status"])
-            # Backdate the demo binding so gratuity service/eligibility is meaningful.
-            import datetime as _bdt
-            from django.utils import timezone as _btz
-            binding.accepted_at = _btz.now() - _bdt.timedelta(days=1180)
-            binding.save(update_fields=["accepted_at"])
+        def _accept_contractor(contractor, employer, site):
+            e = (ContractorEmployerBinding.objects
+                 .filter(contractor=contractor, employer=employer,
+                         binding_status__in=("PENDING", "ACCEPTED")).first())
+            if e is None:
+                e = ContractorEmployerBinding.objects.create(
+                    contractor=contractor, employer=employer, binding_status="ACCEPTED")
+            e.binding_status = "ACCEPTED"
+            e.consent_contractor = True
+            e.consent_employer = True
+            e.consent_method = "app"
+            if not e.accepted_at:
+                e.accepted_at = _btz.now()
+            e.save()
+            ContractorSiteAllotment.objects.update_or_create(
+                binding=e, site=site,
+                defaults={"status": "APPROVED", "source": "employer_allot",
+                          "approved_at": _btz.now()})
+            return e
+
+        def _accept_worker(worker, contractor, site, **terms):
+            b = WorkerContractorBinding.objects.filter(
+                worker=worker, contractor=contractor, site=site,
+                binding_status__in=("PENDING", "ACCEPTED")).first()
+            if b is None:
+                b = WorkerContractorBinding.objects.create(
+                    worker=worker, contractor=contractor, site=site, binding_status="ACCEPTED")
+            b.binding_status = "ACCEPTED"
+            b.consent_worker = True
+            b.consent_contractor = True
+            b.consent_method = "app"
+            for key, value in terms.items():
+                setattr(b, key, value)
+            if not b.accepted_at:
+                b.accepted_at = _btz.now() - _bdt.timedelta(days=1180)
+            b.save()
             try:
                 from api import v1_bridge as _bridge
-                _bridge._sync_employment_from_binding(binding)
+                _bridge._sync_employment_from_binding(b)
             except Exception:
                 pass
-            self.stdout.write(f"binding   worker_9999294962 <-> contractor_4444444444 @ {site.site_name} (ACCEPTED)")
+            return b
+
+        # (employer, contractor, site_code, site_name, location, state, city, workers)
+        DEMO_NETWORK = [
+            ("7777777777", "4444444444", "DEMO-SITE-001", "Demo Metro Site",
+             "Sector 21, Navi Mumbai", "Maharashtra", "Mumbai", ["1111111111", "2222222222"]),
+            ("8888888888", "5555555555", "DEMO-SITE-002", "Demo Highway Site",
+             "NH-48, Panvel", "Maharashtra", "Panvel", ["3333333333"]),
+            ("7777777777", "6666666666", "DEMO-SITE-003", "Demo Industrial Site",
+             "MIDC, Bhosari, Pune", "Maharashtra", "Pune", []),
+            ("7827532749", "9999294962", "DEMO-SITE-004", "Demo Tech Park",
+             "Hinjewadi Phase 1, Pune", "Maharashtra", "Pune", ["9873463856"]),
+        ]
+        demo_sites = {}
+        for emp_phone, con_phone, code, name, location, state, city, worker_phones in DEMO_NETWORK:
+            employer = _user(f"employer_{emp_phone}")
+            contractor = _user(f"contractor_{con_phone}")
+            if not employer or not contractor:
+                continue
+            site = _site_for(employer, code, name, location, state, city)
+            demo_sites[code] = site
+            _accept_contractor(contractor, employer, site)
+            for worker_phone in worker_phones:
+                worker = _user(f"worker_{worker_phone}")
+                if worker:
+                    _accept_worker(worker, contractor, site, designation="Mason",
+                                   department="Civil Works", shift="Day", offered_wage=21000)
+            self.stdout.write(
+                f"network   {employer.username} <-> {contractor.username} @ {site.site_code} "
+                f"({len(worker_phones)} worker(s))")
+
+        # Attach the demo job postings to the primary demo site so a worker
+        # applying on Rozgar raises a site-specific binding request.
+        primary_site = demo_sites.get("DEMO-SITE-001")
+        if primary_site:
+            ContractorJob.objects.filter(site__isnull=True).update(site=primary_site)
+
+        # Primary demo worker for the rich payroll / benefits / leave data below.
+        employer_user = _user("employer_7777777777")
+        contractor_user = _user("contractor_4444444444")
+        worker_user = _user("worker_1111111111")
+        site = primary_site
+        if employer_user and contractor_user and worker_user and site:
+            binding = WorkerContractorBinding.objects.filter(
+                worker=worker_user, contractor=contractor_user, site=site).first()
+            if binding and not binding.accepted_at:
+                binding.accepted_at = _btz.now() - _bdt.timedelta(days=1180)
+                binding.save(update_fields=["accepted_at"])
 
             # Demo eligibility data (Medical / Health & Safety / Compliance) so
             # gate passes can be requested for the demo worker.
@@ -584,7 +651,7 @@ class Command(BaseCommand):
             if wi and not wi.aadhaar:
                 wi.aadhaar = "123412341234"
                 wi.save(update_fields=["aadhaar"])
-            self.stdout.write("eligibility worker_9999294962: Medical Done, Health & Safety Done, Compliance Done")
+            self.stdout.write("eligibility worker_1111111111: Medical Done, Health & Safety Done, Compliance Done")
 
             # Site calendar the contractor manages; workers bound here inherit it.
             from bss_core.models import LeaveType, SiteHoliday, SiteLeavePolicy
@@ -639,7 +706,7 @@ class Command(BaseCommand):
                     mode="CASH", payroll_period="July 2026",
                     approved_at=_tz.now(), disbursed_at=_tz.now(), accepted_at=_tz.now(),
                     adjusted_at=_tz.now(), approved_by=contractor_user)
-            self.stdout.write(f"payroll   {len(wage_specs)} wage records + 2 advances for worker_9999294962")
+            self.stdout.write(f"payroll   {len(wage_specs)} wage records + 2 advances for worker_1111111111")
 
             # Benefits: PF contributions (autofetched) + Bonus + Leave Encashment.
             from bss_core.models import WorkerBenefitRecord
@@ -664,6 +731,6 @@ class Command(BaseCommand):
                           "amount": 5000, "reason": "Encashment of 5 unused leave days",
                           "status": "PAID", "paid_on": _dt.date(2026, 4, 20),
                           "created_by": contractor_user})
-            self.stdout.write("benefits  3 PF + 1 bonus + 1 leave-encashment for worker_9999294962")
+            self.stdout.write("benefits  3 PF + 1 bonus + 1 leave-encashment for worker_1111111111")
 
         self.stdout.write(self.style.SUCCESS(f"Demo accounts seeded. MPIN for all demo logins: {DEMO_MPIN}"))

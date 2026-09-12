@@ -36,10 +36,10 @@ export default function ContractorScanPage() {
       setAlreadyPending(false);
       const bssId = p.bssId ?? "";
       if (p.type === "BSS_SITE") {
-        setEntity({ kind: 'employer', bssId: p.siteToken ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site engagement' });
+        setEntity({ kind: 'employer', bssId: p.siteToken ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site binding' });
         setRequestSent(false);
         setState("binding");
-        setMessage("Site QR identified — request engagement. The employer approves the binding and this site.");
+        setMessage("Site QR identified — request binding. The employer approves the binding and this site.");
         controls.current?.stop();
         return;
       }
@@ -48,7 +48,7 @@ export default function ContractorScanPage() {
         setEntity({ kind: 'employer', bssId, name: known?.name ?? 'Principal Employer ' + bssId.slice(-4), employer: known?.name ?? 'Principal Employer', site: known?.sites?.[0] ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
         setRequestSent(false);
         setState("binding");
-        setMessage("Employer QR identified — request engagement; the employer approves the binding then allots sites.");
+        setMessage("Employer QR identified — request binding; the employer approves the binding then allots sites.");
         controls.current?.stop();
         return;
       }
@@ -86,19 +86,19 @@ export default function ContractorScanPage() {
     if (!scanned || !entity) return;
     setRequestSent(true);
     try {
-      const response = await fetch('/api/engagements/scan', {
+      const response = await fetch('/api/bindings/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.site }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
-      if (!response.ok) throw new Error(result.error || 'Engagement request could not be created.');
+      if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
       setMessage(entity.kind === 'worker'
         ? `Binding request sent to ${entity.name}. The worker must approve before binding is complete.`
-        : `Engagement request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding${scanned.type === 'BSS_SITE' ? ' and this site.' : ' then allots sites.'}`);
+        : `Binding request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding${scanned.type === 'BSS_SITE' ? ' and this site.' : ' then allots sites.'}`);
     } catch (e) {
       setRequestSent(false);
-      setMessage(e instanceof Error ? e.message : 'Engagement request could not be created.');
+      setMessage(e instanceof Error ? e.message : 'Binding request could not be created.');
     }
   };
 

@@ -48,12 +48,12 @@ export default function EmployerScanPage() {
           name: known?.name ?? 'Contractor ' + p.bssId.slice(-4),
           site: known ? (known.siteIds.length + ' site(s) assigned') : 'No site assignment',
           contractor: known?.name ?? 'Contractor',
-          detail: known ? `${known.workers} workers · compliance ${known.compliance}%` : 'No active engagement',
+          detail: known ? `${known.workers} workers · compliance ${known.compliance}%` : 'No active binding',
           bound,
           status: bound ? (known!.status === 'Active' ? 'Bound · Active' : 'Bound · Pending') : 'Not bound',
         });
         setState('identified');
-        setMessage(bound ? 'Contractor identified — engagement details displayed below' : 'Contractor QR identified — this contractor is not connected to your organisation');
+        setMessage(bound ? 'Contractor identified — binding details displayed below' : 'Contractor QR identified — this contractor is not connected to your organisation');
       } else if (isWorker) {
         // Worker QR → identify worker, display current binding (never auto-bind)
         const known = employer.workers.find(w => w.bssId === p.bssId);
@@ -86,26 +86,26 @@ export default function EmployerScanPage() {
     if (!entity) return;
     if (entity.kind === 'contractor' && scanned?.type === 'BSS_CONTRACTOR') {
       try {
-        const response = await fetch('/api/engagements/scan', {
+        const response = await fetch('/api/bindings/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ type: 'BSS_CONTRACTOR', bssId: scanned.bssId }),
         });
         const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
-        if (!response.ok) throw new Error(result.error || 'Engagement request could not be created.');
+        if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
         setState('confirmed');
-        setNotice(`Engagement request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Engagements.`);
-        setMessage('Engagement request sent');
+        setNotice(`Binding request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Binding Requests.`);
+        setMessage('Binding request sent');
       } catch (e) {
         setState('error');
-        setMessage(e instanceof Error ? e.message : 'Engagement request could not be created.');
+        setMessage(e instanceof Error ? e.message : 'Binding request could not be created.');
       }
       return;
     }
     setState('confirmed');
     setNotice(entity.kind === 'worker'
       ? `Binding approved for ${entity.name} — the worker is now bound at ${entity.site} under ${entity.contractor}.`
-      : `Contractor engagement approved for ${entity.name}.`);
+      : `Contractor binding approved for ${entity.name}.`);
     setMessage('Binding confirmed');
   };
 
@@ -130,7 +130,7 @@ export default function EmployerScanPage() {
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold text-[#062D4F] mt-1">QR Scan & Verify</h1><p className="text-sm text-gray-500 mt-1">Scan a Worker QR to verify identity and binding · scan a Contractor QR to review the engagement. Binding always requires review and confirmation — never scan-to-auto-bind.</p></div>
+      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold text-[#062D4F] mt-1">QR Scan & Verify</h1><p className="text-sm text-gray-500 mt-1">Scan a Worker QR to verify identity and binding · scan a Contractor QR to review the binding. Binding always requires review and confirmation — never scan-to-auto-bind.</p></div>
       <div className="flex gap-2"><Link href="/employer/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/employer/approvals" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Approvals</Link></div>
     </div>
 
@@ -164,16 +164,16 @@ export default function EmployerScanPage() {
               </div>
               <dl className="grid grid-cols-2 gap-3 text-xs">
                 {entity.kind === 'worker' && <><div><dt className="text-gray-400 flex items-center gap-1"><Network size={11}/>Contractor</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.contractor}</dd></div><div><dt className="text-gray-400 flex items-center gap-1"><Landmark size={11}/>Site</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.site}</dd></div><div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.detail}</dd></div></>}
-                {entity.kind === 'contractor' && <><div><dt className="text-gray-400 flex items-center gap-1"><Network size={11}/>Engagement</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.site}</dd></div><div><dt className="text-gray-400 flex items-center gap-1"><UserRound size={11}/>Workforce</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.detail}</dd></div></>}
+                {entity.kind === 'contractor' && <><div><dt className="text-gray-400 flex items-center gap-1"><Network size={11}/>Binding</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.site}</dd></div><div><dt className="text-gray-400 flex items-center gap-1"><UserRound size={11}/>Workforce</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.detail}</dd></div></>}
                 <div className="col-span-2"><dt className="text-gray-400">Current binding</dt><dd className="mt-1"><span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${entity.bound ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{entity.bound ? <CheckCircle2 size={11}/> : <Link2 size={11}/>}{entity.status}</span></dd></div>
               </dl>
               <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker'
                 ? 'The worker binds to your organisation through their contractor at the site shown. Confirming approves the binding — no automatic assignment.'
-                : 'The contractor operates under your organisation across the assigned sites. Confirming approves the engagement — the contractor must accept from their portal.'}</p>
+                : 'The contractor operates under your organisation across the assigned sites. Confirming approves the binding — the contractor must accept from their portal.'}</p>
               {state === 'confirmed' ? (
-                <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{entity.kind === 'worker' ? 'Binding approved — bound.' : 'Engagement approved — connected.'}</p>
+                <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{entity.kind === 'worker' ? 'Binding approved — bound.' : 'Binding approved — connected.'}</p>
               ) : (
-                <button onClick={confirmBinding} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>{entity.kind === 'worker' ? 'Approve binding' : 'Approve engagement'}</button>
+                <button onClick={confirmBinding} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>{entity.kind === 'worker' ? 'Approve binding' : 'Approve binding'}</button>
               )}
             </div>
           ) : (

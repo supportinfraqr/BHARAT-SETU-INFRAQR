@@ -2874,8 +2874,8 @@ def _contractor_engaged_at_site(contractor, site_id):
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def engagement_scan(request):
-    """Create/append a contractor<->employer engagement from a scanned QR.
+def binding_scan(request):
+    """Create/append a contractor<->employer binding from a scanned QR.
 
     body: {type:'BSS_EMPLOYER'|'BSS_CONTRACTOR'|'BSS_SITE', bssId?, siteToken?}
     - employer/contractor QR -> binding request (PENDING), source *_qr.
@@ -2902,7 +2902,7 @@ def engagement_scan(request):
         if ep is None:
             return Response({"error": "Unknown employer."}, status=status.HTTP_404_NOT_FOUND)
         if user.role != "contractor":
-            return Response({"error": "Only contractors can request employer engagement."},
+            return Response({"error": "Only contractors can request an employer binding."},
                             status=status.HTTP_403_FORBIDDEN)
         contractor, employer, source = user, ep.user, "employer_qr"
     elif qr_type == "BSS_CONTRACTOR":
@@ -2978,27 +2978,27 @@ def engagement_scan(request):
         ContractorSiteAllotment.objects.get_or_create(
             binding=binding, site=site, defaults={"status": "PENDING", "source": "site_qr"})
 
-    return Response({"data": payloads._engagement_row(binding)}, status=status.HTTP_200_OK)
+    return Response({"data": payloads._ce_binding_row(binding)}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_engagements(request):
+def employer_bindings(request):
     if request.user.role != "employer":
         return Response({"error": "Employers only."}, status=status.HTTP_403_FORBIDDEN)
-    return Response({"data": payloads._employer_engagements(request.user)}, status=status.HTTP_200_OK)
+    return Response({"data": payloads._employer_bindings(request.user)}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
-def employer_engagement_action(request, binding_id):
-    """Actions on a contractor<->employer engagement.
+def employer_binding_action(request, binding_id):
+    """Actions on a contractor<->employer binding.
 
     body: {action:'approve-binding'|'approve-site'|'allot'|'reject', siteId?, siteIds?}
     Both parties may approve the binding (two-sided consent). Only the employer
-    may approve a site or allot sites. Engagement has no OTP — accept in-app.
+    may approve a site or allot sites. Binding has no OTP — accept in-app.
     """
     user = request.user
     if user.role == "employer":
@@ -3006,9 +3006,9 @@ def employer_engagement_action(request, binding_id):
     elif user.role == "contractor":
         b = ContractorEmployerBinding.objects.filter(pk=binding_id, contractor=user).first()
     else:
-        return Response({"error": "Not your engagement."}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"error": "Not your binding."}, status=status.HTTP_403_FORBIDDEN)
     if b is None:
-        return Response({"error": "Engagement not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Binding not found."}, status=status.HTTP_404_NOT_FOUND)
     action = str(request.data.get("action") or "").lower()
 
     if action == "approve-binding":
@@ -3050,7 +3050,7 @@ def employer_engagement_action(request, binding_id):
                           "approved_at": timezone.now()})
     else:
         return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({"data": payloads._engagement_row(b)}, status=status.HTTP_200_OK)
+    return Response({"data": payloads._ce_binding_row(b)}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

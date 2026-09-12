@@ -38,7 +38,7 @@ export default function EmployerProfilePage() {
   // with the safety & governance questionnaire in the profile dataset; expose them under
   // their dedicated tabs so the BSS Employer profile spec sections are visible.
   const relocated: Record<string, string[]> = {
-    'contractor-mgmt': ['Contractor Engagement', 'Number of Active Contractors', 'Contractor Verification Required', 'Contractor Onboarding via BSS QR', 'Contractor Compliance Monitoring', 'Contractor Worker Deployment Tracking', 'Contractor Attendance Integration'],
+    'contractor-mgmt': ['Contractor Binding', 'Number of Active Contractors', 'Contractor Verification Required', 'Contractor Onboarding via BSS QR', 'Contractor Compliance Monitoring', 'Contractor Worker Deployment Tracking', 'Contractor Attendance Integration'],
     'sites-qr': ['Number of Establishments', 'Number of Active Sites', 'Site Registration in BSS', 'Site QR Generated', 'QR Worker Onboarding Enabled', 'QR Attendance Enabled', 'Gate Pass / Access Control', 'Emergency QR / SOS'],
     'worker-relations': ['Worker Grievance Mechanism', 'Grievance Officer', 'Internal Complaints Committee / POSH', 'Standing Orders / Service Rules', 'Worker Communication Channel'],
   };

@@ -11,10 +11,10 @@ export async function GET() {
     const session = await getSession();
     if (!session) return NextResponse.json({ data: [] }, { headers: { 'Cache-Control': 'private, no-store' } });
     const config = getRuntimeConfig();
-    const result = await upstreamRequest<{ data?: unknown[] }>(config.apiBaseUrl, '/v1/employer/engagements', session);
+    const result = await upstreamRequest<{ data?: unknown[] }>(config.apiBaseUrl, '/v1/employer/binding-requests', session);
     return NextResponse.json({ data: result?.data ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
-    return apiError(error, 'Engagements could not be loaded.');
+    return apiError(error, 'Binding requests could not be loaded.');
   }
 }
 
@@ -27,13 +27,13 @@ export async function POST(request: Request) {
     const bindingId = Number(body.bindingId ?? body.id);
     const action = String(body.action ?? '').toLowerCase();
     if (!Number.isInteger(bindingId) || bindingId <= 0) {
-      return NextResponse.json({ error: 'Engagement ID is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'Binding ID is required.' }, { status: 400 });
     }
     if (!['approve-binding', 'approve-site', 'allot', 'reject'].includes(action)) {
-      return NextResponse.json({ error: 'Unsupported engagement action.' }, { status: 400 });
+      return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }
     const config = getRuntimeConfig();
-    const result = await upstreamRequest(config.apiBaseUrl, `/v1/employer/engagements/${bindingId}/action`, session, {
+    const result = await upstreamRequest(config.apiBaseUrl, `/v1/employer/binding-requests/${bindingId}/action`, session, {
       method: 'POST',
       body: JSON.stringify({
         action,
@@ -44,6 +44,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    return apiError(error, 'The engagement could not be updated.');
+    return apiError(error, 'The binding could not be updated.');
   }
 }

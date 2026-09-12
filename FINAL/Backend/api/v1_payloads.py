@@ -1235,8 +1235,8 @@ def _worker_bindings(user):
     return [_binding_row(b) for b in bindings]
 
 
-def _engagement_row(b):
-    """Contractor<->employer engagement with its site allotments (E·C·S·W)."""
+def _ce_binding_row(b):
+    """Contractor<->employer binding with its site allotments (E·C·S·W)."""
     cp = getattr(b.contractor, "contractor_profile", None)
     ep = getattr(b.employer, "employer_profile", None)
     status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted",
@@ -1269,14 +1269,14 @@ def _engagement_row(b):
     }
 
 
-def _employer_engagements(user):
+def _employer_bindings(user):
     qs = ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at")[:50]
-    return [_engagement_row(b) for b in qs]
+    return [_ce_binding_row(b) for b in qs]
 
 
-def _contractor_engagements(user):
+def _contractor_bindings(user):
     qs = ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at")[:50]
-    return [_engagement_row(b) for b in qs]
+    return [_ce_binding_row(b) for b in qs]
 
 
 def _worker_bound_site(user):
@@ -1798,7 +1798,7 @@ def _contractor_employers(user):
                 "status": "ACTIVE",
                 "boundSince": None,
             }
-    # Direct contractor<->employer engagements (accepted).
+    # Direct contractor<->employer bindings (accepted).
     for eng in ContractorEmployerBinding.objects.filter(contractor=user, binding_status="ACCEPTED"):
         e = eng.employer
         ep = getattr(e, "employer_profile", None)
@@ -2012,17 +2012,17 @@ def _contractor_binding_requests(user):
             "unbindConsentWorker": bool(b.unbind_consent_worker),
             "unbindConsentContractor": bool(b.unbind_consent_contractor),
         })
-    # Contractor <-> employer engagements (scanning an employer/site QR).
+    # Contractor <-> employer bindings (scanning an employer/site QR).
     for e in ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at"):
         ep = getattr(e.employer, "employer_profile", None)
         sites = [a.site.site_name for a in e.allotments.all() if a.site]
         rows.append({
-            "id": f"ce-{e.id}", "engagementId": e.id, "type": "Employer",
+            "id": f"ce-{e.id}", "bindingId": e.id, "type": "Employer",
             "entityName": _d(ep.employer_name if ep else "", e.employer.username),
             "bssId": _d(ep.employer_code if ep else "", _bss_employer_code(e.employer_id)),
             "site": ", ".join(sites) if sites else "Sites to be allotted",
             "employer": _d(ep.employer_name if ep else "", e.employer.username),
-            "designation": "Principal employer engagement",
+            "designation": "Principal employer binding",
             "wage": 0,
             "requestedOn": _dts(e.created_at),
             "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
@@ -2379,7 +2379,6 @@ def build_contractor_portal(user):
         "principalEmployer": _contractor_principal_employer(user),
         "sites": _contractor_sites(user),
         "workers": _contractor_workers(user),
-        "engagements": _contractor_engagements(user),
         "compliances": _contractor_compliances(user),
         "complianceReports": _contractor_compliance_reports(user),
         "gatePasses": _contractor_gate_passes(user),
@@ -2510,16 +2509,16 @@ def _employer_contractors(user):
         site_ids = sorted(site_ids)
         wcount = WorkerContractorBinding.objects.filter(contractor=c, site__employer=user,
                                                         binding_status="ACCEPTED").count()
-        # Relationship status reflects the actual engagement with this employer,
+        # Relationship status reflects the actual binding with this employer,
         # not the contractor's own registration approval.
-        engagement = (ContractorEmployerBinding.objects.filter(employer=user, contractor=c)
+        binding = (ContractorEmployerBinding.objects.filter(employer=user, contractor=c)
                       .order_by("-created_at").first())
-        accepted_engagement = bool(engagement and engagement.binding_status == "ACCEPTED")
-        if accepted_engagement or wcount:
+        accepted_binding = bool(binding and binding.binding_status == "ACCEPTED")
+        if accepted_binding or wcount:
             status = "Active"
-        elif engagement:
+        elif binding:
             status = {"PENDING": "Pending", "REJECTED": "Rejected",
-                      "CANCELLED": "Cancelled"}.get(str(engagement.binding_status).upper(), "Pending")
+                      "CANCELLED": "Cancelled"}.get(str(binding.binding_status).upper(), "Pending")
         else:
             status = _d(cp.approval_status if cp else "PENDING")
         rows.append({
@@ -2530,7 +2529,7 @@ def _employer_contractors(user):
             "siteIds": site_ids, "workers": wcount,
             "compliance": 0, "onboardingDate": None,
             "status": status,
-            "verified": bool(cp and cp.is_verified_badge) or accepted_engagement,
+            "verified": bool(cp and cp.is_verified_badge) or accepted_binding,
         })
     return rows
 
@@ -2600,16 +2599,16 @@ def _employer_approvals(user):
             "site": site_name, "submittedAt": _dts(a.requested_at),
             "checks": checks, "status": status_label.get(str(a.status).upper(), "Pending"),
         })
-    # Contractor <-> employer engagements (contractor scanned this employer's QR
+    # Contractor <-> employer bindings (contractor scanned this employer's QR
     # or a site QR). Every status is surfaced so accepted/rejected requests stay
     # visible in the Binding Requests register instead of disappearing.
-    engagement_status = {"PENDING": "Pending", "ACCEPTED": "Accepted",
+    binding_status = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                          "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
     for e in ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at"):
         cp = getattr(e.contractor, "contractor_profile", None)
         sites = [a.site.site_name for a in e.allotments.all() if a.site]
         rows.append({
-            "id": f"ce-{e.id}", "engagementId": str(e.id),
+            "id": f"ce-{e.id}", "bindingId": str(e.id),
             "entityType": "Contractor", "entityId": str(e.contractor_id),
             "name": _d(cp.contractor_name if cp else "", e.contractor.username),
             "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(e.contractor_id)),
@@ -2617,7 +2616,7 @@ def _employer_approvals(user):
             "site": ", ".join(sites) if sites else "Sites to be allotted",
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
-            "status": engagement_status.get(str(e.binding_status).upper(), "Pending"),
+            "status": binding_status.get(str(e.binding_status).upper(), "Pending"),
         })
     return rows
 
@@ -2736,7 +2735,6 @@ def build_employer_portal(user):
         "workers": _employer_workers(user),
         "grievances": _employer_grievances(user),
         "approvals": _employer_approvals(user),
-        "engagements": _employer_engagements(user),
         "gatePasses": _employer_gate_passes(user),
         "submissions": _employer_submissions(user),
         "complianceReports": _employer_compliance_reports(user),

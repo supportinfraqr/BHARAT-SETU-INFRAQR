@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
-// Engagements are consolidated into the Binding Requests register — every
+// These bindings are consolidated into the Binding Requests register — every
 // contractor ↔ worker and contractor ↔ employer request appears there.
-export default function ContractorEngagementsPage(): never {
+export default function ContractorBindingRedirectPage(): never {
   redirect('/contractor/qr/requests');
 }

@@ -96,7 +96,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 
       {tab === 'address' && current.qrToken && (
         <div className="mt-8 pt-6 border-t border-gray-100">
-          <p className="text-[11px] uppercase font-semibold text-gray-400 mb-3 flex items-center gap-1.5"><QrCode size={12}/>Site QR — contractors scan this to request engagement</p>
+          <p className="text-[11px] uppercase font-semibold text-gray-400 mb-3 flex items-center gap-1.5"><QrCode size={12}/>Site QR — contractors scan this to request binding</p>
           <div className="relative w-44 h-44 bg-white p-2 rounded-xl border border-gray-200">
             <SiteQr siteToken={current.qrToken} siteCode={current.code} className="w-full h-full"/>
             <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[38px] h-[38px] bg-white rounded-[7px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[30px] h-[30px] object-contain"/></span></span>

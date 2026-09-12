@@ -70,17 +70,17 @@ export default function ContractorBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
-  async function decideEngagement(row: ContractorBindingRequest, action: 'approve-binding' | 'reject') {
-    if (!row.engagementId) return;
+  async function decideBinding(row: ContractorBindingRequest, action: 'approve-binding' | 'reject') {
+    if (!row.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/contractor/engagements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: row.engagementId, action }) });
+      const response = await fetch('/api/contractor/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: row.bindingId, action }) });
       const result = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(result.error || 'Engagement could not be updated.');
+      if (!response.ok) throw new Error(result.error || 'Binding could not be updated.');
       const accepted = action === 'approve-binding';
-      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.engagementId === row.engagementId ? { ...item, status: (accepted ? 'Accepted' : 'Rejected') as ContractorBindingRequest['status'], consentContractor: accepted ? true : item.consentContractor } : item) });
-      setNotice(accepted ? `Engagement with ${row.entityName} accepted.` : `Engagement with ${row.entityName} declined.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Engagement could not be updated.'); }
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.bindingId === row.bindingId ? { ...item, status: (accepted ? 'Accepted' : 'Rejected') as ContractorBindingRequest['status'], consentContractor: accepted ? true : item.consentContractor } : item) });
+      setNotice(accepted ? `Binding with ${row.entityName} accepted.` : `Binding with ${row.entityName} declined.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Binding could not be updated.'); }
     finally { setBusy(false); }
   }
 
@@ -94,7 +94,7 @@ export default function ContractorBindingRequestsPage() {
     { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-green-700' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{r.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => {
       if (r.type === 'Employer') {
-        if (r.status === 'Pending' && !r.consentContractor) return <div className="flex gap-2"><button disabled={busy} onClick={() => void decideEngagement(r, 'approve-binding')} className="text-green-700 font-semibold">Accept engagement</button><button disabled={busy} onClick={() => void decideEngagement(r, 'reject')} className="text-red-700 font-semibold">Decline</button></div>;
+        if (r.status === 'Pending' && !r.consentContractor) return <div className="flex gap-2"><button disabled={busy} onClick={() => void decideBinding(r, 'approve-binding')} className="text-green-700 font-semibold">Accept binding</button><button disabled={busy} onClick={() => void decideBinding(r, 'reject')} className="text-red-700 font-semibold">Decline</button></div>;
         if (r.status === 'Pending') return <span className="text-orange-700">Awaiting employer</span>;
         if (r.status === 'Accepted') return <span className="text-green-700">Active</span>;
         return <span className="text-gray-400">—</span>;

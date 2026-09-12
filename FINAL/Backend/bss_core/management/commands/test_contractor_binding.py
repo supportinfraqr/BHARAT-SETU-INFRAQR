@@ -1,6 +1,6 @@
-"""Automated end-to-end check of the contractor <-> employer engagement flow.
+"""Automated end-to-end check of the contractor <-> employer binding flow.
 
-Sets up (idempotently) an accepted engagement between the demo contractor and
+Sets up (idempotently) an accepted binding between the demo contractor and
 employer with one approved site allotment, then asserts every derived view and
 the site-gating rule resolve correctly:
 
@@ -9,7 +9,7 @@ the site-gating rule resolve correctly:
     gating: a contractor may only bind workers at an allotted site
 
 Usage:
-    python manage.py test_contractor_engagement
+    python manage.py test_contractor_binding
 """
 
 import uuid
@@ -31,7 +31,7 @@ SITE_CODE = "TEST-SITE-001"
 
 
 class Command(BaseCommand):
-    help = "Create a demo contractor engagement and verify the derived payloads."
+    help = "Create a demo contractor binding and verify the derived payloads."
 
     def _user(self, phone, role):
         user = User.objects.filter(username=f"{role}_{phone}").first()
@@ -60,7 +60,7 @@ class Command(BaseCommand):
             site.employer = employer
             site.save(update_fields=["employer"])
 
-        # ── Setup: accepted engagement + approved site allotment ────────────
+        # ── Setup: accepted binding + approved site allotment ────────────
         binding, _ = ContractorEmployerBinding.objects.get_or_create(
             contractor=contractor, employer=employer,
             defaults={"binding_status": "ACCEPTED", "consent_contractor": True,
@@ -91,22 +91,22 @@ class Command(BaseCommand):
         # ── Assertions ──────────────────────────────────────────────────────
         results = []
 
-        employer_view = payloads._employer_engagements(employer)
+        employer_view = payloads._employer_bindings(employer)
         row = next((e for e in employer_view if e["id"] == binding.id), None)
         results.append((
-            "employer sees the engagement",
+            "employer sees the binding",
             bool(row and row["contractor"] == "BuildWell Contractors"
                  and row["status"] == "Accepted"),
         ))
         results.append((
-            "engagement carries the approved allotment",
+            "binding carries the approved allotment",
             bool(row and any(a["site"] == "Demo Metro Site" and a["status"] == "Approved"
                              for a in row["allotments"])),
         ))
 
-        contractor_view = payloads._contractor_engagements(contractor)
+        contractor_view = payloads._contractor_bindings(contractor)
         results.append((
-            "contractor sees the engagement",
+            "contractor sees the binding",
             any(e["id"] == binding.id and e["employer"] == "Adani Infra Pvt Ltd"
                 for e in contractor_view),
         ))
@@ -121,16 +121,25 @@ class Command(BaseCommand):
             bridge._contractor_engaged_at_site(contractor, site.id) is True,
         ))
 
-        other_site = Site.objects.exclude(pk=site.pk).filter(employer=employer).first()
-        if other_site is not None:
-            results.append((
-                "gating blocks binding at a non-allotted site",
-                bridge._contractor_engaged_at_site(contractor, other_site.id) is False,
-            ))
+        # A dedicated site for the same employer that is NOT allotted to this
+        # contractor — binding workers here must be blocked by the gating rule.
+        other_site, _ = Site.objects.get_or_create(
+            site_code="TEST-SITE-002",
+            defaults={"employer": employer, "site_name": "Non-allotted Test Site",
+                      "state": "Maharashtra", "site_qr_token": str(uuid.uuid4())},
+        )
+        if other_site.employer_id != employer.id:
+            other_site.employer = employer
+            other_site.save(update_fields=["employer"])
+        ContractorSiteAllotment.objects.filter(binding__contractor=contractor, site=other_site).delete()
+        results.append((
+            "gating blocks binding at a non-allotted site",
+            bridge._contractor_engaged_at_site(contractor, other_site.id) is False,
+        ))
 
         # ── Report ──────────────────────────────────────────────────────────
         self.stdout.write("")
-        self.stdout.write(f"Engagement #{binding.id}: contractor {contractor.username} "
+        self.stdout.write(f"Binding #{binding.id}: contractor {contractor.username} "
                           f"<-> employer {employer.username} @ {site.site_code}")
         self.stdout.write("")
         failed = 0
@@ -142,6 +151,6 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"  FAIL  {label}"))
         self.stdout.write("")
         if failed:
-            self.stderr.write(self.style.ERROR(f"{failed} engagement check(s) failed."))
+            self.stderr.write(self.style.ERROR(f"{failed} binding check(s) failed."))
         else:
-            self.stdout.write(self.style.SUCCESS("All engagement checks passed."))
+            self.stdout.write(self.style.SUCCESS("All binding checks passed."))

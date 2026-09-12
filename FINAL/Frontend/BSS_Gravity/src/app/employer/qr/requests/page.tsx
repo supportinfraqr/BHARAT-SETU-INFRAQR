@@ -22,14 +22,14 @@ export default function EmployerQrBindingRequestsPage() {
     setNotice('');
     try {
       let nextStatus: EmployerApproval['status'] = status;
-      if (row.engagementId) {
-        const response = await fetch('/api/employer/engagements', {
+      if (row.bindingId) {
+        const response = await fetch('/api/employer/binding-requests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bindingId: Number(row.engagementId), action: status === 'Approved' ? 'approve-binding' : 'reject' }),
+          body: JSON.stringify({ bindingId: Number(row.bindingId), action: status === 'Approved' ? 'approve-binding' : 'reject' }),
         });
         const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
-        if (!response.ok) throw new Error(result.error || 'Engagement could not be updated.');
+        if (!response.ok) throw new Error(result.error || 'Binding could not be updated.');
         const returned = String(result.data?.status ?? '').toLowerCase();
         nextStatus = returned === 'accepted' ? 'Accepted' : returned === 'rejected' ? 'Rejected' : returned === 'cancelled' ? 'Cancelled' : 'Pending';
       } else {
@@ -48,10 +48,10 @@ export default function EmployerQrBindingRequestsPage() {
   }
 
   async function allot() {
-    if (!allotFor?.engagementId || !chosenSites.length) return;
+    if (!allotFor?.bindingId || !chosenSites.length) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/employer/engagements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(allotFor.engagementId), action: 'allot', siteIds: chosenSites }) });
+      const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(allotFor.bindingId), action: 'allot', siteIds: chosenSites }) });
       const result = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(result.error || 'Sites could not be allotted.');
       const names = employer.sites.filter(site => chosenSites.includes(Number(site.id))).map(site => site.name).join(', ');
@@ -71,7 +71,7 @@ export default function EmployerQrBindingRequestsPage() {
     { id:'status', header:'Relationship', value:row => row.status, render:row => <span className={row.status === 'Approved' || row.status === 'Accepted' ? 'text-green-700' : row.status === 'Rejected' || row.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:row => row.status, render:row => {
       if (row.status === 'Pending') return <div className="flex gap-2"><button disabled={busy} onClick={() => decide(row, 'Approved')} className="text-green-700 font-semibold">Approve</button><button disabled={busy} onClick={() => decide(row, 'Rejected')} className="text-red-700 font-semibold">Reject</button></div>;
-      if (row.engagementId && (row.status === 'Accepted' || row.status === 'Approved')) return <button disabled={busy} onClick={() => { setAllotFor(row); setChosenSites([]); }} className="text-[#073B67] font-semibold">Allot sites</button>;
+      if (row.bindingId && (row.status === 'Accepted' || row.status === 'Approved')) return <button disabled={busy} onClick={() => { setAllotFor(row); setChosenSites([]); }} className="text-[#073B67] font-semibold">Allot sites</button>;
       return <span className="text-gray-400">—</span>;
     } },
   ];

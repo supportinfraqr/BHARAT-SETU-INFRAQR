@@ -370,14 +370,11 @@ export const SECTIONS: SiteSection[] = [
 // completed later from the site detail page. Keeps registration quick.
 export const FORM_SECTIONS: SiteSection[] = [
   {
-    title: 'Basic Site Identification',
+    title: 'Additional details (optional)',
     fields: [
       { name: 'site_display_name', label: 'Site Display Name' },
       { name: 'internal_location_code', label: 'Internal Location Code' },
       { name: 'project_code', label: 'Project Code' },
-      { name: 'site_status', label: 'Site Status', type: 'select', options: ['Active', 'Planned', 'Completed', 'Suspended'] },
-      { name: 'site_start_date', label: 'Site Start Date', type: 'date' },
-      { name: 'expected_end_date', label: 'Expected End Date', type: 'date' },
     ],
   },
 ];
