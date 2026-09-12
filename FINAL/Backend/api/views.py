@@ -768,7 +768,11 @@ class DigiLockerViewSet(viewsets.GenericViewSet):
         # NOTE: self.action is not set yet at this point, so inspect action_map.
         if "callback" in getattr(self, "action_map", {}).values():
             return []
-        return super().get_authenticators()
+        # Authenticated actions use the BSS session auth, which tolerates the
+        # X-BSS-Subject header when the short-lived JWT access token has expired
+        # (the default JWTAuthentication would 401 with "token not valid").
+        from .v1_bridge import BssSessionAuthentication
+        return [BssSessionAuthentication()]
 
     def get_permissions(self):
         from rest_framework.permissions import AllowAny, IsAuthenticated
