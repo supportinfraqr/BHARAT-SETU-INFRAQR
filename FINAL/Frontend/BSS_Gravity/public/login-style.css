@@ -63,7 +63,7 @@ summary,
     display: flex;
     flex-direction: column;
     padding: 20px 40px;
-    background: url("/login-bg.png");
+    background: url("/login-bg.jpg");
     background-position: center bottom;
     background-repeat: no-repeat;
     background-size: cover;
