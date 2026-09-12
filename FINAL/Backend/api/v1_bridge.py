@@ -1366,12 +1366,31 @@ def _persist_mutation(user, role_path, resource, method, body):
                     setattr(ss, fld, ss_patch.get(fe_key))
             ss.save()
 
-        # Banking — only UPI is manual entry (bank details are auto-verified).
+        # Banking — the salary account is manual entry here and verified later
+        # via the NPCI penny-drop API in Govt. Integrations.
         bnk_patch = body.get("banking") or {}
-        if bnk_patch.get("upiEnabled") is not None:
+        if bnk_patch:
             bk, _ = WorkerBanking.objects.get_or_create(user=user)
-            bk.upi_enabled = bool(bnk_patch.get("upiEnabled"))
-            bk.save(update_fields=["upi_enabled"])
+            bnk_map = {
+                "bankName": "bank_name",
+                "holderName": "bank_account_holder_name",
+                "accountNumber": "bank_account_number",
+                "ifsc": "ifsc_code",
+            }
+            details_changed = False
+            for fe_key, fld in bnk_map.items():
+                if bnk_patch.get(fe_key) is None:
+                    continue
+                v = str(bnk_patch.get(fe_key)).strip()
+                if getattr(bk, fld) != v:
+                    setattr(bk, fld, v)
+                    details_changed = True
+            if bnk_patch.get("upiEnabled") is not None:
+                bk.upi_enabled = bool(bnk_patch.get("upiEnabled"))
+            # Changing the account invalidates a prior KYC — require re-verify.
+            if details_changed:
+                bk.bank_verification_status = ""
+            bk.save()
 
         # Welfare & safety — worker self-edit is limited to the fields the sheet
         # marks "Worker Manual Entry". Gate-pass fields (Auto after Binding) are

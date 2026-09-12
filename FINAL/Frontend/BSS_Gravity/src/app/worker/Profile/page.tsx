@@ -142,6 +142,16 @@ export default function WorkerProfilePage() {
     if (tab && (allowed as readonly string[]).includes(tab)) setActiveTab(tab as typeof allowed[number]);
   }, []);
 
+  // Keep the active section in the URL so a refresh lands back on the same tab
+  // instead of resetting to "Worker Identity".
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('tab') !== activeTab) {
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, [activeTab]);
+
   // ── DigiLocker document wallet ──────────────────────────────────────────
   type DigiLockerDoc = { id: number; doctype?: string; issuer?: string; doc_date?: string; file_name?: string; file_url?: string; status?: string };
   const [digilockerDocs, setDigilockerDocs] = useState<DigiLockerDoc[]>([]);
