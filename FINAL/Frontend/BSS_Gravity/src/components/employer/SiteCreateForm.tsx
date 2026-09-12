@@ -366,6 +366,22 @@ export const SECTIONS: SiteSection[] = [
   },
 ];
 
+// The create/edit form stays deliberately short — the full site master is
+// completed later from the site detail page. Keeps registration quick.
+export const FORM_SECTIONS: SiteSection[] = [
+  {
+    title: 'Basic Site Identification',
+    fields: [
+      { name: 'site_display_name', label: 'Site Display Name' },
+      { name: 'internal_location_code', label: 'Internal Location Code' },
+      { name: 'project_code', label: 'Project Code' },
+      { name: 'site_status', label: 'Site Status', type: 'select', options: ['Active', 'Planned', 'Completed', 'Suspended'] },
+      { name: 'site_start_date', label: 'Site Start Date', type: 'date' },
+      { name: 'expected_end_date', label: 'Expected End Date', type: 'date' },
+    ],
+  },
+];
+
 const BOOLEAN_NAMES = new Set(
   SECTIONS.flatMap(s => s.fields).filter(f => f.type === 'checkbox').map(f => f.name)
 );
@@ -381,8 +397,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [location, setLocation] = useState(String(initial?.location ?? ''));
   const [state, setState] = useState(String(initial?.state ?? ''));
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
-  const [tab, setTab] = useState(SECTIONS[0].title);
-  const section = useMemo(() => SECTIONS.find(s => s.title === tab) ?? SECTIONS[0], [tab]);
+  const [tab, setTab] = useState(FORM_SECTIONS[0].title);
+  const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
 
   useEffect(() => {
     let active = true;
@@ -428,7 +444,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
       payload.pincode = geo.pin ?? '';
       payload.country = 'India';
     }
-    for (const s of SECTIONS) {
+    for (const s of FORM_SECTIONS) {
       for (const f of s.fields) {
         if (BOOLEAN_NAMES.has(f.name)) {
           payload[f.name] = form.get(f.name) === 'on';
@@ -472,7 +488,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
 
           <div className="mt-5 border-t border-gray-100 pt-4">
             <div className="flex flex-wrap gap-1.5">
-              {SECTIONS.map(s => (
+              {FORM_SECTIONS.map(s => (
                 <button key={s.title} type="button" onClick={() => setTab(s.title)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${tab === s.title ? 'bg-gray-950 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.title}</button>
               ))}
             </div>

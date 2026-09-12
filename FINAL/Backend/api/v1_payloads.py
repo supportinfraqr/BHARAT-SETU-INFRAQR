@@ -2510,6 +2510,18 @@ def _employer_contractors(user):
         site_ids = sorted(site_ids)
         wcount = WorkerContractorBinding.objects.filter(contractor=c, site__employer=user,
                                                         binding_status="ACCEPTED").count()
+        # Relationship status reflects the actual engagement with this employer,
+        # not the contractor's own registration approval.
+        engagement = (ContractorEmployerBinding.objects.filter(employer=user, contractor=c)
+                      .order_by("-created_at").first())
+        accepted_engagement = bool(engagement and engagement.binding_status == "ACCEPTED")
+        if accepted_engagement or wcount:
+            status = "Active"
+        elif engagement:
+            status = {"PENDING": "Pending", "REJECTED": "Rejected",
+                      "CANCELLED": "Cancelled"}.get(str(engagement.binding_status).upper(), "Pending")
+        else:
+            status = _d(cp.approval_status if cp else "PENDING")
         rows.append({
             "id": c.id, "name": _d(cp.contractor_name if cp else "", c.username),
             "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(c.id)),
@@ -2517,8 +2529,8 @@ def _employer_contractors(user):
             "email": _d(cp.email if cp else ""),
             "siteIds": site_ids, "workers": wcount,
             "compliance": 0, "onboardingDate": None,
-            "status": _d(cp.approval_status if cp else "PENDING"),
-            "verified": bool(cp and cp.is_verified_badge),
+            "status": status,
+            "verified": bool(cp and cp.is_verified_badge) or accepted_engagement,
         })
     return rows
 
