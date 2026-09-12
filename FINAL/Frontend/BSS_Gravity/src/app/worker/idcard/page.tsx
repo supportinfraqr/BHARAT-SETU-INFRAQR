@@ -330,10 +330,10 @@ export default function IdentityCardPage() {
                
                {/* Large QR Code Wrapper */}
                <div className="flex-1 flex flex-col items-center justify-center w-full my-1">
-                 <div className="relative bg-white p-1.5 rounded-md shadow-lg w-[85px] h-[85px] flex items-center justify-center z-10 border-2 border-slate-300 flex-shrink-0">
-                   <WorkerQr bssId={worker.identity.bssId} />
-                   <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[26px] h-[26px] bg-white rounded-[4px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[20px] h-[20px] object-contain" /></span></span>
-                 </div>
+                  <div className="relative bg-white p-1.5 rounded-md shadow-lg w-[100px] h-[100px] flex items-center justify-center z-10 border-2 border-slate-300 flex-shrink-0">
+                    <WorkerQr bssId={worker.identity.bssId} />
+                    <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[30px] h-[30px] bg-white rounded-[4px] grid place-items-center shadow-sm"><img src="/bss-original-logo.png" alt="" className="w-[23px] h-[23px] object-contain" /></span></span>
+                  </div>
                  <p className="text-[7px] font-bold uppercase tracking-widest text-white/90 z-10 mt-1">Scan to Verify</p>
                </div>
 

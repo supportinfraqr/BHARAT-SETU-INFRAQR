@@ -573,6 +573,26 @@ def _aadhaar_address_parts(data):
     }
 
 
+def _aadhaar_care_of_parts(care_of):
+    """Map UIDAI ``care_of`` (e.g. "S/O: Talat Parvez", "W/O: ...") to
+    (father_name, spouse_name). UIDAI exposes no separate parent/spouse fields
+    and never returns the mother's name, so only these two can be derived.
+    ``C/O`` (care of) is an ambiguous guardian and is left unfilled."""
+    raw = str(care_of or "").strip()
+    if not raw:
+        return "", ""
+    relation, _, name = raw.replace(":", " ").partition(" ")
+    relation = relation.upper().replace(".", "")
+    name = name.strip()
+    if not name:
+        return "", ""
+    if relation in ("S/O", "SO", "D/O", "DO"):
+        return name, ""
+    if relation in ("W/O", "WO", "H/O", "HO"):
+        return "", name
+    return "", ""
+
+
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -684,6 +704,7 @@ def aadhaar_verify(request):
                                             role="worker", account_active=True,
                                             is_verified=True, is_active=True)
             photo_url = _save_aadhaar_photo(aadhaar, data.get("photo"))
+            care_father, care_spouse = _aadhaar_care_of_parts(data.get("care_of"))
             identity = WorkerIdentity.objects.create(
                 user=user,
                 bss_worker_id=bss_ids.new_bss_worker_id(),
@@ -692,6 +713,8 @@ def aadhaar_verify(request):
                 date_of_birth=_parse_dob(data.get("date_of_birth")),
                 aadhaar=aadhaar,
                 photo=photo_url,
+                father_name=care_father,
+                spouse_name=care_spouse,
             )
             WorkerOther.objects.get_or_create(user=user)
             _record_registration_consent(user)
@@ -828,6 +851,11 @@ def worker_link_aadhaar(request):
     photo = _save_aadhaar_photo(aadhaar, data.get("photo"))
     if photo:
         identity.photo = photo
+    care_father, care_spouse = _aadhaar_care_of_parts(data.get("care_of"))
+    if care_father:
+        identity.father_name = care_father
+    if care_spouse:
+        identity.spouse_name = care_spouse
     identity.save()
 
     a, _ = WorkerAddressMobility.objects.get_or_create(user=user)

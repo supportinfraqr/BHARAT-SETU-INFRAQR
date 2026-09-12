@@ -4,12 +4,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BssTaxonomies } from '@/data/taxonomies';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
+import type { WorkerRecord } from '@/types/portal';
 import { MobilitySection, type MobilitySectionHandle } from '@/components/worker/MobilitySection';
 import { 
   UserCircle, Save, CheckCircle2, ShieldCheck, 
   MapPin, FileText, Users,
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
-  CalendarDays, ChevronDown, ChevronUp, Clock,
+  Clock,
   Database, Fingerprint, RefreshCw, CheckCircle, HardHat,
   Plus, Trash2, Percent, Upload, X
 } from 'lucide-react';
@@ -21,7 +22,7 @@ export default function WorkerProfilePage() {
   const [activeTab, setActiveTab] = useState<'personal' | 'contact' | 'family' | 'social' | 'banking' | 'classification' | 'employment' | 'skills' | 'welfare' | 'other' | 'integrations'>('personal');
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showAttendanceCalendar, setShowAttendanceCalendar] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   // ── Multiple nominees (dynamic rows) with individual share % ─────────────
   type Nominee = { id: number; name: string; dependant: string; nomineeType: string; relationship: string; dob: string; contact: string; address: string; documents: string[]; percent: number };
@@ -250,11 +251,41 @@ export default function WorkerProfilePage() {
       return;
     }
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    setProfileError('');
+    try {
+      const form = e.currentTarget as HTMLFormElement;
+      const fd = new FormData(form);
+      const patch: Record<string, Record<string, unknown>> = {};
+      for (const [key, value] of fd.entries()) {
+        const idx = key.indexOf('.');
+        if (idx <= 0 || idx === key.length - 1) continue;
+        const section = key.slice(0, idx);
+        const field = key.slice(idx + 1);
+        (patch[section] ??= {})[field] = typeof value === 'string' ? value : value.name;
+      }
+      // Classification selects are controlled state, not native form fields.
+      if (activeTab === 'classification') {
+        patch.classification = { ...(patch.classification ?? {}), currentEmploymentStatus: employmentStatus, workerCategory };
+      }
+      // Family nominees live in component state.
+      if (activeTab === 'family') {
+        patch.family = {
+          ...(patch.family ?? {}),
+          nominees: nominees.map(n => ({
+            name: n.name, dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
+            dob: n.dob, age: nomineeAge(n.dob), contact: n.contact, address: n.address, documents: n.documents,
+          })),
+        };
+      }
+      await saveWorker(patch as Partial<WorkerRecord>);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1500);
+    } catch (err) {
+      setShowSuccess(false);
+      setProfileError(err instanceof Error ? err.message : 'Profile could not be saved.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -269,6 +300,11 @@ export default function WorkerProfilePage() {
         {showSuccess && (
           <div className="bg-[#E8F5E9] text-[#2F9E67] px-4 py-2.5 rounded-full border border-[#2F9E67]/20 flex items-center gap-2 text-[13px] font-semibold animate-in slide-in-from-top-2">
             <CheckCircle2 size={16} /> Persona Updated
+          </div>
+        )}
+        {profileError && (
+          <div role="alert" className="bg-red-50 text-red-700 px-4 py-2.5 rounded-full border border-red-200 flex items-center gap-2 text-[13px] font-semibold">
+            {profileError}
           </div>
         )}
       </div>
@@ -367,11 +403,11 @@ export default function WorkerProfilePage() {
                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 w-full">
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">BSS Worker ID</label>
-                      <input type="text" defaultValue={worker.identity.bssId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                      <input name="identity.bssId" type="text" defaultValue={worker.identity.bssId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Name as per Aadhaar <span className="text-[#FF3B30]">*</span></label>
-                      <input type="text" defaultValue={worker.identity.name} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                      <input name="identity.name" type="text" defaultValue={worker.identity.name} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                     </div>
                  </div>
               </div>
@@ -379,7 +415,7 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Date of Birth</label>
-                    <input type="date" defaultValue={worker.identity.dob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                    <input name="identity.dob" type="date" defaultValue={worker.identity.dob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Age</label>
@@ -387,64 +423,64 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Gender</label>
-                    <select defaultValue={worker.identity.gender} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
+                    <select name="identity.gender" defaultValue={worker.identity.gender} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
                       {BssTaxonomies.Gender.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Place of Birth <span className="text-[#FF3B30]">*</span></label>
-                   <input type="text" defaultValue={worker.identity.placeOfBirth || ''} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input name="identity.placeOfBirth" type="text" defaultValue={worker.identity.placeOfBirth || ''} placeholder="Native village/town, tehsil and district" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                    <p className="text-[10px] text-[#86868B] mt-1">Used with your Aadhaar-verified work address to map migrant flows for state policy.</p>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Marital Status</label>
-                    <select defaultValue={worker.personal.maritalStatus} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
+                    <select name="personal.maritalStatus" defaultValue={worker.personal.maritalStatus} disabled className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none">
                       {BssTaxonomies.MaritalStatus.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Blood Group</label>
-                    <select defaultValue={worker.personal.bloodGroup} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.bloodGroup" defaultValue={worker.personal.bloodGroup} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       {BssTaxonomies.BloodGroup.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Religion</label>
-                    <select defaultValue={worker.personal.religion} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.religion" defaultValue={worker.personal.religion} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       {BssTaxonomies.Religion.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Caste</label>
-                    <select defaultValue={worker.personal.caste} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.caste" defaultValue={worker.personal.caste} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       {BssTaxonomies.SocialCategory.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
-                    <select defaultValue={worker.personal.disabilityStatus} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.disabilityStatus" defaultValue={worker.personal.disabilityStatus} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option>No</option>
                       <option>Yes</option>
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <input type="text" defaultValue={worker.identity.disabilityTypePct} placeholder="If applicable" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <input name="identity.disabilityTypePct" type="text" defaultValue={worker.identity.disabilityTypePct} placeholder="If applicable" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 pt-6 border-t border-black/5">
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Father Name</label>
-                    <input type="text" defaultValue={worker.personal.fatherName} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                    <input name="personal.fatherName" type="text" defaultValue={worker.personal.fatherName} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Mother Name</label>
-                    <input type="text" defaultValue={worker.personal.motherName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <input name="personal.motherName" type="text" defaultValue={worker.personal.motherName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Spouse Name</label>
-                    <input type="text" defaultValue={worker.personal.spouseName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <input name="personal.spouseName" type="text" defaultValue={worker.personal.spouseName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
                  </div>
               </div>
 
@@ -454,15 +490,15 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                   <div>
                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Name</label>
-                     <input type="text" defaultValue={worker.identity.emergencyContactName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                     <input name="identity.emergencyContactName" type="text" defaultValue={worker.identity.emergencyContactName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Number</label>
-                     <input type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                     <input name="identity.emergencyContactNumber" type="tel" maxLength={10} defaultValue={worker.identity.emergencyContactNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Emergency Contact Relationship</label>
-                     <select defaultValue={worker.identity.emergencyContactRelation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                     <select name="identity.emergencyContactRelation" defaultValue={worker.identity.emergencyContactRelation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                        {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
                      </select>
                   </div>
@@ -478,11 +514,11 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Alternate Mobile Number</p>
-                    <input type="tel" defaultValue={worker.contact.alternateMobile} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
+                    <input name="alternateMobile" type="tel" defaultValue={worker.contact.alternateMobile} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Email ID</p>
-                    <input type="email" defaultValue={worker.contact.email} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
+                    <input name="email" type="email" defaultValue={worker.contact.email} placeholder="Not provided" className="mt-1 w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-[#0066CC]" />
                   </div>
                 </div>
               </div>
@@ -498,11 +534,11 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Family Members Count</label>
-                   <input type="number" defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input name="family.familyMembersCount" type="number" defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependants Count</label>
-                   <input type="number" defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                   <input name="family.dependantsCount" type="number" defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
                  </div>
               </div>
 
@@ -616,31 +652,31 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">EPFO UAN</label>
-                   <input type="text" defaultValue={worker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input name="socialSecurity.epfoUan" type="text" defaultValue={worker.socialSecurity.epfoUan} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">ESIC IP Number</label>
-                   <input type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   <input name="socialSecurity.esicIp" type="text" defaultValue={worker.socialSecurity.esicIp} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">LWF Number (Labour Welfare Fund)</label>
-                    <input type="text" defaultValue={worker.socialSecurity.lwfNo} placeholder="Enter if available" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.lwfNo" type="text" defaultValue={worker.socialSecurity.lwfNo} placeholder="Enter if available" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">e-Shram Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">{worker.socialSecurity.eShramNo ? 'Linked' : 'Not Linked'}</span></label>
-                    <input type="text" defaultValue={worker.socialSecurity.eShramNo} placeholder="Enter 12 digit UAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.eShramNo" type="text" defaultValue={worker.socialSecurity.eShramNo} placeholder="Enter 12 digit UAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">BOCW Registration Number <span className="ml-1 inline-flex items-center text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded uppercase">{worker.socialSecurity.bocwRegNumber ? 'Registered' : 'Not Registered'}</span></label>
-                    <input type="text" defaultValue={worker.socialSecurity.bocwRegNumber} placeholder="State BOCW ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.bocwRegNumber" type="text" defaultValue={worker.socialSecurity.bocwRegNumber} placeholder="State BOCW ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">WC Policy No. (Workmen Compensation)</label>
-                    <input type="text" defaultValue={worker.socialSecurity.wcPolicyNo} placeholder="Insurance Policy No." className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.wcPolicyNo" type="text" defaultValue={worker.socialSecurity.wcPolicyNo} placeholder="Insurance Policy No." className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">State Worker ID</label>
-                    <input type="text" defaultValue={worker.socialSecurity.stateWorkerId} placeholder="State labour department worker ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="socialSecurity.stateWorkerId" type="text" defaultValue={worker.socialSecurity.stateWorkerId} placeholder="State labour department worker ID" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
               </div>
             </div>
@@ -653,14 +689,14 @@ export default function WorkerProfilePage() {
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Aadhaar No.</label>
                     <div className="flex items-center gap-3">
-                      <input type="password" defaultValue={worker.identity.aadhaar} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F]" readOnly />
+                      <input name="identity.aadhaar" type="password" defaultValue={worker.identity.aadhaar} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F]" readOnly />
                       <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.aadhaarVerified ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-[#86868B]'}`}>{worker.identity.aadhaarVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">PAN No.</label>
                     <div className="flex items-center gap-3">
-                      <input type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] uppercase" />
+                      <input name="identity.pan" type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] uppercase" />
                       <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.panVerified ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-[#86868B]'}`}>{worker.identity.panVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>
@@ -685,19 +721,19 @@ export default function WorkerProfilePage() {
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name</label>
-                        <input type="text" defaultValue={worker.banking.bankName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.bankName" type="text" defaultValue={worker.banking.bankName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Holder Name</label>
-                        <input type="text" defaultValue={worker.banking.holderName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.holderName" type="text" defaultValue={worker.banking.holderName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Number</label>
-                        <input type="password" defaultValue={worker.banking.accountNumber} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.accountNumber" type="password" defaultValue={worker.banking.accountNumber} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div>
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">IFSC Code</label>
-                        <input type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
+                        <input name="banking.ifsc" type="text" defaultValue={worker.banking.ifsc} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none focus:border-[#0066CC]"/>
                       </div>
                       <div className="sm:col-span-2">
                         <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full ${worker.banking.verificationStatus === 'Verified' ? 'text-[#2F9E67] bg-[#E8F5E9]' : 'text-[#F47A32] bg-[#FFF8F0]'}`}><ShieldCheck size={12}/> {worker.banking.verificationStatus === 'Verified' ? 'KYC Verified (NPCI Penny Drop)' : 'KYC pending — verify in Govt. Integrations'}</span>
@@ -736,17 +772,17 @@ export default function WorkerProfilePage() {
                 </div>
                 <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Sector</label>
-                    <select defaultValue={worker.classification?.sector} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <select name="classification.sector" defaultValue={worker.classification?.sector} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                       {BssTaxonomies.Sector.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Industry</label>
-                    <input type="text" defaultValue={worker.classification?.industry} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="classification.industry" type="text" defaultValue={worker.classification?.industry} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Occupation</label>
-                    <select defaultValue={worker.classification?.occupation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <select name="classification.occupation" defaultValue={worker.classification?.occupation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                       <option>Bar Bender (Rebar)</option>
                       <option>Mason</option>
                       <option>Carpenter</option>
@@ -755,7 +791,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Total Worker Experience (Years)</label>
-                    <input type="number" defaultValue={worker.classification?.totalWorkerExperience} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                    <input name="classification.totalWorkerExperience" type="number" defaultValue={worker.classification?.totalWorkerExperience} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
               </div>
 
@@ -913,7 +949,7 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Frequency</label>
-                    <select defaultValue={worker.classification?.paymentFrequency} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <select name="classification.paymentFrequency" defaultValue={worker.classification?.paymentFrequency} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                       <option>Weekly</option>
                       <option>Fortnightly</option>
                       <option>Monthly</option>
@@ -922,7 +958,7 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Mode</label>
-                    <select defaultValue={worker.classification?.paymentMode} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <select name="classification.paymentMode" defaultValue={worker.classification?.paymentMode} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                       <option>Bank Transfer</option>
                       <option>Cheque</option>
                       <option>Cash</option>
@@ -937,7 +973,7 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Source</label>
-                    <input type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="other.registrationSource" type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent for Data Sharing</label>
@@ -961,55 +997,55 @@ export default function WorkerProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Name</label>
-                   <input type="text" defaultValue={worker.employment.employerDetails?.name ?? worker.employment.employer} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.name ?? worker.employment.employer} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Code</label>
-                   <input type="text" defaultValue={worker.employment.employerDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Email ID</label>
-                   <input type="text" defaultValue={worker.employment.employerDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer State</label>
-                  <input type="text" defaultValue={worker.employment.employerDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Address</label>
-                   <input type="text" defaultValue={worker.employment.employerDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Industry</label>
-                   <input type="text" defaultValue={worker.employment.employerDetails?.industry} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.industry} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Principal Employer LIN No.</label>
-                   <input type="text" defaultValue={worker.employment.employerDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.employerDetails" type="text" defaultValue={worker.employment.employerDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Name</label>
-                   <input type="text" defaultValue={worker.employment.contractorDetails?.name ?? worker.employment.contractor} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.name ?? worker.employment.contractor} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Code</label>
-                   <input type="text" defaultValue={worker.employment.contractorDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Email</label>
-                   <input type="text" defaultValue={worker.employment.contractorDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.email} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor State</label>
-                  <input type="text" defaultValue={worker.employment.contractorDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor Address</label>
-                   <input type="text" defaultValue={worker.employment.contractorDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.address} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Contractor LIN</label>
-                   <input type="text" defaultValue={worker.employment.contractorDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                   <input name="employment.contractorDetails" type="text" defaultValue={worker.employment.contractorDetails?.lin} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
               </div>
 
@@ -1018,19 +1054,19 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Name</label>
-                    <input type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.name ?? worker.employment.site} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Code</label>
-                    <input type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.code} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Site Location</label>
-                    <input type="text" defaultValue={worker.employment.siteDetails?.location} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.location} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">State</label>
-                    <input type="text" defaultValue={worker.employment.siteDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.siteDetails" type="text" defaultValue={worker.employment.siteDetails?.state} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Designation & Department</label>
@@ -1038,27 +1074,27 @@ export default function WorkerProfilePage() {
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nature of Job</label>
-                    <input type="text" defaultValue={worker.employment.natureOfJob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.natureOfJob" type="text" defaultValue={worker.employment.natureOfJob} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Type of Work</label>
-                    <input type="text" defaultValue={worker.employment.typeOfWork} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.typeOfWork" type="text" defaultValue={worker.employment.typeOfWork} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Date of Joining</label>
-                    <input type="text" defaultValue={worker.employment.doj} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.doj" type="text" defaultValue={worker.employment.doj} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employment Status</label>
-                    <input type="text" defaultValue={worker.employment.status} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
+                    <input name="employment.status" type="text" defaultValue={worker.employment.status} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Reference Worker ID</label>
-                    <input type="text" defaultValue={worker.employment.refWorkerId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.refWorkerId" type="text" defaultValue={worker.employment.refWorkerId} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">PF Account</label>
-                    <input type="text" defaultValue={worker.employment.pfAccount} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.pfAccount" type="text" defaultValue={worker.employment.pfAccount} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                 </div>
               </div>
@@ -1068,164 +1104,35 @@ export default function WorkerProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Shift</label>
-                    <input type="text" defaultValue={worker.employment.shift} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.shift" type="text" defaultValue={worker.employment.shift} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Camp No.</label>
-                    <input type="text" defaultValue={worker.employment.campNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.campNo" type="text" defaultValue={worker.employment.campNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Transport Facility</label>
-                    <input type="text" defaultValue={worker.employment.transportFacility} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
+                    <input name="employment.transportFacility" type="text" defaultValue={worker.employment.transportFacility} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#2F9E67]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Route</label>
-                    <input type="text" defaultValue={worker.employment.route} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.route" type="text" defaultValue={worker.employment.route} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bus No.</label>
-                    <input type="text" defaultValue={worker.employment.busNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.busNo" type="text" defaultValue={worker.employment.busNo} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">ID Card Issue Date</label>
-                    <input type="text" defaultValue={worker.employment.idCardIssueDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.idCardIssueDate" type="text" defaultValue={worker.employment.idCardIssueDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">ID Card Validity Till</label>
-                    <input type="text" defaultValue={worker.employment.idCardValidityTill} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                    <input name="employment.idCardValidityTill" type="text" defaultValue={worker.employment.idCardValidityTill} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                   </div>
                 </div>
               </div>
               
-              {/* BINDING HISTORY & ATTENDANCE DETAILS */}
-              <div className="pt-6 border-t border-black/5 space-y-8">
-                
-                {/* Detailed Attendance */}
-                <div>
-                  <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-4">Attendance Overview</h3>
-                  <div className="bg-white border border-black/10 rounded-2xl overflow-hidden shadow-sm">
-                    
-                    {/* Today's Status (Always Visible) */}
-                    <div className="p-5 flex flex-col md:flex-row justify-between md:items-center gap-4">
-                      <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-full flex-shrink-0 ${(portal.attendance.records[0]?.presence === 'Present') ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-gray-400'}`}>
-                          <CheckCircle2 size={24} />
-                        </div>
-                        <div>
-                          {portal.attendance.records.length > 0 ? (
-                            <>
-                              <p className="font-semibold text-[#1D1D1F] text-[16px]">{portal.attendance.records[0].presence === 'Present' ? 'Present' : portal.attendance.records[0].presence}</p>
-                              <p className="text-[13px] text-[#86868B] mt-1 flex items-center gap-1">
-                                <Clock size={14} /> {portal.attendance.records[0].date || ''}
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="font-semibold text-[#1D1D1F] text-[16px]">No attendance records</p>
-                              <p className="text-[13px] text-[#86868B] mt-1">Attendance is captured once you are bound to a contractor.</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <button 
-                        onClick={() => setShowAttendanceCalendar(!showAttendanceCalendar)}
-                        className="bg-[#F5F5F7] hover:bg-[#E5E5EA] text-[#1D1D1F] px-4 py-2 rounded-xl text-[13px] font-semibold transition-colors flex items-center gap-2 self-start md:self-auto"
-                      >
-                        {showAttendanceCalendar ? (
-                          <>Hide Monthly View <ChevronUp size={16} /></>
-                        ) : (
-                          <>View Full Month <ChevronDown size={16} /></>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Expandable Monthly Calendar View */}
-                    {showAttendanceCalendar && (
-                      <div className="border-t border-black/5 animate-in slide-in-from-top-2 duration-300">
-                        <div className="p-4 bg-[#F5F5F7]/50 flex items-center justify-between border-b border-black/5">
-                          <div className="flex items-center gap-2 text-[#1D1D1F] font-semibold text-sm">
-                            <CalendarDays size={18} />
-                            August 2024
-                          </div>
-                          <div className="text-sm font-bold text-[#0066CC]">24 Days Present</div>
-                        </div>
-                        <div className="p-4 overflow-x-auto">
-                          <div className="flex gap-2 min-w-max pb-2">
-                            {/* Dummy calendar dates representation */}
-                            {Array.from({ length: 30 }).map((_, i) => {
-                              const date = i + 1;
-                              const isWeekend = date % 7 === 0;
-                              const isHalfDay = date === 8;
-                              const isAbsent = date === 12 || date === 18;
-                              const isFuture = date > 24;
-                              
-                              let statusColor = "bg-[#E8F5E9] text-[#2F9E67] border-[#2F9E67]/30"; // Present
-                              let statusText = "P";
-                              
-                              if (isFuture) {
-                                statusColor = "bg-gray-50 text-gray-300 border-gray-100";
-                                statusText = "-";
-                              } else if (isWeekend) {
-                                statusColor = "bg-gray-100 text-gray-500 border-gray-300"; // Holiday/Off
-                                statusText = "WO";
-                              } else if (isHalfDay) {
-                                statusColor = "bg-[#FFF8F0] text-[#F47A32] border-[#F47A32]/30"; // Half Day
-                                statusText = "HD";
-                              } else if (isAbsent) {
-                                statusColor = "bg-[#FFF0F0] text-[#FF3B30] border-[#FF3B30]/30"; // Absent
-                                statusText = "A";
-                              }
-
-                              return (
-                                <div key={i} className={`flex flex-col items-center justify-center w-[46px] h-[52px] rounded-xl border ${statusColor} shrink-0`}>
-                                  <span className="text-[10px] font-bold uppercase opacity-80">{['S','M','T','W','T','F','S'][date % 7]}</span>
-                                  <span className="text-sm font-bold">{date}</span>
-                                  <span className="text-[9px] font-black mt-0.5">{statusText}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <div className="p-3 bg-gray-50 border-t border-black/5 flex flex-wrap gap-4 text-[11px] font-semibold text-gray-500 justify-center">
-                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#2F9E67]"></span> Present (P)</span>
-                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F47A32]"></span> Half Day (HD)</span>
-                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF3B30]"></span> Absent (A)</span>
-                          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-400"></span> Weekly Off (WO)</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Binding History */}
-                <div>
-                  <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-4">Historical Bindings</h3>
-                  <div className="bg-white border border-black/10 rounded-2xl overflow-hidden divide-y divide-black/5">
-                    {(portal.bindings ?? []).length ? (portal.bindings ?? []).map(b => {
-                      const active = b.status === 'Accepted';
-                      return (
-                        <div key={b.id} className={`p-5 flex flex-col md:flex-row justify-between md:items-center gap-4 ${active ? '' : 'bg-gray-50/50'}`}>
-                          <div className="flex items-start gap-3">
-                            <div className={`mt-0.5 p-2 rounded-full ${active ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-200 text-gray-600'}`}>
-                              {active ? <Briefcase size={16} /> : <Building2 size={16} />}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-[#1D1D1F] text-[15px]">{b.contractor || '—'}</p>
-                              <p className="text-[13px] text-[#86868B]">{[b.site, b.designation].filter(Boolean).join(' • ') || '—'}</p>
-                              <p className="text-[12px] text-gray-500 mt-1">{b.requestedOn || '—'}</p>
-                            </div>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-[12px] font-bold self-start md:self-auto tracking-wider ${active ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-200 text-gray-600'}`}>{active ? 'ACTIVE' : b.status.toUpperCase()}</span>
-                        </div>
-                      );
-                    }) : (
-                      <p className="p-8 text-center text-gray-500 text-sm">No binding history yet.</p>
-                    )}
-                  </div>
-                </div>
-
-              </div>
 
             </div>
           )}
@@ -1496,19 +1403,19 @@ export default function WorkerProfilePage() {
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Consent Date</label>
-                  <input type="text" defaultValue={worker.other?.consentDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="other.consentDate" type="text" defaultValue={worker.other?.consentDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Source</label>
-                  <input type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="other.registrationSource" type="text" defaultValue={worker.other?.registrationSource} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registered By</label>
-                  <input type="text" defaultValue={worker.other?.registeredBy} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="other.registeredBy" type="text" defaultValue={worker.other?.registeredBy} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
                 <div>
                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Registration Date</label>
-                  <input type="text" defaultValue={worker.other?.registrationDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
+                  <input name="other.registrationDate" type="text" defaultValue={worker.other?.registrationDate} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F]" readOnly />
                 </div>
               </div>
             </div>
