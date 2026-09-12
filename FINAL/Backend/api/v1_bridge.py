@@ -2649,6 +2649,12 @@ def _request_worker_binding(worker, contractor, site, **defaults):
     the previous request was declined/cancelled/expired. This keeps the declined
     request as history instead of overwriting it."""
     from bss_core.models import WorkerContractorBinding
+    # A worker binding must always connect a worker and a contractor — never two
+    # accounts of the same role, and never an account to itself.
+    if (worker is None or contractor is None
+            or worker.role != "worker" or contractor.role != "contractor"
+            or worker.id == contractor.id):
+        raise PortalMutationError("A binding must connect a worker and a contractor.", 400)
     binding = _active_worker_binding(worker, contractor, site)
     if binding is None:
         binding = WorkerContractorBinding.objects.create(
@@ -2922,6 +2928,13 @@ def binding_scan(request):
         if wi is None:
             return Response({"error": "Unknown worker."}, status=status.HTTP_404_NOT_FOUND)
         worker_user = wi.user
+        # A binding must connect two different roles.
+        if worker_user.role != "worker":
+            return Response({"error": "The scanned QR is not a worker credential."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if worker_user.id == user.id:
+            return Response({"error": "You cannot bind your own account."},
+                            status=status.HTTP_400_BAD_REQUEST)
         # Resolve the site: explicit name, else a site the contractor is bound to,
         # else an approved allotment.
         site = Site.objects.filter(site_name__iexact=str(body.get("site") or "")).first() if body.get("site") else None
@@ -2951,6 +2964,13 @@ def binding_scan(request):
 
     if employer is None:
         return Response({"error": "This site has no principal employer."}, status=status.HTTP_400_BAD_REQUEST)
+    # Contractor <-> employer bindings must connect two different roles.
+    if contractor.role != "contractor" or employer.role != "employer":
+        return Response({"error": "A binding must connect a contractor and a principal employer."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if contractor.id == employer.id:
+        return Response({"error": "An account cannot bind to itself."},
+                        status=status.HTTP_400_BAD_REQUEST)
     if not _binding_enabled(contractor) or not _binding_enabled(employer):
         return Response({"error": "Binding is disabled in one party's settings."},
                         status=status.HTTP_403_FORBIDDEN)

@@ -69,10 +69,11 @@ export default function ContractorScanPage() {
         setState("binding");
         setMessage(known ? "Worker is bound to you — mark today's attendance." : pending ? "Binding request already sent — awaiting the worker's approval." : "Worker identified — review current relationship before requesting binding");
       } else {
-        setEntity({ kind: 'employer', bssId, name: 'BSS Contractor ' + bssId.slice(-4), employer: 'Contractor', site: '—', designation: 'Contractor credential' });
+        // A contractor QR — a contractor cannot bind another contractor.
+        setEntity(null);
         setRequestSent(false);
-        setState("binding");
-        setMessage("Contractor credential identified.");
+        setState("error");
+        setMessage("This is a Contractor QR. A contractor cannot bind another contractor — only a principal employer can engage a contractor.");
       }
       controls.current?.stop();
     } catch (e) {
