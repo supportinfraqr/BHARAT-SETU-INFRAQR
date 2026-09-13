@@ -28,6 +28,8 @@ export default function QRScannerWorkflow() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [contractor, setContractor] = useState<{bssId:string; name:string} | null>(null);
+  const [contractorSite, setContractorSite] = useState("");
+  const [siteCheck, setSiteCheck] = useState<'idle' | 'loading' | 'ok' | 'none'>('idle');
   const [bindSent, setBindSent] = useState(false);
   const [sentSite, setSentSite] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -49,8 +51,10 @@ export default function QRScannerWorkflow() {
         // Contractor QR → binding request. The worker never picks a site: the
         // request always targets the contractor's default (or first) site.
         setContractor({ bssId:p.bssId, name:p.name || "Contractor " + p.bssId.slice(-4) });
-        setBindSent(false); setSentSite(""); setError(""); setState("binding");
-        setMessage("Contractor identified — send a binding request to their default site");
+        setBindSent(false); setSentSite(""); setError(""); setContractorSite(""); setSiteCheck("loading");
+        setState("binding");
+        setMessage("Contractor identified — checking their default site…");
+        void checkContractorSite(p.bssId);
       } else if (isEmployer) {
         // Principal Employer QR → informational only for workers
         setState("error"); setMessage(`Principal Employer credential (${p.bssId}). No binding action is available for workers here.`);
@@ -65,6 +69,29 @@ export default function QRScannerWorkflow() {
       playScanBeep(false);
       setState("error"); setMessage(e instanceof Error ? e.message : "Invalid QR code");
       controls.current?.stop();
+    }
+  };
+
+  const checkContractorSite = async (bssId: string) => {
+    try {
+      const response = await fetch('/api/bindings/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'BSS_CONTRACTOR', bssId, preview: true }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { site?: string } };
+      if (!response.ok) {
+        setContractorSite("");
+        setSiteCheck("none");
+        setError(result.error || 'This contractor has no site allotted yet.');
+      } else {
+        setContractorSite(result.data?.site ?? "");
+        setSiteCheck("ok");
+      }
+    } catch {
+      setContractorSite("");
+      setSiteCheck("none");
+      setError('The contractor\u2019s default site could not be verified.');
     }
   };
 
@@ -105,10 +132,11 @@ export default function QRScannerWorkflow() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setConfirmOpen(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setContractorSite(""); setSiteCheck("idle"); setConfirmOpen(false); setMessage(""); setState("idle"); };
 
   const requestSendBinding = () => {
     if (boundContractor) { setState("error"); setMessage(`You are already bound to ${boundContractor}. Unbind first before binding with another contractor.`); return; }
+    if (siteCheck !== 'ok') { setError('This contractor has no site allotted yet, so a binding cannot be requested.'); return; }
     setError("");
     setConfirmOpen(true);
   };
@@ -143,11 +171,17 @@ export default function QRScannerWorkflow() {
           {state==="binding"&&contractor?(
             <div className="space-y-4">
               <div className="flex items-center gap-4"><span className="w-14 h-14 rounded-full bg-orange-50 text-[#F47A32] grid place-items-center"><Handshake size={26}/></span><div><h2 className="font-bold text-lg">{contractor.name}</h2><code className="text-xs text-[#073B67]">{contractor.bssId}</code><p className="text-xs text-orange-600 mt-1 font-semibold">Contractor QR identified</p></div></div>
-              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">Your request goes to the contractor&apos;s <strong>default site</strong> — you never choose a site. Binding completes only after the contractor approves.</p>
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
+                {siteCheck === 'loading'
+                  ? 'Checking the contractor\u2019s default site…'
+                  : siteCheck === 'none'
+                    ? 'This contractor has no site allotted yet, so a binding cannot be requested. Ask the contractor to get a site allotted first.'
+                    : <>Your request will be created at <strong>{contractorSite}</strong> — the contractor&apos;s default site. You never choose a site; binding completes only after the contractor approves.</>}
+              </p>
               {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
               {bindSent
                 ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent{sentSite ? ` for ${sentSite}` : ''}! Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
-                : <button onClick={requestSendBinding} disabled={busy} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>{busy ? 'Sending…' : 'Send binding request'}</button>}
+                : <button onClick={requestSendBinding} disabled={busy || siteCheck !== 'ok'} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>{busy ? 'Sending…' : siteCheck === 'loading' ? 'Checking site…' : 'Send binding request'}</button>}
             </div>
           ):result?(
             <div className="space-y-5">
@@ -164,11 +198,11 @@ export default function QRScannerWorkflow() {
       open={confirmOpen && !!contractor}
       tone="positive"
       title="Confirm binding request"
-      description={`A binding request will be sent to ${contractor?.name ?? 'this contractor'}. It goes to the contractor's default site; binding completes only after the contractor approves.`}
+      description={`A binding request will be sent to ${contractor?.name ?? 'this contractor'}${contractorSite ? ` at ${contractorSite}` : ''}. Binding completes only after the contractor approves.`}
       details={contractor ? [
         { label: 'Contractor', value: contractor.name },
         { label: 'Contractor ID', value: contractor.bssId },
-        { label: 'Site', value: 'Contractor default site' },
+        { label: 'Site', value: contractorSite || '—' },
       ] : []}
       confirmLabel="Send binding request"
       busy={busy}

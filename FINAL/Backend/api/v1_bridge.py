@@ -3514,7 +3514,17 @@ def binding_scan(request):
             return Response({"error": "Unknown contractor."}, status=status.HTTP_404_NOT_FOUND)
         if user.role == "worker":
             # A worker scanning a contractor QR never picks a site — the request
-            # targets the contractor's default (or first allotted) site.
+            # targets the contractor's default (or first allotted) site. A
+            # preview resolves that site without creating a binding.
+            if body.get("preview"):
+                site = _contractor_default_site(cp.user)
+                if site is None:
+                    return Response({
+                        "error": "This contractor has no site allotted yet, so a binding cannot be "
+                                 "requested. Ask the contractor to get a site allotted first."},
+                        status=status.HTTP_400_BAD_REQUEST)
+                return Response({"data": {"site": site.site_name, "siteId": site.id}},
+                                status=status.HTTP_200_OK)
             return _worker_requests_contractor(user, cp.user)
         if user.role != "employer":
             return Response({"error": "Only employers or workers can scan a contractor QR."},
