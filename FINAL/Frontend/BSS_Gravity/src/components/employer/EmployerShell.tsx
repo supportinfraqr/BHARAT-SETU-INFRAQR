@@ -83,7 +83,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-8 w-auto" alt="Bharat Shram Setu"/>
           <BrandText className="hidden lg:block text-base"/>
         </Link>
-        <div className="min-w-0 flex items-center justify-center gap-4">
+        <div className="min-w-0 flex items-center justify-center gap-4 mx-4 md:mx-8">
           <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-1.5">
           {groups.map(group => 'href' in group
             ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
