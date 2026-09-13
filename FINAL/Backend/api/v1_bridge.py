@@ -2242,6 +2242,16 @@ def _contractor_site_ids(user):
         .values_list("site_id", flat=True))
 
 
+def _release_contractor_workers(binding):
+    """When a contractor↔employer binding ends, release that contractor's worker
+    bindings at the employer's sites — a contractor cannot keep workers at a site
+    they are no longer allotted."""
+    WorkerContractorBinding.objects.filter(
+        contractor=binding.contractor, site__employer=binding.employer
+    ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).update(
+        binding_status="CANCELLED", unbound_at=timezone.now())
+
+
 def _handle_site_calendar(user, body, method):
     """Contractor manages a site's holiday calendar + leave policy.
 
@@ -3444,8 +3454,10 @@ def employer_binding_action(request, binding_id):
     elif action == "reject":
         b.binding_status = "REJECTED"
         b.save(update_fields=["binding_status"])
-        # A rejected employer binding invalidates its site allotments.
+        # A rejected employer binding invalidates its site allotments and releases
+        # the contractor's workers from the employer's sites.
         ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
+        _release_contractor_workers(b)
     elif action == "unbind":
         # Two-sided unbinding — either party may request; the binding is
         # cancelled only once both consents are recorded.
@@ -3460,8 +3472,10 @@ def employer_binding_action(request, binding_id):
             b.unbound_at = timezone.now()
         b.save()
         if b.binding_status == "CANCELLED":
-            # Unbinding invalidates the site allotments so they can't be reused.
+            # Unbinding invalidates the site allotments so they can't be reused,
+            # and releases the contractor's workers from the employer's sites.
             ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
+            _release_contractor_workers(b)
     elif action == "approve-site":
         # Two-step: whoever did NOT raise the proposal approves it.
         site_id = request.data.get("siteId")
