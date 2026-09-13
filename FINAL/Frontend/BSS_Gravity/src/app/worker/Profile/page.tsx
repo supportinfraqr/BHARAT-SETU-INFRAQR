@@ -728,7 +728,11 @@ export default function WorkerProfilePage() {
               <div className="pt-6 border-t border-black/5">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="text-[15px] font-semibold text-[#1D1D1F]">Bank Accounts (Wage Transfer)</h3>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#2F9E67] bg-[#E8F5E9] px-2.5 py-1 rounded-full"><CheckCircle2 size={13}/> KYC via bank API</span>
+                  {bankVerified ? (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#2F9E67] bg-[#E8F5E9] px-2.5 py-1 rounded-full"><CheckCircle2 size={13}/> KYC Verified (Penny Drop)</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#F47A32] bg-[#FFF8F0] px-2.5 py-1 rounded-full"><ShieldCheck size={13}/> KYC pending</span>
+                  )}
                 </div>
                 <div className="rounded-[14px] bg-[#EAF3FF] border border-[#0066CC]/15 px-4 py-3 mb-5 text-[13px] text-[#073B67] font-medium">
                   <strong>Note:</strong> Your <strong>primary account receives your salary</strong>. Keep the primary account active; the secondary account is used only when you choose it (e.g., saving/loan account). Both accounts are registered in <em>Govt. Integrations</em> and must pass KYC through the bank verification API.
