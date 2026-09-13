@@ -7,6 +7,9 @@ import { getLocale, getStoredLanguage, LANGUAGE_COOKIE_NAME } from '@/i18n';
 export const metadata: Metadata = {
   title: "Bharat Shram Setu | Enterprise Portal",
   description: "Connecting India's workforce to opportunity, identity and growth.",
+  // The app has its own language switcher; browser auto-translate rewrites the
+  // DOM and breaks controlled form controls (e.g. <select>), so disable it.
+  other: { google: "notranslate" },
 };
 
 export const viewport: Viewport = {
@@ -26,7 +29,7 @@ export default async function RootLayout({
   const initialLocale = getLocale(initialLanguage);
 
   return (
-    <html lang={initialLocale.code} dir={initialLocale.dir} className="h-full antialiased">
+    <html lang={initialLocale.code} dir={initialLocale.dir} translate="no" className="h-full antialiased">
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-[var(--color-bss-bg)] text-[var(--color-bss-text-primary)]">
         <ClientProviders initialLanguage={initialLanguage}>
           {children}
