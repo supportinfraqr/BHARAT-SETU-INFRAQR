@@ -29,7 +29,8 @@ export default function WorkerProfilePage() {
   useEffect(() => { setDirty(false); }, [activeTab]);
 
   // ── Multiple nominees (dynamic rows) with individual share % ─────────────
-  type Nominee = { id: number; name: string; dependant: string; nomineeType: string; relationship: string; dob: string; contact: string; address: string; documents: string[]; percent: number };
+  type NomineeDoc = { type: string; name: string; fileName?: string; url?: string };
+  type Nominee = { id: number; name: string; dependant: string; nomineeType: string; relationship: string; dob: string; contact: string; address: string; documents: NomineeDoc[]; percent: number };
   // Split 100% across the nominees as evenly as possible (remainder on the last).
   const balanceNominees = (list: Nominee[]): Nominee[] => {
     if (list.length === 0) return list;
@@ -41,7 +42,7 @@ export default function WorkerProfilePage() {
     const list = (worker.family?.nominees ?? []).map(n => ({
       id: n.id, name: n.name, dependant: n.dependant, nomineeType: n.nomineeType,
       relationship: n.relation, dob: n.dob, contact: n.contact, address: n.address,
-      documents: n.documents ?? [], percent: n.percent ?? 100,
+      documents: (n.documents ?? []).map(d => typeof d === 'string' ? { type: d, name: d } : d), percent: n.percent ?? 100,
     }));
     const total = list.reduce((sum, n) => sum + (Number.isFinite(n.percent) ? n.percent : 0), 0);
     // Repair a previously-saved total that isn't 100 so the section opens balanced.
@@ -75,15 +76,22 @@ export default function WorkerProfilePage() {
   const addNominee = () => { setDirty(true); setNominees(current => balanceNominees([...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: 0 }])); setNextNomineeId(id => id + 1); };
   const removeNominee = (id: number) => { setDirty(true); setNominees(current => balanceNominees(current.filter(n => n.id !== id))); };
   const pickNomineeDoc = (id: number) => { setDocTargetId(id); window.setTimeout(() => nomineeFileRef.current?.click(), 0); };
-  const addNomineeDoc = (file?: File) => {
+  const addNomineeDoc = async (file?: File) => {
     if (!file || docTargetId === null) return;
-    const lower = file.name.toLowerCase();
-    const label = lower.includes('pan') ? 'PAN'
-      : (lower.includes('aadhaar') || lower.includes('adhar')) ? 'Aadhaar'
-      : file.name;
-    updateNominee(docTargetId, { documents: [...(nominees.find(n => n.id === docTargetId)?.documents ?? []), label] });
+    const targetId = docTargetId;
     setDocTargetId(null);
-    setDirty(true);
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const response = await fetch('/api/worker/nominee-document', { method: 'POST', body: form });
+      const result = await response.json().catch(() => ({})) as { data?: NomineeDoc; error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error || 'The document could not be uploaded.');
+      const doc = result.data;
+      setNominees(current => current.map(n => n.id === targetId ? { ...n, documents: [...n.documents, doc] } : n));
+      setDirty(true);
+    } catch (reason) {
+      setProfileError(reason instanceof Error ? reason.message : 'The document could not be uploaded.');
+    }
   };
   const splitEqually = () => { setDirty(true); setNominees(current => balanceNominees(current)); };
   const segColors = ['bg-[#073B67]', 'bg-[#F47A32]', 'bg-[#2F9E67]', 'bg-[#7A5AF8]', 'bg-[#0EA5E9]', 'bg-[#E11D48]'];
@@ -640,7 +648,7 @@ export default function WorkerProfilePage() {
                 <p className="text-[13px] text-[#86868B] mb-4">Add multiple nominees — each nominee gets one row with their own relationship, identity documents and share (%). Total share must equal 100%.</p>
 
                 {/* Hidden input shared by every nominee row's document upload */}
-                <input ref={nomineeFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { addNomineeDoc(e.target.files?.[0]); e.target.value = ''; }}/>
+                <input ref={nomineeFileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={e => { void addNomineeDoc(e.target.files?.[0]); e.target.value = ''; }}/>
 
                 <div className="space-y-4">
                   {nominees.map((n, rowIndex) => (
@@ -693,7 +701,7 @@ export default function WorkerProfilePage() {
                           <div data-nominee-documents={n.id} className={`flex flex-wrap items-center gap-2 rounded-xl min-h-[42px] ${saveAttempted && n.documents.length === 0 ? 'ring-1 ring-red-400 p-1' : ''}`}>
                             <button type="button" onClick={() => pickNomineeDoc(n.id)} className="inline-flex items-center gap-1.5 bg-white border border-black/10 px-3 py-2 rounded-lg text-[12px] font-medium hover:bg-gray-50"><Upload size={14}/> Upload PAN / Aadhaar Copy</button>
                             {n.documents.map((doc, docIndex) => (
-                              <span key={doc} className="inline-flex items-center gap-1.5 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-[#2F9E67] px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"><FileText size={12}/>{doc}<button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc}`} className="text-gray-400 hover:text-red-600"><Trash2 size={11}/></button></span>
+                              <span key={`${doc.fileName ?? doc.name}-${docIndex}`} className="inline-flex items-center gap-1.5 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-[#2F9E67] px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"><FileText size={12}/>{doc.url ? <a href={doc.url} target="_blank" rel="noopener noreferrer" className="hover:underline" title="View document">{doc.name}</a> : doc.name}<button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc.name}`} className="text-gray-400 hover:text-red-600"><Trash2 size={11}/></button></span>
                             ))}
                             {!n.documents.length && <span className="text-[11px] text-gray-400">No document uploaded</span>}
                           </div>

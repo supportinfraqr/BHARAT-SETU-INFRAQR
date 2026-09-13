@@ -1258,6 +1258,18 @@ def mutate_portal(request, role_path, resource):
                     status=status.HTTP_200_OK)
 
 
+def _nominee_doc_blob(docs):
+    """Upper-cased text of a nominee's attached documents (handles both the
+    legacy string list and the {type,name,fileName} object list)."""
+    parts = []
+    for d in (docs or []):
+        if isinstance(d, dict):
+            parts.extend(str(d.get(k) or "") for k in ("type", "name", "fileName"))
+        else:
+            parts.append(str(d))
+    return " ".join(parts).upper()
+
+
 def _coerce_int(value):
     """Best-effort int for optional numeric form fields ('' / None / bad -> None)."""
     if value is None:
@@ -1598,10 +1610,10 @@ def _persist_mutation(user, role_path, resource, method, body):
                     contact=nm.get("contact", ""), address=nm.get("address", ""),
                     percent=_coerce_int(nm.get("percent")),
                     nominee_documents=list(nm.get("documents") or []),
-                    # Match the doc type anywhere in the uploaded file name, e.g.
-                    # "pan_card.pdf" -> PAN, "aadhaar_front.jpg" -> Aadhaar.
-                    pan_copy_nominee=("PAN" in " ".join(str(d) for d in (nm.get("documents") or [])).upper()),
-                    aadhaar_copy_nominee=any(k in " ".join(str(d) for d in (nm.get("documents") or [])).upper()
+                    # Match the doc type anywhere in the attached document's type
+                    # or file name, e.g. "pan_card.pdf" -> PAN.
+                    pan_copy_nominee=("PAN" in _nominee_doc_blob(nm.get("documents"))),
+                    aadhaar_copy_nominee=any(k in _nominee_doc_blob(nm.get("documents"))
                                              for k in ("AADHAAR", "ADHAR")),
                 )
 
@@ -2905,6 +2917,36 @@ def worker_document_detail(request, document_id):
     response["Content-Type"] = doc.mime_type or "application/octet-stream"
     response["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_nominee_document(request):
+    """Upload a nominee's PAN/Aadhaar copy and return a reference to store on the
+    nominee row. The file is stored under MEDIA_ROOT and served at /media/…"""
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+    user = request.user
+    if user.role != "worker":
+        return Response({"error": "Only workers can upload nominee documents."},
+                        status=status.HTTP_403_FORBIDDEN)
+    file_obj = request.FILES.get("file")
+    if not file_obj:
+        return Response({"error": "Choose a document to upload."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if file_obj.size > 10 * 1024 * 1024:
+        return Response({"error": "Document must be 10 MB or smaller."},
+                        status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+    original = os.path.basename(file_obj.name or "document")
+    lower = original.lower()
+    doc_type = "PAN" if "pan" in lower else ("Aadhaar" if ("aadhaar" in lower or "adhar" in lower) else "Document")
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", original)
+    stored = default_storage.save(f"nominee_documents/{uuid.uuid4().hex}_{safe}", ContentFile(file_obj.read()))
+    return Response({"data": {
+        "type": doc_type, "name": original, "fileName": stored,
+        "url": f"/media/{stored}",
+    }}, status=status.HTTP_201_CREATED)
 
 
 def _grievance_status_label(status):

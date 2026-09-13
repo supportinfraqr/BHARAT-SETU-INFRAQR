@@ -117,7 +117,7 @@ export type WorkerRecord = {
   };
   family?: {
     familyMembersCount?: number; dependantsCount?: number;
-    nominees?: Array<{ id: number; name: string; dependant: string; relation: string; nomineeType: string; dob: string; age?: number; contact: string; address: string; documents: string[]; percent: number }>;
+    nominees?: Array<{ id: number; name: string; dependant: string; relation: string; nomineeType: string; dob: string; age?: number; contact: string; address: string; documents: Array<string | { type: string; name: string; fileName?: string; url?: string }>; percent: number }>;
   };
 };
 

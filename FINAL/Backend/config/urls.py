@@ -56,6 +56,7 @@ _v1_patterns = _v1(
     ("bss-staff/operations/actions", v1_bridge.bss_staff_actions, "v1_bss_staff_actions"),
     ("worker/submissions", v1_bridge.worker_submissions, "v1_worker_submissions"),
     ("worker/documents", v1_bridge.worker_documents, "v1_worker_documents"),
+    ("worker/nominee-document", v1_bridge.worker_nominee_document, "v1_worker_nominee_document"),
     ("worker/documents/<int:document_id>", v1_bridge.worker_document_detail, "v1_worker_document_detail"),
     ("worker/grievances", v1_bridge.worker_grievances, "v1_worker_grievances"),
     ("worker/grievances/<int:grievance_id>/audio", v1_bridge.worker_grievance_audio, "v1_worker_grievance_audio"),
