@@ -614,15 +614,20 @@ export default function WorkerProfilePage() {
           {/* TAB: FAMILY & NOMINEE */}
           {activeTab === 'family' && (
             <div className="space-y-8 animate-in fade-in">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Family Members Count</label>
-                   <input name="family.familyMembersCount" type="number" defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                 </div>
-                 <div>
-                   <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependants Count</label>
-                   <input name="family.dependantsCount" type="number" defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
-                 </div>
+              {/* Household size — describes your family, separate from the legal nominees below */}
+              <div className="rounded-[16px] border border-black/10 bg-gray-50/40 p-5">
+                <h3 className="text-[15px] font-semibold text-[#1D1D1F]">Household</h3>
+                <p className="text-[13px] text-[#86868B] mt-1 mb-4">How many people are in your family and how many depend on you. These are household counts — separate from the legal nominees below.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+                   <div>
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Family Members Count</label>
+                     <input name="family.familyMembersCount" type="number" min={0} defaultValue={worker.family?.familyMembersCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   </div>
+                   <div>
+                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependants Count</label>
+                     <input name="family.dependantsCount" type="number" min={0} defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                   </div>
+                </div>
               </div>
 
               <div className="pt-6 border-t border-black/5">
