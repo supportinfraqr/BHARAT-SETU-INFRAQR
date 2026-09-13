@@ -1247,6 +1247,8 @@ def _wc_history(b):
                        "at": _dts(b.accepted_at)})
     if str(b.binding_status).upper() == "REJECTED":
         by = {"worker": "Worker", "contractor": "Contractor"}.get(str(b.rejected_by or "").lower(), "")
+        if not by:
+            by = "Worker"  # a worker binding is raised by the contractor, so the worker declines
         events.append({"label": "Rejected", "by": by, "at": _dts(b.rejected_at) or _dts(b.updated_at)})
     if b.unbind_requested_at:
         by = {"worker": "Worker", "contractor": "Contractor"}.get(str(b.unbind_requested_by or "").lower(), "")
@@ -1273,6 +1275,8 @@ def _ce_history(b):
                        "at": _dts(b.accepted_at)})
     if str(b.binding_status).upper() == "REJECTED":
         by = {"contractor": "Contractor", "employer": "Employer"}.get(str(b.rejected_by or "").lower(), "")
+        if not by:
+            by = "Employer" if initiated == "Contractor" else "Contractor"
         events.append({"label": "Rejected", "by": by, "at": _dts(b.rejected_at) or _dts(b.updated_at)})
     if b.unbind_requested_at:
         by = {"contractor": "Contractor", "employer": "Employer"}.get(str(b.unbind_requested_by or "").lower(), "")
