@@ -393,6 +393,11 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [geo, setGeo] = useState<SiteGeo | null>(() => initial && initial.latitude ? { lat: Number(initial.latitude), lng: Number(initial.longitude), label: 'Saved site location' } : null);
   const [location, setLocation] = useState(String(initial?.location ?? ''));
   const [state, setState] = useState(String(initial?.state ?? ''));
+  const [name, setName] = useState(String(initial?.site_name ?? initial?.name ?? ''));
+  const [code, setCode] = useState(String(initial?.site_code ?? initial?.code ?? ''));
+  const [startDate, setStartDate] = useState(String(initial?.site_start_date ?? ''));
+  const [endDate, setEndDate] = useState(String(initial?.expected_end_date ?? ''));
+  const [status, setStatus] = useState(String(initial?.site_status ?? 'Active'));
   const [geography, setGeography] = useState<Record<string, Record<string, { city: string; pins: string[] }[]>>>({});
   const [tab, setTab] = useState(FORM_SECTIONS[0].title);
   const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
@@ -429,18 +434,34 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     if (place.state) setState(place.state);
   }
 
+  // Mandatory = everything except the optional "Additional details" section.
+  // The Register/Save button stays disabled until all are filled, and an empty
+  // mandatory field shows a red border.
+  const missing = {
+    name: !name.trim(),
+    code: !code.trim(),
+    location: !location.trim(),
+    state: !state.trim(),
+    startDate: !startDate,
+    endDate: !endDate,
+    status: !status.trim(),
+  };
+  const hasMissing = Object.values(missing).some(Boolean);
+  const fieldCls = (bad: boolean) => `mt-1 w-full h-10 border rounded-lg px-3 text-sm ${bad ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:ring-2 focus:ring-red-100' : 'border-gray-200'}`;
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (hasMissing) return;
     const form = new FormData(event.currentTarget);
     const payload: Record<string, unknown> = {};
     if (initial?.id !== undefined && initial.id !== null && initial.id !== '') payload.id = initial.id;
-    payload.name = String(form.get('name') || '');
-    payload.code = String(form.get('code') || '').toUpperCase();
+    payload.name = name.trim();
+    payload.code = code.trim().toUpperCase();
     payload.location = location.trim();
     payload.state = state.trim() || geo?.state || '';
-    payload.startDate = String(form.get('startDate') || '');
-    payload.endDate = String(form.get('endDate') || '');
-    payload.status = String(form.get('status') || 'Active');
+    payload.startDate = startDate;
+    payload.endDate = endDate;
+    payload.status = status || 'Active';
     if (geo) {
       payload.latitude = String(geo.lat);
       payload.longitude = String(geo.lng);
@@ -475,15 +496,15 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
-            <label className="text-xs font-semibold text-gray-700">Site name<input required name="name" defaultValue={String(initial?.site_name ?? initial?.name ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">Site code<input required name="code" defaultValue={String(initial?.site_code ?? initial?.code ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">City / location<input list="site-city-options" name="location" value={location} onChange={event => setLocation(event.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input list="site-state-options" name="state" value={state} onChange={event => setState(event.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
+            <label className="text-xs font-semibold text-gray-700">Site name<input required value={name} onChange={e => setName(e.target.value)} className={fieldCls(missing.name)} /></label>
+            <label className="text-xs font-semibold text-gray-700">Site code<input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls(missing.code)} /></label>
+            <label className="text-xs font-semibold text-gray-700">City / location<input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls(missing.location)} /></label>
+            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input list="site-state-options" value={state} onChange={event => setState(event.target.value)} className={fieldCls(missing.state)} /></label>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
-            <datalist id="site-state-options">{stateOptions.map(name => <option key={name} value={name} />)}</datalist>
-            <label className="text-xs font-semibold text-gray-700">Start date<input name="startDate" type="date" defaultValue={String(initial?.site_start_date ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">End date<input name="endDate" type="date" defaultValue={String(initial?.expected_end_date ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
-            <label className="text-xs font-semibold text-gray-700">Status<select name="status" defaultValue={String(initial?.site_status ?? 'Active')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm"><option>Active</option><option>Planned</option></select></label>
+            <datalist id="site-state-options">{stateOptions.map(s => <option key={s} value={s} />)}</datalist>
+            <label className="text-xs font-semibold text-gray-700">Start date<input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls(missing.startDate)} /></label>
+            <label className="text-xs font-semibold text-gray-700">End date<input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls(missing.endDate)} /></label>
+            <label className="text-xs font-semibold text-gray-700">Status<select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls(missing.status)} bg-white`}><option>Active</option><option>Planned</option></select></label>
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-100">
@@ -517,9 +538,10 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
           </div>
 
           {error && <p role="alert" className="mt-4 text-sm text-red-700 bg-red-50 rounded-lg p-3">{error}</p>}
+          {hasMissing && <p className="mt-4 text-xs text-gray-400">All fields except <span className="font-semibold">Additional details</span> are required.</p>}
           <div className="mt-5 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm">Cancel</button>
-            <button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : initial ? 'Save changes' : 'Register site'}</button>
+            <button disabled={busy || hasMissing} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">{busy ? 'Saving…' : initial ? 'Save changes' : 'Register site'}</button>
           </div>
         </form>
       </section>
