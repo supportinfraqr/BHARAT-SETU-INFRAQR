@@ -132,7 +132,7 @@ export default function EarningsPage() {
     </section>
 
     <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap gap-3"><select aria-label="Year" className={fieldClass}><option>2026</option></select><select aria-label="Month" className={fieldClass}><option>All months</option></select><select aria-label="Employer or site" className={fieldClass}><option>All employers and sites</option></select></div>
-    <EnterpriseDataTable title="Payment records" rows={wageData.records} columns={wageColumns} rowKey={r => r.id} filename="bss-wage-history" />
+    <EnterpriseDataTable title="Payment records" rows={wageData.records} columns={wageColumns} rowKey={r => r.id} filename="bss-wage-history" showShare={false} showDownload={false} />
     {portal.dataMode === 'demo' && <p className="text-xs text-gray-500 bg-orange-50 border border-orange-100 rounded-xl p-3">Illustrative database records only. Production values come from the connected payroll source.</p>}
 
     {/* Apply modal */}

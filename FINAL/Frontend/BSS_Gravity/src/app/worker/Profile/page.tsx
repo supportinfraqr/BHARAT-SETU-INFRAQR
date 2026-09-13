@@ -55,7 +55,7 @@ export default function WorkerProfilePage() {
     return String(Math.max(0, age));
   };
   const updateNominee = (id: number, patch: Partial<Nominee>) => setNominees(current => current.map(n => n.id === id ? { ...n, ...patch } : n));
-  const addNominee = () => { setNominees(current => [...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: 0 }]); setNextNomineeId(id => id + 1); };
+  const addNominee = () => { setNominees(current => [...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: current.length === 0 ? 100 : 0 }]); setNextNomineeId(id => id + 1); };
   const removeNominee = (id: number) => setNominees(current => current.filter(n => n.id !== id));
   const pickNomineeDoc = (id: number) => { setDocTargetId(id); window.setTimeout(() => nomineeFileRef.current?.click(), 0); };
   const addNomineeDoc = (file?: File) => {
@@ -300,6 +300,7 @@ export default function WorkerProfilePage() {
           nominees: nominees.map(n => ({
             name: n.name, dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
             dob: n.dob, age: nomineeAge(n.dob), contact: n.contact, address: n.address, documents: n.documents,
+            percent: n.percent,
           })),
         };
       }
@@ -561,7 +562,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependants Count</label>
-                   <input name="family.dependantsCount" type="number" defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none" readOnly />
+                   <input name="family.dependantsCount" type="number" defaultValue={worker.family?.dependantsCount ?? 0} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                  </div>
               </div>
 

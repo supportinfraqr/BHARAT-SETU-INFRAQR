@@ -101,9 +101,9 @@ export default function BenefitsPage() {
       </section>
     </div>
 
-    <EnterpriseDataTable title="PF contribution history" rows={pfData.records} columns={pfColumns} rowKey={r => r.period} filename="bss-pf-contributions"/>
-    <EnterpriseDataTable title="Bonus history" rows={bonus.records} columns={bonusColumns} rowKey={r => r.id} filename="bss-bonus-history"/>
-    <EnterpriseDataTable title="Leave encashment history" rows={encashment.records} columns={encColumns} rowKey={r => r.id} filename="bss-leave-encashment-history"/>
+    <EnterpriseDataTable title="PF contribution history" rows={pfData.records} columns={pfColumns} rowKey={r => r.period} filename="bss-pf-contributions" showShare={false} showDownload={false}/>
+    <EnterpriseDataTable title="Bonus history" rows={bonus.records} columns={bonusColumns} rowKey={r => r.id} filename="bss-bonus-history" showShare={false} showDownload={false}/>
+    <EnterpriseDataTable title="Leave encashment history" rows={encashment.records} columns={encColumns} rowKey={r => r.id} filename="bss-leave-encashment-history" showShare={false} showDownload={false}/>
 
     {/* Gratuity application short form */}
     {applyOpen && (

@@ -805,10 +805,13 @@ def _worker_classification_section(user):
 
 def _worker_family_section(user):
     fam = WorkerFamilyDependant.objects.filter(user=user)
-    members = fam.filter(nominee=True).first() if fam.exists() else None
+    # The non-nominee "head" row carries the family/dependants counts; nominee
+    # rows are the actual nominees. Keep them separate so the head row never
+    # leaks into the nominee list as a blank row.
+    head = fam.exclude(nominee=True).first()
     return {
-        "familyMembersCount": fam.first().family_members_count if fam.exists() else 0,
-        "dependantsCount": fam.first().dependants_count if fam.exists() else 0,
+        "familyMembersCount": head.family_members_count if head else 0,
+        "dependantsCount": head.dependants_count if head else 0,
         "nominees": [
             {
                 "id": n.id,
@@ -821,9 +824,9 @@ def _worker_family_section(user):
                 "contact": _d(n.contact),
                 "address": _d(n.address),
                 "documents": [d for d in (["PAN"] if n.pan_copy_nominee else []) + (["Aadhaar"] if n.aadhaar_copy_nominee else [])],
-                "percent": 100,
+                "percent": n.percent if n.percent is not None else 0,
             }
-            for n in fam
+            for n in fam.filter(nominee=True)
         ],
     }
 

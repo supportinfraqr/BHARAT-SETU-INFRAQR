@@ -1233,6 +1233,19 @@ def mutate_portal(request, role_path, resource):
                     status=status.HTTP_200_OK)
 
 
+def _coerce_int(value):
+    """Best-effort int for optional numeric form fields ('' / None / bad -> None)."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return int(float(text))
+    except (TypeError, ValueError):
+        return None
+
+
 def _persist_mutation(user, role_path, resource, method, body):
     """Best-effort persistence for the handful of resources backed by real
     models; returns an id for the generic/unmapped case."""
@@ -1515,9 +1528,9 @@ def _persist_mutation(user, role_path, resource, method, body):
             if not fam_head:
                 fam_head = WorkerFamilyDependant.objects.create(user=user)
             if fam_patch.get("familyMembersCount") is not None:
-                fam_head.family_members_count = fam_patch["familyMembersCount"]
+                fam_head.family_members_count = _coerce_int(fam_patch["familyMembersCount"])
             if fam_patch.get("dependantsCount") is not None:
-                fam_head.dependants_count = fam_patch["dependantsCount"]
+                fam_head.dependants_count = _coerce_int(fam_patch["dependantsCount"])
             fam_head.save(update_fields=["family_members_count", "dependants_count"])
         nominees = fam_patch.get("nominees")
         if nominees is not None:
@@ -1527,8 +1540,9 @@ def _persist_mutation(user, role_path, resource, method, body):
                     user=user, nominee=True,
                     name=nm.get("name", ""), dependant=nm.get("dependant", ""),
                     relation=nm.get("relation", ""), nominee_type=nm.get("nomineeType", ""),
-                    nominee_dob=nm.get("dob") or None, nominee_age=nm.get("age"),
+                    nominee_dob=nm.get("dob") or None, nominee_age=_coerce_int(nm.get("age")),
                     contact=nm.get("contact", ""), address=nm.get("address", ""),
+                    percent=_coerce_int(nm.get("percent")),
                     pan_copy_nominee=bool(nm.get("documents") and "PAN" in nm.get("documents", [])),
                     aadhaar_copy_nominee=bool(nm.get("documents") and "Aadhaar" in nm.get("documents", [])),
                 )

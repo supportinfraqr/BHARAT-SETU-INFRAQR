@@ -97,6 +97,7 @@ class WorkerFamilyDependant(models.Model):
     address = models.CharField(max_length=255, blank=True)
     nominee = models.BooleanField(null=True, blank=True)
     nominee_type = models.CharField(max_length=40, blank=True)
+    percent = models.SmallIntegerField(null=True, blank=True)
     pan_copy_nominee = models.BooleanField(null=True, blank=True)
     aadhaar_copy_nominee = models.BooleanField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
