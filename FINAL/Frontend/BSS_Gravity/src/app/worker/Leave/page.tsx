@@ -41,6 +41,17 @@ export default function LeavePage(){
   const rhRequested=new Set((rh?.requests ?? []).filter(r=>r.status==='Pending'||r.status==='Approved').map(r=>r.holidayDate));
   const rhOptions=(portal.holidays ?? []).filter(h=>h.typeCode==='RESTRICTED'&&!rhRequested.has(h.date));
   const rhBalance=rh?Math.max(0,rh.maxAvail-rh.used):0;
+  // Leave history also includes Restricted Holiday (and any other non-leave)
+  // requests so every request type shows in one list.
+  const rhHistory=((portal.restrictedHolidays?.requests) ?? []).map(r=>({
+    id:`rh-${r.id}`, type:'Restricted Holiday', from:r.holidayDate, to:r.holidayDate,
+    reason:r.reason||r.holidayName, submitted:r.requestedOn, status:r.status as string,
+    approver:undefined as string|undefined, comment:r.comment,
+  }));
+  const history=[
+    ...records.map(r=>({ id:r.id, type:r.type, from:r.from, to:r.to, reason:r.reason, submitted:r.submitted, status:r.status as string, approver:r.approver, comment:r.comment })),
+    ...rhHistory,
+  ].sort((a,b)=>(b.submitted||'').localeCompare(a.submitted||''));
 
 
   const pickType=(t:string)=>{setType(t);};
@@ -233,7 +244,7 @@ export default function LeavePage(){
 
     <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
       <h2 className="p-4 border-b border-gray-100 font-semibold">Leave history</h2>
-      {records.length?records.map(row=>(
+      {history.length?history.map(row=>(
         <article key={row.id} id={row.id} className="p-4 border-b border-gray-50 flex flex-wrap justify-between gap-3">
           <div><strong className="text-sm">{row.type}</strong><p className="text-xs text-gray-500 mt-1">{row.from} – {row.to} · submitted {row.submitted}</p><p className="text-xs text-gray-500 mt-1">{row.reason}</p>{(row.approver||row.comment)&&<p className="text-[11px] text-gray-400 mt-1">{row.approver} · {row.comment}</p>}</div>
           <span className={`h-fit text-[10px] font-bold px-2 py-1 rounded-full ${row.status==='Approved'?'bg-green-50 text-green-700':row.status==='Rejected'?'bg-red-50 text-red-600':'bg-orange-50 text-orange-600'}`}>{row.status}</span>

@@ -68,6 +68,12 @@ export default function HolidaysPage(){
 
   const monthLeaves=leaves.filter(r=>r.from.slice(0,7)===monthKey||r.to.slice(0,7)===monthKey);
 
+  // Approved / pending Restricted Holidays for the grid (RH is not a leave record,
+  // so without this an approved RH would never appear on the worker's calendar).
+  const rhByDate=useMemo(()=>new Map(
+    rhList.filter(r=>r.status==='Approved'||r.status==='Pending').map(r=>[r.holidayDate,r])
+  ),[rhList]);
+
   if(!portal.leaveEnabled){
     return <ModuleShell title="Holiday Calendar" description="Available once you are bound to a contractor and site." icon={CalendarHeart}>
       <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
@@ -104,7 +110,8 @@ export default function HolidaysPage(){
               <span className={`text-xs font-bold ${holiday?'text-[#F47A32]':weekend?'text-gray-400':'text-gray-700'}`}>{day}</span>
               {holiday&&<span className="mt-1 block text-[8.5px] font-bold text-orange-700 leading-tight">{holiday.name}</span>}
               {dayLeaves.map((l,idx)=><span key={`${l.id}-${idx}`} className={`mt-1 block text-[8.5px] font-bold px-1 py-0.5 rounded border leading-tight truncate ${STATUS_TONE[l.status]??STATUS_TONE.Pending}`}>{l.type} · {l.status}</span>)}
-              {!holiday&&!dayLeaves.length&&weekend&&<span className="mt-1 block text-[8.5px] text-gray-300">Weekly off</span>}
+              {rhByDate.get(date)&&<span className={`mt-1 block text-[8.5px] font-bold px-1 py-0.5 rounded border leading-tight truncate ${rhByDate.get(date)!.status==='Approved'?'bg-green-100 text-green-700 border-green-200':'bg-amber-100 text-amber-700 border-amber-200'}`}>RH · {rhByDate.get(date)!.status}</span>}
+              {!holiday&&!dayLeaves.length&&!rhByDate.get(date)&&weekend&&<span className="mt-1 block text-[8.5px] text-gray-300">Weekly off</span>}
             </div>;
           })}
         </div>
@@ -113,6 +120,7 @@ export default function HolidaysPage(){
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-green-400"/>Leave approved</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-orange-400"/>Leave pending</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-red-400"/>Leave rejected</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-400"/>Restricted Holiday (RH)</span>
         </div>
       </div>
 

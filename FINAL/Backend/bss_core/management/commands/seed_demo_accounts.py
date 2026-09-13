@@ -111,9 +111,9 @@ DEMO_JOBS = [
 
 # Leave master (drives the worker Leave ledger: opening + accrued - availed).
 DEMO_LEAVE_TYPES = [
-    {"code": "PERSONAL", "name": "Personal leave", "annual_entitlement": 12, "opening_balance": 2, "sort_order": 1},
-    {"code": "MEDICAL", "name": "Medical leave", "annual_entitlement": 12, "opening_balance": 1, "sort_order": 2},
-    {"code": "OTHER", "name": "Other configured leave", "annual_entitlement": 12, "opening_balance": 0, "sort_order": 3},
+    {"code": "PERSONAL", "name": "Personal Leave", "annual_entitlement": 12, "opening_balance": 2, "sort_order": 1},
+    {"code": "MEDICAL", "name": "Medical Leave", "annual_entitlement": 12, "opening_balance": 1, "sort_order": 2},
+    {"code": "OTHER", "name": "Other Configured Leave", "annual_entitlement": 12, "opening_balance": 0, "sort_order": 3},
 ]
 
 # Demo courses (admin-managed catalog). Each lesson embeds a YouTube video;
