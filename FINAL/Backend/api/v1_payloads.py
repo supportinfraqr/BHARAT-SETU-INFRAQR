@@ -2772,9 +2772,16 @@ def _employer_contractors(user):
         if not c:
             continue
         cp = getattr(c, "contractor_profile", None)
-        site_ids = set(Site.objects.filter(employer=user, bindings__contractor=c).values_list("id", flat=True))
-        site_ids |= set(ContractorSiteAllotment.objects.filter(
-            binding__contractor=c, binding__employer=user, status="APPROVED").values_list("site_id", flat=True))
+        # Only *active* connections count as an assigned site: an APPROVED site
+        # allotment on an ACCEPTED employer binding, or an ACCEPTED worker
+        # binding. This matches _employer_sites().contractorIds, so a site's card
+        # and its "Connected relationships" list agree — cancelled/rejected
+        # relationships no longer show up as connected.
+        site_ids = set(ContractorSiteAllotment.objects.filter(
+            binding__contractor=c, binding__employer=user,
+            binding__binding_status="ACCEPTED", status="APPROVED").values_list("site_id", flat=True))
+        site_ids |= set(WorkerContractorBinding.objects.filter(
+            contractor=c, site__employer=user, binding_status="ACCEPTED").values_list("site_id", flat=True))
         site_ids = sorted(str(x) for x in site_ids)
         wcount = WorkerContractorBinding.objects.filter(contractor=c, site__employer=user,
                                                         binding_status="ACCEPTED").count()
