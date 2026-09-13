@@ -275,8 +275,15 @@ export default function WorkerProfilePage() {
     }
     if (activeTab === 'family') {
       nominees.forEach((n, i) => {
-        if (!n.name.trim()) requiredErrors.push({ message: `Nominee ${i + 1} — name is required.`, selector: `[data-nominee-name="${n.id}"]` });
-        if (!n.relationship.trim()) requiredErrors.push({ message: `Nominee ${i + 1} — relationship is required.`, selector: `[data-nominee-relationship="${n.id}"]` });
+        const row = `Nominee ${i + 1}`;
+        if (!n.name.trim()) requiredErrors.push({ message: `${row} — name is required.`, selector: `[data-nominee-name="${n.id}"]` });
+        if (!n.relationship.trim()) requiredErrors.push({ message: `${row} — relationship is required.`, selector: `[data-nominee-relationship="${n.id}"]` });
+        if (!n.nomineeType.trim()) requiredErrors.push({ message: `${row} — nominee type is required.`, selector: `[data-nominee-type="${n.id}"]` });
+        if (!n.dob) requiredErrors.push({ message: `${row} — date of birth is required.`, selector: `[data-nominee-dob="${n.id}"]` });
+        if (!n.contact.trim()) requiredErrors.push({ message: `${row} — contact is required.`, selector: `[data-nominee-contact="${n.id}"]` });
+        if (!n.dependant.trim()) requiredErrors.push({ message: `${row} — dependant is required.`, selector: `[data-nominee-dependant="${n.id}"]` });
+        if (!n.address.trim()) requiredErrors.push({ message: `${row} — address is required.`, selector: `[data-nominee-address="${n.id}"]` });
+        if (n.documents.length === 0) requiredErrors.push({ message: `${row} — at least one identity document is required.`, selector: `[data-nominee-documents="${n.id}"]` });
       });
     }
     if (requiredErrors.length) {
@@ -647,36 +654,36 @@ export default function WorkerProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Type</label>
-                          <select value={n.nomineeType} onChange={e => updateNominee(n.id, { nomineeType: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Type <span className="text-[#FF3B30]">*</span></label>
+                          <select data-nominee-type={n.id} value={n.nomineeType} onChange={e => updateNominee(n.id, { nomineeType: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                             <option>Nominee</option>
                             <option>Family Member</option>
                             <option>Dependant</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Date of Birth</label>
-                          <input type="date" value={n.dob} onChange={e => updateNominee(n.id, { dob: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Date of Birth <span className="text-[#FF3B30]">*</span></label>
+                          <input type="date" data-nominee-dob={n.id} value={n.dob} onChange={e => updateNominee(n.id, { dob: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.dob ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
                           <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Age</label>
                           <input type="text" value={nomineeAge(n.dob)} readOnly className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F]"/>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Contact</label>
-                          <input type="tel" maxLength={10} value={n.contact} onChange={e => updateNominee(n.id, { contact: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Contact <span className="text-[#FF3B30]">*</span></label>
+                          <input type="tel" maxLength={10} data-nominee-contact={n.id} value={n.contact} onChange={e => updateNominee(n.id, { contact: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.contact.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependant</label>
-                          <input type="text" value={n.dependant} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder="Name of dependant" className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependant <span className="text-[#FF3B30]">*</span></label>
+                          <input type="text" data-nominee-dependant={n.id} value={n.dependant} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder="Name of dependant" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.dependant.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div className="md:col-span-2 lg:col-span-4">
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee / Family Address</label>
-                          <textarea rows={1} value={n.address} onChange={e => updateNominee(n.id, { address: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] resize-none"/>
+                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee / Family Address <span className="text-[#FF3B30]">*</span></label>
+                          <textarea rows={1} data-nominee-address={n.id} value={n.address} onChange={e => updateNominee(n.id, { address: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] resize-none ${saveAttempted && !n.address.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div className="md:col-span-3 lg:col-span-3">
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Identity Documents</label>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Identity Documents <span className="text-[#FF3B30]">*</span></label>
+                          <div data-nominee-documents={n.id} className={`flex flex-wrap items-center gap-2 rounded-xl ${saveAttempted && n.documents.length === 0 ? 'ring-1 ring-red-400 p-1' : ''}`}>
                             <button type="button" onClick={() => pickNomineeDoc(n.id)} className="inline-flex items-center gap-1.5 bg-white border border-black/10 px-3 py-2 rounded-lg text-[12px] font-medium hover:bg-gray-50"><Upload size={14}/> Upload PAN / Aadhaar Copy</button>
                             {n.documents.map((doc, docIndex) => (
                               <span key={doc} className="inline-flex items-center gap-1.5 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-[#2F9E67] px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"><FileText size={12}/>{doc}<button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc}`} className="text-gray-400 hover:text-red-600"><Trash2 size={11}/></button></span>
