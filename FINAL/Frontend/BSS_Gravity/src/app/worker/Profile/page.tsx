@@ -26,13 +26,23 @@ export default function WorkerProfilePage() {
 
   // ── Multiple nominees (dynamic rows) with individual share % ─────────────
   type Nominee = { id: number; name: string; dependant: string; nomineeType: string; relationship: string; dob: string; contact: string; address: string; documents: string[]; percent: number };
-  const [nominees, setNominees] = useState<Nominee[]>(() =>
-    (worker.family?.nominees ?? []).map(n => ({
+  // Split 100% across the nominees as evenly as possible (remainder on the last).
+  const balanceNominees = (list: Nominee[]): Nominee[] => {
+    if (list.length === 0) return list;
+    const base = Math.floor(100 / list.length);
+    const remainder = 100 - base * list.length;
+    return list.map((n, i) => ({ ...n, percent: base + (i === list.length - 1 ? remainder : 0) }));
+  };
+  const [nominees, setNominees] = useState<Nominee[]>(() => {
+    const list = (worker.family?.nominees ?? []).map(n => ({
       id: n.id, name: n.name, dependant: n.dependant, nomineeType: n.nomineeType,
       relationship: n.relation, dob: n.dob, contact: n.contact, address: n.address,
       documents: n.documents ?? [], percent: n.percent ?? 100,
-    })),
-  );
+    }));
+    const total = list.reduce((sum, n) => sum + (Number.isFinite(n.percent) ? n.percent : 0), 0);
+    // Repair a previously-saved total that isn't 100 so the section opens balanced.
+    return list.length > 0 && total !== 100 ? balanceNominees(list) : list;
+  });
   const [nextNomineeId, setNextNomineeId] = useState(() => Math.max(0, ...(worker.family?.nominees ?? []).map(n => n.id)) + 1);
   const [docTargetId, setDocTargetId] = useState<number | null>(null);
   // Disability: Status drives whether Type / % is applicable.
@@ -58,8 +68,8 @@ export default function WorkerProfilePage() {
     return String(Math.max(0, age));
   };
   const updateNominee = (id: number, patch: Partial<Nominee>) => setNominees(current => current.map(n => n.id === id ? { ...n, ...patch } : n));
-  const addNominee = () => { setNominees(current => [...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: current.length === 0 ? 100 : 0 }]); setNextNomineeId(id => id + 1); };
-  const removeNominee = (id: number) => setNominees(current => current.filter(n => n.id !== id));
+  const addNominee = () => { setNominees(current => balanceNominees([...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: 0 }])); setNextNomineeId(id => id + 1); };
+  const removeNominee = (id: number) => setNominees(current => balanceNominees(current.filter(n => n.id !== id)));
   const pickNomineeDoc = (id: number) => { setDocTargetId(id); window.setTimeout(() => nomineeFileRef.current?.click(), 0); };
   const addNomineeDoc = (file?: File) => {
     if (!file || docTargetId === null) return;
@@ -70,13 +80,7 @@ export default function WorkerProfilePage() {
     updateNominee(docTargetId, { documents: [...(nominees.find(n => n.id === docTargetId)?.documents ?? []), label] });
     setDocTargetId(null);
   };
-  const splitEqually = () => {
-    if (!nominees.length) return;
-    const base = Math.floor(100 / nominees.length);
-    const remainder = 100 - base * nominees.length;
-    setNominees(current => current.map((n, index) => ({ ...n, percent: base + (index === current.length - 1 ? remainder : 0) })));
-    void remainder;
-  };
+  const splitEqually = () => setNominees(current => balanceNominees(current));
   const segColors = ['bg-[#073B67]', 'bg-[#F47A32]', 'bg-[#2F9E67]', 'bg-[#7A5AF8]', 'bg-[#0EA5E9]', 'bg-[#E11D48]'];
   
   // ── Government ID integrations (sourced from the worker profile) ────────
@@ -308,11 +312,17 @@ export default function WorkerProfilePage() {
       if (activeTab === 'family') {
         patch.family = {
           ...(patch.family ?? {}),
-          nominees: nominees.filter(n => n.name.trim()).map(n => ({
-            name: n.name.trim(), dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
-            dob: n.dob, age: nomineeAge(n.dob), contact: n.contact, address: n.address, documents: n.documents,
-            percent: n.percent,
-          })),
+          nominees: (() => {
+            const named = nominees.filter(n => n.name.trim());
+            const namedTotal = named.reduce((s, n) => s + (Number.isFinite(n.percent) ? n.percent : 0), 0);
+            // Never save an unbalanced distribution — auto-normalise to 100%.
+            const toSave = named.length > 0 && namedTotal !== 100 ? balanceNominees(named) : named;
+            return toSave.map(n => ({
+              name: n.name.trim(), dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
+              dob: n.dob, age: nomineeAge(n.dob), contact: n.contact, address: n.address, documents: n.documents,
+              percent: n.percent,
+            }));
+          })(),
         };
       }
       await saveWorker(patch as Partial<WorkerRecord>);
@@ -648,33 +658,36 @@ export default function WorkerProfilePage() {
                           <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Share %</label>
                           <div className="relative">
                             <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-                            <input type="number" min={0} max={100} step={1} value={Number.isFinite(n.percent) ? n.percent : 0} onChange={e => updateNominee(n.id, { percent: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) })} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                            <input type="number" min={0} max={100} step={1} value={nominees.length === 1 ? 100 : (Number.isFinite(n.percent) ? n.percent : 0)} onChange={e => updateNominee(n.id, { percent: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) })} disabled={nominees.length === 1} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-500"/>
                           </div>
+                          {nominees.length === 1 && <p className="text-[10px] text-gray-400 mt-1">A single nominee receives 100%.</p>}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Distribution summary */}
-                <div className="mt-5 rounded-[16px] border border-black/10 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[12px] font-semibold text-[#1D1D1F]">Nominee share distribution</p>
-                    <span className={`text-[12px] font-bold ${percentBalanced ? 'text-[#2F9E67]' : 'text-[#FF3B30]'}`}>{totalPercent}% of 100%</span>
-                  </div>
-                  {nominees.length > 1 && (
-                    <div className="mt-3 flex h-2.5 rounded-full overflow-hidden bg-gray-100">
-                      {nominees.map((n, index) => <span key={n.id} className={`h-full ${segColors[index % segColors.length]}`} style={{ width: `${n.percent}%` }} title={`${n.name || 'Nominee ' + (index + 1)} · ${n.percent}%`}/>)}
+                {/* Distribution summary — only meaningful once a nominee exists */}
+                {nominees.length > 0 && (
+                  <div className="mt-5 rounded-[16px] border border-black/10 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[12px] font-semibold text-[#1D1D1F]">Nominee share distribution</p>
+                      <span className={`text-[12px] font-bold ${percentBalanced ? 'text-[#2F9E67]' : 'text-[#F47A32]'}`}>{percentBalanced ? '100% · balanced' : `${totalPercent}% of 100%`}</span>
                     </div>
-                  )}
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                    {nominees.map((n, index) => (
-                      <span key={n.id} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-600"><span className={`w-2.5 h-2.5 rounded-full ${segColors[index % segColors.length]}`}/>{n.name || ('Nominee ' + (index + 1))} — {n.percent}%</span>
-                    ))}
+                    {nominees.length > 1 && (
+                      <div className="mt-3 flex h-2.5 rounded-full overflow-hidden bg-gray-100">
+                        {nominees.map((n, index) => <span key={n.id} className={`h-full ${segColors[index % segColors.length]}`} style={{ width: `${n.percent}%` }} title={`${n.name || 'Nominee ' + (index + 1)} · ${n.percent}%`}/>)}
+                      </div>
+                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                      {nominees.map((n, index) => (
+                        <span key={n.id} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-600"><span className={`w-2.5 h-2.5 rounded-full ${segColors[index % segColors.length]}`}/>{n.name || ('Nominee ' + (index + 1))} — {n.percent}%</span>
+                      ))}
+                    </div>
+                    {!percentBalanced && <p className="mt-3 text-[12px] text-[#F47A32] font-semibold flex items-center gap-1.5">Shares add up to {totalPercent}%. They must total exactly 100% — adjust them, or split equally.</p>}
+                    {nominees.length > 1 && <button type="button" onClick={splitEqually} className="mt-3 inline-flex items-center gap-1.5 text-[#0066CC] text-[12px] font-semibold hover:underline"><RefreshCw size={13}/> Split equally</button>}
                   </div>
-                  {!percentBalanced && <p className="mt-3 text-[12px] text-[#FF3B30] font-semibold flex items-center gap-1.5">Nominee shares must total exactly 100%. Adjust the percentages or use the button to split equally.</p>}
-                  {nominees.length > 1 && <button type="button" onClick={splitEqually} className="mt-3 inline-flex items-center gap-1.5 text-[#0066CC] text-[12px] font-semibold hover:underline"><RefreshCw size={13}/> Split equally</button>}
-                </div>
+                )}
               </div>
             </div>
           )}
