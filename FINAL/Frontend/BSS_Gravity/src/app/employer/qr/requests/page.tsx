@@ -106,16 +106,38 @@ export default function EmployerQrBindingRequestsPage() {
       if (row.status === 'Pending') {
         // A contractor↔employer binding the employer already consented to (they
         // scanned the contractor's QR) only needs the contractor's consent.
-        if (row.bindingId && row.consentEmployer) return <span className="text-orange-700 text-xs font-semibold">Awaiting contractor</span>;
-        return <div className="flex gap-2"><button disabled={busy} onClick={() => setConfirm({ row, kind: 'approve' })} className="text-green-700 font-semibold">Approve</button><button disabled={busy} onClick={() => setConfirm({ row, kind: 'reject' })} className="text-red-700 font-semibold">Reject</button></div>;
+        if (row.bindingId && row.consentEmployer) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>;
+        return (
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={busy}
+              onClick={() => setConfirm({ row, kind: 'approve' })}
+              className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+            >
+              Approve
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => setConfirm({ row, kind: 'reject' })}
+              className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50"
+            >
+              Reject
+            </button>
+          </div>
+        );
       }
       if (row.bindingId && (row.status === 'Accepted' || row.status === 'Approved')) {
         if (row.unbindRequested) {
           return row.unbindConsentEmployer
-            ? <span className="text-orange-700 text-xs font-semibold">Awaiting contractor</span>
-            : <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="text-red-600 font-semibold">Confirm unbind</button>;
+            ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
+            : <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button>;
         }
-        return <div className="flex gap-2"><button disabled={busy} onClick={() => setAllotFor(row)} className="text-[#073B67] font-semibold">Site permissions</button><button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="text-red-600 font-semibold">Unbind</button></div>;
+        return (
+          <div className="flex items-center gap-1.5">
+            <button disabled={busy} onClick={() => setAllotFor(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Unbind</button>
+          </div>
+        );
       }
       return <span className="text-gray-400">—</span>;
     } },

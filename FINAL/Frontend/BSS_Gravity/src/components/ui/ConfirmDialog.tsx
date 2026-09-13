@@ -34,52 +34,56 @@ export default function ConfirmDialog({
   const positive = tone === "positive";
   return (
     <div
-      className="fixed inset-0 z-[95] grid place-items-center p-4 bg-slate-950/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[95] flex items-center justify-center p-4 sm:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-label={title}
       onClick={() => { if (!busy) onCancel(); }}
     >
       <div
-        className="w-full max-w-md bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-auto animate-in zoom-in-95 fade-in duration-200"
         onClick={event => event.stopPropagation()}
       >
-        <div className="relative p-6 pb-5 text-center">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            aria-label="Close"
-            className="absolute right-4 top-4 w-9 h-9 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors disabled:opacity-40"
-          >
-            <X size={17} />
-          </button>
-          <span className={`mx-auto w-16 h-16 rounded-full grid place-items-center ${positive ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
-            {positive ? <CheckCircle2 size={30} /> : <XCircle size={30} />}
-          </span>
-          <h2 className="mt-4 text-lg font-bold text-gray-950">{title}</h2>
-          <p className="mt-1.5 text-sm text-gray-500 leading-6">{description}</p>
+        {/* Header decoration bar */}
+        <div className={`h-2.5 w-full ${positive ? "bg-gradient-to-r from-emerald-500 to-teal-600" : "bg-gradient-to-r from-rose-500 to-red-600"}`} />
+
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          aria-label="Close"
+          className="absolute right-4 top-5 w-8 h-8 grid place-items-center rounded-full bg-gray-50 border border-gray-200/60 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors disabled:opacity-40"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="p-6 pt-5 text-center">
+          <div className={`mx-auto w-14 h-14 rounded-2xl grid place-items-center shadow-inner ${positive ? "bg-emerald-50 text-emerald-600 border border-emerald-100/80" : "bg-rose-50 text-rose-600 border border-rose-100/80"}`}>
+            {positive ? <CheckCircle2 size={32} /> : <XCircle size={32} />}
+          </div>
+          <h2 className="mt-3.5 text-xl font-bold text-gray-900 tracking-tight">{title}</h2>
+          <p className="mt-1.5 text-xs sm:text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">{description}</p>
         </div>
 
         {details.length > 0 && (
-          <div className="px-6">
-            <dl className="rounded-2xl border border-gray-100 bg-gray-50/70 divide-y divide-gray-100 overflow-hidden">
+          <div className="px-6 pb-2">
+            <div className="rounded-2xl border border-gray-200/80 bg-slate-50/70 p-1 divide-y divide-gray-200/60">
               {details.map(detail => (
-                <div key={detail.label} className="flex items-center justify-between gap-4 px-4 py-3">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{detail.label}</dt>
-                  <dd className="text-sm font-semibold text-gray-800 text-right break-words">{detail.value}</dd>
+                <div key={detail.label} className="flex items-center justify-between gap-4 px-4 py-2.5">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{detail.label}</dt>
+                  <dd className="text-xs sm:text-sm font-semibold text-gray-900 font-mono text-right break-words max-w-[65%]">{detail.value}</dd>
                 </div>
               ))}
-            </dl>
+            </div>
           </div>
         )}
 
-        <div className="p-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
+        <div className="p-6 pt-4 flex flex-col sm:flex-row gap-2.5">
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="h-11 px-5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex-1 h-11 px-4 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm font-bold text-gray-700 hover:bg-gray-50 active:scale-[0.98] transition-all disabled:opacity-50"
           >
             Cancel
           </button>
@@ -87,7 +91,7 @@ export default function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className={`h-11 px-6 rounded-xl text-white text-sm font-bold shadow-sm transition-all disabled:opacity-60 disabled:cursor-wait ${positive ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
+            className={`flex-1 h-11 px-4 rounded-xl text-white text-xs sm:text-sm font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait ${positive ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20" : "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20"}`}
           >
             {busy ? "Working…" : confirmLabel}
           </button>
@@ -96,3 +100,4 @@ export default function ConfirmDialog({
     </div>
   );
 }
+
