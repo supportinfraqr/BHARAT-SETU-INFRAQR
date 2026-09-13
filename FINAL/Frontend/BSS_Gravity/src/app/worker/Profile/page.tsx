@@ -557,7 +557,7 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <input name="identity.disabilityTypePct" type="text" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} placeholder={disabilityStatus === 'Yes' ? 'e.g. Locomotor 40%' : 'Not applicable'} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400" />
+                    <input name="identity.disabilityTypePct" type="text" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} placeholder={disabilityStatus === 'Yes' ? 'e.g. Locomotor 40%' : 'Not applicable'} className="bss-cursor-blocked w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400" />
                     {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please specify the disability type / percentage.</p>}
                  </div>
               </div>

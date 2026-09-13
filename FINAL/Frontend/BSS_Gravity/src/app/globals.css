@@ -85,6 +85,13 @@ textarea[aria-readonly="true"] {
   cursor: default !important;
 }
 
+/* Opt-in: a disabled field that should show the "blocked" cursor instead of
+   the default arrow (e.g. Disability Type / % when Disability Status = No). */
+.bss-cursor-blocked:disabled,
+.bss-cursor-blocked[readonly] {
+  cursor: not-allowed !important;
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
