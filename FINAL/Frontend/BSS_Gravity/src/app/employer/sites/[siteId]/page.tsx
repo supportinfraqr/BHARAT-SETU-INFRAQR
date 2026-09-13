@@ -29,8 +29,8 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 
   const current: EmployerSite = site;
   const data = (current.data ?? {}) as Record<string, unknown>;
-  const contractors = employer.contractors.filter(c => c.siteIds?.includes(current.id));
-  const siteWorkers = employer.workers.filter(w => w.siteId === current.id);
+  const contractors = employer.contractors.filter(c => c.siteIds?.some(id => String(id) === String(current.id)));
+  const siteWorkers = employer.workers.filter(w => String(w.siteId) === String(current.id));
 
   function startEdit() {
     setDraft({ ...data });

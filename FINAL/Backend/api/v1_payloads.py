@@ -2736,7 +2736,7 @@ def _employer_contractors(user):
         site_ids = set(Site.objects.filter(employer=user, bindings__contractor=c).values_list("id", flat=True))
         site_ids |= set(ContractorSiteAllotment.objects.filter(
             binding__contractor=c, binding__employer=user, status="APPROVED").values_list("site_id", flat=True))
-        site_ids = sorted(site_ids)
+        site_ids = sorted(str(x) for x in site_ids)
         wcount = WorkerContractorBinding.objects.filter(contractor=c, site__employer=user,
                                                         binding_status="ACCEPTED").count()
         # Relationship status reflects the actual binding with this employer,
@@ -2777,7 +2777,7 @@ def _employer_workers(user):
             "mobile": _d(wi.mobile_number if wi else ""),
             "contractorId": b.contractor_id,
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
-            "siteId": b.site_id, "site": b.site.site_name if b.site else "",
+            "siteId": str(b.site_id), "site": b.site.site_name if b.site else "",
             "designation": _d(b.designation),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "attendance": "PRESENT", "compliance": 0,
