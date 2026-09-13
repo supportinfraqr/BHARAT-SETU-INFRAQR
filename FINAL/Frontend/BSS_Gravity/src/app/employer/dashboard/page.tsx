@@ -30,7 +30,7 @@ export default function EmployerDashboardPage() {
   const actions = [
     { id:'payroll', count:payrollReview, label:'payroll record(s) need review — conflicting Employer / Contractor sources', href:'/employer/payroll?tab=exceptions', severity: payrollReview ? 'red' : 'green' },
     { id:'gatepass', count:pendingGate.length, label:'gate pass requests require approval', href:'/employer/gate-pass?status=Pending', severity: pendingGate.length ? 'orange' : 'green' },
-    { id:'approvals', count:pending.length, label:'contractor or worker binding requests pending', href:'/employer/approvals', severity: pending.length ? 'orange' : 'green' },
+    { id:'approvals', count:pending.length, label:'contractor or worker binding requests pending', href:'/employer/qr/requests', severity: pending.length ? 'orange' : 'green' },
     { id:'submissions', count:pendingSubmissions.length, label:'contractor submissions need review', href:'/employer/compliance-submission', severity: pendingSubmissions.length ? 'blue' : 'green' },
     { id:'documents', count:employer.workerDocuments.filter(d => ['Expiring','Missing','Pending'].includes(d.status)).length, label:'workers have expiring or missing documents', href:'/employer/admin/documents', severity: employer.workerDocuments.filter(d => ['Expiring','Missing','Pending'].includes(d.status)).length ? 'red' : 'green' },
     { id:'sites', count:attentionSites.length, label:'sites have overdue compliance', href:'/employer/site-overview', severity: attentionSites.length ? 'red' : 'green' },
@@ -51,7 +51,7 @@ export default function EmployerDashboardPage() {
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5"><CheckCircle2 size={11}/> VERIFIED</span>
         </div>
       </div>
-      <Link href="/employer/approvals" className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-black">Review approvals <ArrowRight size={15}/></Link>
+      <Link href="/employer/qr/requests" className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-black">Review approvals <ArrowRight size={15}/></Link>
     </header>
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Employer key metrics">
@@ -98,8 +98,8 @@ export default function EmployerDashboardPage() {
 
         <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
           <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><Clock3 size={16} className="text-orange-500"/>{t('ui.approvalQueue')}</h2></header>
-          <div className="divide-y divide-gray-100">{pending.slice(0, 4).map(item => <Link href="/employer/approvals" key={item.id} className="block p-4 hover:bg-gray-50"><div className="flex justify-between gap-2"><p className="text-sm font-semibold text-gray-900">{item.name}</p><span className="text-[9px] font-bold uppercase text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 h-fit">{item.entityType}</span></div><p className="text-xs text-gray-500 mt-1">{item.site}</p><p className="text-[11px] text-gray-400 mt-1">{item.checks.length} checks awaiting review</p></Link>)}</div>
-          <Link href="/employer/approvals" className="h-11 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center">Review {pending.length} pending requests</Link>
+          <div className="divide-y divide-gray-100">{pending.slice(0, 4).map(item => <Link href="/employer/qr/requests" key={item.id} className="block p-4 hover:bg-gray-50"><div className="flex justify-between gap-2"><p className="text-sm font-semibold text-gray-900">{item.name}</p><span className="text-[9px] font-bold uppercase text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 h-fit">{item.entityType}</span></div><p className="text-xs text-gray-500 mt-1">{item.site}</p><p className="text-[11px] text-gray-400 mt-1">{item.checks.length} checks awaiting review</p></Link>)}</div>
+          <Link href="/employer/qr/requests" className="h-11 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center">Review {pending.length} pending requests</Link>
         </section>
 
         <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">

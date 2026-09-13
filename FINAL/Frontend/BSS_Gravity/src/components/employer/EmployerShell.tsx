@@ -97,7 +97,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="hidden sm:block"><LanguageSelect compact/></div>
-          <NotificationBell viewAllHref="/employer/approvals"/>
+          <NotificationBell viewAllHref="/employer/notifications"/>
           <div className="relative">
             <button type="button" onClick={() => setProfile(value => !value)} aria-expanded={profile} className="min-h-11 flex items-center gap-2 rounded-full transition-colors duration-150 hover:bg-gray-100 p-1 pr-2">
               <span className="w-8 h-8 rounded-full bg-[#073B67] text-white flex items-center justify-center font-bold">{employer.identity.company.charAt(0)}</span>

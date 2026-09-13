@@ -34,8 +34,8 @@ const contractorNotificationSeeds: WorkerNotification[] = [
 ];
 
 const employerNotificationSeeds: WorkerNotification[] = [
-  { id:'employer-approval-contractor', entityId:'APR-001', category:'Approvals', title:'Contractor approval required', message:'Metro Civil Works requested access to Mumbai Metro Line 3.', createdAt:'2026-08-29T10:15:00+05:30', href:'/employer/approvals', actionLabel:'Review request', priority:'critical', requiresAction:true, read:false, resolved:false },
-  { id:'employer-approval-worker', entityId:'APR-004', category:'Approvals', title:'Worker compliance approval required', message:'Naveen Yadav submitted a medical renewal and work permit.', createdAt:'2026-08-29T09:30:00+05:30', href:'/employer/approvals', actionLabel:'Review worker', priority:'high', requiresAction:true, read:false, resolved:false },
+  { id:'employer-approval-contractor', entityId:'APR-001', category:'Approvals', title:'Contractor approval required', message:'Metro Civil Works requested access to Mumbai Metro Line 3.', createdAt:'2026-08-29T10:15:00+05:30', href:'/employer/qr/requests', actionLabel:'Review request', priority:'critical', requiresAction:true, read:false, resolved:false },
+  { id:'employer-approval-worker', entityId:'APR-004', category:'Approvals', title:'Worker compliance approval required', message:'Naveen Yadav submitted a medical renewal and work permit.', createdAt:'2026-08-29T09:30:00+05:30', href:'/employer/qr/requests', actionLabel:'Review worker', priority:'high', requiresAction:true, read:false, resolved:false },
   { id:'employer-compliance-overdue', entityId:'ECR-005', category:'Compliance', title:'Statutory filing overdue', message:'SafeBuild Infra has an overdue PF filing for Pune Industrial Campus.', createdAt:'2026-08-28T16:00:00+05:30', href:'/employer/compliance', actionLabel:'Open compliance', priority:'critical', requiresAction:true, read:false, resolved:false },
 ];
 
