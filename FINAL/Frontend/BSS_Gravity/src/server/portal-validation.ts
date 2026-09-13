@@ -85,8 +85,13 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     if (advanceAction !== 'request') requiredString(body, 'id', 40);
   }
   if (role === 'Contractor' && resource === 'site-calendar' && method !== 'DELETE') {
-    if (String(body.kind ?? 'holiday').toLowerCase() === 'leavepolicy') {
+    const kind = String(body.kind ?? 'holiday').toLowerCase();
+    if (kind === 'leavepolicy') {
       requiredString(body, 'leaveType', 80);
+    } else if (kind === 'restrictedpolicy' || kind === 'rhpolicy') {
+      // Restricted Holiday policy carries only numeric allotment / maxAvail.
+    } else if (kind === 'copy' || kind === 'copytosites') {
+      // Copy setup to other sites carries only siteId / targetSiteIds.
     } else {
       requiredString(body, 'name', 120);
       if (!isoDate.test(requiredString(body, 'date', 10))) fail('Enter a valid holiday date.');
@@ -200,5 +205,12 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (role === 'Employer' && resource === 'submissions' && method === 'PATCH') {
     requiredString(body, 'id', 120);
     if (!['Verified', 'Returned'].includes(String(body.status))) fail('Select a valid submission decision.');
+  }
+  if (role === 'Worker' && resource === 'restricted-holiday' && method === 'POST') {
+    if (!isoDate.test(requiredString(body, 'holidayDate', 10))) fail('Choose a valid restricted holiday date.');
+  }
+  if (role === 'Contractor' && resource === 'restricted-holiday' && method === 'PATCH') {
+    requiredString(body, 'id', 40);
+    if (!['Approved', 'Rejected'].includes(String(body.status))) fail('Select a valid decision.');
   }
 }

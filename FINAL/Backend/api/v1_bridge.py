@@ -1779,6 +1779,10 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_rozgar_apply(user, body)
     if resource == "applications" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_rozgar_respond(user, body)
+    if resource == "restricted-holiday" and role_path == "worker" and method == "POST":
+        return _handle_rh_request(user, body)
+    if resource == "restricted-holiday" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_rh_decide(user, body)
     if resource == "attendance" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_mark_attendance(user, body)
     if resource == "leave" and role_path == "worker" and method == "POST":
@@ -2357,6 +2361,53 @@ def _handle_site_calendar(user, body, method):
         )
         return policy.id
 
+    if kind in ("restrictedpolicy", "restricted-policy", "rhpolicy", "rh-policy"):
+        # Restricted Holiday (RH) allowance for the site. `allotment` is how many
+        # optional holidays are offered; `maxAvail` is how many a worker may
+        # actually take (with prior approval).
+        if body.get("allotment") is not None:
+            site.restricted_holiday_allotment = max(0, min(30, int(body.get("allotment") or 0)))
+        if body.get("maxAvail") is not None:
+            site.restricted_holiday_max_avail = max(0, min(30, int(body.get("maxAvail") or 0)))
+        site.save(update_fields=["restricted_holiday_allotment", "restricted_holiday_max_avail", "updated_at"])
+        return site.id
+
+    if kind in ("copy", "copytosites", "copy-to-sites"):
+        # Copy this site's whole calendar (holidays + leave policies + RH policy)
+        # to other allotted sites. targetSiteIds omitted/"all" => every other site.
+        allowed = set(_contractor_site_ids(user))
+        raw_targets = body.get("targetSiteIds")
+        if raw_targets in (None, "", "all", "ALL"):
+            target_ids = allowed - {site.id}
+        else:
+            try:
+                target_ids = {int(t) for t in raw_targets} & allowed
+            except (TypeError, ValueError):
+                target_ids = set()
+            target_ids -= {site.id}
+        if not target_ids:
+            raise PortalMutationError("No other allotted sites to copy to.", 400)
+        src_holidays = list(SiteHoliday.objects.filter(site=site))
+        src_policies = list(SiteLeavePolicy.objects.filter(site=site, is_active=True))
+        copied = 0
+        for tsite in Site.objects.filter(id__in=target_ids):
+            tsite.restricted_holiday_allotment = site.restricted_holiday_allotment
+            tsite.restricted_holiday_max_avail = site.restricted_holiday_max_avail
+            tsite.save(update_fields=["restricted_holiday_allotment", "restricted_holiday_max_avail", "updated_at"])
+            for h in src_holidays:
+                SiteHoliday.objects.get_or_create(
+                    site=tsite, date=h.date, name=h.name,
+                    defaults={"holiday_type": h.holiday_type, "is_paid": h.is_paid, "note": h.note},
+                )
+            for p in src_policies:
+                SiteLeavePolicy.objects.update_or_create(
+                    site=tsite, leave_type=p.leave_type,
+                    defaults={"annual_entitlement": p.annual_entitlement,
+                              "opening_balance": p.opening_balance, "is_active": True},
+                )
+            copied += 1
+        return {"copied": copied, "sourceSiteId": site.id}
+
     # Holiday entry
     holiday = SiteHoliday.objects.filter(pk=record_id, site=site).first() if record_id else None
     if holiday is None:
@@ -2380,15 +2431,26 @@ def _handle_site_calendar(user, body, method):
 
 
 def _handle_leave_apply(user, body):
-    """Worker leave application -> LeaveRequest (PENDING, approved by bound contractor)."""
-    from bss_core.models import LeaveRequest, LeaveType
+    """Worker leave application -> LeaveRequest (PENDING, approved by bound contractor).
+
+    The leave type must be one the contractor configured for the worker's site
+    (Site Calendar & Leave Setup) — never a global default."""
+    from bss_core.models import LeaveRequest, SiteLeavePolicy
+
+    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site").first())
+    if binding is None or binding.site is None:
+        raise PortalMutationError(
+            "Leave is available once you are bound to a contractor and site.", 403)
 
     type_name = str(body.get("type") or "").strip()
-    leave_type = LeaveType.objects.filter(name__iexact=type_name, is_active=True).first()
-    if leave_type is None:
-        leave_type = LeaveType.objects.filter(is_active=True).first()
-    if leave_type is None:
-        raise PortalMutationError("No leave types are configured.", 400)
+    policy = (SiteLeavePolicy.objects
+              .filter(site=binding.site, is_active=True, leave_type__name__iexact=type_name)
+              .select_related("leave_type").first())
+    if policy is None:
+        raise PortalMutationError(
+            "That leave type is not configured for your site. Ask your contractor to set it up.", 400)
+    leave_type = policy.leave_type
 
     from_date = _parse_iso_date(body.get("from"))
     to_date = _parse_iso_date(body.get("to"))
@@ -2396,11 +2458,6 @@ def _handle_leave_apply(user, body):
         raise PortalMutationError("Enter a valid leave date range.", 400)
     days = (to_date - from_date).days + 1
 
-    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
-               .select_related("site").first())
-    if binding is None or binding.site is None:
-        raise PortalMutationError(
-            "Leave is available once you are bound to a contractor and site.", 403)
     request_obj = LeaveRequest.objects.create(
         worker=user,
         leave_type=leave_type,
@@ -2414,6 +2471,80 @@ def _handle_leave_apply(user, body):
         status="PENDING",
     )
     return payloads._leave_row(request_obj)
+
+
+def _handle_rh_request(user, body):
+    """Worker requests to avail a Restricted Holiday (RH) at their site.
+
+    Needs the contractor's prior approval and is capped by the site's
+    ``restricted_holiday_max_avail`` quota."""
+    from bss_core.models import RestrictedHolidayRequest, SiteHoliday
+
+    binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
+               .select_related("site").first())
+    if binding is None or binding.site is None:
+        raise PortalMutationError(
+            "Restricted holidays are available once you are bound to a contractor and site.", 403)
+    site = binding.site
+    holiday_date = _parse_iso_date(body.get("holidayDate"))
+    if not holiday_date:
+        raise PortalMutationError("Choose a restricted holiday date.", 400)
+    holiday = SiteHoliday.objects.filter(site=site, date=holiday_date, holiday_type="RESTRICTED").first()
+    if holiday is None:
+        raise PortalMutationError("That date is not a restricted holiday for your site.", 400)
+    if RestrictedHolidayRequest.objects.filter(
+            worker=user, site=site, holiday_date=holiday_date,
+            status__in=("PENDING", "APPROVED")).exists():
+        raise PortalMutationError("You have already requested this restricted holiday.", 409)
+    used = RestrictedHolidayRequest.objects.filter(
+        worker=user, site=site, status__in=("PENDING", "APPROVED")).count()
+    if used >= site.restricted_holiday_max_avail:
+        raise PortalMutationError(
+            f"You can avail at most {site.restricted_holiday_max_avail} restricted holiday(s) this year.", 409)
+    req = RestrictedHolidayRequest.objects.create(
+        worker=user, contractor=binding.contractor, site=site, holiday=holiday,
+        holiday_date=holiday_date, holiday_name=str(holiday.name or "")[:120],
+        reason=str(body.get("reason") or "")[:500], status="PENDING",
+    )
+    _create_notification(
+        user=binding.contractor,
+        title="Restricted holiday request",
+        body=(f"{payloads._notification_actor_name(user)} requested a restricted holiday on "
+              f"{holiday_date:%d %b %Y} ({holiday.name}). Approve to grant it."),
+        notif_type="APPROVAL",
+        link="/contractor/leave",
+    )
+    return payloads._rh_request_row(req)
+
+
+def _handle_rh_decide(user, body):
+    """Contractor approves / rejects a worker's restricted-holiday request."""
+    from bss_core.models import RestrictedHolidayRequest
+
+    req = RestrictedHolidayRequest.objects.filter(pk=body.get("id"), contractor=user).first()
+    if req is None:
+        raise PortalMutationError("Restricted holiday request not found for your account.", 404)
+    decision = str(body.get("status") or "").strip().upper()
+    mapping = {"APPROVED": "APPROVED", "APPROVE": "APPROVED", "ACCEPTED": "APPROVED",
+               "REJECTED": "REJECTED", "REJECT": "REJECTED"}
+    if decision not in mapping:
+        raise PortalMutationError("Select a valid decision.", 400)
+    req.status = mapping[decision]
+    req.decided_by = user
+    req.decided_at = timezone.now()
+    if body.get("comment") is not None:
+        req.comment = str(body.get("comment") or "")[:500]
+    req.save(update_fields=["status", "decided_by", "decided_at", "comment", "updated_at"])
+    approved = req.status == "APPROVED"
+    _create_notification(
+        user=req.worker,
+        title="Restricted holiday " + ("approved" if approved else "declined"),
+        body=(f"Your restricted holiday request for {req.holiday_date:%d %b %Y} "
+              f"was {'approved' if approved else 'declined'}."),
+        notif_type="APPROVAL",
+        link="/worker/Holidays",
+    )
+    return payloads._rh_request_row(req)
 
 
 def _handle_leave_decide(user, body):

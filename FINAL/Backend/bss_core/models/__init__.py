@@ -63,6 +63,7 @@ from .operations import (
     GratuityApplication,
     SiteLeavePolicy,
     SiteHoliday,
+    RestrictedHolidayRequest,
 )
 from .learning import (
     Course,

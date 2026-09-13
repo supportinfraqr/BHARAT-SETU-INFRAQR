@@ -35,6 +35,11 @@ class Site(models.Model):
     statutory_applicability = models.CharField(max_length=255, blank=True)
     reporting_period = models.CharField(max_length=40, blank=True)
     preferred_calendar = models.CharField(max_length=40, blank=True)
+    # Restricted Holiday (RH) policy: how many optional holidays are offered to
+    # workers at this site, and how many they may actually avail per year (with
+    # prior contractor approval).
+    restricted_holiday_allotment = models.PositiveSmallIntegerField(default=4)
+    restricted_holiday_max_avail = models.PositiveSmallIntegerField(default=2)
     project_head = models.CharField(max_length=120, blank=True)
     site_hr = models.CharField(max_length=120, blank=True)
     safety_officer = models.CharField(max_length=120, blank=True)

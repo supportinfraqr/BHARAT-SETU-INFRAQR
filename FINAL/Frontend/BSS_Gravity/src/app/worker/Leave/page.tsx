@@ -6,6 +6,7 @@ import {useWorker} from '@/contexts/WorkerContext';
 type Leave=ReturnType<typeof useWorker>['portal']['leaveRecords'][number];
 
 const quickReasons=[
+  {label:'Festival', emoji:'🪔'},
   {label:'Fever / not well', emoji:'🤒'},
   {label:'Family function', emoji:'🎉'},
   {label:'Emergency at home', emoji:'🏠'},
@@ -24,12 +25,22 @@ export default function LeavePage(){
   const [to,setTo]=useState('');
   const [reason,setReason]=useState('');
   const [days,setDays]=useState(0);
+  const [rhDate,setRhDate]=useState('');
 
   // Leave ledger comes from the backend (opening + accrued − availed = balance).
   const FY_LABEL='Current financial year · 1 Apr – 31 Mar';
   const FY_AS_ON_LABEL='as on today';
   const balanceByType=new Map((portal.leaveBalance ?? []).map(b=>[b.type,b]));
   const leaveLedger=(leaveType:string)=>balanceByType.get(leaveType) ?? {opening:0,accrued:0,availed:0,pending:0,balance:0};
+  const rh=portal.restrictedHolidays;
+  // Restricted Holiday (RH) is offered as a selectable leave option too. It is
+  // not a leave type — applying for it raises an RH request for a specific
+  // restricted holiday (with the contractor's prior approval).
+  const RH_TYPE='Restricted Holiday (RH)';
+  const isRh=type===RH_TYPE;
+  const rhRequested=new Set((rh?.requests ?? []).filter(r=>r.status==='Pending'||r.status==='Approved').map(r=>r.holidayDate));
+  const rhOptions=(portal.holidays ?? []).filter(h=>h.typeCode==='RESTRICTED'&&!rhRequested.has(h.date));
+  const rhBalance=rh?Math.max(0,rh.maxAvail-rh.used):0;
 
 
   const pickType=(t:string)=>{setType(t);};
@@ -38,6 +49,18 @@ export default function LeavePage(){
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();setBusy(true);setError('');
     const form=e.currentTarget;const data=new FormData(form);const file=data.get('file');
+    if(isRh){
+      if(rhBalance<=0){setError('You have used all your restricted holidays for this year.');setBusy(false);return}
+      if(!rhDate){setError('Choose a restricted holiday.');setBusy(false);return}
+      try{
+        const response=await fetch('/api/portal/restricted-holiday',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({holidayDate:rhDate,reason})});
+        const result=await response.json() as {error?:string};
+        if(!response.ok)throw new Error(result.error??'Restricted holiday request could not be submitted.');
+        form.reset();setType('');setReason('');setRhDate('');
+        setMessage('Restricted holiday requested. Your contractor will approve it.');
+      }catch(reason){setError(reason instanceof Error?reason.message:'Restricted holiday request could not be submitted.')}finally{setBusy(false)}
+      return;
+    }
     if(!type||!from||!to){setError('Please choose a leave type and the dates.');setBusy(false);return}
     if(file instanceof File&&file.size>10*1024*1024){setError('Attachment must be 10 MB or smaller.');setBusy(false);return}
     // Logical guard — never let a worker apply more days than the available balance in that category.
@@ -54,10 +77,14 @@ export default function LeavePage(){
     }catch(reason){setError(reason instanceof Error?reason.message:'Leave request could not be submitted.')}finally{setBusy(false)}
   }
 
-  const typeMeta:Record<string,{icon:React.ReactNode;hint:string}>={
-    'Medical leave':{icon:<Stethoscope size={22}/>,hint:'When you are sick or need a doctor visit'},
-    'Personal leave':{icon:<UsersRound size={22}/>,hint:'Family function, home work or personal need'},
-    'Other configured leave':{icon:<Home size={22}/>,hint:'Any other reason — explain below'},
+  // Leave types are configured per site by the contractor, so pick an icon/hint
+  // by keyword with a sensible fallback instead of a fixed type map.
+  const leaveTypeMeta=(name:string):{icon:React.ReactNode;hint:string}=>{
+    const n=name.toLowerCase();
+    if(n.includes('medical')||n.includes('sick'))return{icon:<Stethoscope size={22}/>,hint:'When you are sick or need a doctor visit'};
+    if(n.includes('casual')||n.includes('personal'))return{icon:<UsersRound size={22}/>,hint:'Family function, home work or personal need'};
+    if(n.includes('earned')||n.includes('annual')||n.includes('privilege'))return{icon:<Home size={22}/>,hint:'Paid / earned leave'};
+    return{icon:<CalendarHeart size={22}/>,hint:'Configured by your contractor'};
   };
 
   if(!portal.leaveEnabled){
@@ -67,6 +94,18 @@ export default function LeavePage(){
         <h2 className="text-base font-semibold text-gray-900 mt-3">Leave unlocks after binding</h2>
         <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">You are not bound to a contractor and site yet. Once a contractor binds you (and you accept the binding request), your site&apos;s leave calendar and entitlements become available here.</p>
         <a href="/worker/binding" className="mt-5 inline-flex h-10 items-center gap-2 px-4 rounded-lg bg-[#073B67] text-white text-sm font-semibold hover:bg-[#062D4F]">View binding requests</a>
+      </div>
+    </ModuleShell>;
+  }
+
+  // No leave types = the contractor has not configured the site's leave calendar
+  // yet. Show exactly what the contractor set up (never a default list).
+  if(!portal.leaveTypes.length){
+    return <ModuleShell title="Leave" description="Your site's leave calendar is set up by your contractor." icon={CalendarPlus}>
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
+        <CalendarHeart size={30} className="mx-auto text-[#F47A32]"/>
+        <h2 className="text-base font-semibold text-gray-900 mt-3">Leave calendar not set up yet</h2>
+        <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">Your contractor hasn&apos;t set up the leave calendar for your site yet. Your leave types and balances will appear here once they configure them in <strong>Site Calendar &amp; Leave Setup</strong>.</p>
       </div>
     </ModuleShell>;
   }
@@ -101,6 +140,19 @@ export default function LeavePage(){
                 </span>
               </button>;
             })}
+            {rh && rh.maxAvail > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3 text-left">
+                <span className="flex items-center justify-between gap-2 mb-1"><strong className="text-sm text-gray-900">Restricted Holiday (RH)</strong><span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">{rh.used} of {rh.maxAvail} availed</span></span>
+                <p className="text-[11px] text-amber-800 mb-2">You may avail <strong>{rh.maxAvail}</strong> of the <strong>{rh.allotment}</strong> restricted holiday{rh.allotment===1?'':'s'} offered this year.</p>
+                <span className="flex flex-col gap-1 text-[11px]">
+                  <span className="flex justify-between text-gray-500"><span>Offered this year</span><strong className="text-gray-700">{rh.allotment}</strong></span>
+                  <span className="flex justify-between text-gray-500"><span>Max you can avail</span><strong className="text-gray-700">{rh.maxAvail}</strong></span>
+                  <span className="flex justify-between text-gray-500"><span>Less: Availed</span><strong className="text-red-500">{rh.used>0?`− ${rh.used}`:'0'}</strong></span>
+                  <span className="flex justify-between pt-1 mt-0.5 border-t border-amber-200 text-xs font-bold"><span>Balance</span><strong className="text-[#073B67]">{Math.max(0, rh.maxAvail - rh.used)}</strong></span>
+                </span>
+                <a href="/worker/Holidays" className="mt-2 block text-[11px] font-semibold text-blue-700 hover:underline">Manage restricted holidays →</a>
+              </div>
+            )}
           </div>
         </div>
 
@@ -110,17 +162,32 @@ export default function LeavePage(){
           <div className="grid sm:grid-cols-3 gap-2">
             {portal.leaveTypes.map(v=>(
               <button key={v} type="button" onClick={()=>pickType(v)} className={`rounded-xl border p-4 text-left transition ${type===v?'border-[#073B67] bg-[#073B67]/5 ring-1 ring-[#073B67]':'border-gray-200 hover:border-gray-300'}`}>
-                <span className={`w-10 h-10 rounded-lg grid place-items-center mb-2 ${type===v?'bg-[#073B67] text-white':'bg-gray-100 text-gray-500'}`}>{typeMeta[v]?.icon}</span>
+                <span className={`w-10 h-10 rounded-lg grid place-items-center mb-2 ${type===v?'bg-[#073B67] text-white':'bg-gray-100 text-gray-500'}`}>{leaveTypeMeta(v).icon}</span>
                 <strong className="block text-sm">{v}</strong>
-                <small className="block text-[11px] text-gray-500 mt-0.5">{typeMeta[v]?.hint}</small>
+                <small className="block text-[11px] text-gray-500 mt-0.5">{leaveTypeMeta(v).hint}</small>
               </button>
             ))}
+            {rh && rh.maxAvail>0 && (
+              <button key="rh" type="button" onClick={()=>pickType(RH_TYPE)} className={`rounded-xl border p-4 text-left transition ${isRh?'border-[#073B67] bg-[#073B67]/5 ring-1 ring-[#073B67]':'border-amber-200 bg-amber-50/40 hover:border-amber-300'}`}>
+                <span className={`w-10 h-10 rounded-lg grid place-items-center mb-2 ${isRh?'bg-[#073B67] text-white':'bg-amber-100 text-amber-700'}`}><CalendarHeart size={22}/></span>
+                <strong className="block text-sm">Restricted Holiday</strong>
+                <small className="block text-[11px] text-gray-500 mt-0.5">Choose from your site&apos;s optional holidays · {rhBalance} of {rh.maxAvail} left</small>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Step 2 — dates */}
+        {/* Step 2 — dates (or restricted-holiday picker) */}
         <div>
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">2 · Which dates?</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{isRh?'2 · Which restricted holiday?':'2 · Which dates?'}</p>
+          {isRh?<div className="space-y-2">
+            <p className="text-[11px] text-gray-500">Pick one of your site&apos;s restricted holidays. You can avail up to {rh?.maxAvail ?? 0} this year ({rhBalance} left).</p>
+            <select value={rhDate} onChange={e=>{setRhDate(e.target.value);const picked=rhOptions.find(x=>x.date===e.target.value);if(picked&&!reason)setReason(picked.name);}} className="w-full h-12 border border-gray-200 rounded-xl px-3 text-sm bg-white focus:border-[#0066CC]">
+              <option value="">Select a restricted holiday</option>
+              {rhOptions.map(h=><option key={h.date} value={h.date}>{h.name} — {new Date(`${h.date}T00:00:00`).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</option>)}
+            </select>
+            {rhOptions.length===0&&<p className="text-xs text-[#F47A32] font-semibold">No restricted holidays available to request (all used, or none published by your contractor yet).</p>}
+          </div>:<>
           <div className="flex flex-wrap gap-2 mb-3">
             <button type="button" onClick={()=>{const t=new Date();const f=t.toISOString().slice(0,10);pickDays(f,f)}} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold hover:border-[#073B67]/40">Today (1 day)</button>
             <button type="button" onClick={()=>{const t=new Date();t.setDate(t.getDate()+1);const f=t.toISOString().slice(0,10);pickDays(f,f)}} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold hover:border-[#073B67]/40">Tomorrow (1 day)</button>
@@ -131,6 +198,7 @@ export default function LeavePage(){
             <label className="text-xs text-gray-600">To (last day of leave)<input required name="to" type="date" value={to} onChange={e=>pickDays(from,e.target.value)} min={from||undefined} className="mt-1 w-full h-12 border border-gray-200 rounded-xl px-3 text-sm bg-white focus:border-[#0066CC]"/></label>
           </div>
           {days>0&&<p className="text-xs mt-2 text-[#2F9E67] font-semibold">✓ {days} day{days>1?'s':''} of leave selected</p>}
+          </>}
         </div>
 
         {/* Step 3 — reason */}

@@ -487,13 +487,14 @@ class SiteLeavePolicy(models.Model):
 
 
 class SiteHoliday(models.Model):
-    """Per-site holiday calendar entry (public / restricted / annual / sick etc.).
-    Workers bound to the site inherit the calendar."""
+    """Per-site holiday calendar entry. Workers bound to the site inherit it.
 
-    TYPES = [("PUBLIC", "Public holiday"), ("ANNUAL", "Annual holiday"),
-             ("RESTRICTED", "Restricted holiday"), ("SICK", "Sick leave day"),
-             ("WEEKLY_OFF", "Weekly off"), ("OPTIONAL", "Optional holiday"),
-             ("OTHER", "Other")]
+    Kept deliberately small — only the three standard Indian calendar categories:
+    weekly offs, fixed public/gazetted holidays, and optional (restricted)
+    holidays the worker may choose from with prior approval."""
+
+    TYPES = [("WEEKLY_OFF", "Weekly Off"), ("PUBLIC", "Public Holiday"),
+             ("RESTRICTED", "Restricted Holiday")]
 
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="holidays")
     date = models.DateField()
@@ -513,3 +514,42 @@ class SiteHoliday(models.Model):
 
     def __str__(self):
         return f"{self.site_id} {self.date} {self.name}"
+
+
+class RestrictedHolidayRequest(models.Model):
+    """A worker's request to avail a Restricted Holiday (RH) at their site.
+
+    The contractor's prior approval is required. The number of RH a worker may
+    avail per year is capped by the site's ``restricted_holiday_max_avail``."""
+
+    STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"),
+              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled")]
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="restricted_holiday_requests")
+    contractor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="restricted_holiday_approvals")
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="restricted_holiday_requests")
+    holiday = models.ForeignKey(SiteHoliday, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name="restricted_requests")
+    holiday_date = models.DateField()
+    holiday_name = models.CharField(max_length=120, blank=True)
+    reason = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    decided_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="restricted_holiday_decisions")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    comment = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "restricted_holiday_request"
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            # One live request per worker/site/date (terminal rows kept as history).
+            models.UniqueConstraint(fields=["worker", "site", "holiday_date"],
+                                    condition=models.Q(status__in=["PENDING", "APPROVED"]),
+                                    name="uq_rh_request_active"),
+        ]
+
+    def __str__(self):
+        return f"{self.worker_id} {self.holiday_date} ({self.status})"

@@ -278,6 +278,7 @@ export type SiteCalendar = {
   siteId:number; siteName:string;
   holidays: Array<{id:number;date:string;name:string;holidayType:string;holidayTypeCode:string;isPaid:boolean;note:string}>;
   leavePolicies: Array<{id:number;leaveTypeId:number;leaveType:string;annualEntitlement:number;openingBalance:number;isActive:boolean}>;
+  restrictedHolidayAllotment?:number; restrictedHolidayMaxAvail?:number;
 };
 export type ContractorPortalData = {
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
@@ -308,6 +309,7 @@ export type ContractorPortalData = {
   complianceHistory: ContractorComplianceHistory[];
   jobHistory: ContractorJobPosting[];
   leaveApprovals: ContractorLeaveApproval[];
+  restrictedHolidayRequests?: Array<{ id:string; worker:string; workerId:string; site:string; siteId:number; holidayDate:string; holidayName:string; reason:string; status:'Pending'|'Approved'|'Rejected'|'Cancelled'; requestedOn:string; decidedOn:string; comment:string }>;
   advances: ContractorAdvance[];
   siteCalendars: SiteCalendar[];
   leaveTypeCatalog: string[];
@@ -590,7 +592,7 @@ export type WorkerPortalData = {
   bonus: DataState<BonusRecord>;
   leaveEncashment: DataState<LeaveEncashmentRecord>;
   gratuity: {serviceStart:string;completedService:string;calculationBasis:string;indicativeAmount:number;eligibilityStatus:string;lastUpdated:string;schemeStatus?:'Enabled'|'Non-enabled';application?:{reference:string;submittedOn:string;status:'Submitted'|'Under examination'|'Approved'|'Disbursed'|'Rejected'} | null};
-  holidays: Array<{date:string;name:string;type:string;appliesTo:string}>;
+  holidays: Array<{date:string;name:string;type:string;typeCode?:string;appliesTo:string}>;
   announcements: Array<{id:string;title:string;description:string;publisher:string;published:string;eventDate:string|null;priority:'Important'|'Normal';category:string}>;
   courses: LearningCourse[];
   documents: WorkerDocument[];
@@ -601,6 +603,7 @@ export type WorkerPortalData = {
   leaveTypes: string[];
   leaveRecords: Array<{id:string;type:string;from:string;to:string;reason:string;submitted:string;status:'Pending'|'Approved'|'Rejected'|'Cancelled';approver?:string;comment?:string}>;
   leaveBalance: Array<{type:string;opening:number;accrued:number;availed:number;pending:number;balance:number}>;
+  restrictedHolidays?: { allotment:number; maxAvail:number; used:number; requests: Array<{id:string;holidayDate:string;holidayName:string;reason:string;status:'Pending'|'Approved'|'Rejected'|'Cancelled';requestedOn:string;decidedOn:string;comment:string}> };
   leaveEnabled: boolean;
   cardProduct: { productId:string; cardFee:number; deliveryFee:number; currency:string; paymentProviders:Array<'razorpay'|'payu'> };
   geography: Record<string, Record<string, ReadonlyArray<{city:string;pins:readonly string[]}>>>;

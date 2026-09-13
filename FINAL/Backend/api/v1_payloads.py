@@ -28,6 +28,7 @@ from bss_core.models import (
     EmployerProfile,
     LeaveRequest,
     LeaveType,
+    RestrictedHolidayRequest,
     SiteHoliday,
     SiteLeavePolicy,
     User,
@@ -896,10 +897,64 @@ def _worker_holidays(user=None):
             "date": _dts(h.date),
             "name": _d(h.name),
             "type": h.get_holiday_type_display(),
+            "typeCode": h.holiday_type,
             "appliesTo": _d(site.site_name),
             "isPaid": h.is_paid,
         })
     return rows
+
+
+_RH_STATUS = {"PENDING": "Pending", "APPROVED": "Approved",
+              "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
+
+
+def _rh_request_row(r):
+    """Restricted-holiday request row, shared by the worker and contractor views."""
+    wi = WorkerIdentity.objects.filter(user=r.worker).first()
+    return {
+        "id": str(r.id),
+        "worker": _d(wi.name if wi else r.worker.username),
+        "workerId": _d(wi.bss_worker_id if wi else ""),
+        "site": r.site.site_name if r.site else "",
+        "siteId": r.site_id,
+        "holidayDate": _dts(r.holiday_date),
+        "holidayName": _d(r.holiday_name),
+        "reason": _d(r.reason),
+        "status": _RH_STATUS.get(str(r.status).upper(), "Pending"),
+        "requestedOn": _dts(r.created_at),
+        "decidedOn": _dts(r.decided_at) if r.decided_at else "",
+        "comment": _d(r.comment),
+    }
+
+
+def _worker_restricted_holidays(user):
+    """The worker's Restricted Holiday (RH) quota + their requests.
+
+    ``allotment`` is the actual number of Restricted Holidays published on the
+    site calendar (not a typed-in number), so it always matches what the worker
+    sees on the calendar."""
+    site = _worker_bound_site(user)
+    if site is None:
+        return {"allotment": 0, "maxAvail": 0, "used": 0, "requests": []}
+    reqs = (RestrictedHolidayRequest.objects
+            .filter(worker=user, site=site).select_related("site", "worker"))
+    used = reqs.filter(status__in=("PENDING", "APPROVED")).count()
+    offered = SiteHoliday.objects.filter(site=site, holiday_type="RESTRICTED").count()
+    # You cannot avail more restricted holidays than are actually offered.
+    max_avail = min(site.restricted_holiday_max_avail, offered)
+    return {
+        "allotment": offered,
+        "maxAvail": max_avail,
+        "used": used,
+        "requests": [_rh_request_row(r) for r in reqs[:20]],
+    }
+
+
+def _contractor_restricted_holiday_requests(user):
+    """Restricted-holiday requests raised by the contractor's bound workers."""
+    reqs = (RestrictedHolidayRequest.objects
+            .filter(contractor=user).select_related("site", "worker")[:100])
+    return [_rh_request_row(r) for r in reqs]
 
 
 def _contractor_site_calendars(user):
@@ -924,6 +979,9 @@ def _contractor_site_calendars(user):
         out.append({
             "siteId": site.id, "siteName": _d(site.site_name),
             "holidays": holidays, "leavePolicies": policies,
+            # "Offered" is derived from the calendar, not a typed number.
+            "restrictedHolidayAllotment": sum(1 for h in holidays if h["holidayTypeCode"] == "RESTRICTED"),
+            "restrictedHolidayMaxAvail": site.restricted_holiday_max_avail,
         })
     return out
 
@@ -1448,15 +1506,16 @@ def _site_leave_policies(site):
 
 
 def _worker_leave_types(user=None):
-    """Leave types the worker inherits: the bound site's policy if configured,
-    otherwise the global master. Empty until the worker is bound to a site."""
+    """Leave types the worker inherits — ONLY the bound site's configured policy.
+
+    There is deliberately no global fallback: the worker must see exactly the
+    leave types their contractor set up for the site (Site Calendar & Leave
+    Setup). Empty when nothing is configured, so the UI can prompt them that the
+    calendar has not been set up yet."""
     site = _worker_bound_site(user)
     if site is None:
         return []
-    policies = _site_leave_policies(site)
-    if policies:
-        return [p.leave_type.name for p in policies]
-    return [lt.name for lt in LeaveType.objects.filter(is_active=True)]
+    return [p.leave_type.name for p in _site_leave_policies(site)]
 
 
 def _leave_row(request_obj):
@@ -1500,12 +1559,10 @@ def _worker_leave_balance(user):
     site = _worker_bound_site(user)
     if site is None:
         return []
+    # Only the site's configured leave policies — no global fallback (mirrors
+    # _worker_leave_types so balances always line up with the offered types).
     policies = _site_leave_policies(site)
-    if policies:
-        plan = [(p.leave_type, p.annual_entitlement, p.opening_balance) for p in policies]
-    else:
-        plan = [(lt, lt.annual_entitlement, lt.opening_balance)
-                for lt in LeaveType.objects.filter(is_active=True)]
+    plan = [(p.leave_type, p.annual_entitlement, p.opening_balance) for p in policies]
     out = []
     for lt, annual, opening in plan:
         def days(qs):
@@ -1682,6 +1739,7 @@ def build_worker_portal(user):
         "leaveRecords": _worker_leave_records(user),
         "leaveBalance": _worker_leave_balance(user),
         "leaveEnabled": _worker_bound_site(user) is not None,
+        "restrictedHolidays": _worker_restricted_holidays(user),
         "cardProduct": {
             "productId": "BSS-WORKER-CARD",
             "cardFee": 0,
@@ -2690,6 +2748,7 @@ def build_contractor_portal(user):
         "complianceHistory": _contractor_compliance_history(user),
         "jobHistory": _contractor_job_history(user),
         "leaveApprovals": _contractor_leave_approvals(user),
+        "restrictedHolidayRequests": _contractor_restricted_holiday_requests(user),
         "siteCalendars": _contractor_site_calendars(user),
         "leaveTypeCatalog": [lt.name for lt in LeaveType.objects.filter(is_active=True)],
         "bindingRequests": _contractor_binding_requests(user),
