@@ -43,7 +43,7 @@ export default function ContractorScanPage() {
       setAlreadyPending(false);
       const bssId = p.bssId ?? "";
       if (p.type === "BSS_SITE") {
-        setEntity({ kind: 'employer', bssId: p.siteToken ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site binding' });
+        setEntity({ kind: 'employer', bssId: p.bssId ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site binding' });
         setRequestSent(false);
         setState("binding");
         setMessage("Site QR identified — request binding. The employer approves the binding and this site.");
@@ -268,8 +268,8 @@ export default function ContractorScanPage() {
           : `A binding request will be sent to ${entity?.name ?? 'this employer'}. The employer approves the binding, then allots sites.`}
       details={entity ? [
         { label: entity.kind === 'worker' ? 'Worker' : scanned?.type === 'BSS_SITE' ? 'Site' : 'Employer', value: entity.name },
-        { label: 'BSS ID', value: entity.bssId || '—' },
-        { label: 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
+        ...(entity.bssId ? [{ label: 'BSS ID', value: entity.bssId }] : []),
+        { label: scanned?.type === 'BSS_SITE' ? 'Site code' : 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
         { label: 'Designation', value: entity.designation || '—' },
       ] : []}
       confirmLabel="Send binding request"
