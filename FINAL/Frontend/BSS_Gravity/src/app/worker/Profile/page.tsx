@@ -515,7 +515,7 @@ export default function WorkerProfilePage() {
         
         {/* CONTENT AREA */}
         <div className="flex-1 w-full bg-white rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden">
-          <form onSubmit={handleSave} onChange={() => setDirty(true)} onInput={() => setDirty(true)} className="p-6 md:p-8">
+          <form onSubmit={handleSave} onChange={() => { setDirty(true); setInvalidFields([]); }} onInput={() => { setDirty(true); setInvalidFields([]); }} className="p-6 md:p-8">
           
           {/* TAB: PERSONAL */}
           {activeTab === 'personal' && (
@@ -1088,8 +1088,8 @@ export default function WorkerProfilePage() {
                 <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-4">Payment Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Frequency</label>
-                    <select name="classification.paymentFrequency" defaultValue={worker.classification?.paymentFrequency} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Frequency <span className="text-[#FF3B30]">*</span></label>
+                    <select name="classification.paymentFrequency" defaultValue={worker.classification?.paymentFrequency} className={`w-full bg-white border ${clsErr('classification.paymentFrequency')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`}>
                       <option>Weekly</option>
                       <option>Fortnightly</option>
                       <option>Monthly</option>
@@ -1097,8 +1097,8 @@ export default function WorkerProfilePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Mode</label>
-                    <select name="classification.paymentMode" defaultValue={worker.classification?.paymentMode} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Payment Mode <span className="text-[#FF3B30]">*</span></label>
+                    <select name="classification.paymentMode" defaultValue={worker.classification?.paymentMode} className={`w-full bg-white border ${clsErr('classification.paymentMode')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`}>
                       <option>Bank Transfer</option>
                       <option>Cheque</option>
                       <option>Cash</option>
