@@ -62,25 +62,42 @@ ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose up -d --b
 ```
 The backend entrypoint runs `migrate` + `collectstatic` on start.
 
-## Prod database backup (before any prod data change)
+## Backups (prod) — automatic + manual
 
+The prod server runs `~/backup_bss_prod.sh` (source: `FINAL/scripts/backup_prod.sh`) **daily at 02:30 UTC** via cron. It writes to `~/bss_backups/`:
+- `bss_prod_db_<stamp>.sql.gz` — PostgreSQL dump (keeps last 14)
+- `bss_prod_media_<stamp>.tar.gz` — media volume: uploads / Aadhaar / DigiLocker (keeps last 7)
+
+Run it manually any time (do this before a risky change or a prod deploy):
 ```bash
 KEY=/home/yasser/BSS_Project/login-bharatshramsetu-root_key.pem
 HOST=ubuntu@ec2-13-235-161-192.ap-south-1.compute.amazonaws.com
-ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose exec -T db \
-  pg_dump -U bss -d bss_prod | gzip > ~/bss_prod_backup_$(date +%Y%m%d_%H%M%S).sql.gz'
+ssh -i "$KEY" $HOST 'bash ~/backup_bss_prod.sh'
 ```
-Restore (only with explicit approval):
+
+Off-server copy (pull the newest DB dump to the laptop; `backups/` is git-ignored):
 ```bash
-ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && gunzip -c ~/bss_prod_backup_<stamp>.sql.gz | \
+mkdir -p /home/yasser/BSS_Project/backups
+LATEST=$(ssh -i "$KEY" $HOST 'ls -1t ~/bss_backups/bss_prod_db_*.sql.gz | head -1')
+scp -i "$KEY" "$HOST:$LATEST" /home/yasser/BSS_Project/backups/
+```
+
+### Restore (only with explicit approval)
+```bash
+# Database
+ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && gunzip -c ~/bss_backups/bss_prod_db_<stamp>.sql.gz | \
   sudo docker compose exec -T db psql -U bss -d bss_prod'
+
+# Media volume
+ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose exec -T backend sh -c \
+  "rm -rf /data/media/* && tar xzf - -C /data/media" < ~/bss_backups/bss_prod_media_<stamp>.tar.gz'
 ```
 
-## Seed demo accounts (staging)
+## Seed demo accounts
 
-```bash
-ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy && docker compose exec -T backend python manage.py seed_demo_accounts'
-```
+Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy && docker compose exec -T backend python manage.py seed_demo_accounts'`
+
+Prod (explicit approval): `ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose exec -T backend python manage.py seed_demo_accounts'`
 
 ## DB shell (read/inspect or staging mutations)
 
