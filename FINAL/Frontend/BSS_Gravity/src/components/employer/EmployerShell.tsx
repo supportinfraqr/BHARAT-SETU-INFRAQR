@@ -78,12 +78,13 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
 
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
     <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-gray-200 shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
-      <div className="bss-shell-bar max-w-[1200px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="bss-shell-bar w-full max-w-[1560px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-6">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-8 w-auto" alt="Bharat Shram Setu"/>
           <BrandText className="hidden lg:block text-base"/>
         </Link>
-        <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-0.5 flex-1 justify-center">
+        <div className="flex-1 min-w-0 flex items-center justify-center gap-4">
+          <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-1.5">
           {groups.map(group => 'href' in group
             ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
             : <div key={group.key} className="relative">
@@ -94,9 +95,10 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
                   </div>
                 </div>}
               </div>)}
-        </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden sm:block"><LanguageSelect compact/></div>
+          </nav>
+          <div className="hidden sm:block shrink-0"><LanguageSelect compact/></div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <NotificationBell viewAllHref="/employer/notifications"/>
           <div className="relative">
             <button type="button" onClick={() => setProfile(value => !value)} aria-expanded={profile} className="min-h-11 flex items-center gap-2 rounded-full transition-colors duration-150 hover:bg-gray-100 p-1 pr-2">
