@@ -2850,7 +2850,7 @@ def _employer_approvals(user):
         cp = getattr(e.contractor, "contractor_profile", None)
         approved_sites = [a.site.site_name for a in e.allotments.all()
                           if a.site and a.status == "APPROVED"]
-        pending_sites = [f"{a.site.site_name} (pending)" for a in e.allotments.all()
+        pending_sites = [f"{a.site.site_name} (pending approval from contractor)" for a in e.allotments.all()
                          if a.site and a.status == "PENDING"]
         sites = approved_sites + pending_sites
         rows.append({
