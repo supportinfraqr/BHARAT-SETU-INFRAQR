@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
 import ScanFrame from '@/components/qr/ScanFrame';
 import { playScanBeep, primeAudio } from '@/lib/scanFeedback';
-import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus } from '@/lib/qrScanner';
+import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from '@/lib/qrScanner';
 
 type Payload = { v: number; type: 'BSS_WORKER' | 'BSS_CONTRACTOR' | 'BSS_EMPLOYER'; bssId: string; issuer: string };
 type ScannedEntity = {
@@ -151,10 +151,8 @@ export default function EmployerScanPage() {
   const scanFile = async (file?: File) => {
     if (!file) return;
     setState('scanning'); setMessage('Reading QR image…');
-    const url = URL.createObjectURL(file);
-    try { verify((await createQrReader().decodeFromImageUrl(url)).getText()); }
+    try { verify(await decodeQrFromImageFile(file)); }
     catch { setState('error'); setMessage('No valid QR code could be read from that image.'); }
-    finally { URL.revokeObjectURL(url); }
   };
 
   const reset = () => { controls.current?.stop(); setEntity(null); setScanned(null); setNotice(''); setMessage(''); setAlreadyRequested(null); setConfirmOpen(false); setChosenSiteIds([]); setState('idle'); };

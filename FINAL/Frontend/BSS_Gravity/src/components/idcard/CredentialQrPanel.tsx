@@ -38,7 +38,7 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
 async function renderCredentialQr(bssId: string): Promise<string> {
   const qrDataUrl = await QRCode.toDataURL(createWorkerQrPayload(bssId), {
     errorCorrectionLevel: "H",
-    margin: 1,
+    margin: 4,
     width: SIZE,
   });
   const canvas = document.createElement("canvas");
@@ -90,7 +90,6 @@ export default function CredentialQrPanel({
 
   useEffect(() => {
     let active = true;
-    setQrSrc("");
     if (!bssId) return;
     renderCredentialQr(bssId)
       .then(src => { if (active) setQrSrc(src); })

@@ -14,7 +14,7 @@ export function createWorkerQrPayload(bssId: string) {
 
 export default function WorkerQr({ bssId, className = "w-full h-full" }: { bssId: string; className?: string }) {
   const [src, setSrc] = useState("");
-  useEffect(() => { QRCode.toDataURL(createWorkerQrPayload(bssId), { errorCorrectionLevel: "H", margin: 1, width: 512 }).then(setSrc); }, [bssId]);
+  useEffect(() => { QRCode.toDataURL(createWorkerQrPayload(bssId), { errorCorrectionLevel: "H", margin: 4, width: 512 }).then(setSrc); }, [bssId]);
   return src ? <img src={src} alt={`Scannable worker QR for ${bssId}`} className={className} /> : <div className={`${className} animate-pulse bg-gray-200`} aria-label="Generating QR code" />;
 }
 
@@ -54,7 +54,7 @@ export function createSiteQrPayload(siteToken: string, siteCode = "", bssId = ""
 async function renderSiteQr(siteToken: string, siteCode: string, bssId: string): Promise<string> {
   const qrDataUrl = await QRCode.toDataURL(createSiteQrPayload(siteToken, siteCode, bssId), {
     errorCorrectionLevel: "H",
-    margin: 1,
+    margin: 4,
     width: SITE_QR_SIZE,
   });
   const canvas = document.createElement("canvas");

@@ -8,7 +8,7 @@ import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 import ScanFrame from "@/components/qr/ScanFrame";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
-import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus } from "@/lib/qrScanner";
+import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from "@/lib/qrScanner";
 
 type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string; name?: string };
 
@@ -126,10 +126,8 @@ export default function QRScannerWorkflow() {
   const scanFile = async (file?: File) => {
     if (!file) return;
     setState("scanning"); setMessage("Reading QR image…");
-    const url = URL.createObjectURL(file);
-    try { verify((await createQrReader().decodeFromImageUrl(url)).getText()); }
+    try { verify(await decodeQrFromImageFile(file)); }
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
-    finally { URL.revokeObjectURL(url); }
   };
 
   const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setContractorSite(""); setSiteCheck("idle"); setConfirmOpen(false); setMessage(""); setState("idle"); };
