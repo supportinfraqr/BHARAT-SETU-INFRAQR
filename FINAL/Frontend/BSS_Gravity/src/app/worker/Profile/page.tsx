@@ -27,7 +27,10 @@ export default function WorkerProfilePage() {
   const [invalidFields, setInvalidFields] = useState<string[]>([]);
   // Save Persona stays disabled until the user actually changes something.
   const [dirty, setDirty] = useState(false);
-  useEffect(() => { setDirty(false); }, [activeTab]);
+  // Switching tabs resets the dirty state AND any validation error/highlights
+  // from the previous tab, so a missing-field warning never leaks onto another
+  // section's Save Persona.
+  useEffect(() => { setDirty(false); setProfileError(''); setInvalidFields([]); setSaveAttempted(false); }, [activeTab]);
 
   // ── Multiple nominees (dynamic rows) with individual share % ─────────────
   type NomineeDoc = { type: string; name: string; fileName?: string; url?: string };
