@@ -507,8 +507,12 @@ class WorkerContractorBinding(models.Model):
     shift = models.CharField(max_length=40, blank=True)
     offered_wage = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
+    # Who declined the request and when (worker / contractor).
+    rejected_by = models.CharField(max_length=20, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     # Two-sided unbinding: a binding is cancelled only when both sides consent.
     unbind_requested_at = models.DateTimeField(null=True, blank=True)
+    unbind_requested_by = models.CharField(max_length=20, blank=True)
     unbind_consent_worker = models.BooleanField(default=False)
     unbind_consent_contractor = models.BooleanField(default=False)
     unbound_at = models.DateTimeField(null=True, blank=True)
@@ -562,8 +566,12 @@ class ContractorEmployerBinding(models.Model):
     consent_method = models.CharField(max_length=20, null=True, blank=True)
     source = models.CharField(max_length=20, choices=SOURCE, default="site_qr")
     accepted_at = models.DateTimeField(null=True, blank=True)
+    # Who declined the request and when (contractor / employer).
+    rejected_by = models.CharField(max_length=20, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     # Two-sided unbinding: a binding is cancelled only when both sides consent.
     unbind_requested_at = models.DateTimeField(null=True, blank=True)
+    unbind_requested_by = models.CharField(max_length=20, blank=True)
     unbind_consent_contractor = models.BooleanField(default=False)
     unbind_consent_employer = models.BooleanField(default=False)
     unbound_at = models.DateTimeField(null=True, blank=True)

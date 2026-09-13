@@ -3215,7 +3215,9 @@ def binding_consent(request, binding_id):
 
     if action == "decline":
         b.binding_status = "REJECTED"
-        b.save(update_fields=["binding_status"])
+        b.rejected_by = side
+        b.rejected_at = timezone.now()
+        b.save(update_fields=["binding_status", "rejected_by", "rejected_at"])
         return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
     if action == "unbind":
         if side == "worker":
@@ -3224,6 +3226,7 @@ def binding_consent(request, binding_id):
             b.unbind_consent_contractor = True
         if not b.unbind_requested_at:
             b.unbind_requested_at = timezone.now()
+            b.unbind_requested_by = side
         if b.unbind_consent_worker and b.unbind_consent_contractor:
             b.binding_status = "CANCELLED"
             b.unbound_at = timezone.now()
@@ -3471,7 +3474,9 @@ def employer_binding_action(request, binding_id):
         b.save()
     elif action == "reject":
         b.binding_status = "REJECTED"
-        b.save(update_fields=["binding_status"])
+        b.rejected_by = "employer" if user.role == "employer" else "contractor"
+        b.rejected_at = timezone.now()
+        b.save(update_fields=["binding_status", "rejected_by", "rejected_at"])
         # A rejected employer binding invalidates its site allotments and releases
         # the contractor's workers from the employer's sites.
         ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
@@ -3485,6 +3490,7 @@ def employer_binding_action(request, binding_id):
             b.unbind_consent_employer = True
         if not b.unbind_requested_at:
             b.unbind_requested_at = timezone.now()
+            b.unbind_requested_by = user.role
         if b.unbind_consent_contractor and b.unbind_consent_employer:
             b.binding_status = "CANCELLED"
             b.unbound_at = timezone.now()

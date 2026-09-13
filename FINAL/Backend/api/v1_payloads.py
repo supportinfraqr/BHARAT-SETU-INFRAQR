@@ -1245,13 +1245,18 @@ def _wc_history(b):
         events.append({"label": "Binding accepted",
                        "by": "Worker" if b.consent_worker else "Contractor",
                        "at": _dts(b.accepted_at)})
+    if str(b.binding_status).upper() == "REJECTED":
+        by = {"worker": "Worker", "contractor": "Contractor"}.get(str(b.rejected_by or "").lower(), "")
+        events.append({"label": "Rejected", "by": by, "at": _dts(b.rejected_at) or _dts(b.updated_at)})
     if b.unbind_requested_at:
-        if b.unbind_consent_contractor and not b.unbind_consent_worker:
-            by = "Contractor"
-        elif b.unbind_consent_worker and not b.unbind_consent_contractor:
-            by = "Worker"
-        else:
-            by = "Both parties"
+        by = {"worker": "Worker", "contractor": "Contractor"}.get(str(b.unbind_requested_by or "").lower(), "")
+        if not by:
+            if b.unbind_consent_contractor and not b.unbind_consent_worker:
+                by = "Contractor"
+            elif b.unbind_consent_worker and not b.unbind_consent_contractor:
+                by = "Worker"
+            else:
+                by = "Both parties"
         events.append({"label": "Unbind requested", "by": by, "at": _dts(b.unbind_requested_at)})
     if b.unbound_at:
         events.append({"label": "Unbound", "by": "Both parties", "at": _dts(b.unbound_at)})
@@ -1266,13 +1271,18 @@ def _ce_history(b):
         events.append({"label": "Binding accepted",
                        "by": accepted or ("Employer" if initiated == "Contractor" else "Contractor"),
                        "at": _dts(b.accepted_at)})
+    if str(b.binding_status).upper() == "REJECTED":
+        by = {"contractor": "Contractor", "employer": "Employer"}.get(str(b.rejected_by or "").lower(), "")
+        events.append({"label": "Rejected", "by": by, "at": _dts(b.rejected_at) or _dts(b.updated_at)})
     if b.unbind_requested_at:
-        if b.unbind_consent_contractor and not b.unbind_consent_employer:
-            by = "Contractor"
-        elif b.unbind_consent_employer and not b.unbind_consent_contractor:
-            by = "Employer"
-        else:
-            by = "Both parties"
+        by = {"contractor": "Contractor", "employer": "Employer"}.get(str(b.unbind_requested_by or "").lower(), "")
+        if not by:
+            if b.unbind_consent_contractor and not b.unbind_consent_employer:
+                by = "Contractor"
+            elif b.unbind_consent_employer and not b.unbind_consent_contractor:
+                by = "Employer"
+            else:
+                by = "Both parties"
         events.append({"label": "Unbind requested", "by": by, "at": _dts(b.unbind_requested_at)})
     if b.unbound_at:
         events.append({"label": "Unbound", "by": "Both parties", "at": _dts(b.unbound_at)})
