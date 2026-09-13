@@ -842,35 +842,35 @@ export default function WorkerProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Platform / Aggregator Name</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigPlatformName" type="text" defaultValue={worker.classification?.gigPlatformName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Platform Worker ID</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigPlatformWorkerId" type="text" defaultValue={worker.classification?.gigPlatformWorkerId} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Date Joined Platform</label>
-                      <input type="date" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigDateJoined" type="date" defaultValue={worker.classification?.gigDateJoined} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Platform Type</label>
-                      <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                      <select name="classification.gigPlatformType" defaultValue={worker.classification?.gigPlatformType} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                         {BssTaxonomies.PlatformType.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Service Area</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigServiceArea" type="text" defaultValue={worker.classification?.gigServiceArea} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Vehicle Type</label>
-                      <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                      <select name="classification.gigVehicleType" defaultValue={worker.classification?.gigVehicleType} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                         {BssTaxonomies.VehicleType.map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Vehicle Ownership</label>
-                      <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                      <select name="classification.gigVehicleOwnership" defaultValue={worker.classification?.gigVehicleOwnership} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                         <option>Owned</option>
                         <option>Leased / Rented</option>
                         <option>Platform Provided</option>
@@ -878,19 +878,19 @@ export default function WorkerProfilePage() {
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours per Day</label>
-                      <input type="number" placeholder="Hours" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.gigAvgHoursPerDay} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days per Week</label>
-                      <input type="number" placeholder="Days" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.gigAvgDaysPerWeek} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Driving Licence Number</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigDlNumber" type="text" defaultValue={worker.classification?.gigDlNumber} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Driving Licence Expiry</label>
-                      <input type="date" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.gigDlExpiry" type="date" defaultValue={worker.classification?.gigDlExpiry} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                   </div>
                 </div>
@@ -903,19 +903,19 @@ export default function WorkerProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Business / Enterprise Name</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seBusinessName" type="text" defaultValue={worker.classification?.seBusinessName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer / Business Name</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seEmployerName" type="text" defaultValue={worker.classification?.seEmployerName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Business Type</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seBusinessType" type="text" defaultValue={worker.classification?.seBusinessType} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Business Registration Status</label>
-                      <select className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                      <select name="classification.seRegistrationStatus" defaultValue={worker.classification?.seRegistrationStatus} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                         <option>Registered</option>
                         <option>Unregistered</option>
                         <option>Registration Pending</option>
@@ -923,23 +923,23 @@ export default function WorkerProfilePage() {
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Business Start Date</label>
-                      <input type="date" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seStartDate" type="date" defaultValue={worker.classification?.seStartDate} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Number of Employees</label>
-                      <input type="number" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seEmployeesCount" type="number" defaultValue={worker.classification?.seEmployeesCount} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours/Day</label>
-                      <input type="number" placeholder="Hours" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.seAvgHoursPerDay} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days/Week</label>
-                      <input type="number" placeholder="Days" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.seAvgDaysPerWeek} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Location</label>
-                      <input type="text" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <input name="classification.seLocation" type="text" defaultValue={worker.classification?.seLocation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
                     </div>
                   </div>
                 </div>

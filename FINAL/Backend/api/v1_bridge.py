@@ -1489,14 +1489,14 @@ def _persist_mutation(user, role_path, resource, method, body):
                 "gigDlNumber": "gig_dl_number",
                 "gigDlExpiry": "gig_dl_expiry",
                 "seBusinessName": "se_business_name",
+                "seEmployerName": "se_employer_or_business_name",
                 "seBusinessType": "se_business_type",
                 "seRegistrationStatus": "se_registration_status",
                 "seStartDate": "se_start_date",
-                "seBusinessLocation": "se_business_location",
+                "seLocation": "se_business_location",
                 "seAvgHoursPerDay": "se_avg_hours_per_day",
                 "seAvgDaysPerWeek": "se_avg_days_per_week",
-                "seNumEmployees": "se_num_employees",
-                "seEmployerOrBusinessName": "se_employer_or_business_name",
+                "seEmployeesCount": "se_num_employees",
                 "seasonalJobType": "season_job_work_type",
                 "seasonalStartDate": "season_start_date",
                 "seasonalEndDate": "season_end_date",
@@ -1517,6 +1517,8 @@ def _persist_mutation(user, role_path, resource, method, body):
                 # so coerce blank dates to NULL.
                 if fld in date_fields:
                     v = str(v).strip() or None
+                elif fld == "se_num_employees":
+                    v = _coerce_int(v)
                 setattr(wc, fld, v)
             wc.save()
 

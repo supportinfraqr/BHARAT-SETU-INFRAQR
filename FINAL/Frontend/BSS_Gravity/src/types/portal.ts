@@ -92,6 +92,11 @@ export type WorkerRecord = {
   classification: {
     workerCategory?: string; sector?: string; industry?: string; occupation?: string; skill?: string;
     currentEmploymentStatus?: string; totalWorkerExperience?: string; paymentFrequency?: string; paymentMode?: string;
+    gigPlatformName?: string; gigPlatformWorkerId?: string; gigPlatformType?: string; gigDateJoined?: string;
+    gigServiceArea?: string; gigVehicleType?: string; gigVehicleOwnership?: string;
+    gigAvgHoursPerDay?: string; gigAvgDaysPerWeek?: string; gigDlNumber?: string; gigDlExpiry?: string;
+    seBusinessName?: string; seEmployerName?: string; seBusinessType?: string; seRegistrationStatus?: string;
+    seStartDate?: string; seLocation?: string; seAvgHoursPerDay?: string; seAvgDaysPerWeek?: string; seEmployeesCount?: number | string;
     seasonalJobType?: string; seasonalStartDate?: string; seasonalEndDate?: string;
     seasonalAvgHoursPerDay?: string; seasonalAvgDaysPerWeek?: string;
     seasonalLocation?: string; seasonalExpectedIncome?: string;
