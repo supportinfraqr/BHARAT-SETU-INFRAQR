@@ -63,7 +63,11 @@ export default function WorkerProfilePage() {
   const pickNomineeDoc = (id: number) => { setDocTargetId(id); window.setTimeout(() => nomineeFileRef.current?.click(), 0); };
   const addNomineeDoc = (file?: File) => {
     if (!file || docTargetId === null) return;
-    updateNominee(docTargetId, { documents: [...(nominees.find(n => n.id === docTargetId)?.documents ?? []), file.name] });
+    const lower = file.name.toLowerCase();
+    const label = lower.includes('pan') ? 'PAN'
+      : (lower.includes('aadhaar') || lower.includes('adhar')) ? 'Aadhaar'
+      : file.name;
+    updateNominee(docTargetId, { documents: [...(nominees.find(n => n.id === docTargetId)?.documents ?? []), label] });
     setDocTargetId(null);
   };
   const splitEqually = () => {

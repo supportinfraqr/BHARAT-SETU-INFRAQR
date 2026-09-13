@@ -1574,8 +1574,11 @@ def _persist_mutation(user, role_path, resource, method, body):
                     nominee_dob=nm.get("dob") or None, nominee_age=_coerce_int(nm.get("age")),
                     contact=nm.get("contact", ""), address=nm.get("address", ""),
                     percent=_coerce_int(nm.get("percent")),
-                    pan_copy_nominee=bool(nm.get("documents") and "PAN" in nm.get("documents", [])),
-                    aadhaar_copy_nominee=bool(nm.get("documents") and "Aadhaar" in nm.get("documents", [])),
+                    # Match the doc type anywhere in the uploaded file name, e.g.
+                    # "pan_card.pdf" -> PAN, "aadhaar_front.jpg" -> Aadhaar.
+                    pan_copy_nominee=("PAN" in " ".join(str(d) for d in (nm.get("documents") or [])).upper()),
+                    aadhaar_copy_nominee=any(k in " ".join(str(d) for d in (nm.get("documents") or [])).upper()
+                                             for k in ("AADHAAR", "ADHAR")),
                 )
 
         # Settings screen also persists privacy/QR consent + preferred channel
