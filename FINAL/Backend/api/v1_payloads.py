@@ -2647,9 +2647,8 @@ def _employer_stats(user):
     sites = Site.objects.filter(employer=user)
     accepted_contractors = set(ContractorEmployerBinding.objects.filter(
         employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
-    contractors = WorkerContractorBinding.objects.filter(
-        site__employer=user, contractor_id__in=accepted_contractors).values_list(
-        "contractor_id", flat=True).distinct().count()
+    # Bound contractors count even before they have workers on a site.
+    contractors = len(accepted_contractors)
     # Only workers whose contractor is actually bound to this employer count as
     # on-site — a stale worker binding must not inflate the employer's numbers.
     workers = WorkerContractorBinding.objects.filter(
@@ -2671,7 +2670,14 @@ def _employer_sites(user):
     for s in Site.objects.filter(employer=user):
         site_bindings = WorkerContractorBinding.objects.filter(
             site=s, binding_status="ACCEPTED", contractor_id__in=accepted_contractors)
-        cids = site_bindings.values_list("contractor_id", flat=True).distinct()
+        # A contractor counts against a site when the site is allotted to them
+        # (approved allotment on an accepted binding) — even before any of their
+        # workers are bound — as well as when they have workers on the site.
+        allotted_ids = set(ContractorSiteAllotment.objects.filter(
+            site=s, status="APPROVED", binding__binding_status="ACCEPTED"
+        ).values_list("binding__contractor_id", flat=True))
+        worker_ids = set(site_bindings.values_list("contractor_id", flat=True))
+        cids = sorted(allotted_ids | worker_ids)
         wcount = site_bindings.count()
         rows.append({
             "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
