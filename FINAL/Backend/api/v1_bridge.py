@@ -1328,6 +1328,8 @@ def _persist_mutation(user, role_path, resource, method, body):
                 a.migration_type = values.get("migrationType")
             if values.get("migrant") is not None:
                 a.migrant_worker = bool(values.get("migrant"))
+            if values.get("sameAsPermanent") is not None:
+                a.current_same_as_permanent = bool(values.get("sameAsPermanent"))
             a.save()
             return identity.id
         place = body.get("placeOfBirth") or body.get("place_of_birth")

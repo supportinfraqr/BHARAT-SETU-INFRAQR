@@ -20,6 +20,8 @@ export type MobilityPayload = {
   alternateMobile: string;
   currentAddress: MobilityAddress;
   permanentAddress: MobilityAddress;
+  /** Worker ticked "Current address is the same as permanent". */
+  sameAsPermanent: boolean;
 };
 
 export type GeographyReference = Record<string, Record<string, ReadonlyArray<{
@@ -78,6 +80,7 @@ export function normalizeMobilityPayload(payload: MobilityPayload): MobilityPayl
     alternateMobile: payload.alternateMobile.replace(/\D/g, ''),
     currentAddress: cleanAddress(payload.currentAddress),
     permanentAddress: cleanAddress(payload.permanentAddress),
+    sameAsPermanent: Boolean(payload.sameAsPermanent),
   };
 }
 

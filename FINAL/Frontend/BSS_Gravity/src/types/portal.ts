@@ -79,7 +79,7 @@ export type WorkerRecord = {
   rozgarRequests: Array<{ id: string; employer: string; site: string; status: string }>;
   grievances: { openCount: number; recent: { id: string; status: string; date: string } };
   contact: { mobile: string; alternateMobile: string; email: string; preferredLanguage: string; preferredChannel: string };
-  address: { current: string; currentState: string; currentDistrict: string; currentCity: string; currentLocality: string; currentPin: string; permanent: string; permanentState: string; permanentDistrict: string; permanentCity: string; permanentLocality: string; permanentPin: string; migrant: boolean; migrationType: string };
+  address: { current: string; currentState: string; currentDistrict: string; currentCity: string; currentLocality: string; currentPin: string; permanent: string; permanentState: string; permanentDistrict: string; permanentCity: string; permanentLocality: string; permanentPin: string; migrant: boolean; migrationType: string; sameAsPermanent: boolean };
   personal: { maritalStatus: string; bloodGroup: string; fatherName: string; motherName: string; spouseName: string; disabilityStatus: string; religion: string; caste: string };
   banking: { bankName: string; holderName: string; accountNumber: string; ifsc: string; verificationStatus: string; upiEnabled: boolean };
   preferences: { consentToPublicPhoto: boolean; consentToDataSharing: boolean };

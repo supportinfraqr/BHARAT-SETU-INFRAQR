@@ -74,6 +74,8 @@ class WorkerAddressMobility(models.Model):
     permanent_pincode = models.CharField(max_length=10, blank=True)
     migrant_worker = models.BooleanField(null=True, blank=True)
     migration_type = models.CharField(max_length=40, blank=True)
+    # Worker opted "Current address is the same as permanent".
+    current_same_as_permanent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

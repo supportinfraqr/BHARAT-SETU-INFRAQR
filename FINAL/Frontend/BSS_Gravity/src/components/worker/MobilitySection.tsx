@@ -28,6 +28,7 @@ function fromWorker(worker: WorkerRecord): MobilityPayload {
     alternateMobile: worker.contact.alternateMobile,
     currentAddress: { line: worker.address.current, state: worker.address.currentState, district: worker.address.currentDistrict, city: worker.address.currentCity, locality: worker.address.currentLocality, pin: worker.address.currentPin },
     permanentAddress: { line: worker.address.permanent, state: worker.address.permanentState, district: worker.address.permanentDistrict, city: worker.address.permanentCity, locality: worker.address.permanentLocality, pin: worker.address.permanentPin },
+    sameAsPermanent: Boolean(worker.address.sameAsPermanent),
   };
 }
 
@@ -36,7 +37,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
 ) {
   const [draft, setDraft] = useState(() => fromWorker(worker));
   const [reference, setReference] = useState<GeographyReference>({});
-  const [sameAsPermanent, setSameAsPermanent] = useState(false);
+  const [sameAsPermanent, setSameAsPermanent] = useState(() => Boolean(worker.address.sameAsPermanent));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -80,6 +81,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
       }
       const data = result.data;
       setDraft(data);
+      setSameAsPermanent(Boolean(data.sameAsPermanent));
       updateWorker({
         contact: { ...worker.contact, email: data.email, mobile: data.mobile, alternateMobile: data.alternateMobile },
         address: {
@@ -97,6 +99,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
           permanentPin: data.permanentAddress.pin,
           migrant: data.migrant,
           migrationType: data.migrationType,
+          sameAsPermanent: Boolean(data.sameAsPermanent),
         },
       });
       onSaved();
@@ -135,7 +138,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
 
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6 border-t border-black/5">
       <div>
-        <div className="flex justify-between items-start gap-3 mb-4"><h3 className="text-[15px] font-semibold text-[#1D1D1F]">Current Address</h3><label className="flex items-center gap-2 text-xs text-[#68686d] cursor-pointer"><input type="checkbox" checked={sameAsPermanent} onChange={event => { const checked = event.target.checked; setSameAsPermanent(checked); if (checked) updateAddress('currentAddress', { ...draft.permanentAddress }); }}/><span>Same as permanent</span></label></div>
+        <div className="flex justify-between items-start gap-3 mb-4"><h3 className="text-[15px] font-semibold text-[#1D1D1F]">Current Address</h3><label className="flex items-center gap-2 text-xs text-[#68686d] cursor-pointer"><input type="checkbox" checked={sameAsPermanent} onChange={event => { const checked = event.target.checked; setSameAsPermanent(checked); setDraft(current => ({ ...current, sameAsPermanent: checked, currentAddress: checked ? { ...current.permanentAddress } : current.currentAddress })); }}/><span>Same as permanent</span></label></div>
         <AddressEditor kind="currentAddress" prefix="Current" address={draft.currentAddress} reference={reference} disabled={sameAsPermanent} error={errors['currentAddress.line'] || errors['currentAddress.location']} onChange={value => updateAddress('currentAddress', value)}/>
       </div>
       <AddressEditor title="Permanent Address" kind="permanentAddress" prefix="Permanent" address={draft.permanentAddress} reference={reference} readOnly error={errors['permanentAddress.line'] || errors['permanentAddress.location']} onChange={value => updateAddress('permanentAddress', value)}/>

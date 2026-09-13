@@ -638,6 +638,7 @@ def _worker_address_section(user):
         "permanentPin": _d(a.permanent_pincode) if a else "",
         "migrant": bool(a and a.migrant_worker),
         "migrationType": _d(a.migration_type) if a else "",
+        "sameAsPermanent": bool(a and a.current_same_as_permanent),
     }
 
 
