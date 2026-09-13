@@ -642,24 +642,24 @@ export default function WorkerProfilePage() {
 
                 <div className="space-y-4">
                   {nominees.map((n, rowIndex) => (
-                    <div key={n.id} className="rounded-[16px] border border-black/10 bg-gray-50/40 p-4 space-y-4">
+                    <div key={n.id} className="rounded-[16px] border border-black/10 bg-gray-50/40 p-5 space-y-5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Nominee {rowIndex + 1} {n.name && <span className="normal-case text-gray-600">— {n.name}</span>}</p>
                         <button type="button" onClick={() => removeNominee(n.id)} aria-label="Remove nominee" className="w-7 h-7 grid place-items-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-4">
-                        <div className="lg:col-span-1">
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Name <span className="text-[#FF3B30]">*</span></label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-5">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Name <span className="text-[#FF3B30]">*</span></label>
                           <input type="text" data-nominee-name={n.id} value={n.name} onChange={e => updateNominee(n.id, { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.name.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Relationship with you <span className="text-[#FF3B30]">*</span></label>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Relationship <span className="text-[#FF3B30]">*</span></label>
                           <select data-nominee-relationship={n.id} value={n.relationship} onChange={e => updateNominee(n.id, { relationship: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                             {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Type <span className="text-[#FF3B30]">*</span></label>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Nominee Type <span className="text-[#FF3B30]">*</span></label>
                           <select data-nominee-type={n.id} value={n.nomineeType} onChange={e => updateNominee(n.id, { nomineeType: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                             <option>Nominee</option>
                             <option>Family Member</option>
@@ -667,28 +667,28 @@ export default function WorkerProfilePage() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Date of Birth <span className="text-[#FF3B30]">*</span></label>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Date of Birth <span className="text-[#FF3B30]">*</span></label>
                           <input type="date" data-nominee-dob={n.id} value={n.dob} onChange={e => updateNominee(n.id, { dob: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.dob ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Age</label>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Age</label>
                           <input type="text" value={nomineeAge(n.dob)} readOnly className="w-full bg-[#F5F5F7] border border-transparent rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F]"/>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee Contact <span className="text-[#FF3B30]">*</span></label>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Contact <span className="text-[#FF3B30]">*</span></label>
                           <input type="tel" maxLength={10} data-nominee-contact={n.id} value={n.contact} onChange={e => updateNominee(n.id, { contact: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.contact.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Dependant <span className="text-[#FF3B30]">*</span></label>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Dependant <span className="text-[#FF3B30]">*</span></label>
                           <input type="text" data-nominee-dependant={n.id} value={n.dependant} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder="Name of dependant" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.dependant.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
-                        <div className="md:col-span-2 lg:col-span-4">
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Nominee / Family Address <span className="text-[#FF3B30]">*</span></label>
-                          <textarea rows={1} data-nominee-address={n.id} value={n.address} onChange={e => updateNominee(n.id, { address: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] resize-none ${saveAttempted && !n.address.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Nominee / Family Address <span className="text-[#FF3B30]">*</span></label>
+                          <textarea rows={2} data-nominee-address={n.id} value={n.address} onChange={e => updateNominee(n.id, { address: e.target.value })} className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] resize-none ${saveAttempted && !n.address.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
-                        <div className="md:col-span-3 lg:col-span-3">
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Identity Documents <span className="text-[#FF3B30]">*</span></label>
-                          <div data-nominee-documents={n.id} className={`flex flex-wrap items-center gap-2 rounded-xl ${saveAttempted && n.documents.length === 0 ? 'ring-1 ring-red-400 p-1' : ''}`}>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Identity Documents <span className="text-[#FF3B30]">*</span></label>
+                          <div data-nominee-documents={n.id} className={`flex flex-wrap items-center gap-2 rounded-xl min-h-[42px] ${saveAttempted && n.documents.length === 0 ? 'ring-1 ring-red-400 p-1' : ''}`}>
                             <button type="button" onClick={() => pickNomineeDoc(n.id)} className="inline-flex items-center gap-1.5 bg-white border border-black/10 px-3 py-2 rounded-lg text-[12px] font-medium hover:bg-gray-50"><Upload size={14}/> Upload PAN / Aadhaar Copy</button>
                             {n.documents.map((doc, docIndex) => (
                               <span key={doc} className="inline-flex items-center gap-1.5 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-[#2F9E67] px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"><FileText size={12}/>{doc}<button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc}`} className="text-gray-400 hover:text-red-600"><Trash2 size={11}/></button></span>
@@ -696,8 +696,8 @@ export default function WorkerProfilePage() {
                             {!n.documents.length && <span className="text-[11px] text-gray-400">No document uploaded</span>}
                           </div>
                         </div>
-                        <div className="lg:col-span-1">
-                          <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Share %</label>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Share %</label>
                           <div className="relative">
                             <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
                             <input type="text" inputMode="numeric" pattern="[0-9]*" value={nominees.length === 1 ? '100' : (n.percent ? String(n.percent) : '')} placeholder="0" onChange={e => { const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); const others = totalPercent - (Number.isFinite(n.percent) ? n.percent : 0); const max = Math.max(0, 100 - others); const num = digits === '' ? 0 : Math.min(max, parseInt(digits, 10)); updateNominee(n.id, { percent: num }); }} disabled={nominees.length === 1} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-500"/>
