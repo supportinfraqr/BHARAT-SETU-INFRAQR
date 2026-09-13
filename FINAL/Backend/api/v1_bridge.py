@@ -2626,20 +2626,21 @@ def _handle_default_site(user, body):
     site_id = body.get("siteId")
     if user.role == "contractor":
         prof, _ = ContractorProfile.objects.get_or_create(user=user)
-        allowed = set(WorkerContractorBinding.objects.filter(contractor=user)
-                      .values_list("site_id", flat=True))
-        allowed |= set(ContractorSiteAllotment.objects
-                       .filter(binding__contractor=user, status="APPROVED")
-                       .values_list("site_id", flat=True))
+        allowed = _contractor_site_ids(user)
     elif user.role == "employer":
         prof, _ = EmployerProfile.objects.get_or_create(user=user)
         allowed = set(Site.objects.filter(employer=user).values_list("id", flat=True))
     else:
         return None
     if site_id in (None, "", "none"):
-        prof.default_site = None
+        # A default site is mandatory while the caller has at least one site —
+        # fall back to the first available instead of clearing it.
+        fallback = Site.objects.filter(id__in=allowed).order_by("id").first()
+        if fallback is None:
+            raise PortalMutationError("You have no sites yet, so a default site cannot be set.", 400)
+        prof.default_site = fallback
         prof.save()
-        return None
+        return fallback.id
     site = Site.objects.filter(pk=site_id, id__in=allowed).first()
     if site is None:
         raise PortalMutationError("That site is not available to you.", 400)

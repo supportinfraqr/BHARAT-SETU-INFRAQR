@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, Info, MapPin, Star, Users } from 'lucide-react';
+import { Building2, Info, MapPin, Star, Users } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 import ContractorSiteDetailDialog, { type ContractorSiteDetail } from '@/components/site/ContractorSiteDetailDialog';
 
@@ -67,8 +67,8 @@ export default function ContractorQrSitesPage() {
                 <div className="grid grid-cols-2 divide-x divide-gray-100 border-t border-gray-100">
                   <button type="button" onClick={() => setDetailFor(site)} className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-gray-50 text-[#073B67] hover:bg-gray-100"><Info size={14}/>View details</button>
                   {isDefault ? (
-                    <button type="button" disabled={busy === 'clear'} onClick={() => void setDefault('')} className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-orange-50 text-[#F47A32] hover:bg-orange-100 disabled:opacity-70">
-                      {busy === 'clear' ? 'Clearing…' : <><CheckCircle2 size={14} />Default — clear</>}
+                    <button type="button" disabled className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-orange-50 text-[#F47A32] opacity-90">
+                      <Star size={14} />Default
                     </button>
                   ) : (
                     <button type="button" disabled={busy === site.id} onClick={() => void setDefault(site.id)} className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-gray-50 text-[#073B67] hover:bg-gray-100 disabled:opacity-70">

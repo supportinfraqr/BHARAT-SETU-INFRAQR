@@ -62,10 +62,10 @@ export default function EmployerSitesPage() {
     <section className="bg-white border border-gray-200 rounded-2xl p-5">
       <div className="flex items-center gap-2"><Star size={16} className="text-[#F47A32]"/><h2 className="font-semibold text-sm">Default site for contractor allotments</h2></div>
       <p className="text-xs text-gray-500 mt-1 mb-3">Pre-selected when you allot sites to a contractor. You can still change it per allotment.</p>
-      <select value={employer.defaultSite?.id ?? ''} onChange={e => void setDefaultSite(e.target.value)} disabled={defaultBusy} className="w-full sm:w-96 h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white disabled:opacity-60">
-        <option value="">No default site</option>
+      <select value={employer.defaultSite?.id ?? (employer.sites[0]?.id ?? '')} onChange={e => void setDefaultSite(e.target.value)} disabled={defaultBusy || !employer.sites.length} className="w-full sm:w-96 h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white disabled:opacity-60">
         {employer.sites.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}</option>)}
       </select>
+      {!employer.sites.length && <p className="mt-2 text-xs text-gray-400">Add a site first — the first site becomes the default automatically.</p>}
       {defaultNotice && <p role="status" className="mt-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{defaultNotice}</p>}
       {defaultError && <p role="alert" className="mt-2 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{defaultError}</p>}
     </section>
@@ -80,7 +80,7 @@ export default function EmployerSitesPage() {
         <div className="grid grid-cols-3 divide-x divide-gray-100 border-t border-gray-100">
           <Link href={`/employer/sites/${site.id}`} className="h-9 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100">View Site <ArrowRight size={14}/></Link>
           <button type="button" onClick={() => setQrSite(site)} disabled={!site.qrToken} className="h-9 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100 disabled:opacity-50"><QrCode size={14}/>QR</button>
-          <button type="button" onClick={() => void setDefaultSite(isDefault ? '' : site.id)} disabled={defaultBusy} className={`h-9 text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-50 ${isDefault ? 'bg-orange-50 text-[#F47A32] hover:bg-orange-100' : 'bg-gray-50 text-[#073B67] hover:bg-gray-100'}`}><Star size={14}/>{isDefault ? 'Default' : 'Set default'}</button>
+          <button type="button" onClick={() => void setDefaultSite(site.id)} disabled={defaultBusy || isDefault} className={`h-9 text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-70 ${isDefault ? 'bg-orange-50 text-[#F47A32]' : 'bg-gray-50 text-[#073B67] hover:bg-gray-100'}`}><Star size={14}/>{isDefault ? 'Default' : 'Set default'}</button>
         </div>
       </article>;
       })}
