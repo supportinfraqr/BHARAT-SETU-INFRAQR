@@ -35,6 +35,9 @@ export default function WorkerProfilePage() {
   );
   const [nextNomineeId, setNextNomineeId] = useState(() => Math.max(0, ...(worker.family?.nominees ?? []).map(n => n.id)) + 1);
   const [docTargetId, setDocTargetId] = useState<number | null>(null);
+  // Disability: Status drives whether Type / % is applicable.
+  const [disabilityStatus, setDisabilityStatus] = useState(() => worker.personal.disabilityStatus || 'No');
+  const [disabilityTypePct, setDisabilityTypePct] = useState(() => worker.identity.disabilityTypePct || '');
   const nomineeFileRef = useRef<HTMLInputElement>(null);
   const totalPercent = nominees.reduce((sum, n) => sum + (Number.isFinite(n.percent) ? n.percent : 0), 0);
   const percentBalanced = nominees.length > 0 && totalPercent === 100;
@@ -293,6 +296,10 @@ export default function WorkerProfilePage() {
       if (activeTab === 'classification') {
         patch.classification = { ...(patch.classification ?? {}), currentEmploymentStatus: employmentStatus, workerCategory };
       }
+      // Disability Type / % is a controlled, conditionally-disabled field.
+      if (activeTab === 'personal') {
+        patch.identity = { ...(patch.identity ?? {}), disabilityTypePct: disabilityStatus === 'Yes' ? disabilityTypePct.trim() : '' };
+      }
       // Family nominees live in component state.
       if (activeTab === 'family') {
         patch.family = {
@@ -482,14 +489,15 @@ export default function WorkerProfilePage() {
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Status</label>
-                    <select name="personal.disabilityStatus" defaultValue={worker.personal.disabilityStatus} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
+                    <select name="personal.disabilityStatus" value={disabilityStatus} onChange={e => { const v = e.target.value; setDisabilityStatus(v); if (v !== 'Yes') setDisabilityTypePct(''); }} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]">
                       <option>No</option>
                       <option>Yes</option>
                     </select>
                  </div>
                  <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Disability Type / %</label>
-                    <input name="identity.disabilityTypePct" type="text" defaultValue={worker.identity.disabilityTypePct} placeholder="If applicable" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC]" />
+                    <input name="identity.disabilityTypePct" type="text" value={disabilityTypePct} onChange={e => setDisabilityTypePct(e.target.value)} disabled={disabilityStatus !== 'Yes'} placeholder={disabilityStatus === 'Yes' ? 'e.g. Locomotor 40%' : 'Not applicable'} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] focus:ring-1 focus:ring-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-400" />
+                    {disabilityStatus === 'Yes' && !disabilityTypePct.trim() && <p className="text-[11px] text-[#F47A32] mt-1">Please specify the disability type / percentage.</p>}
                  </div>
               </div>
               
