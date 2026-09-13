@@ -32,6 +32,7 @@ export default function EmployerScanPage() {
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [notice, setNotice] = useState('');
   const [alreadyRequested, setAlreadyRequested] = useState<string | null>(null);
+  const [sentContractors, setSentContractors] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [chosenSiteIds, setChosenSiteIds] = useState<number[]>([]);
 
@@ -51,7 +52,9 @@ export default function EmployerScanPage() {
         const known = employer.contractors.find(c => c.bssId === p.bssId);
         const bound = Boolean(known);
         const existing = employer.approvals.find(a => a.bssId === p.bssId && ['Pending', 'Accepted', 'Approved'].includes(a.status));
-        setAlreadyRequested(existing ? existing.status : null);
+        // A request sent earlier in this session (portal data is not refreshed live).
+        const sentHere = sentContractors.includes(p.bssId);
+        setAlreadyRequested(sentHere ? 'Pending' : (existing ? existing.status : null));
         setEntity({
           kind: 'contractor',
           bssId: p.bssId,
@@ -118,6 +121,7 @@ export default function EmployerScanPage() {
         const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
         if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
         setState('confirmed');
+        setSentContractors(current => current.includes(scanned.bssId) ? current : [...current, scanned.bssId]);
         const siteNote = chosenSiteIds.length ? ' Site(s) proposed for the contractor to approve.' : ' No site proposed — allot sites later from Binding Requests.';
         setNotice(`Binding request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Binding Requests.${siteNote}`);
         setMessage('Binding request sent');

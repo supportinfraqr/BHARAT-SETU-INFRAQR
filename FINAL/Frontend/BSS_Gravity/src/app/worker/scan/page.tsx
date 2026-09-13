@@ -31,6 +31,7 @@ export default function QRScannerWorkflow() {
   const [contractorSite, setContractorSite] = useState("");
   const [siteCheck, setSiteCheck] = useState<'idle' | 'loading' | 'ok' | 'none'>('idle');
   const [bindSent, setBindSent] = useState(false);
+  const [sentContractors, setSentContractors] = useState<string[]>([]);
   const [sentSite, setSentSite] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -43,6 +44,7 @@ export default function QRScannerWorkflow() {
   const existingBinding = contractor
     ? portal.bindings.find(b => b.contractorCode === contractor.bssId && (b.status === 'Pending' || b.status === 'Accepted'))
     : undefined;
+  const alreadySentToContractor = !!contractor && sentContractors.includes(contractor.bssId);
 
   useEffect(() => () => controls.current?.stop(), []);
 
@@ -113,6 +115,7 @@ export default function QRScannerWorkflow() {
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
       setBindSent(true);
       setSentSite(result.data?.site ?? "");
+      setSentContractors(current => current.includes(contractor.bssId) ? current : [...current, contractor.bssId]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Binding request could not be created.');
     } finally { setBusy(false); }
@@ -138,7 +141,7 @@ export default function QRScannerWorkflow() {
   const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setContractorSite(""); setSiteCheck("idle"); setConfirmOpen(false); setMessage(""); setState("idle"); };
 
   const requestSendBinding = () => {
-    if (existingBinding) { setError(existingBinding.status === 'Accepted' ? `You are already bound to ${contractor?.name}.` : `A binding request is already pending with ${contractor?.name}.`); return; }
+    if (existingBinding || alreadySentToContractor) { setError(existingBinding?.status === 'Accepted' ? `You are already bound to ${contractor?.name}.` : `A binding request is already pending with ${contractor?.name}.`); return; }
     if (boundContractor) { setState("error"); setMessage(`You are already bound to ${boundContractor}. Unbind first before binding with another contractor.`); return; }
     if (siteCheck !== 'ok') { setError('This contractor has no site allotted yet, so a binding cannot be requested.'); return; }
     setError("");
@@ -183,8 +186,8 @@ export default function QRScannerWorkflow() {
                     : <>Your request will be created at <strong>{contractorSite}</strong> — the contractor&apos;s default site. You never choose a site; binding completes only after the contractor approves.</>}
               </p>
               {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
-              {existingBinding
-                ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>{existingBinding.status === 'Accepted' ? `You are already bound to ${contractor.name}${existingBinding.site ? ` at ${existingBinding.site}` : ''}.` : `A binding request is already pending with ${contractor.name}.`} Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
+              {existingBinding || alreadySentToContractor
+                ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>{existingBinding?.status === 'Accepted' ? `You are already bound to ${contractor.name}${existingBinding.site ? ` at ${existingBinding.site}` : ''}.` : `A binding request is already pending with ${contractor.name}.`} Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
                 : bindSent
                   ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent{sentSite ? ` for ${sentSite}` : ''}! Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
                   : <button onClick={requestSendBinding} disabled={busy || siteCheck !== 'ok'} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>{busy ? 'Sending…' : siteCheck === 'loading' ? 'Checking site…' : 'Send binding request'}</button>}

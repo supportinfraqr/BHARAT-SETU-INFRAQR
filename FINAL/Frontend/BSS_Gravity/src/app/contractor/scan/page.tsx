@@ -25,6 +25,7 @@ export default function ContractorScanPage() {
   const [entity, setEntity] = useState<ScannedEntity | null>(null);
   const [requestSent, setRequestSent] = useState(false);
   const [alreadyPending, setAlreadyPending] = useState(false);
+  const [sentBssIds, setSentBssIds] = useState<string[]>([]);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [unbindRequested, setUnbindRequested] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
@@ -42,9 +43,11 @@ export default function ContractorScanPage() {
       setScanned(p);
       setAlreadyPending(false);
       const bssId = p.bssId ?? "";
+      const sentHere = sentBssIds.includes(bssId);
       if (p.type === "BSS_SITE") {
         setEntity({ kind: 'employer', bssId: p.bssId ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site binding' });
         setRequestSent(false);
+        setAlreadyPending(sentHere);
         setState("binding");
         setMessage("Site QR identified — request a binding. The employer approves the binding, then proposes sites for you to approve.");
         controls.current?.stop();
@@ -53,7 +56,7 @@ export default function ContractorScanPage() {
       if (p.type === "BSS_EMPLOYER") {
         const known = contractor.employers.find(e => e.employerId === bssId);
         const existing = contractor.bindingRequests.find(b => b.type === 'Employer' && b.bssId === bssId && ['Pending', 'Accepted'].includes(b.status));
-        setAlreadyPending(Boolean(existing));
+        setAlreadyPending(Boolean(existing) || sentHere);
         setEntity({ kind: 'employer', bssId, name: known?.name ?? existing?.entityName ?? 'Principal Employer ' + bssId.slice(-4), employer: known?.name ?? existing?.entityName ?? 'Principal Employer', site: known?.sites?.[0] ?? existing?.site ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
         setRequestSent(false);
         setState("binding");
@@ -75,7 +78,7 @@ export default function ContractorScanPage() {
           designation: known?.designation ?? pending?.designation ?? 'Not disclosed',
         });
         setRequestSent(false);
-        setAlreadyPending(Boolean(pending));
+        setAlreadyPending(Boolean(pending) || sentHere);
         setAttendanceMarked(false);
         setUnbindRequested(false);
         setState("binding");
@@ -107,6 +110,8 @@ export default function ContractorScanPage() {
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
+      const key = scanned.bssId || scanned.siteToken || '';
+      if (key) setSentBssIds(current => current.includes(key) ? current : [...current, key]);
       setMessage(entity.kind === 'worker'
         ? `Binding request sent to ${entity.name}. The worker must approve before binding is complete.`
         : `Binding request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding, then proposes sites.`);
