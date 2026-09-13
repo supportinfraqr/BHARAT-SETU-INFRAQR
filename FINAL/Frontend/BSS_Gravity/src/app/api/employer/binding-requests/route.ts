@@ -40,6 +40,7 @@ export async function POST(request: Request) {
         siteId: Number(body.siteId) || undefined,
         allotmentId: Number(body.allotmentId) || undefined,
         siteIds: Array.isArray(body.siteIds) ? body.siteIds.map(Number).filter(Number.isInteger) : undefined,
+        bindingIds: Array.isArray(body.bindingIds) ? body.bindingIds.map(Number).filter(Number.isInteger) : undefined,
       }),
     });
     return NextResponse.json(result);

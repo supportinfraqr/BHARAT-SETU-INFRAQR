@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Check, MapPin, Plus, ShieldCheck, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Check, ChevronDown, MapPin, Plus, ShieldCheck, Users, X } from "lucide-react";
 
 export type SitePermissionStatus = "Approved" | "Pending" | "Rejected" | "Released" | "None";
 
@@ -22,6 +22,8 @@ export type SitePermissionRow = {
   canApproveRelease?: boolean;
   canRejectRelease?: boolean;
 };
+
+export type SecondaryContractor = { id: number; name: string; bindingId: number };
 
 const STATUS_STYLE: Record<SitePermissionStatus, string> = {
   Approved: "bg-green-50 text-green-700 ring-green-100",
@@ -52,6 +54,7 @@ export default function SitePermissionsDialog({
   busy,
   note,
   footer,
+  secondaryContractors = [],
   onClose,
   onApprove,
   onReject,
@@ -59,6 +62,7 @@ export default function SitePermissionsDialog({
   onRelease,
   onApproveRelease,
   onRejectRelease,
+  onSelectionChange,
 }: {
   open: boolean;
   title: string;
@@ -68,14 +72,27 @@ export default function SitePermissionsDialog({
   busy: boolean;
   note?: string;
   footer?: ReactNode;
+  secondaryContractors?: SecondaryContractor[];
   onClose: () => void;
   onApprove: (siteId: number) => void;
   onReject: (siteId: number) => void;
-  onPropose: (siteId: number) => void;
+  onPropose: (siteId: number, extraBindingIds: number[]) => void;
   onRelease: (siteId: number) => void;
   onApproveRelease: (siteId: number) => void;
   onRejectRelease: (siteId: number) => void;
+  onSelectionChange?: (bindingIds: number[]) => void;
 }) {
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
+  const [selectedBindings, setSelectedBindings] = useState<number[]>([]);
+  const toggleBinding = (bindingId: number) => {
+    setSelectedBindings(current => {
+      const next = current.includes(bindingId)
+        ? current.filter(id => id !== bindingId)
+        : [...current, bindingId];
+      onSelectionChange?.(next);
+      return next;
+    });
+  };
   if (!open) return null;
   return (
     <div
@@ -107,6 +124,41 @@ export default function SitePermissionsDialog({
 
         <div className="px-6 py-4 overflow-y-auto">
           <p className="text-xs text-gray-500 bg-blue-50/60 border border-blue-100 rounded-xl px-3 py-2.5 leading-5">{intro}</p>
+          {secondaryContractors.length > 0 && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setSecondaryOpen(value => !value)}
+                aria-expanded={secondaryOpen}
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-700 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Users size={14} className="text-[#073B67]" />
+                  Also propose to other bound contractors{selectedBindings.length ? ` (${selectedBindings.length})` : ""}
+                </span>
+                <ChevronDown size={14} className={`transition-transform ${secondaryOpen ? "rotate-180" : ""}`} />
+              </button>
+              {secondaryOpen && (
+                <div className="mt-1 rounded-xl border border-gray-200 bg-white p-1 max-h-44 overflow-y-auto">
+                  {secondaryContractors.map(contractor => {
+                    const on = selectedBindings.includes(contractor.bindingId);
+                    return (
+                      <button
+                        key={contractor.bindingId}
+                        type="button"
+                        onClick={() => toggleBinding(contractor.bindingId)}
+                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs hover:bg-gray-50"
+                      >
+                        <span className="min-w-0 text-left font-semibold text-gray-800 truncate">{contractor.name}</span>
+                        <span className={`w-4 h-4 rounded border grid place-items-center flex-shrink-0 ${on ? "bg-[#073B67] border-[#073B67] text-white" : "border-gray-300"}`}>{on && <Check size={11} />}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="mt-1 text-[10px] text-gray-400">The site is proposed to the current contractor and to each selected bound contractor; each approves independently.</p>
+            </div>
+          )}
           {rows.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">No sites yet.</p>
           ) : (
@@ -208,7 +260,7 @@ export default function SitePermissionsDialog({
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => onPropose(row.siteId)}
+                        onClick={() => onPropose(row.siteId, selectedBindings)}
                         className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] transition-colors disabled:opacity-60 inline-flex items-center gap-1"
                       >
                         <Plus size={13} />Propose

@@ -444,6 +444,7 @@ export type EmployerContractor = {
   compliance: number;
   onboardingDate: string;
   status: 'Active' | 'Pending' | 'Suspended';
+  bindingId?: number;
   verified: boolean;
 };
 

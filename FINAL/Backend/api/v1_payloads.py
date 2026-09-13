@@ -2768,6 +2768,7 @@ def _employer_contractors(user):
             "siteIds": site_ids, "workers": wcount,
             "compliance": 0, "onboardingDate": None,
             "status": status,
+            "bindingId": binding.id if (binding and accepted_binding) else None,
             "verified": bool(cp and cp.is_verified_badge) or accepted_binding,
         })
     return rows

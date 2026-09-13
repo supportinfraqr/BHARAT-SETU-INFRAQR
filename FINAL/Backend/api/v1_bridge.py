@@ -3897,21 +3897,48 @@ def employer_binding_action(request, binding_id):
         if not site_ids:
             return Response({"error": "Select at least one site to propose."},
                             status=status.HTTP_400_BAD_REQUEST)
-        for sid in site_ids:
-            site = Site.objects.filter(pk=sid, employer=request.user).first()
-            if site is None:
+        # Target bindings: the current one plus any secondary contractors the
+        # employer selected — all must be ACCEPTED bindings of this employer.
+        target_ids = [b.id]
+        for bid in (request.data.get("bindingIds") or []):
+            try:
+                bid = int(bid)
+            except (TypeError, ValueError):
                 continue
-            # Two-step: the employer proposes (PENDING); the contractor approves.
-            ContractorSiteAllotment.objects.update_or_create(
-                binding=b, site=site,
-                defaults={"status": "PENDING", "source": "employer_allot"})
-            _create_notification(
-                user=b.contractor,
-                title="Site permission proposed",
-                body=f"Employer {payloads._notification_actor_name(user)} proposed site access for {payloads._d(site.site_name)}.",
-                notif_type="APPROVAL",
-                link="/contractor/qr/requests"
-            )
+            if bid not in target_ids:
+                target_ids.append(bid)
+        targets = list(ContractorEmployerBinding.objects.filter(
+            pk__in=target_ids, employer=user, binding_status="ACCEPTED"))
+        if not targets:
+            targets = [b]
+        for target in targets:
+            for sid in site_ids:
+                site = Site.objects.filter(pk=sid, employer=request.user).first()
+                if site is None:
+                    continue
+                existing = ContractorSiteAllotment.objects.filter(binding=target, site=site).first()
+                # Never downgrade an already-approved site or re-notify a pending one.
+                if existing is not None and existing.status == "APPROVED":
+                    continue
+                if existing is None:
+                    ContractorSiteAllotment.objects.create(
+                        binding=target, site=site, status="PENDING", source="employer_allot")
+                elif existing.status != "PENDING":
+                    existing.status = "PENDING"
+                    existing.source = "employer_allot"
+                    existing.release_requested_at = None
+                    existing.release_requested_by = ""
+                    existing.save(update_fields=["status", "source", "release_requested_at",
+                                                 "release_requested_by", "updated_at"])
+                else:
+                    continue
+                _create_notification(
+                    user=target.contractor,
+                    title="Site permission proposed",
+                    body=f"Employer {payloads._notification_actor_name(user)} proposed site access for {payloads._d(site.site_name)}.",
+                    notif_type="APPROVAL",
+                    link="/contractor/qr/requests"
+                )
     else:
         return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"data": payloads._ce_binding_row(b)}, status=status.HTTP_200_OK)
