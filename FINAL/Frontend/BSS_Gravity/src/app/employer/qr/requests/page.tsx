@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Building2, Clock3, UserRoundCheck } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import SitePermissionsDialog, { type SitePermissionStatus } from '@/components/ui/SitePermissionsDialog';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerApproval } from '@/types/portal';
 
@@ -127,44 +128,37 @@ export default function EmployerQrBindingRequestsPage() {
     {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
     <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={row => row.id} filename="employer-binding-requests"/>
 
-    {allotFor && (
-      <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
-        <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-          <h2 className="font-semibold">Site permissions — {allotFor.name}</h2>
-          <p className="text-xs text-gray-500 mt-1">Two-step: you propose a site and the contractor approves — or the contractor requests and you approve. Workers only operate at approved sites.</p>
-          <div className="mt-4 space-y-2">
-            {employer.sites.map(site => {
-              const id = Number(site.id);
-              const a = allotFor.allotments?.find(x => x.siteId === id);
-              const status = a?.status ?? 'None';
-              const isDefault = employer.defaultSite?.id === site.id;
-              return (
-                <div key={site.id} className="flex flex-wrap items-center justify-between gap-2 border border-gray-200 rounded-lg px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm text-gray-900">{site.name}{isDefault && <span className="ml-1 text-[10px] font-bold text-[#F47A32]">Default</span>}</p>
-                    <p className="text-[11px] text-gray-400 font-mono">{site.code}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${status === 'Approved' ? 'bg-green-50 text-green-700' : status === 'Pending' ? 'bg-orange-50 text-orange-700' : status === 'Rejected' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {status === 'None' ? 'Not proposed' : status}{a?.source === 'contractor_request' ? ' · requested' : a?.source === 'employer_allot' ? ' · proposed' : ''}
-                    </span>
-                    {status === 'Pending' && a?.source === 'contractor_request' && <button disabled={busy} onClick={() => void bindingSiteAction('approve-site', { siteId: id })} className="text-green-700 text-xs font-bold">Approve</button>}
-                    {status === 'Pending' && <button disabled={busy} onClick={() => void bindingSiteAction('reject-site', { siteId: id })} className="text-red-600 text-xs font-semibold">Reject</button>}
-                    {(status === 'None' || status === 'Rejected') && <button disabled={busy} onClick={() => void bindingSiteAction('allot', { siteIds: [id] })} className="text-[#073B67] text-xs font-bold">Propose</button>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {!employer.sites.length && <p className="text-xs text-gray-400 mt-3">No sites yet — register a site first.</p>}
-          <div className="mt-5 flex items-center justify-between gap-3">
-            {employer.defaultSite && <button disabled={busy} onClick={() => void bindingSiteAction('allot', { siteIds: [Number(employer.defaultSite!.id)] })} className="text-[11px] text-[#073B67] font-semibold">Propose default site ({employer.defaultSite.name})</button>}
-            <button onClick={() => { setAllotFor(null); setError(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold ml-auto">Close</button>
-          </div>
-          {!employer.defaultSite && <p className="text-[11px] text-orange-600 mt-2">No default site set — propose a site for this binding, or set a default in <a href="/employer/sites" className="underline font-semibold">Sites</a>.</p>}
-        </section>
-      </div>
-    )}
+    <SitePermissionsDialog
+      open={!!allotFor}
+      title="Site permissions"
+      subtitle={allotFor ? `${allotFor.name} · ${allotFor.bssId}` : ''}
+      intro="Two-step: you propose a site and the contractor approves — or the contractor requests and you approve. Workers only operate at approved sites."
+      rows={allotFor ? employer.sites.map(site => {
+        const id = Number(site.id);
+        const a = allotFor.allotments?.find(x => x.siteId === id);
+        const status = (a?.status ?? 'None') as SitePermissionStatus;
+        return {
+          siteId: id,
+          name: site.name,
+          code: site.code,
+          status,
+          source: a?.source,
+          isDefault: employer.defaultSite?.id === site.id,
+          canApprove: status === 'Pending' && a?.source === 'contractor_request',
+          canReject: status === 'Pending',
+          canPropose: status === 'None' || status === 'Rejected',
+        };
+      }) : []}
+      busy={busy}
+      note={!employer.defaultSite ? 'No default site set — propose a site for this binding, or set a default in Sites.' : undefined}
+      footer={employer.defaultSite ? (
+        <button type="button" disabled={busy} onClick={() => void bindingSiteAction('allot', { siteIds: [Number(employer.defaultSite!.id)] })} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] transition-colors disabled:opacity-60">Propose default site ({employer.defaultSite.name})</button>
+      ) : undefined}
+      onClose={() => { setAllotFor(null); setError(''); }}
+      onApprove={id => void bindingSiteAction('approve-site', { siteId: id })}
+      onReject={id => void bindingSiteAction('reject-site', { siteId: id })}
+      onPropose={id => void bindingSiteAction('allot', { siteIds: [id] })}
+    />
     <ConfirmDialog
       open={!!confirm}
       tone={confirm?.kind === 'approve' ? 'positive' : 'negative'}

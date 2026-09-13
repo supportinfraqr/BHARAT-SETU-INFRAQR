@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound, X } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import SitePermissionsDialog from '@/components/ui/SitePermissionsDialog';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorBindingRequest } from '@/types/portal';
 
@@ -198,31 +199,27 @@ export default function ContractorBindingRequestsPage() {
         </section>
       </div>
     )}
-    {sitesFor && (
-      <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Site permissions">
-        <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
-          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div><h2 className="font-semibold text-gray-900">Site permissions</h2><p className="text-xs text-gray-500 mt-0.5">{sitesFor.entityName} · {sitesFor.bssId}</p></div>
-            <button onClick={() => setSitesFor(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
-          </header>
-          <div className="p-5 space-y-2">
-            <p className="text-xs text-gray-500">Two-step: the employer proposes a site and you approve. To request a new site, scan that site&apos;s QR — the employer then approves it.</p>
-            {(sitesFor.allotments ?? []).length === 0 && <p className="text-xs text-gray-400">No sites proposed or allotted yet.</p>}
-            {(sitesFor.allotments ?? []).map(a => (
-              <div key={a.siteId} className="flex flex-wrap items-center justify-between gap-2 border border-gray-200 rounded-lg px-3 py-2">
-                <div><p className="font-semibold text-sm text-gray-900">{a.site}</p><p className="text-[11px] text-gray-400 font-mono">{a.siteCode}</p></div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${a.status === 'Approved' ? 'bg-green-50 text-green-700' : a.status === 'Pending' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>{a.status}</span>
-                  {a.status === 'Pending' && a.source === 'employer_allot' && <button disabled={busy} onClick={() => void contractorSiteAction('approve-site', a.siteId)} className="text-green-700 text-xs font-bold">Approve</button>}
-                  {a.status === 'Pending' && <button disabled={busy} onClick={() => void contractorSiteAction('reject-site', a.siteId)} className="text-red-600 text-xs font-semibold">Reject</button>}
-                  {a.status === 'Pending' && a.source !== 'employer_allot' && <span className="text-orange-700 text-xs font-semibold">Awaiting employer</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )}
+    <SitePermissionsDialog
+      open={!!sitesFor}
+      title="Site permissions"
+      subtitle={sitesFor ? `${sitesFor.entityName} · ${sitesFor.bssId}` : ''}
+      intro="Two-step: the employer proposes a site and you approve. To request a new site, scan that site's QR — the employer then approves it."
+      rows={(sitesFor?.allotments ?? []).map(a => ({
+        siteId: a.siteId,
+        name: a.site,
+        code: a.siteCode,
+        status: a.status,
+        source: a.source,
+        canApprove: a.status === 'Pending' && a.source === 'employer_allot',
+        canReject: a.status === 'Pending',
+        canPropose: false,
+      }))}
+      busy={busy}
+      onClose={() => setSitesFor(null)}
+      onApprove={id => void contractorSiteAction('approve-site', id)}
+      onReject={id => void contractorSiteAction('reject-site', id)}
+      onPropose={() => {}}
+    />
     <ConfirmDialog
       open={!!confirm}
       tone={confirm?.kind === 'approve' || confirm?.kind === 'accept' ? 'positive' : 'negative'}
