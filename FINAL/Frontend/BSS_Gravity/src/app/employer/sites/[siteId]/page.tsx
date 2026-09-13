@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { ArrowLeft, Building2, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
-import { parseCoordinate } from '@/components/employer/SiteMap';
+import { parseCoordinate } from '@/components/employer/siteGeo';
 import { SiteQr, SiteQrPanel } from '@/components/qr/WorkerQr';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { tabs, type Tab, TAB_FIELDS, LABELS, FIELD_DEFS } from '@/components/site/siteDetailFields';

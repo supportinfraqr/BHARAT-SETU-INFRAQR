@@ -4,38 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-/** A resolved geo place chosen from OpenStreetMap (Nominatim). */
-export type SiteGeo = {
-  lat: number;
-  lng: number;
-  label: string; // human readable site/landmark name (or display_name)
-  address?: string;
-  state?: string;
-  district?: string;
-  city?: string;
-  pin?: string;
-  country?: string;
-};
-
-/** Parse "19.0178° N", "19.0178,72.8", "19.0178" into a number (or null). */
-export function parseCoordinate(value?: string | number | null): number | null {
-  if (value === null || value === undefined) return null;
-  const text = String(value).trim();
-  const match = text.match(/(-?\d+(?:\.\d+)?)/);
-  return match ? Number(match[1]) : null;
-}
-
-export function formatLatitude(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
-  const n = Number(value);
-  return `${Math.abs(n).toFixed(5)}° ${n >= 0 ? "N" : "S"}`;
-}
-
-export function formatLongitude(value: number | null | undefined): string {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
-  const n = Number(value);
-  return `${Math.abs(n).toFixed(5)}° ${n >= 0 ? "E" : "W"}`;
-}
+// The pure geo helpers live in a leaflet-free module (siteGeo) so server code
+// can import them without pulling in leaflet, which touches `window` at module
+// scope and crashes SSR. Re-exported here for existing import sites.
+import { formatLatitude, formatLongitude, type SiteGeo } from "./siteGeo";
+export { parseCoordinate, formatLatitude, formatLongitude } from "./siteGeo";
+export type { SiteGeo } from "./siteGeo";
 
 function pinIcon() {
   return L.divIcon({

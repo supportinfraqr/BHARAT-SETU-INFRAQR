@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, X } from 'lucide-react';
-import type { SiteGeo } from '@/components/employer/SiteMap';
+import type { SiteGeo } from '@/components/employer/siteGeo';
 
 const SiteMapPicker = dynamic(() => import('@/components/employer/SiteMap').then(m => m.default), { ssr: false });
 
