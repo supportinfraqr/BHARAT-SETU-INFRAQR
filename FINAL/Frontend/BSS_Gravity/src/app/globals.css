@@ -424,7 +424,6 @@ html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-moti
 
 [role="dialog"] {
   max-height: calc(100dvh - max(2rem, env(safe-area-inset-top)) - max(2rem, env(safe-area-inset-bottom)));
-  overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }

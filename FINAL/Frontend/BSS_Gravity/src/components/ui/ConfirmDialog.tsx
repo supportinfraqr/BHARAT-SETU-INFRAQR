@@ -34,13 +34,13 @@ export default function ConfirmDialog({
   const positive = tone === "positive";
   return (
     <div
-      className="fixed inset-0 z-[95] flex items-center justify-center p-4 sm:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto"
       onClick={() => { if (!busy) onCancel(); }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-auto animate-in zoom-in-95 fade-in duration-200"
         onClick={event => event.stopPropagation()}
       >
