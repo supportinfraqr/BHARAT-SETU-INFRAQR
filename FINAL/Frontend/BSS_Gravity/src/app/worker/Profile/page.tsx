@@ -281,7 +281,7 @@ export default function WorkerProfilePage() {
         if (!n.nomineeType.trim()) requiredErrors.push({ message: `${row} — nominee type is required.`, selector: `[data-nominee-type="${n.id}"]` });
         if (!n.dob) requiredErrors.push({ message: `${row} — date of birth is required.`, selector: `[data-nominee-dob="${n.id}"]` });
         if (!n.contact.trim()) requiredErrors.push({ message: `${row} — contact is required.`, selector: `[data-nominee-contact="${n.id}"]` });
-        if (!n.dependant.trim()) requiredErrors.push({ message: `${row} — dependant is required.`, selector: `[data-nominee-dependant="${n.id}"]` });
+        if (!(n.nomineeType === 'Dependant' ? n.name : n.dependant).trim()) requiredErrors.push({ message: `${row} — dependant is required.`, selector: `[data-nominee-dependant="${n.id}"]` });
         if (!n.address.trim()) requiredErrors.push({ message: `${row} — address is required.`, selector: `[data-nominee-address="${n.id}"]` });
         if (n.documents.length === 0) requiredErrors.push({ message: `${row} — at least one identity document is required.`, selector: `[data-nominee-documents="${n.id}"]` });
       });
@@ -355,7 +355,9 @@ export default function WorkerProfilePage() {
             // Never save an unbalanced distribution — auto-normalise to 100%.
             const toSave = named.length > 0 && namedTotal !== 100 ? balanceNominees(named) : named;
             return toSave.map(n => ({
-              name: n.name.trim(), dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
+              name: n.name.trim(),
+              dependant: n.nomineeType === 'Dependant' ? n.name.trim() : n.dependant,
+              relation: n.relationship, nomineeType: n.nomineeType,
               dob: n.dob, age: nomineeAge(n.dob), contact: n.contact, address: n.address, documents: n.documents,
               percent: n.percent,
             }));
@@ -650,7 +652,7 @@ export default function WorkerProfilePage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-5">
                         <div>
                           <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Name <span className="text-[#FF3B30]">*</span></label>
-                          <input type="text" data-nominee-name={n.id} value={n.name} onChange={e => updateNominee(n.id, { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.name.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                          <input type="text" data-nominee-name={n.id} value={n.name} onChange={e => updateNominee(n.id, n.nomineeType === 'Dependant' ? { name: e.target.value, dependant: e.target.value } : { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.name.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Relationship <span className="text-[#FF3B30]">*</span></label>
@@ -660,7 +662,7 @@ export default function WorkerProfilePage() {
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Nominee Type <span className="text-[#FF3B30]">*</span></label>
-                          <select data-nominee-type={n.id} value={n.nomineeType} onChange={e => updateNominee(n.id, { nomineeType: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                          <select data-nominee-type={n.id} value={n.nomineeType} onChange={e => { const t = e.target.value; updateNominee(n.id, t === 'Dependant' ? { nomineeType: t, dependant: n.name } : { nomineeType: t }); }} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                             <option>Nominee</option>
                             <option>Family Member</option>
                             <option>Dependant</option>
@@ -680,7 +682,7 @@ export default function WorkerProfilePage() {
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Dependant <span className="text-[#FF3B30]">*</span></label>
-                          <input type="text" data-nominee-dependant={n.id} value={n.dependant} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder="Name of dependant" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.dependant.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                          <input type="text" data-nominee-dependant={n.id} value={n.nomineeType === 'Dependant' ? n.name : n.dependant} readOnly={n.nomineeType === 'Dependant'} onChange={e => updateNominee(n.id, { dependant: e.target.value })} placeholder={n.nomineeType === 'Dependant' ? 'Auto-filled from nominee name' : 'Name of dependant'} className={`w-full border rounded-xl px-3 py-2.5 text-[13px] font-medium focus:outline-none focus:border-[#0066CC] ${n.nomineeType === 'Dependant' ? 'bg-[#F5F5F7] text-gray-500 border-transparent' : `bg-white text-[#1D1D1F] ${saveAttempted && !n.dependant.trim() ? 'border-red-400' : 'border-black/10'}`}`}/>
                         </div>
                         <div className="sm:col-span-2">
                           <label className="block text-[11px] font-semibold text-[#86868B] uppercase tracking-wider mb-1.5">Nominee / Family Address <span className="text-[#FF3B30]">*</span></label>
