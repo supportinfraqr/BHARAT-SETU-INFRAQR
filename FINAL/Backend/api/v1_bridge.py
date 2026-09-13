@@ -2311,11 +2311,17 @@ def _contractor_default_site(contractor):
 def _release_contractor_workers(binding):
     """When a contractor↔employer binding ends, release that contractor's worker
     bindings at the employer's sites — a contractor cannot keep workers at a site
-    they are no longer allotted."""
-    WorkerContractorBinding.objects.filter(
+    they are no longer allotted. Each released worker also gets an experience
+    letter (same as a normal unbind)."""
+    released = list(WorkerContractorBinding.objects.filter(
         contractor=binding.contractor, site__employer=binding.employer
-    ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).update(
+    ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]))
+    if not released:
+        return
+    WorkerContractorBinding.objects.filter(pk__in=[b.id for b in released]).update(
         binding_status="CANCELLED", unbound_at=timezone.now())
+    for released_binding in released:
+        _issue_binding_letter(released_binding, "experience")
 
 
 def _handle_site_calendar(user, body, method):
@@ -3067,7 +3073,7 @@ def worker_documents(request):
     # Education — may be uploaded manually; such uploads remain "Under
     # Verification" and never receive the DigiLocker "Verified" badge.
     if WorkerDocument.objects.filter(user=user, document=master, auto_generated=True).exists():
-        return Response({"error": "This document is fetched from DigiLocker and cannot be uploaded or replaced."},
+        return Response({"error": "This document is issued by the system and cannot be uploaded or replaced."},
                         status=status.HTTP_400_BAD_REQUEST)
 
     WorkerDocument.objects.filter(user=user, document=master).delete()
@@ -3104,7 +3110,7 @@ def worker_document_detail(request, document_id):
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
     if request.method == "DELETE":
         if doc.auto_generated:
-            return Response({"error": "This document is fetched from DigiLocker and cannot be deleted."},
+            return Response({"error": "This document is issued by the system and cannot be deleted."},
                             status=status.HTTP_400_BAD_REQUEST)
         if doc.file:
             doc.file.delete(save=False)
@@ -3411,6 +3417,7 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None):
         binding.accepted_at = timezone.now()
         binding.save()
         _sync_employment_from_binding(binding)
+        _issue_binding_letter(binding, "appointment")
         _create_notification(
             user=binding.worker,
             title="Binding approved",
@@ -3487,6 +3494,27 @@ def _unlink_employment_from_binding(binding):
         return
     WorkerEmployment.objects.filter(user=binding.worker, assignment=binding).update(
         assignment=None, status="Inactive")
+
+
+def _issue_binding_letter(binding, letter_type):
+    """Issue the auto letter for a worker binding — appointment on accept,
+    experience on unbind — and notify the worker. Never blocks the binding
+    transition if letter issuance fails."""
+    try:
+        from api import letters
+        doc = letters.issue_letter(binding, letter_type)
+    except Exception:
+        doc = None
+    if doc is None:
+        return
+    name = letters.LETTER_NAMES.get(letter_type, "Letter")
+    _create_notification(
+        user=binding.worker,
+        title=f"{name} issued",
+        body=f"Your {name.lower()} has been issued and is available in your Documents.",
+        notif_type="INFO",
+        link="/worker/Documents",
+    )
 
 
 def _verify_binding_otp(mobile, credential):
@@ -3654,6 +3682,7 @@ def binding_consent(request, binding_id):
         b.save()
         if b.binding_status == "CANCELLED":
             _unlink_employment_from_binding(b)
+            _issue_binding_letter(b, "experience")
             # Notify both sides that unbind is completed
             actor_name = payloads._notification_actor_name(user)
             _create_notification(
@@ -3693,6 +3722,7 @@ def binding_consent(request, binding_id):
         b.save()
         if b.binding_status == "ACCEPTED":
             _sync_employment_from_binding(b)
+            _issue_binding_letter(b, "appointment")
             # Notify both parties of accepted binding
             _create_notification(
                 user=b.worker,

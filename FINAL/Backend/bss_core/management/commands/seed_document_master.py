@@ -28,6 +28,8 @@ DOCUMENTS = [
     ("MED", "Medical Fitness Certificate", True, "worker", 10),
     ("TGP", "Temporary Gate Pass", False, "system", 11),
     ("PGP", "Permanent Gate Pass", True, "system", 12),
+    ("APPT", "Appointment Letter", False, "system", 13),
+    ("EXPL", "Experience Letter", False, "system", 14),
 ]
 
 
