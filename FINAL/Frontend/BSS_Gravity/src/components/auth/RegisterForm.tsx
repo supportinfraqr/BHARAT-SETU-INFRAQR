@@ -25,7 +25,7 @@ interface RegisterFormProps {
 
 // Demo mobiles that use the fixed OTP (see BSS_DEMO_OTP_MOBILES) and are exempt
 // from the standard Indian mobile (6-9) format check.
-const DEMO_MOBILES = ['2222222222', '3333333333'];
+const DEMO_MOBILES = ['2222222222', '3333333333', '4444444444'];
 
 export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChange, t }: RegisterFormProps) {
   const [selectedRole, setSelectedRole] = useState("Worker");
