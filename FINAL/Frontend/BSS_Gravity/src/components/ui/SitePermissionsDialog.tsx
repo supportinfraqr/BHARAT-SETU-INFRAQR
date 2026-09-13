@@ -203,17 +203,7 @@ export default function SitePermissionsDialog({
                         Reject
                       </button>
                     )}
-                    {row.canWithdraw && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => onReject(row.siteId)}
-                        className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
-                      >
-                        Cancel request
-                      </button>
-                    )}
-                    {row.releaseRequested && !row.canApproveRelease && !row.canRejectRelease && !row.canCancelRelease && (
+                    {row.releaseRequested && !row.canApproveRelease && !row.canRejectRelease && (
                       <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-orange-50 text-orange-700 ring-1 ring-orange-100">Release requested</span>
                     )}
                     {row.canRelease && (
@@ -224,16 +214,6 @@ export default function SitePermissionsDialog({
                         className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors disabled:opacity-60"
                       >
                         Request unbind
-                      </button>
-                    )}
-                    {row.canCancelRelease && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => onRelease(row.siteId)}
-                        className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
-                      >
-                        Cancel request
                       </button>
                     )}
                     {row.canApproveRelease && (
@@ -251,9 +231,9 @@ export default function SitePermissionsDialog({
                         type="button"
                         disabled={busy}
                         onClick={() => onRejectRelease(row.siteId)}
-                        className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
+                        className="h-8 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors disabled:opacity-60"
                       >
-                        Cancel request
+                        Reject
                       </button>
                     )}
                     {row.canPropose && (
