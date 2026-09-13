@@ -1215,8 +1215,31 @@ def _worker_available_jobs(user):
     return rows
 
 
+_CE_SOURCE_INITIATOR = {"site_qr": "Contractor", "employer_qr": "Contractor",
+                        "contractor_qr": "Employer"}
+
+
+def _ce_initiator_acceptor(b):
+    """(initiated_by, accepted_by) role labels for a contractor<->employer binding.
+
+    The initiator is derived from how the request was raised (who scanned whose
+    QR). Once accepted, the counterparty of the initiator is the acceptor."""
+    initiated = _CE_SOURCE_INITIATOR.get(str(b.source or "").lower(), "Contractor")
+    accepted = ""
+    if str(b.binding_status).upper() == "ACCEPTED":
+        accepted = "Employer" if initiated == "Contractor" else "Contractor"
+    return initiated, accepted
+
+
+def _wc_initiator_acceptor(b):
+    """(initiated_by, accepted_by) for a worker<->contractor binding: the
+    contractor raises it from a worker QR scan and the worker accepts."""
+    return "Contractor", ("Worker" if b.consent_worker else "")
+
+
 def _binding_row(b):
     """Canonical binding payload (E·C·S·W), shared by worker/contractor/employer views."""
+    initiated_by, accepted_by = _wc_initiator_acceptor(b)
     site = b.site
     employer_name = ""
     if site and site.employer:
@@ -1257,6 +1280,8 @@ def _binding_row(b):
         "wage": wage,
         "requestedOn": _dts(b.created_at),
         "status": status_map.get(str(b.binding_status).upper(), "Pending"),
+        "initiatedBy": initiated_by,
+        "acceptedBy": accepted_by,
         "consentWorker": bool(b.consent_worker),
         "consentContractor": bool(b.consent_contractor),
         "consentMethod": _d(b.consent_method),
@@ -1279,6 +1304,7 @@ def _ce_binding_row(b):
     status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                   "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
     allot_status = {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected"}
+    initiated_by, accepted_by = _ce_initiator_acceptor(b)
     allotments = [
         {
             "id": a.id,
@@ -1293,6 +1319,8 @@ def _ce_binding_row(b):
     return {
         "id": b.id,
         "ref": f"CEB-2026-{b.id:03d}",
+        "initiatedBy": initiated_by,
+        "acceptedBy": accepted_by,
         "contractor": _d(cp.contractor_name if cp else "", b.contractor.username),
         "contractorCode": _d(cp.contractor_code if cp else "", _bss_contractor_code(b.contractor_id)),
         "employer": _d(ep.employer_name if ep else "", b.employer.username),
@@ -2061,26 +2089,20 @@ def _contractor_binding_requests(user):
             "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
                        "CANCELLED": "Cancelled", "EXPIRED": "Expired"}.get(
                            str(b.binding_status).upper(), "Pending"),
+            "initiatedBy": "Contractor",
+            "acceptedBy": "Worker" if b.consent_worker else "",
             "consentWorker": bool(b.consent_worker),
             "consentContractor": bool(b.consent_contractor),
             "unbindRequested": bool(b.unbind_requested_at),
             "unbindConsentWorker": bool(b.unbind_consent_worker),
             "unbindConsentContractor": bool(b.unbind_consent_contractor),
         })
-    # Contractor <-> employer bindings (scanning an employer/site QR). The
-    # register shows ONE row per principal employer — prefer a live binding
-    # (PENDING/ACCEPTED), otherwise the most recent terminal one — instead of
-    # every historical decline/cancel.
-    _LIVE = {"PENDING", "ACCEPTED"}
-    ce_latest = {}
+    # Contractor <-> employer bindings (scanning an employer/site QR). Every
+    # request is surfaced — rows are never replaced or hidden; a fresh request
+    # after a decline is an additional row, not an overwrite.
     for e in ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at"):
-        current = ce_latest.get(e.employer_id)
-        if current is None or (str(current.binding_status).upper() not in _LIVE
-                               and str(e.binding_status).upper() in _LIVE):
-            ce_latest[e.employer_id] = e
-    for e in ce_latest.values():
         ep = getattr(e.employer, "employer_profile", None)
-        sites = [a.site.site_name for a in e.allotments.all() if a.site]
+        sites = [a.site.site_name for a in e.allotments.all() if a.site and a.status == "APPROVED"]
         rows.append({
             "id": f"ce-{e.id}", "bindingId": e.id, "type": "Employer",
             "entityName": _d(ep.employer_name if ep else "", e.employer.username),
@@ -2092,6 +2114,8 @@ def _contractor_binding_requests(user):
             "requestedOn": _dts(e.created_at),
             "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
                        "CANCELLED": "Cancelled"}.get(str(e.binding_status).upper(), "Pending"),
+            "initiatedBy": _ce_initiator_acceptor(e)[0],
+            "acceptedBy": _ce_initiator_acceptor(e)[1],
             # The contractor's own consent is consentContractor; the employer's
             # consent occupies the "worker" slot so the shared row shape works.
             "consentWorker": bool(e.consent_employer),
@@ -2665,23 +2689,17 @@ def _employer_approvals(user):
             "bssId": bss_id, "contractor": contractor_name or None,
             "site": site_name, "submittedAt": _dts(a.requested_at),
             "checks": checks, "status": status_label.get(str(a.status).upper(), "Pending"),
+            "initiatedBy": entity_type or "Worker",
+            "acceptedBy": "Employer" if str(a.status).upper() == "APPROVED" else "",
         })
     # Contractor <-> employer bindings (contractor scanned this employer's QR
-    # or a site QR). ONE row per contractor: prefer a live binding
-    # (PENDING/ACCEPTED), otherwise the most recent terminal one — the register
-    # is not a per-request history log.
+    # or a site QR). Every request is surfaced — rows are never replaced or
+    # hidden, so accepted/rejected/cancelled requests all stay visible.
     binding_status = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                          "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
-    _LIVE = {"PENDING", "ACCEPTED"}
-    ce_latest = {}
     for e in ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at"):
-        current = ce_latest.get(e.contractor_id)
-        if current is None or (str(current.binding_status).upper() not in _LIVE
-                               and str(e.binding_status).upper() in _LIVE):
-            ce_latest[e.contractor_id] = e
-    for e in ce_latest.values():
         cp = getattr(e.contractor, "contractor_profile", None)
-        sites = [a.site.site_name for a in e.allotments.all() if a.site]
+        sites = [a.site.site_name for a in e.allotments.all() if a.site and a.status == "APPROVED"]
         rows.append({
             "id": f"ce-{e.id}", "bindingId": str(e.id),
             "entityType": "Contractor", "entityId": str(e.contractor_id),
@@ -2689,10 +2707,12 @@ def _employer_approvals(user):
             "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(e.contractor_id)),
             "contractor": None,
             "site": ", ".join(sites) if sites else "Sites to be allotted",
-            "siteIds": [a.site_id for a in e.allotments.all() if a.site_id],
+            "siteIds": [a.site_id for a in e.allotments.all() if a.site_id and a.status == "APPROVED"],
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
             "status": binding_status.get(str(e.binding_status).upper(), "Pending"),
+            "initiatedBy": _ce_initiator_acceptor(e)[0],
+            "acceptedBy": _ce_initiator_acceptor(e)[1],
             "consentEmployer": bool(e.consent_employer),
             "consentContractor": bool(e.consent_contractor),
             "source": _d(e.source),

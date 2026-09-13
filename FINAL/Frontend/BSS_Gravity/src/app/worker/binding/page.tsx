@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Building2, CheckCircle2, Handshake, Home, Link2, MapPin, QrCode, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Handshake, Home, Link2, MapPin, QrCode, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useWorker } from '@/contexts/WorkerContext';
 import RebindAuthModal from '@/components/worker/RebindAuthModal';
@@ -19,6 +19,8 @@ type BindingRequest = {
   wage: string;
   requestedOn: string;
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled';
+  initiatedBy?: string;
+  acceptedBy?: string;
   consentWorker?: boolean;
   consentContractor?: boolean;
   unbindRequested?: boolean;
@@ -43,6 +45,8 @@ export default function BindingRequestsPage() {
     wage: String(req.wage || ''),
     requestedOn: String(req.requestedOn || '—'),
     status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
+    initiatedBy: String(req.initiatedBy || ''),
+    acceptedBy: String(req.acceptedBy || ''),
     consentWorker: Boolean(req.consentWorker),
     consentContractor: Boolean(req.consentContractor),
     unbindRequested: Boolean(req.unbindRequested),
@@ -57,6 +61,16 @@ export default function BindingRequestsPage() {
   const boundContractor = (worker.employment.status === 'Active' && worker.employment.contractor?.trim()) ? worker.employment.contractor : null;
   const [authRequestId, setAuthRequestId] = useState<number | null>(null);
   const authRequest = requests.find(r => r.id === authRequestId) ?? null;
+  const [confirm, setConfirm] = useState<{ req: BindingRequest; kind: 'accept' | 'decline' | 'unbind' } | null>(null);
+
+  function runConfirm() {
+    if (!confirm) return;
+    const { req, kind } = confirm;
+    setConfirm(null);
+    if (kind === 'accept') { requestAccept(req); return; }
+    if (kind === 'unbind') { void requestUnbind(req); return; }
+    void act(req.id, 'decline');
+  }
 
   const act = async (id: number, action: 'accept' | 'decline') => {
     setBusyId(id);
@@ -142,7 +156,7 @@ export default function BindingRequestsPage() {
                 <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
               </div>
             </div>
-            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {req.requestedOn}</p><p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p></div>
+            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {req.requestedOn}</p><p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p></div>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -154,19 +168,19 @@ export default function BindingRequestsPage() {
 
           {req.status === 'Pending' && (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-              <button onClick={() => requestAccept(req)} disabled={busyId===req.id} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-60"><Link2 size={15}/>{busyId===req.id?'Approving…':'Accept & Bind'}</button>
-              <button onClick={() => void act(req.id, 'decline')} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 disabled:opacity-60"><XCircle size={15}/>Decline</button>
+              <button onClick={() => setConfirm({ req, kind: 'accept' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-60"><Link2 size={15}/>{busyId===req.id?'Approving…':'Accept & Bind'}</button>
+              <button onClick={() => setConfirm({ req, kind: 'decline' })} disabled={busyId===req.id} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 disabled:opacity-60"><XCircle size={15}/>Decline</button>
             </div>
           )}
           {req.status === 'Accepted' && (req.unbindRequested ? (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
               <p className="text-xs text-orange-700 font-semibold flex items-center gap-1.5"><XCircle size={14}/>{req.unbindConsentWorker ? 'Unbinding requested — awaiting the contractor’s consent.' : 'The contractor requested unbinding — awaiting your consent.'}</p>
-              {!req.unbindConsentWorker && <button onClick={() => void requestUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
+              {!req.unbindConsentWorker && <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
             </div>
           ) : (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
               <p className="text-xs text-green-700 font-semibold flex items-center gap-1.5"><CheckCircle2 size={14}/>Binding active · employment started with {req.contractor} on approval of both parties.</p>
-              <button onClick={() => void requestUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Request Unbind</button>
+              <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-60"><XCircle size={14}/>Request Unbind</button>
             </div>
           ))}
           {req.status === 'Cancelled' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding unbound — both parties consented.</p>}
@@ -182,6 +196,35 @@ export default function BindingRequestsPage() {
         onCancel={() => setAuthRequestId(null)}
         onAuthenticated={() => { setAuthRequestId(null); void act(authRequest.id, 'accept'); }}
       />
+    )}
+    {confirm && (
+      <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Confirm binding action">
+        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {confirm.kind === 'accept' ? <CheckCircle2 size={18} className="text-green-600"/> : <XCircle size={18} className="text-red-600"/>}
+              <h2 className="font-semibold text-gray-900">{confirm.kind === 'decline' ? 'Decline this binding?' : confirm.kind === 'unbind' ? 'Unbind this binding?' : 'Accept this binding?'}</h2>
+            </div>
+            <button onClick={() => setConfirm(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
+          </header>
+          <div className="p-5 space-y-4">
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 text-sm">
+              <p className="font-semibold text-gray-900">{confirm.req.contractor}</p>
+              <p className="font-mono text-[11px] text-gray-400 mt-0.5">{confirm.req.contractorCode}</p>
+              <p className="text-xs text-gray-500 mt-1.5">{confirm.req.site} · {confirm.req.designation}</p>
+            </div>
+            <p className="text-xs text-gray-500 leading-5">{confirm.kind === 'decline'
+              ? 'The contractor will be notified and this request will be declined. This cannot be undone.'
+              : confirm.kind === 'unbind'
+                ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
+                : 'Both parties must approve before you are bound. Accepting records your consent and starts your employment at the site.'}</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirm(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-semibold">Cancel</button>
+              <button onClick={runConfirm} disabled={busyId===confirm.req.id} className={`h-10 px-5 rounded-xl text-white text-sm font-bold disabled:opacity-60 ${confirm.kind === 'accept' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>{busyId===confirm.req.id ? 'Working…' : confirm.kind === 'decline' ? 'Confirm decline' : confirm.kind === 'unbind' ? 'Confirm unbind' : 'Confirm accept'}</button>
+            </div>
+          </div>
+        </div>
+      </div>
     )}
   </div>;
 }
