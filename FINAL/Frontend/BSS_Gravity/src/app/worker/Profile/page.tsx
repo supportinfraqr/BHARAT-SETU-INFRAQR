@@ -299,17 +299,29 @@ export default function WorkerProfilePage() {
         ['classification.gigPlatformWorkerId', 'Platform Worker ID'],
         ['classification.gigDateJoined', 'Date Joined Platform'],
         ['classification.gigPlatformType', 'Platform Type'],
+        ['classification.gigServiceArea', 'Service Area'],
+        ['classification.gigAvgHoursPerDay', 'Average Hours per Day'],
+        ['classification.gigAvgDaysPerWeek', 'Average Days per Week'],
       );
       if (employmentStatus === 'Self-employed') req.push(
         ['classification.seBusinessName', 'Business / Enterprise Name'],
+        ['classification.seEmployerName', 'Employer / Business Name'],
         ['classification.seBusinessType', 'Business Type'],
         ['classification.seRegistrationStatus', 'Business Registration Status'],
         ['classification.seStartDate', 'Business Start Date'],
+        ['classification.seEmployeesCount', 'Number of Employees'],
+        ['classification.seAvgHoursPerDay', 'Average Hours/Day'],
+        ['classification.seAvgDaysPerWeek', 'Average Days/Week'],
+        ['classification.seLocation', 'Location'],
       );
       if (employmentStatus === 'Seasonal') req.push(
         ['classification.seasonalJobType', 'Job / Work Type'],
         ['classification.seasonalStartDate', 'Season Start'],
         ['classification.seasonalEndDate', 'Season End'],
+        ['classification.seasonalAvgHoursPerDay', 'Average Hours/Day'],
+        ['classification.seasonalAvgDaysPerWeek', 'Average Days/Week'],
+        ['classification.seasonalLocation', 'Work Location / Service Area'],
+        ['classification.seasonalExpectedIncome', 'Expected Seasonal Income'],
       );
       for (const [name, label] of req) {
         if (!val(name)) requiredErrors.push({ message: `${label} is required.`, selector: `[name="${name}"]`, field: name });
@@ -959,8 +971,8 @@ export default function WorkerProfilePage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Service Area</label>
-                      <input name="classification.gigServiceArea" type="text" defaultValue={worker.classification?.gigServiceArea} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Service Area <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.gigServiceArea" type="text" defaultValue={worker.classification?.gigServiceArea} className={`w-full bg-white border ${clsErr('classification.gigServiceArea')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Vehicle Type</label>
@@ -977,12 +989,12 @@ export default function WorkerProfilePage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours per Day</label>
-                      <input name="classification.gigAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.gigAvgHoursPerDay} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours per Day <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.gigAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.gigAvgHoursPerDay} className={`w-full bg-white border ${clsErr('classification.gigAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days per Week</label>
-                      <input name="classification.gigAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.gigAvgDaysPerWeek} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days per Week <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.gigAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.gigAvgDaysPerWeek} className={`w-full bg-white border ${clsErr('classification.gigAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Driving Licence Number</label>
@@ -1006,8 +1018,8 @@ export default function WorkerProfilePage() {
                       <input name="classification.seBusinessName" type="text" defaultValue={worker.classification?.seBusinessName} className={`w-full bg-white border ${clsErr('classification.seBusinessName')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer / Business Name</label>
-                      <input name="classification.seEmployerName" type="text" defaultValue={worker.classification?.seEmployerName} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer / Business Name <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seEmployerName" type="text" defaultValue={worker.classification?.seEmployerName} className={`w-full bg-white border ${clsErr('classification.seEmployerName')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
                       <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Business Type <span className="text-[#FF3B30]">*</span></label>
@@ -1026,20 +1038,20 @@ export default function WorkerProfilePage() {
                       <input name="classification.seStartDate" type="date" defaultValue={worker.classification?.seStartDate} className={`w-full bg-white border ${clsErr('classification.seStartDate')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Number of Employees</label>
-                      <input name="classification.seEmployeesCount" type="number" defaultValue={worker.classification?.seEmployeesCount} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Number of Employees <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seEmployeesCount" type="number" min={0} defaultValue={worker.classification?.seEmployeesCount} className={`w-full bg-white border ${clsErr('classification.seEmployeesCount')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours/Day</label>
-                      <input name="classification.seAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.seAvgHoursPerDay} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours/Day <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seAvgHoursPerDay" type="number" placeholder="Hours" defaultValue={worker.classification?.seAvgHoursPerDay} className={`w-full bg-white border ${clsErr('classification.seAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days/Week</label>
-                      <input name="classification.seAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.seAvgDaysPerWeek} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days/Week <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seAvgDaysPerWeek" type="number" placeholder="Days" defaultValue={worker.classification?.seAvgDaysPerWeek} className={`w-full bg-white border ${clsErr('classification.seAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Location</label>
-                      <input name="classification.seLocation" type="text" defaultValue={worker.classification?.seLocation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Location <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seLocation" type="text" defaultValue={worker.classification?.seLocation} className={`w-full bg-white border ${clsErr('classification.seLocation')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                   </div>
                 </div>
@@ -1065,20 +1077,20 @@ export default function WorkerProfilePage() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours/Day</label>
-                      <input name="classification.seasonalAvgHoursPerDay" type="number" defaultValue={worker.classification?.seasonalAvgHoursPerDay} placeholder="Hours" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Hours/Day <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seasonalAvgHoursPerDay" type="number" defaultValue={worker.classification?.seasonalAvgHoursPerDay} placeholder="Hours" className={`w-full bg-white border ${clsErr('classification.seasonalAvgHoursPerDay')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days/Week</label>
-                      <input name="classification.seasonalAvgDaysPerWeek" type="number" defaultValue={worker.classification?.seasonalAvgDaysPerWeek} placeholder="Days" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Average Days/Week <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seasonalAvgDaysPerWeek" type="number" defaultValue={worker.classification?.seasonalAvgDaysPerWeek} placeholder="Days" className={`w-full bg-white border ${clsErr('classification.seasonalAvgDaysPerWeek')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Work Location / Service Area</label>
-                      <input name="classification.seasonalLocation" type="text" defaultValue={worker.classification?.seasonalLocation} className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Work Location / Service Area <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seasonalLocation" type="text" defaultValue={worker.classification?.seasonalLocation} className={`w-full bg-white border ${clsErr('classification.seasonalLocation')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                     <div>
-                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Expected Seasonal Income</label>
-                      <input name="classification.seasonalExpectedIncome" type="text" defaultValue={worker.classification?.seasonalExpectedIncome} placeholder="₹" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]" />
+                      <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Expected Seasonal Income <span className="text-[#FF3B30]">*</span></label>
+                      <input name="classification.seasonalExpectedIncome" type="text" defaultValue={worker.classification?.seasonalExpectedIncome} placeholder="₹" className={`w-full bg-white border ${clsErr('classification.seasonalExpectedIncome')} rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]`} />
                     </div>
                   </div>
                 </div>
