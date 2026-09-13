@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart2, Briefcase, Building2, ChevronDown, Database, FileText, Home, Menu, ScanLine, Settings, X } from 'lucide-react';
+import { BarChart2, Briefcase, ChevronDown, Database, FileText, Home, Menu, ScanLine, Settings, X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -26,7 +26,7 @@ export default function ContractorShell({ children }: { children:React.ReactNode
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
-  const { contractor, employerScope, setEmployerScope } = useContractor();
+  const { contractor } = useContractor();
   const { t } = useLanguage();
 
   // Close every popover on navigation (adjust state during render — the
@@ -67,7 +67,6 @@ export default function ContractorShell({ children }: { children:React.ReactNode
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <label className="hidden xl:flex items-center gap-2 relative" aria-label="Employer scope"><Building2 size={14} className="text-gray-400"/><select value={employerScope} onChange={e=>setEmployerScope(e.target.value)} className="h-10 rounded-lg border border-gray-200 pl-1 pr-2 text-xs font-semibold text-gray-700 bg-white hover:border-gray-300"><option value="all">All Employers</option>{contractor.employers.map(emp=><option key={emp.id} value={emp.name}>{emp.name}</option>)}</select></label>
           <div className="hidden lg:block"><LanguageSelect compact/></div>
           <NotificationBell viewAllHref="/contractor/dashboard"/>
           <div className="relative">
@@ -79,7 +78,6 @@ export default function ContractorShell({ children }: { children:React.ReactNode
       </div>
 
       {mobile&&<nav aria-label={t('nav.mobile')} className="bss-mobile-menu absolute left-0 w-full bg-white border-b shadow-xl p-4 pb-8">
-        <div className="mb-3"><label className="text-[11px] uppercase font-bold text-gray-500 block mb-1">Employer scope</label><select value={employerScope} onChange={e=>setEmployerScope(e.target.value)} className="w-full h-11 rounded-lg border border-gray-200 px-3 text-sm bg-white"><option value="all">All Employers</option>{contractor.employers.map(emp=><option key={emp.id} value={emp.name}>{emp.name}</option>)}</select></div>
         {mobileItems.map(group=>(
           <div key={group.label} className="mb-1">
             <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400">{t(group.label)}</p>

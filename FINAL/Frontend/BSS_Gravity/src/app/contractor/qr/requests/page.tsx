@@ -131,7 +131,7 @@ export default function ContractorBindingRequestsPage() {
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
 
-    <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={r => r.id} filename="contractor-binding-requests"/>
+    <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={r => r.id} filename="contractor-binding-requests" showDownload={false}/>
 
     {otpFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">

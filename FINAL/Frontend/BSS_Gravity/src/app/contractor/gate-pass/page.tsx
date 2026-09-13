@@ -10,7 +10,7 @@ const tempAllowed = (e?: GatePassEligibility) => !!e && e.medical === 'Done' && 
 const permAllowed = (e?: GatePassEligibility) => !!e && e.medical === 'Done' && e.healthSafety === 'Done' && e.compliance === 'Done';
 
 export default function ContractorGatePassPage() {
-  const { contractor, replaceContractor, mutate, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, mutate, scoped } = useContractor();
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [busyId, setBusyId] = useState('');
@@ -101,7 +101,6 @@ export default function ContractorGatePassPage() {
     {error && !open && !bulkOpen && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
     <div className="flex flex-wrap items-center gap-3">
-      <span className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-2 text-xs">Showing gate passes for <strong>{employerScope === 'all' ? 'All Employers' : employerScope}</strong>.</span>
       <label className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400"/><select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 pl-9 pr-3 text-xs bg-white"><option value="all">All Sites</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select></label>
     </div>
 

@@ -10,7 +10,7 @@ type BenefitType = 'bonus' | 'leaveEncashment';
 type RowDraft = { workerId:string; worker:string; period:string; amount:string; days:string; reason:string; paidOn:string };
 
 export default function ContractorBenefitsPage() {
-  const { contractor, replaceContractor, mutate, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, mutate, scoped } = useContractor();
   const [tab, setTab] = useState<BenefitType>('bonus');
   const [modal, setModal] = useState<BenefitType | null>(null);
   const [mode, setMode] = useState<'single' | 'bulk'>('single');
@@ -126,7 +126,7 @@ export default function ContractorBenefitsPage() {
 
   return <div className="space-y-6">
     <header className="flex flex-col sm:flex-row justify-between gap-4"><div><h1 className="text-xl font-bold">Worker Benefits — Bonus & Leave Encashment</h1><p className="text-sm text-gray-500 mt-1">Fill and upload worker benefit records. Government-verifiable data (EPFO UAN / PF) is autofetched; Bonus and Leave Encashment are supplied here by your organisation.</p></div></header>
-    <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs"><strong>Source of record:</strong> Bonus and Leave Encashment are filled and uploaded by the contractor. PF contributions under the worker UAN are autofetched from the EPFO government API when connected. Showing records for <strong>{employerScope === 'all' ? 'All Employers' : employerScope}</strong>.</div>
+    <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs"><strong>Source of record:</strong> Bonus and Leave Encashment are filled and uploaded by the contractor. PF contributions under the worker UAN are autofetched from the EPFO government API when connected.</div>
 
     <div className="flex border-b">{(['bonus','leaveEncashment'] as const).map(value => <button key={value} onClick={() => { setTab(value); setError(''); setNotice(''); }} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === value ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>{value === 'bonus' ? 'Bonus' : 'Leave Encashment'}</button>)}</div>
 

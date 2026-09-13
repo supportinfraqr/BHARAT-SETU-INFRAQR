@@ -10,7 +10,7 @@ import type { ContractorSalaryRecord } from '@/types/portal';
 type RowDraft = { workerId:string; worker:string; period:string; gross:string; deductions:string; paidOn:string };
 
 export default function ContractorSalariesPage() {
-  const { contractor, replaceContractor, mutate, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, mutate, scoped } = useContractor();
   const [modal, setModal] = useState<'single' | 'bulk' | null>(null);
   const [rows, setRows] = useState<RowDraft[]>([]);
   const [busy, setBusy] = useState(false);
@@ -111,7 +111,7 @@ export default function ContractorSalariesPage() {
 
   return <div className="space-y-6">
     <header className="flex flex-col sm:flex-row justify-between gap-4"><div><h1 className="text-2xl font-bold">Salary & Wages</h1><p className="text-sm text-gray-500 mt-1">Record and submit employer-wise wage details for bound workers.</p></div></header>
-    <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Salary details are filled and submitted by the contractor for each bound worker and employer. Showing records for <strong>{employerScope === 'all' ? 'All Employers' : employerScope}</strong>.</div>
+    <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Salary details are filled and submitted by the contractor for each bound worker and employer.</div>
 
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Metric label="Records" value={totals.total} icon={FileText} tone="bg-blue-50 text-blue-700"/><Metric label="Gross recorded" value={money(totals.gross)} icon={IndianRupee} tone="bg-emerald-50 text-emerald-700"/><Metric label="Net paid" value={money(totals.net)} icon={IndianRupee} tone="bg-green-50 text-green-700"/><Metric label="Net of all entries" value={money(totals.net)} icon={IndianRupee} tone="bg-orange-50 text-orange-700"/></div>
 

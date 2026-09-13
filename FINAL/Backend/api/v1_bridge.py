@@ -159,6 +159,7 @@ _PROFILE_LABEL_MAP = {
         "Legal Name": "contractor_name",
         "Trade / Brand Name": "trade_name",
         "Entity Constitution": "constitution",
+        "Date of Incorporation": "incorporation_date",
         "Authorised Person Name": "contact_person",
         "Mobile Number": "mobile",
         "Email ID": "email",
@@ -1250,6 +1251,26 @@ def _coerce_int(value):
         return None
 
 
+def _coerce_profile_date(value):
+    """Parse a profile date field; blank/invalid -> None so a DateField never
+    receives an empty string (which Django rejects)."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+_PROFILE_DATE_FIELDS = {
+    "incorporation_date", "agm_date", "balance_sheet_date",
+    "licence_valid_from", "licence_valid_to", "consent_date", "verification_date",
+}
+
+
 def _persist_mutation(user, role_path, resource, method, body):
     """Best-effort persistence for the handful of resources backed by real
     models; returns an id for the generic/unmapped case."""
@@ -1271,7 +1292,10 @@ def _persist_mutation(user, role_path, resource, method, body):
                     # The registered mobile is the login identity — immutable for
                     # every role. Ignore any attempt to change it.
                     continue
-                setattr(prof, attr, (field.get("value") or "").strip())
+                value = (field.get("value") or "").strip()
+                if attr in _PROFILE_DATE_FIELDS:
+                    value = _coerce_profile_date(value)
+                setattr(prof, attr, value)
             prof.save()
             return prof.id
         return int(uuid.uuid4().int % 10**10)
@@ -1570,10 +1594,12 @@ def _persist_mutation(user, role_path, resource, method, body):
         p.save()
         return identity.id
     if resource in ("notifications",) and method in ("PATCH",):
-        notif_id = body.get("id")
+        notif_id = str(body.get("id") or "")
         action = body.get("action")
         if notif_id:
-            n = Notification.objects.filter(id=notif_id, user=user).first()
+            db_id = notif_id[3:] if notif_id.startswith("db-") else notif_id
+            n = (Notification.objects.filter(id=db_id, user=user).first()
+                 if db_id.isdigit() else None)
             if n:
                 if action in ("read", "resolve"):
                     n.is_read = True
@@ -1581,7 +1607,20 @@ def _persist_mutation(user, role_path, resource, method, body):
                 elif action == "unread":
                     n.is_read = False
                     n.save(update_fields=["is_read"])
-                return n.id
+                return notif_id
+            # Derived (non-DB) notification — persist read state per user so the
+            # notification centre remembers it across reloads.
+            p, _ = UserPreference.objects.get_or_create(user=user)
+            prefs = dict(p.notification_prefs or {})
+            read_ids = set(prefs.get("readNotificationIds") or [])
+            if action in ("read", "resolve"):
+                read_ids.add(notif_id)
+            elif action == "unread":
+                read_ids.discard(notif_id)
+            prefs["readNotificationIds"] = sorted(read_ids)
+            p.notification_prefs = prefs
+            p.save(update_fields=["notification_prefs", "updated_at"])
+            return notif_id
     if resource == "settings" and user.role == "worker" and method in ("PATCH", "POST"):
         # Worker Portal Settings — persist every toggle/select into the real
         # UserPreference row (was silently dropped -> page reload reverted to

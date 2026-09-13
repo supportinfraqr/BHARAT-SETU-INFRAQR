@@ -149,7 +149,7 @@ export default function ContractorCompliancePage() {
     </div>
 
     {tab === 'records' && <>
-      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Showing compliance for <strong>{employerScope === 'all' ? 'All Employers' : employerScope}</strong>. Site codes, verification state and expiry tracking are shown per record.</div>
+      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Site codes, verification state and expiry tracking are shown per record.</div>
       <EnterpriseDataTable title="Compliance register" rows={rowsData} columns={columns} rowKey={r => r.id} filename="contractor-compliance"/>
     </>}
 

@@ -120,7 +120,7 @@ export default function WorkerMasterPage() {
       </div>
     </header>
 
-    <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Showing workers for <strong>{employerScope === 'all' ? 'All Employers' : employerScope}</strong>. Use the employer selector in the top bar to switch principal employer bindings.</div>
+    <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Showing workers across all bound principal employers.</div>
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">

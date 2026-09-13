@@ -34,6 +34,7 @@ from bss_core.models import (
     Notification,
     GratuityApplication,
     PayrollConfig,
+    RozgarRequest,
     SalaryAdvance,
     SubmissionEvidence,
     WorkerBenefitRecord,
@@ -2236,9 +2237,9 @@ def _contractor_payroll_config(user):
     }
 
 
-def _f(label, value, note="", sensitive=False):
+def _f(label, value, note="", sensitive=False, field_type="text"):
     """Profile section field helper."""
-    return {"label": label, "value": "" if value is None else str(value), "note": note, "sensitive": sensitive}
+    return {"label": label, "value": "" if value is None else str(value), "note": note, "sensitive": sensitive, "type": field_type}
 
 
 def _contractor_profile_sections(user):
@@ -2251,6 +2252,7 @@ def _contractor_profile_sections(user):
             _f("Legal Name", getattr(cp, "contractor_name", "") if cp else "", "Contractor"),
             _f("Trade / Brand Name", getattr(cp, "trade_name", "") if cp else "", "Contractor"),
             _f("Entity Constitution", getattr(cp, "constitution", "") if cp else "", "Contractor"),
+            _f("Date of Incorporation", _dts(cp.incorporation_date) if cp and cp.incorporation_date else "", "Contractor", field_type="date"),
             _f("Authorised Person Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
             _f("Mobile Number", getattr(cp, "mobile", "") if cp else "", "Auth identity — locked", sensitive=True),
             _f("Email ID", getattr(cp, "email", "") if cp else "", "Contractor"),
@@ -2265,8 +2267,8 @@ def _contractor_profile_sections(user):
             _f("Labour Department Registration Number", getattr(cp, "labour_dept_reg_no", "") if cp else "", "Contractor"),
             _f("Contract Labour Licence Number", getattr(cp, "clra_licence_no", "") if cp else "", "Contractor"),
             _f("BOCW / Other Labour Registration", getattr(cp, "bocw_reg_no", "") if cp else "", "Contractor"),
-            _f("Licence Valid From", getattr(cp, "licence_valid_from", "") if cp else "", "Contractor/System"),
-            _f("Licence Valid To", getattr(cp, "licence_valid_to", "") if cp else "", "Contractor/System"),
+            _f("Licence Valid From", getattr(cp, "licence_valid_from", "") if cp else "", "Contractor/System", field_type="date"),
+            _f("Licence Valid To", getattr(cp, "licence_valid_to", "") if cp else "", "Contractor/System", field_type="date"),
         ],
         "directors": [
             _f("Director Name", getattr(cp, "contact_person", "") if cp else "", "Contractor"),
@@ -2332,7 +2334,7 @@ def _employer_profile_sections(user):
             _f("Number of Members", getattr(ep, "members_count", "") if ep else "", "Employer"),
             _f("Authorised Share Capital", getattr(ep, "authorized_capital", "") if ep else "", "Employer"),
             _f("Paid-up Share Capital", getattr(ep, "paid_up_capital", "") if ep else "", "Employer"),
-            _f("Date of Incorporation", getattr(ep, "incorporation_date", "") if ep else "", "Employer"),
+            _f("Date of Incorporation", getattr(ep, "incorporation_date", "") if ep else "", "Employer", field_type="date"),
             _f("PAN", getattr(ep, "pan_no", "") if ep else "", "Employer"),
             _f("GSTIN", getattr(ep, "gstin", "") if ep else "", "Employer"),
         ],
@@ -2853,24 +2855,175 @@ CATEGORY_MAP = {
 }
 
 
+def _notification(nid, category, title, message, href, created, read=False,
+                  requires_action=True, priority="normal", entity_id=None):
+    return {
+        "id": nid,
+        "entityId": entity_id,
+        "category": category,
+        "title": title,
+        "message": message,
+        "createdAt": _dts(created),
+        "href": href,
+        "actionLabel": "View",
+        "priority": priority,
+        "requiresAction": requires_action,
+        "read": read,
+        "resolved": read,
+    }
+
+
+def _notification_actor_name(user_obj):
+    """Best display name for the counterparty on a notification."""
+    cp = getattr(user_obj, "contractor_profile", None)
+    if cp:
+        return _d(cp.trade_name) or _d(cp.contractor_name) or _d(user_obj.username)
+    ep = getattr(user_obj, "employer_profile", None)
+    if ep:
+        return _d(ep.trade_name) or _d(ep.employer_name) or _d(user_obj.username)
+    wi = getattr(user_obj, "worker_identity", None)
+    if wi:
+        return _d(wi.name) or _d(user_obj.username)
+    return _d(user_obj.get_full_name()) or _d(user_obj.username)
+
+
 def build_notifications(user):
+    """Role-aware notification centre for worker / contractor / employer.
+
+    BSS has no background job runner, so the feed is derived from live domain
+    state (pending bindings, gate-pass approvals, job offers, grievances and
+    missing documents) for every role, plus any persisted Notification rows.
+    Read state for derived items is kept in UserPreference.notification_prefs
+    under 'readNotificationIds' (the PATCH handler writes it)."""
+    pref = UserPreference.objects.filter(user=user).first()
+    read_ids = set((pref.notification_prefs or {}).get("readNotificationIds") or []) if pref else set()
     rows = []
+
+    def emit(nid, category, title, message, href, created,
+             requires_action=True, priority="normal", entity_id=None):
+        rows.append(_notification(
+            nid, category, title, message, href, created,
+            read=nid in read_ids, requires_action=requires_action,
+            priority=priority, entity_id=entity_id))
+
+    if user.role == "worker":
+        for b in (WorkerContractorBinding.objects
+                  .filter(worker=user, binding_status="PENDING")
+                  .select_related("contractor", "site").order_by("-created_at")[:10]):
+            emit(f"wc-binding-{b.id}", "Approvals", "New engagement request",
+                 f"{_notification_actor_name(b.contractor)} wants to engage you"
+                 f"{' at ' + _d(b.site.site_name) if b.site else ''}.",
+                 "/worker/binding", b.created_at, priority="high", entity_id=str(b.id))
+        for r in (RozgarRequest.objects.filter(worker=user, status="PENDING")
+                  .select_related("job").order_by("-created_at")[:10]):
+            emit(f"rozgar-{r.id}", "Jobs", "New job offer",
+                 f"You have a pending offer for {_d(r.job.job_title) if r.job else 'a role'}.",
+                 "/worker/rozgar", r.created_at, priority="high", entity_id=str(r.id))
+        for g in WorkerGatePass.objects.filter(worker=user).order_by("-created_at")[:5]:
+            label = "Temporary" if g.gate_pass_type == "TGP" else "Permanent"
+            if g.status == "PENDING":
+                emit(f"gp-{g.id}", "Compliance", f"{label} gate pass pending",
+                     f"Gate pass {g.gate_pass_no} is awaiting approval.",
+                     "/worker/Compliance", g.created_at, priority="high")
+            elif g.status == "ACTIVE":
+                emit(f"gp-{g.id}", "Compliance", f"{label} gate pass active",
+                     f"Gate pass {g.gate_pass_no} is active.",
+                     "/worker/Compliance", g.created_at, requires_action=False)
+        try:
+            missing = _worker_documents_section(user).get("missing") or []
+        except Exception:
+            missing = []
+        if missing:
+            emit("docs-missing", "Documents", "Documents pending",
+                 f"{len(missing)} mandatory document{'s' if len(missing) != 1 else ''} still to be uploaded.",
+                 "/worker/Documents", timezone.now(), priority="high")
+        for g in (WorkerGrievance.objects.filter(worker=user)
+                  .exclude(status="RESOLVED").order_by("-created_at")[:5]):
+            emit(f"grievance-{g.id}", "Grievances", "Grievance update",
+                 f"Ticket {g.ticket_no or g.id} is {g.get_status_display()}.",
+                 "/worker/grievances", g.created_at, requires_action=False,
+                 entity_id=g.ticket_no or str(g.id))
+        wi = getattr(user, "worker_identity", None)
+        if wi and (not _d(wi.name) or not _d(wi.aadhaar) or not _d(wi.mobile_number)):
+            emit("profile-incomplete", "Documents", "Complete your profile",
+                 "Add the missing identity details to keep your record compliant.",
+                 "/worker/Profile", timezone.now(), requires_action=False)
+
+    elif user.role == "contractor":
+        for b in (ContractorEmployerBinding.objects
+                  .filter(contractor=user, binding_status="PENDING")
+                  .select_related("employer").order_by("-created_at")[:10]):
+            emit(f"ce-binding-{b.id}", "Approvals", "New employer binding request",
+                 f"{_notification_actor_name(b.employer)} has requested to engage your firm.",
+                 "/contractor/qr/requests", b.created_at, priority="high", entity_id=str(b.id))
+        for b in (WorkerContractorBinding.objects
+                  .filter(contractor=user, binding_status="PENDING")
+                  .select_related("worker", "site").order_by("-created_at")[:10]):
+            emit(f"wc-binding-{b.id}", "Approvals", "Worker binding pending",
+                 f"{_notification_actor_name(b.worker)} has a pending binding"
+                 f"{' at ' + _d(b.site.site_name) if b.site else ''}.",
+                 "/contractor/qr/requests", b.created_at, priority="high", entity_id=str(b.id))
+        worker_ids = list(WorkerContractorBinding.objects
+                          .filter(contractor=user).values_list("worker_id", flat=True))
+        for g in (WorkerGrievance.objects.filter(worker_id__in=worker_ids)
+                  .exclude(status="RESOLVED").order_by("-created_at")[:5]):
+            emit(f"grievance-{g.id}", "Grievances", "Worker grievance",
+                 f"Ticket {g.ticket_no or g.id} needs attention.",
+                 "/contractor/grievances", g.created_at, requires_action=False,
+                 entity_id=g.ticket_no or str(g.id))
+        cp = getattr(user, "contractor_profile", None)
+        if cp and (_d(cp.approval_status) or "PENDING") != "APPROVED":
+            emit("contractor-review", "Approvals", "Contractor profile under review",
+                 "Your registration is being verified. Keep your compliance documents up to date.",
+                 "/contractor/profile", timezone.now(), requires_action=False)
+        if not WorkerContractorBinding.objects.filter(contractor=user).exists():
+            emit("bind-first-worker", "Sites", "Bind your first worker",
+                 "Scan a worker QR or add workers manually to start building your workforce.",
+                 "/contractor/workers", timezone.now(), requires_action=False)
+
+    elif user.role == "employer":
+        for b in (ContractorEmployerBinding.objects
+                  .filter(employer=user, binding_status="PENDING")
+                  .select_related("contractor").order_by("-created_at")[:10]):
+            emit(f"ce-binding-{b.id}", "Approvals", "New contractor binding request",
+                 f"{_notification_actor_name(b.contractor)} has requested to be bound to your organisation.",
+                 "/employer/qr/requests", b.created_at, priority="high", entity_id=str(b.id))
+        for g in (WorkerGatePass.objects.filter(site__employer=user, status="PENDING")
+                  .select_related("worker", "site").order_by("-created_at")[:10]):
+            emit(f"gp-{g.id}", "Approvals", "Gate pass approval pending",
+                 f"{_notification_actor_name(g.worker)} · {g.gate_pass_no} is awaiting your approval.",
+                 "/employer/approvals", g.created_at, priority="high")
+        worker_ids = list(WorkerContractorBinding.objects
+                          .filter(site__employer=user).values_list("worker_id", flat=True))
+        for g in (WorkerGrievance.objects.filter(worker_id__in=worker_ids)
+                  .exclude(status="RESOLVED").order_by("-created_at")[:5]):
+            emit(f"grievance-{g.id}", "Grievances", "Worker grievance",
+                 f"Ticket {g.ticket_no or g.id} needs attention.",
+                 "/employer/grievances", g.created_at, requires_action=False,
+                 entity_id=g.ticket_no or str(g.id))
+        ep = getattr(user, "employer_profile", None)
+        if ep and (_d(ep.approval_status) or "PENDING") != "APPROVED":
+            emit("employer-review", "Approvals", "Employer profile under review",
+                 "Your organisation is being verified. Complete the pending details.",
+                 "/employer/profile", timezone.now(), requires_action=False)
+        if not Site.objects.filter(employer=user).exists():
+            emit("add-first-site", "Sites", "Add your first site",
+                 "Register a site so contractors and workers can be mapped to it.",
+                 "/employer/sites", timezone.now(), requires_action=False)
+        if not ContractorEmployerBinding.objects.filter(employer=user).exists():
+            emit("bind-first-contractor", "Contractors", "Bind a contractor",
+                 "Scan a contractor QR or send a binding request to onboard a contractor.",
+                 "/employer/contractors", timezone.now(), requires_action=False)
+
+    # Persisted Notification rows (for any workflow that creates them).
     for n in Notification.objects.filter(user=user).order_by("-created_at")[:50]:
-        rows.append({
-            "id": n.id,
-            "entityId": None,
-            "category": CATEGORY_MAP.get(n.type, "info"),
-            "title": _d(n.title),
-            "message": _d(n.body),
-            "createdAt": _dts(n.created_at),
-            "href": _d(n.link),
-            "actionLabel": "View",
-            "priority": "normal",
-            "requiresAction": not n.is_read,
-            "read": n.is_read,
-            "resolved": bool(n.is_read),
-        })
-    return rows
+        rows.append(_notification(
+            f"db-{n.id}", CATEGORY_MAP.get(n.type, "Announcements"),
+            _d(n.title), _d(n.body), _d(n.link) or "/", n.created_at,
+            read=n.is_read, requires_action=not n.is_read))
+
+    rows.sort(key=lambda row: row.get("createdAt") or "", reverse=True)
+    return rows[:50]
 
 
 # ---------------------------------------------------------------------------
