@@ -502,7 +502,7 @@ export default function WorkerProfilePage() {
             onClick={() => setActiveTab('welfare')}
             className={`flex items-center gap-3 px-4 py-3 font-semibold text-[14px] rounded-xl whitespace-nowrap transition-colors focus:outline-none ${activeTab === 'welfare' ? 'bg-[#0F172A] text-white shadow-md' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
           >
-            <HardHat size={18}/> Welfare & Safety
+            <HardHat size={18}/> Compliance & Welfare
           </button>
           <button 
             onClick={() => setActiveTab('skills')}

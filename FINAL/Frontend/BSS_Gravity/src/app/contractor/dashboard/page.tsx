@@ -316,7 +316,7 @@ export default function ContractorDashboardPage() {
 
           {/* Worker Compliance Overview */}
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Worker Compliance Overview</h2></div>
+            <div className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Compliance &amp; Welfare Overview</h2></div>
             <div className="grid grid-cols-3 divide-x divide-gray-100">
               {(['gatePass', 'medical', 'healthSafety'] as const).map(key => {
                 const label = key === 'gatePass' ? 'Gate Pass' : key === 'medical' ? 'Medical Exam' : 'Health & Safety';

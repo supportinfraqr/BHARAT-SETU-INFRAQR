@@ -4,20 +4,13 @@ import { ShieldCheck, HardHat, FileCheck, CheckCircle2, Clock, AlertCircle } fro
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function ComplianceModule() {
-  const { t } = useLanguage();
-  const { worker } = useWorker();
-  const welfare = worker.welfare ?? {};
-  const gatePasses = worker.gatePasses ?? [];
-  const records = worker.complianceRecords ?? [];
-  const ppeIssued = (welfare.typesOfPpeGiven ?? '').split(',').map(s => s.trim()).filter(Boolean);
+const isDone = (value?: string | boolean) => typeof value === 'boolean'
+  ? value
+  : ['done', 'completed', 'active', 'fit', 'yes', 'issued'].includes((value ?? '').toLowerCase());
+const tone = (ok: boolean) => ok ? 'text-[#2F9E67]' : 'text-[#F47A32]';
 
-  const isDone = (value?: string | boolean) => typeof value === 'boolean'
-    ? value
-    : ['done', 'completed', 'active', 'fit', 'yes', 'issued'].includes((value ?? '').toLowerCase());
-  const tone = (ok: boolean) => ok ? 'text-[#2F9E67]' : 'text-[#F47A32]';
-
-  const Stat = ({ label, value, ok, sub }: { label: string; value: string; ok: boolean; sub?: string }) => (
+function Stat({ label, value, ok, sub }: { label: string; value: string; ok: boolean; sub?: string }) {
+  return (
     <div>
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
       <div className="flex justify-between items-end mt-1">
@@ -29,11 +22,20 @@ export default function ComplianceModule() {
       </div>
     </div>
   );
+}
+
+export default function ComplianceModule() {
+  const { t } = useLanguage();
+  const { worker } = useWorker();
+  const welfare = worker.welfare ?? {};
+  const gatePasses = worker.gatePasses ?? [];
+  const records = worker.complianceRecords ?? [];
+  const ppeIssued = (welfare.typesOfPpeGiven ?? '').split(',').map(s => s.trim()).filter(Boolean);
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#062D4F]">{t('nav.compliance')}</h1>
+        <h1 className="text-2xl font-bold text-[#062D4F]">{t('nav.complianceWelfare')}</h1>
         <p className="text-sm text-gray-500 mt-1">Safety, health and security records managed by your contractor and principal employer.</p>
       </div>
 

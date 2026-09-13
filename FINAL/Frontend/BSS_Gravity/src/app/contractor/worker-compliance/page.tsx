@@ -42,8 +42,8 @@ export default function ContractorWorkerCompliancePage() {
     <div className="p-4 lg:p-6 space-y-5">
       <header>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p>
-        <h1 className="text-2xl font-bold mt-1">Worker Compliance</h1>
-        <p className="text-sm text-gray-500 mt-1">Record Medical, Safety Kit/PPE, Safety Training, Site Induction, Insurance, Accommodation and Police Verification for your bound workers. It appears on the worker&apos;s Compliance page.</p>
+        <h1 className="text-2xl font-bold mt-1">Compliance &amp; Welfare</h1>
+        <p className="text-sm text-gray-500 mt-1">Record Medical, Safety Kit/PPE, Safety Training, Site Induction, Insurance, Accommodation and Police Verification for your bound workers. It appears on the worker&apos;s Compliance &amp; Welfare page.</p>
       </header>
 
       {notice && <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>{notice}</p>}
