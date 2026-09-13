@@ -2,6 +2,7 @@
 
 import { BrowserQRCodeReader } from "@zxing/browser";
 import { DecodeHintType } from "@zxing/library";
+import jsQR from "jsqr";
 
 /**
  * Optimised QR capture settings shared by all BSS scanners:
@@ -44,30 +45,38 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** Decode a QR from an already-loaded image via jsQR (more tolerant than ZXing
+ *  on still images). `padRatio` adds a white quiet-zone border. */
+function decodeImageWithJsQr(img: HTMLImageElement, padRatio: number): string | null {
+  const pad = Math.round(Math.max(img.width, img.height) * padRatio);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width + pad * 2;
+  canvas.height = img.height + pad * 2;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, pad, pad);
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(data, width, height, { inversionAttempts: "attemptBoth" });
+  return code ? code.data : null;
+}
+
 /**
- * Decode a QR from an uploaded image file. The BSS credential/site QRs are
- * composited with a small (1-module) quiet zone, which the live camera tolerates
- * but ZXing's still-image path can reject — so on failure we re-draw the image
- * on a canvas with a generous white quiet-zone border and try again.
+ * Decode a QR from an uploaded image file. Uses jsQR because ZXing's still-image
+ * path can throw a ChecksumException on some BSS credential QRs (e.g. the longer
+ * employer payload) even though the live camera reads them fine. A padded
+ * quiet-zone retry covers QRs composited with a tight margin.
  */
 export async function decodeQrFromImageFile(file: File): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
-    try {
-      return (await createQrReader().decodeFromImageUrl(url)).getText();
-    } catch {
-      const img = await loadImage(url);
-      const pad = Math.round(Math.max(img.width, img.height) * 0.1);
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width + pad * 2;
-      canvas.height = img.height + pad * 2;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas unavailable");
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, pad, pad);
-      return (await createQrReader().decodeFromImageUrl(canvas.toDataURL("image/png"))).getText();
-    }
+    const img = await loadImage(url);
+    const direct = decodeImageWithJsQr(img, 0);
+    if (direct) return direct;
+    const padded = decodeImageWithJsQr(img, 0.1);
+    if (padded) return padded;
+    throw new Error("No QR code found in the image.");
   } finally {
     URL.revokeObjectURL(url);
   }
