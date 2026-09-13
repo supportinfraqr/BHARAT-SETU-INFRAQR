@@ -1771,9 +1771,12 @@ def _contractor_sites(user):
             "id": s.id, "code": _d(s.site_code), "name": _d(s.site_name),
             "bssId": _d(s.bss_site_id),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
+            "state": _d(s.state),
+            "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "workers": WorkerContractorBinding.objects.filter(
                 contractor=user, site=s, binding_status="ACCEPTED").count(),
             "compliance": _d(s.compliance_client) if hasattr(s, "compliance_client") else "",
+            "data": _site_scalar_data(s),
         })
     return rows
 
@@ -2570,12 +2573,19 @@ def _employer_profile_sections(user):
 
 
 def build_contractor_portal(user):
+    sites = _contractor_sites(user)
+    # A default site is only meaningful while it is still allotted — drop a stale
+    # default left over from a binding/allotment that has since ended.
+    allowed_site_ids = {str(s["id"]) for s in sites}
+    default_site = _default_site_info(getattr(user, "contractor_profile", None))
+    if default_site and default_site["id"] not in allowed_site_ids:
+        default_site = None
     return {
         "identity": _contractor_identity(user),
         "stats": _contractor_stats(user),
         "principalEmployer": _contractor_principal_employer(user),
-        "sites": _contractor_sites(user),
-        "defaultSite": _default_site_info(getattr(user, "contractor_profile", None)),
+        "sites": sites,
+        "defaultSite": default_site,
         "workers": _contractor_workers(user),
         "compliances": _contractor_compliances(user),
         "complianceReports": _contractor_compliance_reports(user),

@@ -282,7 +282,7 @@ export type ContractorPortalData = {
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
-  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number }>;
+  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number; bssId?: string; state?: string; status?: string; data?: Record<string, unknown> }>;
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;

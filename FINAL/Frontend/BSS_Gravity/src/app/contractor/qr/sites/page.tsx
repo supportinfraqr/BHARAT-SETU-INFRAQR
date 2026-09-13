@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, MapPin, Star, Users } from 'lucide-react';
+import { Building2, CheckCircle2, Info, MapPin, Star, Users } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
+import ContractorSiteDetailDialog, { type ContractorSiteDetail } from '@/components/site/ContractorSiteDetailDialog';
 
 export default function ContractorQrSitesPage() {
   const { contractor, replaceContractor, mutate } = useContractor();
@@ -10,6 +11,7 @@ export default function ContractorQrSitesPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const defaultId = contractor.defaultSite?.id ?? '';
+  const [detailFor, setDetailFor] = useState<ContractorSiteDetail | null>(null);
 
   async function setDefault(siteId: string) {
     setBusy(siteId || 'clear');
@@ -62,20 +64,24 @@ export default function ContractorQrSitesPage() {
                   <p className="text-xs text-gray-500 flex items-center gap-1 mt-3"><MapPin size={12} />{site.location || '—'}</p>
                   <p className="text-xs text-gray-500 mt-1.5">Principal employer: <span className="font-semibold text-gray-700">{site.employer || '—'}</span></p>
                 </div>
-                {isDefault ? (
-                  <button type="button" disabled={busy === 'clear'} onClick={() => void setDefault('')} className="w-full h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-orange-50 text-[#F47A32] hover:bg-orange-100 disabled:opacity-70">
-                    {busy === 'clear' ? 'Clearing…' : <><CheckCircle2 size={14} />Default — click to clear</>}
-                  </button>
-                ) : (
-                  <button type="button" disabled={busy === site.id} onClick={() => void setDefault(site.id)} className="w-full h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-gray-50 text-[#073B67] hover:bg-gray-100 disabled:opacity-70">
-                    {busy === site.id ? 'Saving…' : <><Star size={14} />Set as default site</>}
-                  </button>
-                )}
+                <div className="grid grid-cols-2 divide-x divide-gray-100 border-t border-gray-100">
+                  <button type="button" onClick={() => setDetailFor(site)} className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-gray-50 text-[#073B67] hover:bg-gray-100"><Info size={14}/>View details</button>
+                  {isDefault ? (
+                    <button type="button" disabled={busy === 'clear'} onClick={() => void setDefault('')} className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-orange-50 text-[#F47A32] hover:bg-orange-100 disabled:opacity-70">
+                      {busy === 'clear' ? 'Clearing…' : <><CheckCircle2 size={14} />Default — clear</>}
+                    </button>
+                  ) : (
+                    <button type="button" disabled={busy === site.id} onClick={() => void setDefault(site.id)} className="h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-gray-50 text-[#073B67] hover:bg-gray-100 disabled:opacity-70">
+                      {busy === site.id ? 'Saving…' : <><Star size={14} />Set as default</>}
+                    </button>
+                  )}
+                </div>
               </article>
             );
           })}
         </section>
       )}
+      <ContractorSiteDetailDialog open={!!detailFor} site={detailFor} onClose={() => setDetailFor(null)} />
     </div>
   );
 }
