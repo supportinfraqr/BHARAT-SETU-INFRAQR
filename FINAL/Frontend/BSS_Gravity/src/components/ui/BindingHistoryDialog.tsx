@@ -1,9 +1,13 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { History, X } from "lucide-react";
 import type { BindingHistoryEvent } from "@/types/portal";
 
 export type { BindingHistoryEvent };
+
+const noopSubscribe = () => () => {};
 
 function formatWhen(value?: string): string {
   if (!value) return "";
@@ -30,8 +34,12 @@ export default function BindingHistoryDialog({
   events: BindingHistoryEvent[];
   onClose: () => void;
 }) {
-  if (!open) return null;
-  return (
+  // Render into <body> so `position: fixed` is relative to the viewport — the
+  // portal layouts animate <main> with a transform, which otherwise becomes the
+  // containing block and pushes the dialog off-centre.
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  if (!open || !mounted) return null;
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/65 backdrop-blur-md overflow-y-auto"
       role="dialog"
@@ -88,6 +96,7 @@ export default function BindingHistoryDialog({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
