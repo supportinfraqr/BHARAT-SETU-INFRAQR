@@ -495,6 +495,7 @@ class WorkerContractorBinding(models.Model):
     STATUS = [("PENDING", "Pending"), ("ACCEPTED", "Accepted"),
               ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled"), ("EXPIRED", "Expired")]
     CONSENT_METHOD = [("app", "App"), ("ivr", "IVR"), ("sms_otp", "SMS OTP"), ("voice", "Voice")]
+    INITIATOR = [("worker", "Worker"), ("contractor", "Contractor")]
 
     worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="worker_bindings",
                                limit_choices_to={"role": "worker"})
@@ -502,6 +503,10 @@ class WorkerContractorBinding(models.Model):
                                    limit_choices_to={"role": "contractor"})
     site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="bindings")
     binding_status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
+    # Who raised the request (worker scanned a contractor QR / applied to a job =
+    # worker; contractor scanned a worker QR / added the worker = contractor).
+    # Stored because two-sided consent makes the initiator unrecoverable later.
+    initiated_by = models.CharField(max_length=20, choices=INITIATOR, blank=True, default="")
     consent_worker = models.BooleanField(default=False)
     consent_contractor = models.BooleanField(default=False)
     consent_method = models.CharField(max_length=20, choices=CONSENT_METHOD, null=True, blank=True)

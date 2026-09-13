@@ -1731,7 +1731,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                 if not _contractor_engaged_at_site(user, site.id):
                     raise ValidationError(
                         "You are not engaged at this site. Ask the employer to allot this site to you first.")
-                binding = _request_worker_binding(w, user, site)
+                binding = _request_worker_binding(w, user, site, initiated_by="contractor")
                 if binding.binding_status != "ACCEPTED":
                     # Two-sided: the contractor consents now, the worker accepts (app/OTP).
                     binding.binding_status = "PENDING"
@@ -2591,7 +2591,7 @@ def _handle_rozgar_apply(user, body):
     # contractor (worker-initiated consent). The contractor accepts it in
     # Binding Requests; the binding completes only after both sides consent.
     if job.site_id and job.contractor_id:
-        binding = _request_worker_binding(user, job.contractor, job.site)
+        binding = _request_worker_binding(user, job.contractor, job.site, initiated_by="worker")
         if binding.binding_status != "ACCEPTED":
             binding.binding_status = "PENDING"
             binding.consent_worker = True
@@ -3150,7 +3150,7 @@ def _worker_requests_contractor(worker_user, contractor_user):
             "error": (f"You are {state} with {cname} at {site_name}. "
                       "Unbind the current binding before requesting another.")},
             status=status.HTTP_409_CONFLICT)
-    binding = _request_worker_binding(worker_user, contractor_user, site)
+    binding = _request_worker_binding(worker_user, contractor_user, site, initiated_by="worker")
     binding.binding_status = "PENDING"
     binding.consent_worker = True
     binding.consent_contractor = False
@@ -3273,7 +3273,7 @@ def worker_bindings(request):
     if b is not None and b.binding_status == "ACCEPTED":
         return Response({"error": "Already bound to this worker at this site."},
                         status=status.HTTP_400_BAD_REQUEST)
-    b = _request_worker_binding(worker, user, site)
+    b = _request_worker_binding(worker, user, site, initiated_by="contractor")
     b.binding_status = "PENDING"
     b.consent_worker = False
     b.consent_contractor = False
@@ -3577,7 +3577,7 @@ def binding_scan(request):
                 "error": (f"This worker is {state} with {cname} at {site_name}. "
                           "Unbind the current binding before binding the worker to a different site.")},
                 status=status.HTTP_409_CONFLICT)
-        binding = _request_worker_binding(worker_user, user, site)
+        binding = _request_worker_binding(worker_user, user, site, initiated_by="contractor")
         binding.binding_status = "PENDING"
         binding.consent_contractor = True
         binding.consent_worker = False

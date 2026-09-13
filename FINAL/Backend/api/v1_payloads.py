@@ -1234,16 +1234,21 @@ def _ce_initiator_acceptor(b):
 
 
 def _wc_initiator_acceptor(b):
-    """(initiated_by, accepted_by) for a worker<->contractor binding. The
-    contractor usually raises it from a worker QR scan, but a worker can also
-    initiate by scanning the contractor's QR (consent_worker set first)."""
-    worker_initiated = bool(b.consent_worker) and not bool(b.consent_contractor)
-    if worker_initiated:
-        initiated = "Worker"
-        accepted = "Contractor" if b.consent_contractor else ""
+    """(initiated_by, accepted_by) for a worker<->contractor binding.
+
+    Uses the stored `initiated_by` — a worker scanning a contractor QR (or
+    applying to a job) makes it worker-initiated; a contractor scanning a worker
+    QR (or adding the worker) makes it contractor-initiated. Falls back to the
+    old consent-order heuristic for legacy rows created before the field existed
+    (only reliable while the binding is still PENDING)."""
+    stored = str(getattr(b, "initiated_by", "") or "").lower()
+    if stored in ("worker", "contractor"):
+        initiated = "Worker" if stored == "worker" else "Contractor"
     else:
-        initiated = "Contractor"
-        accepted = "Worker" if b.consent_worker else ""
+        initiated = "Worker" if (bool(b.consent_worker) and not bool(b.consent_contractor)) else "Contractor"
+    accepted = ""
+    if str(b.binding_status).upper() == "ACCEPTED":
+        accepted = "Contractor" if initiated == "Worker" else "Worker"
     return initiated, accepted
 
 
