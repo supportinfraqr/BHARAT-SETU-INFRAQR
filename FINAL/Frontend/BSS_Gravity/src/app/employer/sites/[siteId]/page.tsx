@@ -9,6 +9,7 @@ import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/SiteMap';
 import { SiteQr, SiteQrPanel } from '@/components/qr/WorkerQr';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { tabs, type Tab, TAB_FIELDS, LABELS, FIELD_DEFS } from '@/components/site/siteDetailFields';
 
 const SiteMapView = dynamic(() => import('@/components/employer/SiteMap').then(m => m.SiteMapView), { ssr: false });
@@ -23,6 +24,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   const [error, setError] = useState('');
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [qrOpen, setQrOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const site = employer.sites.find(item => item.id === siteId);
 
   if (!site) return <div className="space-y-6"><h1 className="text-2xl font-bold">Site not found</h1><p className="text-sm text-gray-500 mt-1">This site does not belong to your organisation or has been removed.</p><Link href="/employer/sites" className="inline-flex items-center gap-1 text-sm text-blue-700 font-semibold"><ArrowLeft size={15}/>Back to sites</Link></div>;
@@ -55,13 +57,16 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   }
 
   async function remove() {
-    if (!window.confirm(`Delete site "${current.name}"? This cannot be undone.`)) return;
     setBusy(true); setError('');
     try {
       await mutate('sites', 'DELETE', { id: current.id });
       replaceEmployer({ ...employer, sites: employer.sites.filter(s => s.id !== current.id) });
       router.push('/employer/sites');
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site could not be deleted.'); setBusy(false); }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Site could not be deleted.');
+      setBusy(false);
+      setConfirmDelete(false);
+    }
   }
 
   function fieldValue(name: string): string {
@@ -76,7 +81,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
     <header><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{current.name}</h1><Status value={current.status}/></div><p className="font-mono text-xs text-gray-500 mt-1">{current.code}</p><p className="text-sm text-gray-600 flex items-center gap-1 mt-2"><MapPin size={13}/>{current.location}, {current.state}</p></div><div className="flex gap-2">
       <button onClick={() => setQrOpen(true)} className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold flex items-center gap-2 hover:bg-gray-50"><QrCode size={15}/>Site QR</button>
       {editing ? <><button onClick={() => setEditing(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold">Cancel</button><button onClick={saveInline} disabled={busy} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"><Save size={15}/>{busy ? 'Saving…' : 'Save changes'}</button></> : <button onClick={startEdit} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2"><Pencil size={15}/>Edit</button>}
-      <button onClick={remove} disabled={busy} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-semibold flex items-center gap-2 hover:bg-red-50"><Trash2 size={15}/>Delete</button>
+      <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-semibold flex items-center gap-2 hover:bg-red-50"><Trash2 size={15}/>Delete</button>
     </div></div></header>
 
     <nav className="flex gap-1 overflow-x-auto bg-white border border-gray-200 rounded-2xl p-2">{tabs.map(([id, label, Icon]) => <button key={id} onClick={() => { setTab(id); setEditing(false); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={16}/>{label}</button>)}</nav>
@@ -153,6 +158,22 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
         </div>
       </div>
     )}
+
+    <ConfirmDialog
+      open={confirmDelete}
+      tone="negative"
+      title="Delete this site?"
+      description={`"${current.name}" and its site master details will be removed. This cannot be undone.`}
+      details={[
+        { label: 'Site', value: current.name },
+        { label: 'Site code', value: current.code },
+        { label: 'BSS ID', value: current.bssId ?? '—' },
+      ]}
+      confirmLabel="Delete site"
+      busy={busy}
+      onCancel={() => setConfirmDelete(false)}
+      onConfirm={() => void remove()}
+    />
   </div>;
 }
 
