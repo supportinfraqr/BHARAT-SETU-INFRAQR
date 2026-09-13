@@ -28,7 +28,10 @@ export default function LeavePage(){
   const [rhDate,setRhDate]=useState('');
 
   // Leave ledger comes from the backend (opening + accrued − availed = balance).
-  const FY_LABEL='Current financial year · 1 Apr – 31 Mar';
+  // Show the actual financial year (1 Apr – 31 Mar) rather than a bare label.
+  const _today=new Date();
+  const _fyStart=_today.getMonth()>=3?_today.getFullYear():_today.getFullYear()-1;
+  const FY_LABEL=`FY ${_fyStart}-${String((_fyStart+1)%100).padStart(2,'0')} · 1 Apr ${_fyStart} – 31 Mar ${_fyStart+1}`;
   const FY_AS_ON_LABEL='as on today';
   const balanceByType=new Map((portal.leaveBalance ?? []).map(b=>[b.type,b]));
   const leaveLedger=(leaveType:string)=>balanceByType.get(leaveType) ?? {opening:0,accrued:0,availed:0,pending:0,balance:0};
@@ -53,6 +56,23 @@ export default function LeavePage(){
     ...rhHistory,
   ].sort((a,b)=>(b.submitted||'').localeCompare(a.submitted||''));
 
+  // Frontend guard: disable submission when the selected range includes a public
+  // holiday or a weekly off (the backend enforces this too).
+  const weeklyOff=new Set(portal.weeklyOffDays ?? []);
+  const publicDates=new Set((portal.holidays ?? []).filter(h=>h.typeCode==='PUBLIC').map(h=>h.date));
+  const dayCodes=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const blockedDays=(()=>{
+    if(isRh||!from||!to)return [] as string[];
+    const start=new Date(`${from}T00:00:00`),end=new Date(`${to}T00:00:00`);
+    if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime())||end<start)return [] as string[];
+    const out:string[]=[];
+    for(const d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+      const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if(publicDates.has(key)||weeklyOff.has(dayCodes[d.getDay()]))out.push(key);
+    }
+    return out;
+  })();
+
 
   const pickType=(t:string)=>{setType(t);};
   const pickDays=(start:string,end:string)=>{setFrom(start);setTo(end);if(start&&end){const a=new Date(start+ 'T00:00:00'),b=new Date(end+'T00:00:00');setDays(Math.max(0,Math.round((b.getTime()-a.getTime())/86400000)+1));}};
@@ -73,6 +93,7 @@ export default function LeavePage(){
       return;
     }
     if(!type||!from||!to){setError('Please choose a leave type and the dates.');setBusy(false);return}
+    if(blockedDays.length>0){setError('Leave cannot be taken on a public holiday or weekly off.');setBusy(false);return}
     if(file instanceof File&&file.size>10*1024*1024){setError('Attachment must be 10 MB or smaller.');setBusy(false);return}
     // Logical guard — never let a worker apply more days than the available balance in that category.
     if(type && days>0 && days>leaveLedger(type).balance){setError(`Only ${leaveLedger(type).balance} day${leaveLedger(type).balance===1?'':'s'} of ${type} left this financial year — opening + accrued − applied (pending + approved).`);setBusy(false);return}
@@ -210,6 +231,7 @@ export default function LeavePage(){
           </div>
           {days>0&&<p className="text-xs mt-2 text-[#2F9E67] font-semibold">✓ {days} day{days>1?'s':''} of leave selected</p>}
           <p className="text-[11px] text-gray-400 mt-2">Leave cannot be applied on public holidays or weekly offs{(portal.weeklyOffDays?.length?` (${portal.weeklyOffDays.map(c=>c.charAt(0)+c.slice(1).toLowerCase()).join(', ')})`:'')}.</p>
+          {blockedDays.length>0&&<p role="alert" className="text-xs mt-2 text-red-600 font-semibold">Can&apos;t apply leave on a public holiday or weekly off: {blockedDays.map(d=>new Date(`${d}T00:00:00`).toLocaleDateString('en-IN',{day:'numeric',month:'short'})).join(', ')}.</p>}
           </>}
         </div>
 
@@ -226,7 +248,7 @@ export default function LeavePage(){
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <label className="text-xs flex gap-2 items-center text-gray-600"><Paperclip size={14}/>Add a photo or paper (optional)<input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" className="text-xs"/></label>
-          <button disabled={busy} className="h-11 px-5 bg-[#073B67] text-white rounded-xl font-bold flex gap-2 items-center hover:bg-[#062D4F] disabled:opacity-60"><Send size={15}/>{busy?'Submitting…':'Submit leave request'}</button>
+          <button disabled={busy||(!isRh&&blockedDays.length>0)} className="h-11 px-5 bg-[#073B67] text-white rounded-xl font-bold flex gap-2 items-center hover:bg-[#062D4F] disabled:opacity-60 disabled:cursor-not-allowed"><Send size={15}/>{busy?'Submitting…':'Submit leave request'}</button>
         </div>
       </form>
 

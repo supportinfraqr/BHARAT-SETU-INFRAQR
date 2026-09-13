@@ -245,7 +245,15 @@ export default function WorkerProfilePage() {
   // Welfare & Safety — Medical examination values come from the Worker record.
   const medicalExaminationStatus = worker.welfare?.medicalExaminationStatus?.trim() || '';
   const medicalFitnessStatus = worker.welfare?.medicalFitnessStatus?.trim() || '';
-  const medicalStatusTone = medicalExaminationStatus === 'Completed' ? 'text-[#2F9E67]' : medicalExaminationStatus === 'Pending' ? 'text-[#F47A32]' : medicalExaminationStatus === 'Expired' ? 'text-[#FF3B30]' : 'text-gray-900';
+  const medicalStatusTone = medicalExaminationStatus === 'Pending' ? 'text-[#F47A32]' : medicalExaminationStatus === 'Expired' ? 'text-[#FF3B30]' : medicalExaminationStatus ? 'text-[#2F9E67]' : 'text-gray-900';
+  // Green when a welfare/safety value is in a "done" state, amber when recorded
+  // but not done, grey when empty — so the done items stand out on the tab.
+  const welfareClass = (value?: string | boolean) => {
+    const s = (typeof value === 'boolean' ? (value ? 'yes' : '') : String(value ?? '')).trim().toLowerCase();
+    if (!s) return 'text-gray-400';
+    const ok = ['done', 'completed', 'active', 'fit', 'yes', 'provided', 'issued', 'self arranged', 'camp', 'room'].some(k => s.includes(k));
+    return ok ? 'text-[#2F9E67]' : 'text-[#F47A32]';
+  };
 
   // Skills & Education — self-declared manual-entry fields (editable).
   // System-verified certifications are read-only (issued via course completion).
@@ -1447,7 +1455,7 @@ export default function WorkerProfilePage() {
               <div className="bg-[#F5F5F7] rounded-[16px] p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">PPE Required</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.ppeRequired ? 'Yes — per site safety policy' : 'No'}</p>
+                  <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.ppeRequired)}`}>{worker.welfare?.ppeRequired ? 'Yes — per site safety policy' : 'No'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Types of PPE Given</p>
@@ -1458,7 +1466,7 @@ export default function WorkerProfilePage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Safety Training Completed</p>
-                  <p className={`text-sm font-semibold mt-1 ${worker.welfare?.safetyTrainingCompleted ? 'text-[#2F9E67]' : 'text-gray-400'}`}>{worker.welfare?.safetyTrainingCompleted ? 'Yes' : 'No'}</p>
+                  <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.safetyTrainingCompleted)}`}>{worker.welfare?.safetyTrainingCompleted ? 'Yes' : 'No'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Training Date</p>
@@ -1470,19 +1478,19 @@ export default function WorkerProfilePage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Site Induction Status</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.siteInductionStatus || 'Not recorded'}</p>
+                  <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.siteInductionStatus)}`}>{worker.welfare?.siteInductionStatus || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Insurance Status</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.insuranceStatus || 'Not recorded'}</p>
+                  <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.insuranceStatus)}`}>{worker.welfare?.insuranceStatus || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Accommodation Provided</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{worker.welfare?.accommodationProvided || 'Not recorded'}</p>
+                  <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.accommodationProvided)}`}>{worker.welfare?.accommodationProvided || 'Not recorded'}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Police Verification</p>
-                  <p className="text-sm font-semibold text-[#F47A32] mt-1">{worker.welfare?.policeVerification || 'Not recorded'}</p>
+                  <p className={`text-sm font-semibold mt-1 ${welfareClass(worker.welfare?.policeVerification)}`}>{worker.welfare?.policeVerification || 'Not recorded'}</p>
                 </div>
               </div>
 

@@ -2,14 +2,21 @@ import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, Database } from 'lucide-react';
 
-export function ModuleShell({ title, description, icon: Icon, children }: { title: string; description: string; icon: LucideIcon; children: React.ReactNode }) {
+export function ModuleShell({ title, description, icon: Icon, children, watermark }: { title: string; description: string; icon: LucideIcon; children: React.ReactNode; watermark?: string }) {
   return <div className="space-y-5 pb-12">
     <header className="flex items-start gap-3">
       <Link href="/worker" aria-label="Back to dashboard" className="mt-1 w-9 h-9 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:text-bss-navy"><ArrowLeft size={17}/></Link>
       <span className="w-11 h-11 rounded-xl bg-bss-blue-tint text-bss-navy flex items-center justify-center"><Icon size={21}/></span>
       <div><h1 className="text-2xl font-semibold text-gray-950">{title}</h1><p className="text-sm text-gray-500 mt-1">{description}</p></div>
     </header>
-    {children}
+    {watermark ? <div className="relative">
+      <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-20 overflow-hidden">
+        <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
+          {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">{watermark}</span>)}
+        </div>
+      </div>
+      {children}
+    </div> : children}
   </div>;
 }
 

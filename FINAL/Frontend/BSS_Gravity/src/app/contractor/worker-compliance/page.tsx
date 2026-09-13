@@ -9,6 +9,10 @@ type Details = ContractorWorkerComplianceStatus['details'];
 const MEDICAL_EXAM = ['', 'Done', 'Pending', 'Expired'];
 const MEDICAL_FIT = ['', 'Fit', 'Fit with Restrictions', 'Unfit', 'Pending'];
 const INDUCTION = ['', 'Done', 'Pending'];
+const YESNO = ['Yes', 'No'];
+const INSURANCE = ['', 'Active', 'Expired', 'Pending'];
+const POLICE = ['', 'Done', 'Under Process'];
+const ACCOMMODATION = ['', 'Camp', 'Room', 'Self Arranged', 'Not Provided'];
 
 export default function ContractorWorkerCompliancePage() {
   const { contractor, replaceContractor, mutate } = useContractor();
@@ -84,8 +88,8 @@ export default function ContractorWorkerCompliancePage() {
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">Health &amp; Safety</h3>
               <div className="grid sm:grid-cols-2 gap-3">
-                <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 mt-5"><input type="checkbox" checked={form.ppeRequired} onChange={e => set('ppeRequired', e.target.checked)}/>PPE required</label>
-                <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 mt-5"><input type="checkbox" checked={form.safetyTrainingCompleted} onChange={e => set('safetyTrainingCompleted', e.target.checked)}/>Safety training completed</label>
+                <label className="text-xs font-semibold text-gray-600">PPE required<select value={form.ppeRequired ? 'Yes' : 'No'} onChange={e => set('ppeRequired', e.target.value === 'Yes')} className={field}>{YESNO.map(v => <option key={v} value={v}>{v}</option>)}</select></label>
+                <label className="text-xs font-semibold text-gray-600">Safety training completed<select value={form.safetyTrainingCompleted ? 'Yes' : 'No'} onChange={e => set('safetyTrainingCompleted', e.target.value === 'Yes')} className={field}>{YESNO.map(v => <option key={v} value={v}>{v}</option>)}</select></label>
                 <label className="text-xs font-semibold text-gray-600 sm:col-span-2">PPE issued (comma-separated)<input value={form.typesOfPpeGiven} onChange={e => set('typesOfPpeGiven', e.target.value)} placeholder="Helmet, Safety shoes, Harness" className={field}/></label>
                 <label className="text-xs font-semibold text-gray-600">Site induction<select value={form.siteInductionStatus} onChange={e => set('siteInductionStatus', e.target.value)} className={field}>{INDUCTION.map(v => <option key={v} value={v}>{v || 'Select'}</option>)}</select></label>
                 <label className="text-xs font-semibold text-gray-600">Training date<input type="date" value={form.trainingDate} onChange={e => set('trainingDate', e.target.value)} className={field}/></label>
@@ -96,9 +100,9 @@ export default function ContractorWorkerCompliancePage() {
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">Welfare &amp; Security</h3>
               <div className="grid sm:grid-cols-2 gap-3">
-                <label className="text-xs font-semibold text-gray-600">Insurance status<input value={form.insuranceStatus} onChange={e => set('insuranceStatus', e.target.value)} placeholder="Active" className={field}/></label>
-                <label className="text-xs font-semibold text-gray-600">Police verification<input value={form.policeVerification} onChange={e => set('policeVerification', e.target.value)} placeholder="Done / Under Process" className={field}/></label>
-                <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Accommodation<input value={form.accommodationProvided} onChange={e => set('accommodationProvided', e.target.value)} placeholder="Camp / room" className={field}/></label>
+                <label className="text-xs font-semibold text-gray-600">Insurance status<select value={form.insuranceStatus} onChange={e => set('insuranceStatus', e.target.value)} className={field}>{INSURANCE.map(v => <option key={v} value={v}>{v || 'Select'}</option>)}</select></label>
+                <label className="text-xs font-semibold text-gray-600">Police verification<select value={form.policeVerification} onChange={e => set('policeVerification', e.target.value)} className={field}>{POLICE.map(v => <option key={v} value={v}>{v || 'Select'}</option>)}</select></label>
+                <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Accommodation<select value={form.accommodationProvided} onChange={e => set('accommodationProvided', e.target.value)} className={field}>{ACCOMMODATION.map(v => <option key={v} value={v}>{v || 'Select'}</option>)}</select></label>
               </div>
             </div>
             {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
