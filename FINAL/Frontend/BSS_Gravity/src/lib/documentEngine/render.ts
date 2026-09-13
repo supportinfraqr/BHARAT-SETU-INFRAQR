@@ -9,8 +9,8 @@ const THEME_COLORS: Record<string, { primary: string; accent: string; light: str
   'bss-plain': { primary: '#111827', accent: '#2563EB', light: '#F3F4F6' },
 };
 
-function esc(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function esc(value: unknown): string {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Replace tokens with resolved values; unresolved tokens render as readable chips. */

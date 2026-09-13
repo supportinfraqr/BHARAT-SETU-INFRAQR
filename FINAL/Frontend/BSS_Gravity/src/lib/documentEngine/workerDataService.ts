@@ -175,7 +175,8 @@ export function resolveWorkerTokens(portal: PortalView, worker: WorkerLike): Res
 function deriveDobFromAge(age?: string): string {
   if (!age) return '';
   const year = new Date().getFullYear() - Number(age);
-  return `01-01-${year}`;
+  // ISO form so formatDate() parses it (a non-ISO value falls back to the raw age).
+  return `${year}-01-01`;
 }
 function shiftYears(iso: string, years: number): string {
   const date = new Date(`${iso}T00:00:00`);
