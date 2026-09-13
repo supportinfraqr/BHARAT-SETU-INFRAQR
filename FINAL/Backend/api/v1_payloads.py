@@ -3403,7 +3403,7 @@ def build_notifications(user):
                   .select_related("worker", "site").order_by("-created_at")[:10]):
             emit(f"gp-{g.id}", "Approvals", "Gate pass approval pending",
                  f"{_notification_actor_name(g.worker)} · {g.gate_pass_no} is awaiting your approval.",
-                 "/employer/approvals", g.created_at, priority="high")
+                 "/employer/gate-pass", g.created_at, priority="high")
         worker_ids = list(WorkerContractorBinding.objects
                           .filter(site__employer=user).values_list("worker_id", flat=True))
         for g in (WorkerGrievance.objects.filter(worker_id__in=worker_ids)
