@@ -3719,6 +3719,83 @@ def employer_binding_action(request, binding_id):
             notif_type="WARNING",
             link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
         )
+    elif action == "request-site-release":
+        if user.role != "contractor":
+            return Response({"error": "Only the contractor can request a site release."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(
+            binding=b, site_id=site_id, status="APPROVED").first()
+        if a is None:
+            return Response({"error": "Only an approved site can be released."},
+                            status=status.HTTP_404_NOT_FOUND)
+        a.release_requested_at = timezone.now()
+        a.release_requested_by = "contractor"
+        a.save(update_fields=["release_requested_at", "release_requested_by", "updated_at"])
+        _create_notification(
+            user=b.employer,
+            title="Site release requested",
+            body=f"{payloads._notification_actor_name(user)} requested to release "
+                 f"{payloads._d(a.site.site_name) if a.site else 'a site'}.",
+            notif_type="APPROVAL",
+            link="/employer/qr/requests")
+    elif action == "cancel-site-release":
+        if user.role != "contractor":
+            return Response({"error": "Only the contractor can cancel a site release."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
+        if a is None:
+            return Response({"error": "Site allotment not found."},
+                            status=status.HTTP_404_NOT_FOUND)
+        a.release_requested_at = None
+        a.release_requested_by = ""
+        a.save(update_fields=["release_requested_at", "release_requested_by", "updated_at"])
+    elif action == "approve-site-release":
+        if user.role != "employer":
+            return Response({"error": "Only the employer can approve a site release."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(
+            binding=b, site_id=site_id, status="APPROVED",
+            release_requested_at__isnull=False).first()
+        if a is None:
+            return Response({"error": "No release request for that site."},
+                            status=status.HTTP_404_NOT_FOUND)
+        a.status = "RELEASED"
+        a.released_at = timezone.now()
+        a.save(update_fields=["status", "released_at", "updated_at"])
+        # Release the contractor's workers from that site.
+        WorkerContractorBinding.objects.filter(
+            contractor=b.contractor, site_id=site_id
+        ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).update(
+            binding_status="CANCELLED", unbound_at=timezone.now())
+        _create_notification(
+            user=b.contractor,
+            title="Site released",
+            body=f"{payloads._notification_actor_name(user)} approved the release of "
+                 f"{payloads._d(a.site.site_name) if a.site else 'a site'}.",
+            notif_type="INFO",
+            link="/contractor/qr/requests")
+    elif action == "reject-site-release":
+        if user.role != "employer":
+            return Response({"error": "Only the employer can decline a site release."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
+        if a is None:
+            return Response({"error": "Site allotment not found."},
+                            status=status.HTTP_404_NOT_FOUND)
+        a.release_requested_at = None
+        a.release_requested_by = ""
+        a.save(update_fields=["release_requested_at", "release_requested_by", "updated_at"])
+        _create_notification(
+            user=b.contractor,
+            title="Site release declined",
+            body=f"{payloads._notification_actor_name(user)} kept "
+                 f"{payloads._d(a.site.site_name) if a.site else 'the site'} allotted to you.",
+            notif_type="WARNING",
+            link="/contractor/qr/requests")
     elif action == "request-site":
         if user.role != "contractor":
             return Response({"error": "Only the contractor can request a site."},

@@ -112,7 +112,7 @@ export default function ContractorBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
-  async function contractorSiteAction(action: 'approve-site' | 'reject-site', siteId: number) {
+  async function contractorSiteAction(action: 'approve-site' | 'reject-site' | 'request-site-release' | 'cancel-site-release', siteId: number) {
     if (!sitesFor?.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
@@ -225,12 +225,21 @@ export default function ContractorBindingRequestsPage() {
         canReject: a.status === 'Pending' && a.source === 'employer_allot',
         canWithdraw: a.status === 'Pending' && (a.source === 'contractor_request' || a.source === 'site_qr'),
         canPropose: false,
+        releaseRequested: !!a.releaseRequested,
+        canRelease: a.status === 'Approved' && !a.releaseRequested,
+        canCancelRelease: a.status === 'Approved' && !!a.releaseRequested,
       }))}
       busy={busy}
       onClose={() => setSitesFor(null)}
       onApprove={id => void contractorSiteAction('approve-site', id)}
       onReject={id => void contractorSiteAction('reject-site', id)}
       onPropose={() => {}}
+      onRelease={id => {
+        const a = sitesFor?.allotments?.find(x => x.siteId === id);
+        void contractorSiteAction(a?.releaseRequested ? 'cancel-site-release' : 'request-site-release', id);
+      }}
+      onApproveRelease={() => {}}
+      onRejectRelease={() => {}}
     />
     <BindingHistoryDialog
       open={!!historyFor}

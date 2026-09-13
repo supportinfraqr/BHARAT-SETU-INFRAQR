@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Check, MapPin, Plus, ShieldCheck, X } from "lucide-react";
 
-export type SitePermissionStatus = "Approved" | "Pending" | "Rejected" | "None";
+export type SitePermissionStatus = "Approved" | "Pending" | "Rejected" | "Released" | "None";
 
 export type SitePermissionRow = {
   siteId: number;
@@ -16,12 +16,18 @@ export type SitePermissionRow = {
   canReject?: boolean;
   canPropose?: boolean;
   canWithdraw?: boolean;
+  releaseRequested?: boolean;
+  canRelease?: boolean;
+  canCancelRelease?: boolean;
+  canApproveRelease?: boolean;
+  canRejectRelease?: boolean;
 };
 
 const STATUS_STYLE: Record<SitePermissionStatus, string> = {
   Approved: "bg-green-50 text-green-700 ring-green-100",
   Pending: "bg-orange-50 text-orange-700 ring-orange-100",
   Rejected: "bg-red-50 text-red-700 ring-red-100",
+  Released: "bg-gray-100 text-gray-500 ring-gray-200",
   None: "bg-gray-100 text-gray-500 ring-gray-200",
 };
 
@@ -50,6 +56,9 @@ export default function SitePermissionsDialog({
   onApprove,
   onReject,
   onPropose,
+  onRelease,
+  onApproveRelease,
+  onRejectRelease,
 }: {
   open: boolean;
   title: string;
@@ -63,6 +72,9 @@ export default function SitePermissionsDialog({
   onApprove: (siteId: number) => void;
   onReject: (siteId: number) => void;
   onPropose: (siteId: number) => void;
+  onRelease: (siteId: number) => void;
+  onApproveRelease: (siteId: number) => void;
+  onRejectRelease: (siteId: number) => void;
 }) {
   if (!open) return null;
   return (
@@ -147,6 +159,49 @@ export default function SitePermissionsDialog({
                         className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
                       >
                         Withdraw
+                      </button>
+                    )}
+                    {row.releaseRequested && !row.canApproveRelease && !row.canRejectRelease && !row.canCancelRelease && (
+                      <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-orange-50 text-orange-700 ring-1 ring-orange-100">Release requested</span>
+                    )}
+                    {row.canRelease && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onRelease(row.siteId)}
+                        className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors disabled:opacity-60"
+                      >
+                        Request unbind
+                      </button>
+                    )}
+                    {row.canCancelRelease && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onRelease(row.siteId)}
+                        className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
+                      >
+                        Cancel request
+                      </button>
+                    )}
+                    {row.canApproveRelease && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onApproveRelease(row.siteId)}
+                        className="h-8 px-3 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors disabled:opacity-60 inline-flex items-center gap-1"
+                      >
+                        <Check size={13} />Approve release
+                      </button>
+                    )}
+                    {row.canRejectRelease && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onRejectRelease(row.siteId)}
+                        className="h-8 px-3 rounded-lg border border-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-50 transition-colors disabled:opacity-60"
+                      >
+                        Keep site
                       </button>
                     )}
                     {row.canPropose && (

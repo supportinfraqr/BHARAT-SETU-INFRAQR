@@ -600,7 +600,8 @@ class ContractorEmployerBinding(models.Model):
 class ContractorSiteAllotment(models.Model):
     """A site the employer allots to a bound contractor (one row per site)."""
 
-    STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")]
+    STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected"),
+              ("RELEASED", "Released")]
     SOURCE = [("site_qr", "Site QR"), ("employer_allot", "Employer Allotment"),
               ("contractor_request", "Contractor Request")]
 
@@ -611,6 +612,11 @@ class ContractorSiteAllotment(models.Model):
     status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
     source = models.CharField(max_length=20, choices=SOURCE, default="site_qr")
     approved_at = models.DateTimeField(null=True, blank=True)
+    # Two-sided site release: the contractor asks to give an approved site back
+    # and the employer approves it (the allotment then becomes RELEASED).
+    release_requested_at = models.DateTimeField(null=True, blank=True)
+    release_requested_by = models.CharField(max_length=20, blank=True)
+    released_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

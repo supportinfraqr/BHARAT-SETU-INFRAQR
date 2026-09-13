@@ -68,7 +68,7 @@ export default function EmployerQrBindingRequestsPage() {
     setAllotFor(prev => prev && prev.id === row.id ? { ...prev, ...next } : prev);
   }
 
-  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site', payload: { siteIds?: number[]; siteId?: number }) {
+  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release', payload: { siteIds?: number[]; siteId?: number }) {
     if (!allotFor?.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
@@ -180,6 +180,9 @@ export default function EmployerQrBindingRequestsPage() {
           canReject: status === 'Pending' && (a?.source === 'contractor_request' || a?.source === 'site_qr'),
           canWithdraw: status === 'Pending' && a?.source === 'employer_allot',
           canPropose: status === 'None' || status === 'Rejected',
+          releaseRequested: !!a?.releaseRequested,
+          canApproveRelease: status === 'Approved' && !!a?.releaseRequested,
+          canRejectRelease: status === 'Approved' && !!a?.releaseRequested,
         };
       }) : []}
       busy={busy}
@@ -191,6 +194,9 @@ export default function EmployerQrBindingRequestsPage() {
       onApprove={id => void bindingSiteAction('approve-site', { siteId: id })}
       onReject={id => void bindingSiteAction('reject-site', { siteId: id })}
       onPropose={id => void bindingSiteAction('allot', { siteIds: [id] })}
+      onRelease={() => {}}
+      onApproveRelease={id => void bindingSiteAction('approve-site-release', { siteId: id })}
+      onRejectRelease={id => void bindingSiteAction('reject-site-release', { siteId: id })}
     />
     <ConfirmDialog
       open={!!confirm}

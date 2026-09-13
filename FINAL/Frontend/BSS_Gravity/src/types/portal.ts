@@ -194,7 +194,8 @@ export type ContractorBindingRequest = {
 
 export type SiteAllotment = {
   siteId: number; site: string; siteCode: string;
-  status: 'Pending' | 'Approved' | 'Rejected'; source: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Released'; source: string;
+  releaseRequested?: boolean; releaseRequestedBy?: string;
 };
 
 export type BindingHistoryEvent = { label: string; by?: string; at?: string };

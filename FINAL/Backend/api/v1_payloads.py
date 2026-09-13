@@ -1375,7 +1375,8 @@ def _ce_binding_row(b):
     ep = getattr(b.employer, "employer_profile", None)
     status_map = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                   "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
-    allot_status = {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected"}
+    allot_status = {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected",
+                    "RELEASED": "Released"}
     initiated_by, accepted_by = _ce_initiator_acceptor(b)
     allotments = [
         {
@@ -1385,6 +1386,8 @@ def _ce_binding_row(b):
             "siteCode": a.site.site_code if a.site else "",
             "status": allot_status.get(str(a.status).upper(), "Pending"),
             "source": _d(a.source),
+            "releaseRequested": bool(a.release_requested_at),
+            "releaseRequestedBy": _d(a.release_requested_by),
         }
         for a in b.allotments.all()
     ]
@@ -2215,8 +2218,10 @@ def _contractor_binding_requests(user):
                 "site": a.site.site_name if a.site else "",
                 "siteCode": a.site.site_code if a.site else "",
                 "status": {"PENDING": "Pending", "APPROVED": "Approved",
-                           "REJECTED": "Rejected"}.get(str(a.status).upper(), "Pending"),
+                           "REJECTED": "Rejected", "RELEASED": "Released"}.get(str(a.status).upper(), "Pending"),
                 "source": _d(a.source),
+                "releaseRequested": bool(a.release_requested_at),
+                "releaseRequestedBy": _d(a.release_requested_by),
             } for a in e.allotments.all()],
             "employer": _org_name(e.employer),
             "designation": "Principal employer binding",
@@ -2845,8 +2850,10 @@ def _employer_approvals(user):
                 "site": a.site.site_name if a.site else "",
                 "siteCode": a.site.site_code if a.site else "",
                 "status": {"PENDING": "Pending", "APPROVED": "Approved",
-                           "REJECTED": "Rejected"}.get(str(a.status).upper(), "Pending"),
+                           "REJECTED": "Rejected", "RELEASED": "Released"}.get(str(a.status).upper(), "Pending"),
                 "source": _d(a.source),
+                "releaseRequested": bool(a.release_requested_at),
+                "releaseRequestedBy": _d(a.release_requested_by),
             } for a in e.allotments.all()],
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
