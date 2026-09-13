@@ -3,7 +3,21 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, X } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
-export default function ProfileCompletion(){const {worker,ready}=useWorker();const [show,setShow]=useState(false);const missing=[!worker.contact.alternateMobile&&{label:'Add an alternate contact number',section:'contact'},!worker.socialSecurity.eShramLinked&&{label:'Link your e-Shram record',section:'social'},worker.documents.uploaded<worker.documents.required&&{label:'Upload mandatory documents',section:'documents'}].filter(Boolean) as {label:string;section:string}[];const complete=Math.max(0,Math.round((1-missing.length/10)*100));
- useEffect(()=>{if(!ready||missing.length===0)return;const last=Number(localStorage.getItem('bss-profile-prompt-at')||0);if(Date.now()-last>7*24*60*60*1000){const timer=window.setTimeout(()=>setShow(true),0);return()=>window.clearTimeout(timer)}},[ready,missing.length]);
- function later(){localStorage.setItem('bss-profile-prompt-at',String(Date.now()));setShow(false)}
- return <>{<Link href="/worker/Profile" className="hidden sm:flex items-center gap-2 text-xs text-gray-600"><span className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden"><span className="block h-full bg-bss-green" style={{width:`${complete}%`}}/></span>{complete}% Profile Completion</Link>}{show&&missing[0]&&<div className="fixed bottom-16 left-4 z-40 w-[min(360px,calc(100vw-2rem))] bg-white border border-blue-100 rounded-2xl shadow-xl p-4"><button onClick={later} className="absolute right-3 top-3 text-gray-400" aria-label="Later"><X size={16}/></button><p className="text-[10px] font-bold text-blue-700 uppercase">Complete your profile</p><h2 className="font-semibold text-sm mt-1">{missing[0].label}</h2><p className="text-xs text-gray-500 mt-1">Complete your record when convenient. We will not ask for information you cannot edit.</p><div className="flex gap-2 mt-3"><Link onClick={()=>setShow(false)} href={missing[0].section==='documents'?'/worker/Documents':'/worker/Profile'} className="h-8 px-3 rounded-lg bg-bss-navy text-white text-xs font-semibold flex items-center gap-1">Add now <ArrowRight size={13}/></Link><button onClick={later} className="h-8 px-3 rounded-lg border text-xs">Later</button></div></div>}</>}
+import { workerCompletion, completionHref } from '@/lib/workerProfileCompletion';
+
+export default function ProfileCompletion(){
+  const { worker, ready } = useWorker();
+  const [show, setShow] = useState(false);
+  // Same source of truth as the dashboard card, so the two never disagree.
+  const { percent: complete, missing } = workerCompletion(worker);
+  useEffect(() => {
+    if (!ready || missing.length === 0) return;
+    const last = Number(localStorage.getItem('bss-profile-prompt-at') || 0);
+    if (Date.now() - last > 7 * 24 * 60 * 60 * 1000) {
+      const timer = window.setTimeout(() => setShow(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [ready, missing.length]);
+  function later(){ localStorage.setItem('bss-profile-prompt-at', String(Date.now())); setShow(false); }
+  return <>{<Link href="/worker/Profile" className="hidden sm:flex items-center gap-2 text-xs text-gray-600"><span className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden"><span className="block h-full bg-bss-green" style={{width:`${complete}%`}}/></span>{complete}% Profile Completion</Link>}{show && missing[0] && <div className="fixed bottom-16 left-4 z-40 w-[min(360px,calc(100vw-2rem))] bg-white border border-blue-100 rounded-2xl shadow-xl p-4"><button onClick={later} className="absolute right-3 top-3 text-gray-400" aria-label="Later"><X size={16}/></button><p className="text-[10px] font-bold text-blue-700 uppercase">Complete your profile</p><h2 className="font-semibold text-sm mt-1">{missing[0].label}</h2><p className="text-xs text-gray-500 mt-1">Complete your record when convenient. We will not ask for information you cannot edit.</p><div className="flex gap-2 mt-3"><Link onClick={()=>setShow(false)} href={completionHref(missing[0].section)} className="h-8 px-3 rounded-lg bg-bss-navy text-white text-xs font-semibold flex items-center gap-1">Add now <ArrowRight size={13}/></Link><button onClick={later} className="h-8 px-3 rounded-lg border text-xs">Later</button></div></div>}</>;
+}

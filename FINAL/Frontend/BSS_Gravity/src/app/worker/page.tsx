@@ -6,6 +6,7 @@ import { AlertCircle, ArrowRight, BadgeCheck, Bell, BriefcaseBusiness, Building2
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { workerCompletion } from '@/lib/workerProfileCompletion';
 
 export default function WorkerOverview() {
   const { worker, portal, saveWorker } = useWorker(); const { t } = useLanguage();
@@ -19,7 +20,8 @@ export default function WorkerOverview() {
   const announcement = portal.announcements.find(item=>item.priority==='Important')??portal.announcements[0];
   const missingDocuments = portal.documents.filter(item=>item.mandatory&&['Missing','Rejected','Expired'].includes(item.status));
   const pendingBinding = portal.jobRequests.find(item=>item.status==='Pending');
-  const profileCompletion = Math.min(100, Math.round(([worker.contact.alternateMobile, worker.contact.email, worker.identity.aadhaarVerified, worker.identity.panVerified, worker.socialSecurity.eShramLinked, worker.banking.verificationStatus==='Verified'].filter(Boolean).length / 6) * 100));  const inr = (amount:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(amount);
+  const profileCompletion = workerCompletion(worker).percent;
+  const inr = (amount:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(amount);
   const emp = worker.employment;
   const siteInfo = emp.siteDetails ?? { name: '', code: '', location: '', medicalOfficer: '', officerContact: '' };
   const contractorInfo = emp.contractorDetails ?? { name: '', code: '', contact: '', email: '', lin: '' };
