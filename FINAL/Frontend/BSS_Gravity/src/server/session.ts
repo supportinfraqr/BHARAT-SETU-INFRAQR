@@ -1,49 +1,17 @@
 import 'server-only';
 
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { getRuntimeConfig } from '@/server/config';
+import { SESSION_COOKIE, SESSION_TTL_SECONDS, decryptSession, encryptSession } from '@/server/session-token';
 import type { PortalRole, PortalSession } from '@/types/portal';
 
-export const SESSION_COOKIE = process.env.NODE_ENV === 'production' ? '__Host-bss_session' : 'bss_session';
-const SESSION_TTL_SECONDS = 8 * 60 * 60;
-
-function secretKey(): Buffer {
-  const configured = getRuntimeConfig().sessionSecret;
-  if (process.env.NODE_ENV === 'production' && (!configured || configured.length < 32)) {
-    throw new Error('A production-grade BSS_SESSION_SECRET is required.');
-  }
-  return createHash('sha256').update(configured ?? 'bss-development-session-secret-not-for-production').digest();
-}
-
-function encrypt(payload: PortalSession): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', secretKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()]);
-  return [iv, cipher.getAuthTag(), ciphertext].map(value => value.toString('base64url')).join('.');
-}
-
-function decrypt(value: string): PortalSession | null {
-  try {
-    const [encodedIv, encodedTag, encodedCiphertext] = value.split('.');
-    if (!encodedIv || !encodedTag || !encodedCiphertext) return null;
-    const decipher = createDecipheriv('aes-256-gcm', secretKey(), Buffer.from(encodedIv, 'base64url'));
-    decipher.setAuthTag(Buffer.from(encodedTag, 'base64url'));
-    const json = Buffer.concat([decipher.update(Buffer.from(encodedCiphertext, 'base64url')), decipher.final()]).toString('utf8');
-    const session = JSON.parse(json) as PortalSession;
-    if (!session.subject || !session.sessionId || !['Worker', 'Contractor', 'Employer', 'BSS Admin', 'BSS Staff', 'Government'].includes(session.role) || session.expiresAt <= Date.now()) return null;
-    return session;
-  } catch {
-    return null;
-  }
-}
+export { SESSION_COOKIE };
 
 export async function createSession(input: { subject: string; role: PortalRole; sessionId: string; accessToken?: string }): Promise<PortalSession> {
   const issuedAt = Date.now();
   const session: PortalSession = { ...input, issuedAt, expiresAt: issuedAt + SESSION_TTL_SECONDS * 1000 };
   const store = await cookies();
-  store.set(SESSION_COOKIE, encrypt(session), {
+  store.set(SESSION_COOKIE, encryptSession(session), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -60,7 +28,7 @@ export async function clearSession(): Promise<void> {
 
 export async function getSession(): Promise<PortalSession | null> {
   const value = (await cookies()).get(SESSION_COOKIE)?.value;
-  return value ? decrypt(value) : null;
+  return value ? decryptSession(value) : null;
 }
 
 export async function requireSession(role?: PortalRole): Promise<PortalSession> {
