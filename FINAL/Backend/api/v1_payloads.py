@@ -825,7 +825,8 @@ def _worker_family_section(user):
                 "age": n.nominee_age,
                 "contact": _d(n.contact),
                 "address": _d(n.address),
-                "documents": [d for d in (["PAN"] if n.pan_copy_nominee else []) + (["Aadhaar"] if n.aadhaar_copy_nominee else [])],
+                "documents": (n.nominee_documents
+                              or [d for d in (["PAN"] if n.pan_copy_nominee else []) + (["Aadhaar"] if n.aadhaar_copy_nominee else [])]),
                 "percent": n.percent if n.percent is not None else 0,
             }
             for n in fam.filter(nominee=True)

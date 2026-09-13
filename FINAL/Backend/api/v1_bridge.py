@@ -201,6 +201,25 @@ PORTAL_ROLE = {
 }
 
 
+def _create_notification(user, title, body, notif_type="APPROVAL", link=""):
+    """Helper to persist a Notification record for a targeted user."""
+    if not user:
+        return None
+    try:
+        return Notification.objects.create(
+            user=user,
+            type=notif_type,
+            title=str(title)[:120],
+            body=str(body)[:500],
+            link=str(link)[:255],
+            is_read=False
+        )
+    except Exception as err:
+        logger.warning(f"Failed to create notification for user {getattr(user, 'id', None)}: {err}")
+        return None
+
+
+
 # ---------------------------------------------------------------------------
 # Demo-tolerant session authentication
 # ---------------------------------------------------------------------------
@@ -1578,6 +1597,7 @@ def _persist_mutation(user, role_path, resource, method, body):
                     nominee_dob=nm.get("dob") or None, nominee_age=_coerce_int(nm.get("age")),
                     contact=nm.get("contact", ""), address=nm.get("address", ""),
                     percent=_coerce_int(nm.get("percent")),
+                    nominee_documents=list(nm.get("documents") or []),
                     # Match the doc type anywhere in the uploaded file name, e.g.
                     # "pan_card.pdf" -> PAN, "aadhaar_front.jpg" -> Aadhaar.
                     pan_copy_nominee=("PAN" in " ".join(str(d) for d in (nm.get("documents") or [])).upper()),
@@ -3218,6 +3238,16 @@ def binding_consent(request, binding_id):
         b.rejected_by = side
         b.rejected_at = timezone.now()
         b.save(update_fields=["binding_status", "rejected_by", "rejected_at"])
+        # Notify the counterparty about the rejection
+        other_user = b.contractor if side == "worker" else b.worker
+        actor_name = payloads._notification_actor_name(user)
+        _create_notification(
+            user=other_user,
+            title="Binding request declined",
+            body=f"{actor_name} declined your binding request.",
+            notif_type="WARNING",
+            link="/contractor/qr/requests" if other_user.role == "contractor" else "/worker/binding"
+        )
         return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
     if action == "unbind":
         if side == "worker":
@@ -3233,6 +3263,33 @@ def binding_consent(request, binding_id):
         b.save()
         if b.binding_status == "CANCELLED":
             _unlink_employment_from_binding(b)
+            # Notify both sides that unbind is completed
+            actor_name = payloads._notification_actor_name(user)
+            _create_notification(
+                user=b.worker,
+                title="Binding ended",
+                body=f"Your binding with {payloads._notification_actor_name(b.contractor)} has been ended.",
+                notif_type="INFO",
+                link="/worker/binding"
+            )
+            _create_notification(
+                user=b.contractor,
+                title="Binding ended",
+                body=f"Your binding with worker {payloads._notification_actor_name(b.worker)} has been ended.",
+                notif_type="INFO",
+                link="/contractor/qr/requests"
+            )
+        else:
+            # Notify counterparty that an unbind was requested and requires confirmation
+            other_user = b.contractor if side == "worker" else b.worker
+            actor_name = payloads._notification_actor_name(user)
+            _create_notification(
+                user=other_user,
+                title="Unbind requested",
+                body=f"{actor_name} requested to end the binding. Please confirm.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests" if other_user.role == "contractor" else "/worker/binding"
+            )
     else:
         if side == "worker":
             b.consent_worker = True
@@ -3245,6 +3302,31 @@ def binding_consent(request, binding_id):
         b.save()
         if b.binding_status == "ACCEPTED":
             _sync_employment_from_binding(b)
+            # Notify both parties of accepted binding
+            _create_notification(
+                user=b.worker,
+                title="Binding approved",
+                body=f"Your binding with {payloads._notification_actor_name(b.contractor)} is active.",
+                notif_type="APPROVAL",
+                link="/worker/binding"
+            )
+            _create_notification(
+                user=b.contractor,
+                title="Worker bound successfully",
+                body=f"Worker {payloads._notification_actor_name(b.worker)} accepted binding request.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests"
+            )
+        else:
+            # Notify counterparty that binding consent was given
+            other_user = b.contractor if side == "worker" else b.worker
+            _create_notification(
+                user=other_user,
+                title="Binding request pending",
+                body=f"{payloads._notification_actor_name(user)} sent a binding request for your approval.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests" if other_user.role == "contractor" else "/worker/binding"
+            )
     return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
 
 
@@ -3472,6 +3554,30 @@ def employer_binding_action(request, binding_id):
             b.binding_status = "ACCEPTED"
             b.accepted_at = timezone.now()
         b.save()
+        if b.binding_status == "ACCEPTED":
+            _create_notification(
+                user=b.contractor,
+                title="Employer binding accepted",
+                body=f"Your organisation binding with {payloads._notification_actor_name(b.employer)} is active.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests"
+            )
+            _create_notification(
+                user=b.employer,
+                title="Contractor bound successfully",
+                body=f"Binding with contractor {payloads._notification_actor_name(b.contractor)} is active.",
+                notif_type="APPROVAL",
+                link="/employer/qr/requests"
+            )
+        else:
+            other_user = b.contractor if user == b.employer else b.employer
+            _create_notification(
+                user=other_user,
+                title="Binding consent updated",
+                body=f"{payloads._notification_actor_name(user)} consented to the binding request.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
+            )
     elif action == "reject":
         b.binding_status = "REJECTED"
         b.rejected_by = "employer" if user.role == "employer" else "contractor"
@@ -3481,6 +3587,14 @@ def employer_binding_action(request, binding_id):
         # the contractor's workers from the employer's sites.
         ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
         _release_contractor_workers(b)
+        other_user = b.contractor if user == b.employer else b.employer
+        _create_notification(
+            user=other_user,
+            title="Binding request declined",
+            body=f"{payloads._notification_actor_name(user)} declined the binding request.",
+            notif_type="WARNING",
+            link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
+        )
     elif action == "unbind":
         # Two-sided unbinding — either party may request; the binding is
         # cancelled only once both consents are recorded.
@@ -3500,6 +3614,29 @@ def employer_binding_action(request, binding_id):
             # and releases the contractor's workers from the employer's sites.
             ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
             _release_contractor_workers(b)
+            _create_notification(
+                user=b.contractor,
+                title="Employer binding ended",
+                body=f"Your binding with employer {payloads._notification_actor_name(b.employer)} has been ended.",
+                notif_type="INFO",
+                link="/contractor/qr/requests"
+            )
+            _create_notification(
+                user=b.employer,
+                title="Contractor binding ended",
+                body=f"Your binding with contractor {payloads._notification_actor_name(b.contractor)} has been ended.",
+                notif_type="INFO",
+                link="/employer/qr/requests"
+            )
+        else:
+            other_user = b.contractor if user == b.employer else b.employer
+            _create_notification(
+                user=other_user,
+                title="Unbind requested",
+                body=f"{payloads._notification_actor_name(user)} requested to end the organisation binding. Confirm to unbind.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
+            )
     elif action == "approve-site":
         # Two-step: whoever did NOT raise the proposal approves it.
         site_id = request.data.get("siteId")
@@ -3515,6 +3652,15 @@ def employer_binding_action(request, binding_id):
         a.status = "APPROVED"
         a.approved_at = timezone.now()
         a.save()
+        other_user = b.contractor if user == b.employer else b.employer
+        site_title = payloads._d(a.site.site_name) if a.site else "Site"
+        _create_notification(
+            user=other_user,
+            title="Site permission approved",
+            body=f"{payloads._notification_actor_name(user)} approved site permission for {site_title}.",
+            notif_type="APPROVAL",
+            link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
+        )
     elif action == "reject-site":
         site_id = request.data.get("siteId")
         a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
@@ -3522,6 +3668,15 @@ def employer_binding_action(request, binding_id):
             return Response({"error": "Site allotment not found."}, status=status.HTTP_404_NOT_FOUND)
         a.status = "REJECTED"
         a.save()
+        other_user = b.contractor if user == b.employer else b.employer
+        site_title = payloads._d(a.site.site_name) if a.site else "Site"
+        _create_notification(
+            user=other_user,
+            title="Site permission declined",
+            body=f"{payloads._notification_actor_name(user)} declined site permission for {site_title}.",
+            notif_type="WARNING",
+            link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
+        )
     elif action == "request-site":
         if user.role != "contractor":
             return Response({"error": "Only the contractor can request a site."},
@@ -3534,6 +3689,13 @@ def employer_binding_action(request, binding_id):
         ContractorSiteAllotment.objects.update_or_create(
             binding=b, site=site,
             defaults={"status": "PENDING", "source": "contractor_request"})
+        _create_notification(
+            user=b.employer,
+            title="Site permission requested",
+            body=f"Contractor {payloads._notification_actor_name(user)} requested site access for {payloads._d(site.site_name)}.",
+            notif_type="APPROVAL",
+            link="/employer/qr/requests"
+        )
     elif action == "allot":
         if user.role != "employer":
             return Response({"error": "Only the employer can propose sites."},
@@ -3555,6 +3717,13 @@ def employer_binding_action(request, binding_id):
             ContractorSiteAllotment.objects.update_or_create(
                 binding=b, site=site,
                 defaults={"status": "PENDING", "source": "employer_allot"})
+            _create_notification(
+                user=b.contractor,
+                title="Site permission proposed",
+                body=f"Employer {payloads._notification_actor_name(user)} proposed site access for {payloads._d(site.site_name)}.",
+                notif_type="APPROVAL",
+                link="/contractor/qr/requests"
+            )
     else:
         return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"data": payloads._ce_binding_row(b)}, status=status.HTTP_200_OK)

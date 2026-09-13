@@ -102,6 +102,8 @@ class WorkerFamilyDependant(models.Model):
     percent = models.SmallIntegerField(null=True, blank=True)
     pan_copy_nominee = models.BooleanField(null=True, blank=True)
     aadhaar_copy_nominee = models.BooleanField(null=True, blank=True)
+    # Actual attached documents for this nominee: [{type, name}].
+    nominee_documents = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
