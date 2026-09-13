@@ -77,17 +77,17 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const toggleMenu = (key: string) => setOpenMenu(current => (current === key ? null : key));
 
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
-    <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
+    <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-gray-200 shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
       <div className="bss-shell-bar max-w-[1200px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-8 w-auto" alt="Bharat Shram Setu"/>
           <BrandText className="hidden lg:block text-base"/>
         </Link>
-        <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-1 flex-1 justify-center">
+        <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-0.5 flex-1 justify-center">
           {groups.map(group => 'href' in group
-            ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`px-3 py-2 rounded-full text-[13px] font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
+            ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
             : <div key={group.key} className="relative">
-                <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => toggleMenu(group.key)} className={`px-3 py-2 rounded-full text-[13px] font-medium flex items-center gap-1 ${group.items.some(item => pathname === item[1]) || openMenu === group.key ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={12} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
+                <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => toggleMenu(group.key)} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium gap-1 ${group.items.some(item => pathname === item[1]) || openMenu === group.key ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={12} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
                 {openMenu === group.key && <div role="menu" className="absolute top-full left-0 pt-2 w-56 z-50">
                   <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-1">
                     {group.items.map(item => <Link key={item[0]} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className="block px-3 py-2.5 rounded-lg text-xs hover:bg-gray-50">{t(item[0])}</Link>)}
