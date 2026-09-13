@@ -15,6 +15,7 @@ export type SitePermissionRow = {
   canApprove?: boolean;
   canReject?: boolean;
   canPropose?: boolean;
+  canWithdraw?: boolean;
 };
 
 const STATUS_STYLE: Record<SitePermissionStatus, string> = {
@@ -136,6 +137,16 @@ export default function SitePermissionsDialog({
                         className="h-8 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-colors disabled:opacity-60"
                       >
                         Reject
+                      </button>
+                    )}
+                    {row.canWithdraw && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => onReject(row.siteId)}
+                        className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
+                      >
+                        Withdraw
                       </button>
                     )}
                     {row.canPropose && (

@@ -219,7 +219,8 @@ export default function ContractorBindingRequestsPage() {
         status: a.status,
         source: a.source,
         canApprove: a.status === 'Pending' && a.source === 'employer_allot',
-        canReject: a.status === 'Pending',
+        canReject: a.status === 'Pending' && a.source === 'employer_allot',
+        canWithdraw: a.status === 'Pending' && a.source === 'contractor_request',
         canPropose: false,
       }))}
       busy={busy}

@@ -169,7 +169,8 @@ export default function EmployerQrBindingRequestsPage() {
           source: a?.source,
           isDefault: employer.defaultSite?.id === site.id,
           canApprove: status === 'Pending' && a?.source === 'contractor_request',
-          canReject: status === 'Pending',
+          canReject: status === 'Pending' && a?.source === 'contractor_request',
+          canWithdraw: status === 'Pending' && a?.source === 'employer_allot',
           canPropose: status === 'None' || status === 'Rejected',
         };
       }) : []}
