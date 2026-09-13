@@ -2544,7 +2544,9 @@ def _handle_job_posting(user, body, method):
         job.validity_until = _parse_iso_date(body.get("closingDate"))
     site_name = text("site", "")
     if site_name:
-        site = Site.objects.filter(site_name__iexact=site_name).first()
+        # Only a site the contractor is actually allotted may be used for a posting.
+        allowed = _contractor_site_ids(user)
+        site = Site.objects.filter(site_name__iexact=site_name, id__in=allowed).first()
         if site:
             job.site = site
     status = str(body.get("status") or "").strip().upper()

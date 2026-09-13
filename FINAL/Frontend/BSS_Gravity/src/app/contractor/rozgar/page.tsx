@@ -21,7 +21,7 @@ type PostingDraft = {
 
 export default function ContractorRozgarPage() {
   const { contractor, replaceContractor, mutate } = useContractor();
-  const [tab, setTab] = useState<'jobs' | 'applicants'>('jobs');
+  const [tab, setTab] = useState<'jobs' | 'applicants' | 'available'>('jobs');
   const [selectedId, setSelectedId] = useState(contractor.applications[0]?.id ?? '');
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
@@ -59,10 +59,10 @@ export default function ContractorRozgarPage() {
     const required = [draft.title, draft.trade, draft.state, draft.city, draft.site, draft.description, draft.experience, draft.monthlyWage];
     if (!asDraft && required.some(v => !v)) { setError('Complete the required fields (title, trade, state, city, site, description, experience, monthly wage) before publishing.'); setBusy(false); return; }
     try {
-      await mutate('job-postings', 'POST', { ...draft, status: asDraft ? 'Draft' : 'Submitted' });
+      const result = await mutate<{ data?: { id?: number } }>('job-postings', 'POST', { ...draft, status: asDraft ? 'Draft' : 'Submitted' });
       setPosting(false); setStep(1);
       const postingRecord: ContractorJobPosting = {
-        id: `JOB-${Date.now()}`, title: draft.title, trade: draft.trade, category: draft.category, workplaceType: draft.workplaceType, state: draft.state, city: draft.city,
+        id: String(result?.data?.id ?? `JOB-${Date.now()}`), title: draft.title, trade: draft.trade, category: draft.category, workplaceType: draft.workplaceType, state: draft.state, city: draft.city,
         site: draft.site, description: draft.description, skills: draft.skills, experience: draft.experience, minSalary: Number(draft.minSalary) || 0, maxSalary: Number(draft.maxSalary) || 0,
         salaryVisibility: draft.salaryVisibility, vacancies: Number(draft.vacancies) || 1, monthlyWage: Number(draft.monthlyWage) || 0, closingDate: draft.closingDate, duration: draft.duration,
         visibility: draft.visibility, status: asDraft ? 'Draft' : 'Submitted', postedOn: asDraft ? '' : new Date().toISOString().slice(0, 10), applications: 0, hires: 0,
@@ -70,6 +70,17 @@ export default function ContractorRozgarPage() {
       replaceContractor({ ...contractor, jobHistory: [postingRecord, ...contractor.jobHistory] });
       setNotice(asDraft ? 'Posting saved as Draft — publish it from the job dashboard when ready.' : 'Job posting submitted for approval and applicant matching.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Posting could not be created.'); }
+    finally { setBusy(false); }
+  }
+
+  async function inviteToBind(worker: ContractorPortalData['availableWorkers'][number]) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/bindings/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'BSS_WORKER', bssId: worker.workerId }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Binding request could not be sent.');
+      setNotice(`Binding request sent to ${worker.workerName} — they approve it from their portal.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Binding request could not be sent.'); }
     finally { setBusy(false); }
   }
 
@@ -99,6 +110,7 @@ export default function ContractorRozgarPage() {
     <div className="flex border-b">
       <button onClick={() => setTab('jobs')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'jobs' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Job Dashboard & History</button>
       <button onClick={() => setTab('applicants')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'applicants' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Workforce Sourcing — Applicants</button>
+      <button onClick={() => setTab('available')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'available' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Available Workers ({contractor.availableWorkers.length})</button>
     </div>
 
     {tab === 'jobs' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -138,6 +150,22 @@ export default function ContractorRozgarPage() {
         </div>
       </div> : <div className="bg-white border rounded-2xl p-10 text-center"><Briefcase className="mx-auto text-gray-300"/><p className="mt-3 text-sm text-gray-500">Select an application.</p></div>}</section>
     </div>}
+
+    {tab === 'available' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Workers available for work</h2><p className="text-xs text-gray-400 mt-0.5">Workers who turned on Rozgar Setu availability. Send a binding request to engage them at your default site.</p></header>
+      <div className="divide-y divide-gray-100">
+        {contractor.availableWorkers.length ? contractor.availableWorkers.map(worker => (
+          <div key={worker.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2"><h3 className="font-semibold text-gray-900">{worker.workerName}</h3><span className="text-[10px] font-bold uppercase text-green-700 bg-green-50 rounded px-1.5 py-0.5">Available</span></div>
+              <p className="font-mono text-[11px] text-gray-400 mt-0.5">{worker.workerId}</p>
+              <p className="text-xs text-gray-500 mt-1">{[worker.trade, worker.location].filter(Boolean).join(' · ') || '—'}{worker.skills.length ? ` · ${worker.skills.join(', ')}` : ''}</p>
+            </div>
+            <button disabled={busy} onClick={() => void inviteToBind(worker)} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-60">Invite to bind</button>
+          </div>
+        )) : <p className="p-10 text-center text-sm text-gray-400">No workers are currently available. They appear here when a worker turns on “Available for work”.</p>}
+      </div>
+    </section>}
 
     {/* Post new job — multi-step wizard */}
     {posting && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden">

@@ -2008,6 +2008,42 @@ def _contractor_applications(user):
     return rows
 
 
+def _contractor_available_workers(user):
+    """Workers who turned on 'Available for work' (Rozgar Setu) — surfaced to the
+    contractor for sourcing. Excludes workers already bound to this contractor."""
+    from bss_core.models import WorkerOther
+
+    bound_ids = set(WorkerContractorBinding.objects.filter(
+        contractor=user, binding_status__in=("PENDING", "ACCEPTED")
+    ).values_list("worker_id", flat=True))
+    rows = []
+    for other in (WorkerOther.objects.filter(available_for_work=True)
+                  .select_related("user").order_by("-updated_at")[:50]):
+        w = other.user
+        if w is None or w.id in bound_ids:
+            continue
+        wi = WorkerIdentity.objects.filter(user=w).first()
+        addr = getattr(w, "worker_address", None)
+        state = str(getattr(addr, "current_state", "") or getattr(addr, "permanent_state", "") or "")
+        skills = []
+        if hasattr(w, "worker_skills"):
+            skills = [str(getattr(s, "name", "") or "") for s in w.worker_skills.all()[:4]]
+        rows.append({
+            "id": w.id,
+            "workerName": _d(wi.name if wi else w.username),
+            "workerId": _d(wi.bss_worker_id if wi else _bss_worker_code(w.id)),
+            "trade": next((s for s in skills if s), ""),
+            "skills": [s for s in skills if s],
+            "experience": "",
+            "expectedWage": 0,
+            "location": state,
+            "status": "Available",
+            "dateApplied": _dts(other.updated_at),
+            "matchScore": 0,
+        })
+    return rows
+
+
 def _contractor_employers(user):
     """Principal employers the contractor is actually bound to (ACCEPTED
     contractor↔employer bindings) and the sites those employers allotted
@@ -2637,6 +2673,7 @@ def build_contractor_portal(user):
         "gatePasses": _contractor_gate_passes(user),
         "advances": _contractor_advances(user),
         "applications": _contractor_applications(user),
+        "availableWorkers": _contractor_available_workers(user),
         "employers": _contractor_employers(user),
         "submissions": _contractor_submissions(user),
         "workerBenefits": _contractor_worker_benefits(user),
