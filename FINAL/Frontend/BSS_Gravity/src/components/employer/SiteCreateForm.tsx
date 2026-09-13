@@ -397,6 +397,14 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   const [tab, setTab] = useState(FORM_SECTIONS[0].title);
   const section = useMemo(() => FORM_SECTIONS.find(s => s.title === tab) ?? FORM_SECTIONS[0], [tab]);
 
+  // Lock background scrolling while the modal is open (this component only
+  // mounts while open, so mount/unmount is the open/close lifecycle).
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, []);
+
   useEffect(() => {
     let active = true;
     fetch('/api/geography')
@@ -455,7 +463,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   }
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/50 p-4 flex items-center justify-center">
+    <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm p-4 flex items-center justify-center">
       <section role="dialog" aria-modal="true" aria-labelledby="add-site-title" className="w-full max-w-3xl max-h-[calc(100vh-2rem)] bg-white rounded-2xl overflow-hidden flex flex-col">
         <header className="p-5 border-b border-gray-100 flex justify-between items-start flex-shrink-0">
           <div>
