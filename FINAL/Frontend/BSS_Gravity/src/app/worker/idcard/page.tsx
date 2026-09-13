@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { Download, Share2, ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, PackageCheck, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import WorkerQr from '@/components/qr/WorkerQr';
+import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -374,22 +375,12 @@ export default function IdentityCardPage() {
       </div>
 
       {/* Large QR — easier to scan than the small QR printed on the card */}
-      <section className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-6">
-        <div className="relative w-56 h-56 sm:w-60 sm:h-60 bg-white p-3 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-center flex-shrink-0">
-          <WorkerQr bssId={worker.identity.bssId} className="w-full h-full" />
-          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="w-[46px] h-[46px] bg-white rounded-[9px] grid place-items-center shadow-sm">
-              <img src="/bss-original-logo.png" alt="" className="w-[36px] h-[36px] object-contain" />
-            </span>
-          </span>
-        </div>
-        <div className="text-center sm:text-left min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">Scan to verify</p>
-          <h2 className="text-lg font-bold text-[#062D4F] mt-1 break-words">{worker.identity.name}</h2>
-          <p className="font-mono text-sm text-gray-500 mt-1 break-all">{worker.identity.bssId}</p>
-          <p className="text-xs text-gray-500 mt-3">This large QR carries the same BSS credential as the card — use it when the printed card QR is too small to scan. Anyone can scan it to verify your identity.</p>
-        </div>
-      </section>
+      <CredentialQrPanel
+        bssId={worker.identity.bssId}
+        name={worker.identity.name}
+        idLabel="worker"
+        description="This large QR carries the same BSS credential as the card — use it when the printed card QR is too small to scan. Anyone can scan it to verify your identity."
+      />
 
       <div className="flex gap-3 pt-2">
         <button onClick={handleDownload} disabled={isExporting} className="flex-1 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2">

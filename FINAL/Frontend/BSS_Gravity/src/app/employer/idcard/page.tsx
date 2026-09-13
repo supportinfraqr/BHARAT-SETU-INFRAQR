@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Download, Share2 } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import OrganizationIdentityCard, { entityInitials, formatCardDate, type OrganizationCardContent } from '@/components/idcard/OrganizationIdentityCard';
+import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
 
 export default function EmployerIdentityCardPage() {
   const { employer } = useEmployer();
@@ -107,6 +108,8 @@ export default function EmployerIdentityCardPage() {
     <div className="flex justify-center mb-6"><div className="bg-gray-100 p-1 rounded-xl flex gap-1 shadow-inner"><button onClick={() => setIsFlipped(false)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${!isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>Front Side</button><button onClick={() => setIsFlipped(true)} className={`px-6 py-1.5 rounded-lg text-sm font-bold transition-all ${isFlipped ? 'bg-white text-[#073B67] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>Back Side</button></div></div>
 
     <OrganizationIdentityCard content={content} frontRef={frontRef} backRef={backRef} isFlipped={isFlipped} onToggleFlip={() => setIsFlipped(v => !v)} />
+
+    <CredentialQrPanel bssId={entityId} name={employer.identity.company} idLabel="employer" />
 
     <div className="flex gap-3"><button onClick={handleDownload} disabled={isExporting} className="flex-1 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Download size={18}/>{isExporting ? 'Creating print PDF…' : 'View / Download Print-Ready PDF'}</button><button onClick={handleShare} disabled={isExporting} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-wait px-4 py-3 rounded-[12px] font-bold text-sm flex justify-center items-center gap-2"><Share2 size={18}/>{isExporting ? 'Preparing…' : 'Share Digital ID'}</button></div>
     <p className="text-center text-xs text-gray-500 mt-4">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>

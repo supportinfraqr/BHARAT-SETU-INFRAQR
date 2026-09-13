@@ -5,6 +5,7 @@ import { Download, Share2, ChevronLeft, Home } from 'lucide-react';
 import Link from 'next/link';
 import { useContractor } from '@/contexts/ContractorContext';
 import OrganizationIdentityCard, { entityInitials, formatCardDate, type OrganizationCardContent } from '@/components/idcard/OrganizationIdentityCard';
+import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
 
 export default function ContractorIdentityCardPage() {
   const { contractor: portal } = useContractor();
@@ -201,6 +202,8 @@ export default function ContractorIdentityCardPage() {
       <div ref={cardRef}>
         <OrganizationIdentityCard content={content} frontRef={frontRef} backRef={backRef} isFlipped={isFlipped} onToggleFlip={() => setIsFlipped(v => !v)} />
       </div>
+
+      <CredentialQrPanel bssId={entityId} name={portal.identity.company} idLabel="contractor" />
 
       <div className="flex gap-3 pt-2">
         <button onClick={handleDownload} disabled={isExporting} className="flex-1 bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 rounded-[12px] font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2">
