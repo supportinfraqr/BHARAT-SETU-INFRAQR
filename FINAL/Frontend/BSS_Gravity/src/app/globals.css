@@ -499,12 +499,17 @@ html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-moti
    accessibility. The app shell/header stays stable; only the
    changing content region fades in on navigation.
 ───────────────────────────────────────────────────────────── */
+/* Fade only — deliberately no transform. A lingering transform (from
+   animation-fill-mode) turns the content region into a containing block, which
+   mis-positions every `position: fixed` dialog rendered inside a page: they
+   centre on the content box instead of the viewport and get clipped by the
+   header. Keep this opacity-only. */
 .bss-content-fade {
-  animation: bssContentIn 0.18s ease-out both;
+  animation: bssContentIn 0.18s ease-out;
 }
 @keyframes bssContentIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Restrained micro-interactions for enterprise controls */
