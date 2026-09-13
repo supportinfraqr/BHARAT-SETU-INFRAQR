@@ -16,6 +16,7 @@ export default function ContractorBindingRequestsPage() {
   const [otpFor, setOtpFor] = useState<ContractorBindingRequest | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [otpMode, setOtpMode] = useState<'bind' | 'unbind'>('bind');
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' } | null>(null);
   const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
 
@@ -47,14 +48,14 @@ export default function ContractorBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
-  async function sendWorkerOtp(row: ContractorBindingRequest) {
+  async function sendWorkerOtp(row: ContractorBindingRequest, mode: 'bind' | 'unbind') {
     setBusy(true); setError(''); setNotice('');
     try {
       const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'send-otp', target: 'worker' }) });
       const result = await response.json().catch(() => ({})) as { error?: string; mobile?: string };
       if (!response.ok) throw new Error(result.error || 'OTP could not be sent.');
-      setOtpFor(row); setOtpSent(true); setOtp('');
-      setNotice(`OTP sent to the worker's mobile ${result.mobile ?? ''}. Enter the OTP the worker reads out to record their consent.`);
+      setOtpFor(row); setOtpMode(mode); setOtpSent(true); setOtp('');
+      setNotice(`OTP sent to the worker's mobile ${result.mobile ?? ''}. Enter the OTP the worker reads out to record their ${mode === 'unbind' ? 'unbinding' : 'binding'} consent.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'OTP could not be sent.'); }
     finally { setBusy(false); }
   }
@@ -63,12 +64,19 @@ export default function ContractorBindingRequestsPage() {
     if (!otpFor) return;
     setBusy(true); setError('');
     try {
-      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: otpFor.id, action: 'accept-otp', side: 'worker', otp }) });
+      const unbind = otpMode === 'unbind';
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: otpFor.id, action: unbind ? 'unbind' : 'accept-otp', side: 'worker', otp }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'OTP verification failed.');
-      const accepted = result.data?.status === 'Accepted';
-      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === otpFor.id ? { ...item, status: (accepted ? 'Accepted' : 'Pending') as ContractorBindingRequest['status'], consentWorker: true } : item) });
-      setNotice(accepted ? `Bound to ${otpFor.entityName} — worker consent recorded via OTP.` : `Worker consent recorded via OTP — awaiting the contractor's acceptance.`);
+      if (unbind) {
+        const cancelled = result.data?.status === 'Cancelled';
+        replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === otpFor.id ? { ...item, status: (cancelled ? 'Cancelled' : 'Accepted') as ContractorBindingRequest['status'], unbindRequested: true, unbindConsentWorker: true, unbindConsentContractor: cancelled ? true : item.unbindConsentContractor } : item) });
+        setNotice(cancelled ? `Unbound from ${otpFor.entityName} — worker consent recorded via OTP.` : 'Worker unbinding consent recorded via OTP.');
+      } else {
+        const accepted = result.data?.status === 'Accepted';
+        replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === otpFor.id ? { ...item, status: (accepted ? 'Accepted' : 'Pending') as ContractorBindingRequest['status'], consentWorker: true } : item) });
+        setNotice(accepted ? `Bound to ${otpFor.entityName} — worker consent recorded via OTP.` : `Worker consent recorded via OTP — awaiting the contractor's acceptance.`);
+      }
       setOtpFor(null); setOtpSent(false); setOtp('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'OTP verification failed.'); }
     finally { setBusy(false); }
@@ -152,9 +160,9 @@ export default function ContractorBindingRequestsPage() {
         return <span className="text-gray-400">—</span>;
       }
       if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="text-red-700 font-semibold">Confirm unbind</button>;
-      if (r.status === 'Accepted' && r.unbindRequested) return <span className="text-orange-700">Awaiting worker</span>;
+      if (r.status === 'Accepted' && r.unbindRequested) return <div className="flex items-center gap-2"><span className="text-orange-700">Awaiting worker</span><button disabled={busy} onClick={() => void sendWorkerOtp(r, 'unbind')} className="text-[#073B67] font-semibold inline-flex items-center gap-1"><KeyRound size={13}/>Send OTP to worker</button></div>;
       if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'accept' })} className="text-green-700 font-semibold">Accept binding</button>;
-      if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r)} className="text-[#073B67] font-semibold inline-flex items-center gap-1"><KeyRound size={13}/>Send OTP to worker</button>;
+      if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r, 'bind')} className="text-[#073B67] font-semibold inline-flex items-center gap-1"><KeyRound size={13}/>Send OTP to worker</button>;
       if (r.status === 'Pending' && !r.consentWorker) return <span className="text-gray-400">Awaiting worker</span>;
       if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="text-green-700">Active</span><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="text-red-700 font-semibold">Request unbind</button></div>;
       return <span className="text-gray-400">—</span>;
@@ -188,13 +196,13 @@ export default function ContractorBindingRequestsPage() {
     {otpFor && (
       <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
         <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
-          <h2 className="font-semibold text-gray-900">Approve binding via worker OTP</h2>
+          <h2 className="font-semibold text-gray-900">{otpMode === 'unbind' ? 'Confirm unbinding via worker OTP' : 'Approve binding via worker OTP'}</h2>
           <p className="text-xs text-gray-500 mt-1">{otpFor.entityName} · {otpFor.site}</p>
-          <p className="text-[11px] text-gray-400 mt-2">The OTP is sent to the worker&apos;s mobile. If the worker has no smartphone, ask them to read it out and enter it here to record their consent.</p>
+          <p className="text-[11px] text-gray-400 mt-2">The OTP is sent to the worker&apos;s mobile. If the worker has no smartphone, ask them to read it out and enter it here to record their {otpMode === 'unbind' ? 'unbinding' : 'binding'} consent.</p>
           {otpSent && <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="6-digit OTP" className="mt-4 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-center tracking-[0.4em] font-bold focus:outline-none"/>}
           <div className="mt-4 flex gap-2 justify-end">
             <button onClick={() => { setOtpFor(null); setOtpSent(false); setOtp(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
-            {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : 'Verify & Approve'}</button>}
+            {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : otpMode === 'unbind' ? 'Verify & Unbind' : 'Verify & Approve'}</button>}
           </div>
         </section>
       </div>
