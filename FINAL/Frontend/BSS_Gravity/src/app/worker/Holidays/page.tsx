@@ -22,25 +22,9 @@ export default function HolidaysPage(){
   const holidays=portal.holidays;
   const leaves=portal.leaveRecords;
   const restricted=portal.restrictedHolidays ?? {allotment:0,maxAvail:0,used:0,requests:[]};
-  const [rhList,setRhList]=useState(restricted.requests);
-  const [rhUsed,setRhUsed]=useState(restricted.used);
-  const [rhBusy,setRhBusy]=useState('');
-  const [rhMsg,setRhMsg]=useState('');
-  const [rhErr,setRhErr]=useState('');
-  const rhHolidays=holidays.filter(h=>h.typeCode==='RESTRICTED');
-  const rhPending=new Set(rhList.filter(r=>r.status==='Pending'||r.status==='Approved').map(r=>r.holidayDate));
-  async function requestRh(date:string,name:string){
-    setRhBusy(date);setRhMsg('');setRhErr('');
-    try{
-      const res=await fetch('/api/portal/restricted-holiday',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({holidayDate:date,reason:name})});
-      const result=await res.json().catch(()=>({}));
-      if(!res.ok)throw new Error(result.error||'Request could not be sent.');
-      setRhList(current=>[result.data,...current]);
-      setRhUsed(u=>u+1);
-      setRhMsg(`Requested ${name}. Your contractor will approve it.`);
-    }catch(e){setRhErr(e instanceof Error?e.message:'Request could not be sent.');}
-    finally{setRhBusy('');}
-  }
+  // RH requests are treated as leave (they show in "Your leave" and on the grid).
+  const rhList=restricted.requests;
+  const weeklyOff=new Set(portal.weeklyOffDays ?? []);
   // Default the calendar to the current month (not the first holiday's month).
   const [month,setMonth]=useState(()=>new Date().getMonth());
   const [year,setYear]=useState(()=>new Date().getFullYear());
@@ -66,7 +50,13 @@ export default function HolidaysPage(){
     return map;
   },[leaves]);
 
-  const monthLeaves=leaves.filter(r=>r.from.slice(0,7)===monthKey||r.to.slice(0,7)===monthKey);
+  // "Your leave" also lists Restricted Holiday (RH) requests — RH is a leave the
+  // worker takes, just limited to the site's restricted-holiday dates.
+  const leaveRows=[
+    ...leaves.map(r=>({ id:r.id, type:r.type, from:r.from, to:r.to, reason:r.reason, status:r.status, approver:r.approver, comment:r.comment })),
+    ...rhList.map(r=>({ id:`rh-${r.id}`, type:'Restricted Holiday', from:r.holidayDate, to:r.holidayDate, reason:r.reason||r.holidayName, status:r.status as string, approver:undefined as string|undefined, comment:r.comment })),
+  ];
+  const monthLeaves=leaveRows.filter(r=>r.from.slice(0,7)===monthKey||r.to.slice(0,7)===monthKey);
 
   // Approved / pending Restricted Holidays for the grid (RH is not a leave record,
   // so without this an approved RH would never appear on the worker's calendar).
@@ -105,7 +95,7 @@ export default function HolidaysPage(){
             const holiday=byDate.get(String(day).padStart(2,'0'));
             const dayLeaves=leaveByDate.get(date)??[];
             const weekday=new Date(year,month,day).getDay();
-            const weekend=weekday===0||weekday===6;
+            const weekend=weeklyOff.has(['SUN','MON','TUE','WED','THU','FRI','SAT'][weekday]);
             return <div key={date} className={`bg-white p-2 min-h-[4rem] ${holiday?'ring-2 ring-inset ring-[#F47A32]/50 bg-orange-50/40':''}`}>
               <span className={`text-xs font-bold ${holiday?'text-[#F47A32]':weekend?'text-gray-400':'text-gray-700'}`}>{day}</span>
               {holiday&&<span className="mt-1 block text-[8.5px] font-bold text-orange-700 leading-tight">{holiday.name}</span>}
@@ -149,31 +139,7 @@ export default function HolidaysPage(){
             </div>;
           }):<p className="p-6 text-center text-xs text-gray-400">No holidays published for your site yet.</p>}
         </section>
-        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-sm flex items-center gap-2"><CalendarHeart size={15} className="text-[#F47A32]"/>Restricted Holidays (RH)</h2>
-            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">{rhUsed} of {restricted.maxAvail} availed</span>
-          </div>
-          <p className="px-4 pt-3 text-[11px] text-gray-500">{restricted.allotment} restricted holidays offered this year. You may avail up to {restricted.maxAvail} with your contractor&apos;s prior approval.</p>
-          {rhMsg&&<p role="status" className="mx-4 mt-3 p-2 bg-green-50 border border-green-100 text-green-700 rounded-lg text-[11px] font-semibold">{rhMsg}</p>}
-          {rhErr&&<p role="alert" className="mx-4 mt-3 p-2 bg-red-50 border border-red-100 text-red-700 rounded-lg text-[11px] font-semibold">{rhErr}</p>}
-          <div className="mt-2">
-            {rhHolidays.length?rhHolidays.map(h=>{
-              const requested=rhPending.has(h.date);
-              const full=rhUsed>=restricted.maxAvail;
-              const d=new Date(`${h.date}T00:00:00`);
-              return <div key={h.date} className="px-4 py-3 border-t border-gray-50 flex items-center justify-between gap-3">
-                <div><strong className="text-xs text-gray-900">{h.name}</strong><p className="text-[11px] text-gray-400 mt-0.5">{d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</p></div>
-                <button type="button" disabled={requested||full||rhBusy===h.date} onClick={()=>void requestRh(h.date,h.name)} className="h-8 px-3 rounded-lg text-[11px] font-bold border border-[#073B67]/30 text-[#073B67] hover:bg-[#073B67]/5 disabled:opacity-40 disabled:cursor-not-allowed">{requested?'Requested':full?'Quota full':'Request'}</button>
-              </div>;
-            }):<p className="p-6 text-center text-xs text-gray-400">No restricted holidays published for your site yet.</p>}
-          </div>
-          {rhList.length>0&&<div className="border-t border-gray-100">
-            <p className="px-4 pt-3 text-[10px] font-bold uppercase tracking-wider text-gray-400">Your RH requests</p>
-            {rhList.map(r=><div key={r.id} className="px-4 py-2.5 flex items-center justify-between gap-2 text-[11px]"><span className="text-gray-700">{r.holidayName||r.holidayDate} · {r.holidayDate}</span><span className={`font-bold px-2 py-0.5 rounded-full border ${STATUS_TONE[r.status]??STATUS_TONE.Pending}`}>{r.status}</span></div>)}
-          </div>}
-        </section>
-        <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 text-xs text-blue-900">Leave you apply for shows here straight away — <strong>Pending</strong> until your contractor approves it, then <strong>Approved</strong>.</div>
+        <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 text-xs text-blue-900">Leave you apply for (including <strong>Restricted Holiday</strong>) shows here straight away — <strong>Pending</strong> until your contractor approves it, then <strong>Approved</strong>.</div>
       </div>
     </div>
   </ModuleShell>;

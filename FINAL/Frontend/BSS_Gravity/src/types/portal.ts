@@ -278,7 +278,7 @@ export type SiteCalendar = {
   siteId:number; siteName:string;
   holidays: Array<{id:number;date:string;name:string;holidayType:string;holidayTypeCode:string;isPaid:boolean;note:string}>;
   leavePolicies: Array<{id:number;leaveTypeId:number;leaveType:string;annualEntitlement:number;openingBalance:number;isActive:boolean}>;
-  restrictedHolidayAllotment?:number; restrictedHolidayMaxAvail?:number;
+  restrictedHolidayAllotment?:number; restrictedHolidayMaxAvail?:number; weeklyOffDays?:string[];
 };
 export type ContractorPortalData = {
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
@@ -593,6 +593,7 @@ export type WorkerPortalData = {
   leaveEncashment: DataState<LeaveEncashmentRecord>;
   gratuity: {serviceStart:string;completedService:string;calculationBasis:string;indicativeAmount:number;eligibilityStatus:string;lastUpdated:string;schemeStatus?:'Enabled'|'Non-enabled';application?:{reference:string;submittedOn:string;status:'Submitted'|'Under examination'|'Approved'|'Disbursed'|'Rejected'} | null};
   holidays: Array<{date:string;name:string;type:string;typeCode?:string;appliesTo:string}>;
+  weeklyOffDays?: string[];
   announcements: Array<{id:string;title:string;description:string;publisher:string;published:string;eventDate:string|null;priority:'Important'|'Normal';category:string}>;
   courses: LearningCourse[];
   documents: WorkerDocument[];

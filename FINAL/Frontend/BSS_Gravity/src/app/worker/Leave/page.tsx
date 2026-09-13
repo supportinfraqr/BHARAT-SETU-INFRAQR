@@ -161,7 +161,7 @@ export default function LeavePage(){
                   <span className="flex justify-between text-gray-500"><span>Less: Availed</span><strong className="text-red-500">{rh.used>0?`− ${rh.used}`:'0'}</strong></span>
                   <span className="flex justify-between pt-1 mt-0.5 border-t border-amber-200 text-xs font-bold"><span>Balance</span><strong className="text-[#073B67]">{Math.max(0, rh.maxAvail - rh.used)}</strong></span>
                 </span>
-                <a href="/worker/Holidays" className="mt-2 block text-[11px] font-semibold text-blue-700 hover:underline">Manage restricted holidays →</a>
+                <a href="/worker/Holidays" className="mt-2 block text-[11px] font-semibold text-blue-700 hover:underline">See restricted holiday dates →</a>
               </div>
             )}
           </div>
@@ -209,6 +209,7 @@ export default function LeavePage(){
             <label className="text-xs text-gray-600">To (last day of leave)<input required name="to" type="date" value={to} onChange={e=>pickDays(from,e.target.value)} min={from||undefined} className="mt-1 w-full h-12 border border-gray-200 rounded-xl px-3 text-sm bg-white focus:border-[#0066CC]"/></label>
           </div>
           {days>0&&<p className="text-xs mt-2 text-[#2F9E67] font-semibold">✓ {days} day{days>1?'s':''} of leave selected</p>}
+          <p className="text-[11px] text-gray-400 mt-2">Leave cannot be applied on public holidays or weekly offs{(portal.weeklyOffDays?.length?` (${portal.weeklyOffDays.map(c=>c.charAt(0)+c.slice(1).toLowerCase()).join(', ')})`:'')}.</p>
           </>}
         </div>
 

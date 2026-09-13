@@ -2372,6 +2372,17 @@ def _handle_site_calendar(user, body, method):
         site.save(update_fields=["restricted_holiday_allotment", "restricted_holiday_max_avail", "updated_at"])
         return site.id
 
+    if kind in ("weeklyoff", "weekly-off", "weeklyoffdays"):
+        raw = body.get("days")
+        if isinstance(raw, list):
+            codes = [str(d).strip().upper()[:3] for d in raw]
+        else:
+            codes = [c.strip().upper()[:3] for c in str(raw or "").split(",")]
+        valid = [c for c in ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN") if c in codes]
+        site.weekly_off_days = ",".join(valid)
+        site.save(update_fields=["weekly_off_days", "updated_at"])
+        return site.id
+
     if kind in ("copy", "copytosites", "copy-to-sites"):
         # Copy this site's whole calendar (holidays + leave policies + RH policy)
         # to other allotted sites. targetSiteIds omitted/"all" => every other site.
@@ -2393,7 +2404,8 @@ def _handle_site_calendar(user, body, method):
         for tsite in Site.objects.filter(id__in=target_ids):
             tsite.restricted_holiday_allotment = site.restricted_holiday_allotment
             tsite.restricted_holiday_max_avail = site.restricted_holiday_max_avail
-            tsite.save(update_fields=["restricted_holiday_allotment", "restricted_holiday_max_avail", "updated_at"])
+            tsite.weekly_off_days = site.weekly_off_days
+            tsite.save(update_fields=["restricted_holiday_allotment", "restricted_holiday_max_avail", "weekly_off_days", "updated_at"])
             for h in src_holidays:
                 SiteHoliday.objects.get_or_create(
                     site=tsite, date=h.date, name=h.name,
@@ -2435,7 +2447,7 @@ def _handle_leave_apply(user, body):
 
     The leave type must be one the contractor configured for the worker's site
     (Site Calendar & Leave Setup) — never a global default."""
-    from bss_core.models import LeaveRequest, SiteLeavePolicy
+    from bss_core.models import LeaveRequest, SiteHoliday, SiteLeavePolicy
 
     binding = (WorkerContractorBinding.objects.filter(worker=user, binding_status="ACCEPTED")
                .select_related("site").first())
@@ -2457,6 +2469,23 @@ def _handle_leave_apply(user, body):
     if not from_date or not to_date or to_date < from_date:
         raise PortalMutationError("Enter a valid leave date range.", 400)
     days = (to_date - from_date).days + 1
+
+    # Leave cannot be taken on a Public Holiday or a weekly off day.
+    weekly = {c for c in (binding.site.weekly_off_days or "").split(",") if c}
+    day_codes = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+    public_dates = set(SiteHoliday.objects.filter(
+        site=binding.site, holiday_type="PUBLIC", date__range=(from_date, to_date)
+    ).values_list("date", flat=True))
+    blocked = []
+    cursor = from_date
+    while cursor <= to_date:
+        if cursor in public_dates or day_codes[cursor.weekday()] in weekly:
+            blocked.append(cursor)
+        cursor += timedelta(days=1)
+    if blocked:
+        raise PortalMutationError(
+            "Leave cannot be taken on a public holiday or weekly off: "
+            + ", ".join(x.strftime("%d %b") for x in blocked[:5]), 400)
 
     request_obj = LeaveRequest.objects.create(
         worker=user,

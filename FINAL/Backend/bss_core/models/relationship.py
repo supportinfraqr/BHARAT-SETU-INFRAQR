@@ -40,6 +40,8 @@ class Site(models.Model):
     # prior contractor approval).
     restricted_holiday_allotment = models.PositiveSmallIntegerField(default=4)
     restricted_holiday_max_avail = models.PositiveSmallIntegerField(default=2)
+    # Weekly off days for the site, comma-separated day codes (MON..SUN).
+    weekly_off_days = models.CharField(max_length=40, blank=True, default="SUN")
     project_head = models.CharField(max_length=120, blank=True)
     site_hr = models.CharField(max_length=120, blank=True)
     safety_officer = models.CharField(max_length=120, blank=True)

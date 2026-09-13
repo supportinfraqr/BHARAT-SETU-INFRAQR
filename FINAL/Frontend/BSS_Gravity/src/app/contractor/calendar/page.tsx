@@ -34,6 +34,10 @@ const STANDARD_INDIAN_HOLIDAYS = [
   { name: 'Diwali', date: '-11-01', type: 'PUBLIC', isPaid: true },
 ] as const;
 
+const DAY_CODES = [
+  ['MON', 'Mon'], ['TUE', 'Tue'], ['WED', 'Wed'], ['THU', 'Thu'], ['FRI', 'Fri'], ['SAT', 'Sat'], ['SUN', 'Sun'],
+] as const;
+
 export default function ContractorCalendarPage() {
   const { contractor, replaceContractor, mutate } = useContractor();
   const calendars = contractor.siteCalendars ?? [];
@@ -66,6 +70,27 @@ export default function ContractorCalendarPage() {
   const rhMaxAvail = String(current?.restrictedHolidayMaxAvail ?? 2);
   const rhOfferedCount = (current?.holidays ?? []).filter((h) => h.holidayTypeCode === 'RESTRICTED').length;
   const setRhMaxAvail = (value: string) => applyCalendars(calendars.map((c) => c.siteId === current?.siteId ? { ...c, restrictedHolidayMaxAvail: Math.max(0, Number(value) || 0) } : c));
+
+  // Weekly off days for the site (leave cannot be applied on these days).
+  const weeklyOff = new Set(current?.weeklyOffDays ?? []);
+  const toggleWeeklyOff = (code: string) => {
+    const next = new Set(weeklyOff);
+    if (next.has(code)) next.delete(code); else next.add(code);
+    applyCalendars(calendars.map((c) => c.siteId === current?.siteId ? { ...c, weeklyOffDays: [...next] } : c));
+  };
+  async function saveWeeklyOff() {
+    if (!current) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await mutate('site-calendar', 'POST', { kind: 'weeklyoff', siteId: current.siteId, days: [...weeklyOff] });
+      setNotice(`Weekly off days saved for ${current.siteName || 'this site'}.`);
+      setTimeout(() => setNotice(''), 4500);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Weekly offs could not be saved.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -765,6 +790,26 @@ export default function ContractorCalendarPage() {
                 </label>
                 <button type="button" disabled={busy} onClick={() => void saveRestrictedPolicy()} className="h-11 px-4 rounded-xl bg-[#073B67] hover:bg-[#062D4F] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
                   <Zap size={16} /> Save RH policy
+                </button>
+              </div>
+
+              {/* Weekly off days */}
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-3">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <CalendarDays size={18} className="text-[#F47A32]" /> Weekly Off Days
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    The day(s) workers at this site get off every week. Leave cannot be applied on weekly offs or public holidays.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {DAY_CODES.map(([code, label]) => (
+                    <button key={code} type="button" onClick={() => toggleWeeklyOff(code)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${weeklyOff.has(code) ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>{label}</button>
+                  ))}
+                </div>
+                <button type="button" disabled={busy} onClick={() => void saveWeeklyOff()} className="h-11 px-4 rounded-xl bg-[#073B67] hover:bg-[#062D4F] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+                  <Zap size={16} /> Save weekly offs
                 </button>
               </div>
 

@@ -904,6 +904,14 @@ def _worker_holidays(user=None):
     return rows
 
 
+def _worker_weekly_off_days(user=None):
+    """The bound site's weekly off day codes (MON..SUN)."""
+    site = _worker_bound_site(user)
+    if site is None:
+        return []
+    return [d for d in (site.weekly_off_days or "").split(",") if d]
+
+
 _RH_STATUS = {"PENDING": "Pending", "APPROVED": "Approved",
               "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
 
@@ -982,6 +990,7 @@ def _contractor_site_calendars(user):
             # "Offered" is derived from the calendar, not a typed number.
             "restrictedHolidayAllotment": sum(1 for h in holidays if h["holidayTypeCode"] == "RESTRICTED"),
             "restrictedHolidayMaxAvail": site.restricted_holiday_max_avail,
+            "weeklyOffDays": [d for d in (site.weekly_off_days or "").split(",") if d],
         })
     return out
 
@@ -1728,6 +1737,7 @@ def build_worker_portal(user):
         "leaveEncashment": _worker_financial_records(user, "leaveEncashment"),
         "gratuity": _worker_gratuity(user),
         "holidays": _worker_holidays(user),
+        "weeklyOffDays": _worker_weekly_off_days(user),
         "announcements": _worker_announcements(),
         "courses": _worker_courses(user),
         "documents": _worker_documents_display(user),

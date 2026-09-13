@@ -92,6 +92,8 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
       // Restricted Holiday policy carries only numeric allotment / maxAvail.
     } else if (kind === 'copy' || kind === 'copytosites') {
       // Copy setup to other sites carries only siteId / targetSiteIds.
+    } else if (kind === 'weeklyoff') {
+      // Weekly off carries only a list of day codes.
     } else {
       requiredString(body, 'name', 120);
       if (!isoDate.test(requiredString(body, 'date', 10))) fail('Enter a valid holiday date.');
