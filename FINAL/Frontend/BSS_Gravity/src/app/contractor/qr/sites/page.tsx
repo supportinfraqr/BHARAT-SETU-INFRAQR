@@ -31,8 +31,8 @@ export default function ContractorQrSitesPage() {
     <div className="space-y-6">
       <header>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p>
-        <h1 className="text-2xl font-bold mt-1">My Sites</h1>
-        <p className="text-sm text-gray-500 mt-1">Sites allotted to you by your principal employers. Pick the default site used when you scan a worker QR.</p>
+        <h1 className="text-2xl font-bold mt-1">Allotted Sites</h1>
+        <p className="text-sm text-gray-500 mt-1">Sites your principal employers have allotted to you. You never own a site — pick the default one used when you scan a worker QR.</p>
       </header>
 
       {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}

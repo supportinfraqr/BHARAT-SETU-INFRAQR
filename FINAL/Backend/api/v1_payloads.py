@@ -1700,9 +1700,12 @@ def _default_site_info(profile):
 
 
 def _contractor_sites(user):
-    site_ids = set(WorkerContractorBinding.objects.filter(contractor=user).values_list("site_id", flat=True))
-    site_ids.update(ContractorSiteAllotment.objects.filter(
-        binding__contractor=user, status="APPROVED").values_list("site_id", flat=True))
+    """Sites allotted to the contractor by an employer (APPROVED on an ACCEPTED
+    contractor↔employer binding). A contractor never owns a site — these are the
+    employer's sites that were allotted to them."""
+    site_ids = set(ContractorSiteAllotment.objects.filter(
+        binding__contractor=user, binding__binding_status="ACCEPTED", status="APPROVED"
+    ).values_list("site_id", flat=True))
     sites = Site.objects.filter(id__in=site_ids)
     rows = []
     for s in sites:
@@ -1710,7 +1713,8 @@ def _contractor_sites(user):
         rows.append({
             "id": s.id, "code": _d(s.site_code), "name": _d(s.site_name),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
-            "workers": WorkerContractorBinding.objects.filter(contractor=user, site=s).count(),
+            "workers": WorkerContractorBinding.objects.filter(
+                contractor=user, site=s, binding_status="ACCEPTED").count(),
             "compliance": _d(s.compliance_client) if hasattr(s, "compliance_client") else "",
         })
     return rows
@@ -2572,10 +2576,16 @@ def _employer_identity(user):
 
 def _employer_stats(user):
     sites = Site.objects.filter(employer=user)
-    contractors = WorkerContractorBinding.objects.filter(site__employer=user).values_list(
+    accepted_contractors = set(ContractorEmployerBinding.objects.filter(
+        employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
+    contractors = WorkerContractorBinding.objects.filter(
+        site__employer=user, contractor_id__in=accepted_contractors).values_list(
         "contractor_id", flat=True).distinct().count()
-    workers = WorkerContractorBinding.objects.filter(site__employer=user,
-                                                     binding_status="ACCEPTED").count()
+    # Only workers whose contractor is actually bound to this employer count as
+    # on-site — a stale worker binding must not inflate the employer's numbers.
+    workers = WorkerContractorBinding.objects.filter(
+        site__employer=user, binding_status="ACCEPTED",
+        contractor_id__in=accepted_contractors).count()
     return {
         "totalContractors": contractors,
         "totalWorkers": workers,
@@ -2586,11 +2596,14 @@ def _employer_stats(user):
 
 
 def _employer_sites(user):
+    accepted_contractors = set(ContractorEmployerBinding.objects.filter(
+        employer=user, binding_status="ACCEPTED").values_list("contractor_id", flat=True))
     rows = []
     for s in Site.objects.filter(employer=user):
-        cids = WorkerContractorBinding.objects.filter(site=s).values_list(
-            "contractor_id", flat=True).distinct()
-        wcount = WorkerContractorBinding.objects.filter(site=s, binding_status="ACCEPTED").count()
+        site_bindings = WorkerContractorBinding.objects.filter(
+            site=s, binding_status="ACCEPTED", contractor_id__in=accepted_contractors)
+        cids = site_bindings.values_list("contractor_id", flat=True).distinct()
+        wcount = site_bindings.count()
         rows.append({
             "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
             "location": _d(s.location) or _d(s.city),

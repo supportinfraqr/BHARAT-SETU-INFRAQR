@@ -2233,15 +2233,13 @@ def _handle_course_action(user, body):
 
 
 def _contractor_site_ids(user):
-    """Sites a contractor may legitimately use: sites of their worker bindings
-    plus APPROVED allotments on an ACCEPTED contractor↔employer binding. Sites
-    from rejected/cancelled employer bindings are NOT included."""
-    ids = set(WorkerContractorBinding.objects.filter(contractor=user)
-              .values_list("site_id", flat=True))
-    ids.update(ContractorSiteAllotment.objects.filter(
+    """Sites a contractor may use: only sites APPROVED on an ACCEPTED
+    contractor↔employer binding. Sites belong to the employer and are merely
+    allotted to the contractor — a contractor never owns a site. Sites from
+    pending/rejected/cancelled employer bindings are not included."""
+    return set(ContractorSiteAllotment.objects.filter(
         binding__contractor=user, binding__binding_status="ACCEPTED", status="APPROVED")
         .values_list("site_id", flat=True))
-    return ids
 
 
 def _handle_site_calendar(user, body, method):
