@@ -1757,10 +1757,23 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_site(user, body, method)
     if resource == "sites" and user.role == "employer" and method == "DELETE":
         site_id = body.get("id")
-        if site_id:
-            Site.objects.filter(pk=site_id, employer=user).delete()
-            return site_id
-        return None
+        if not site_id:
+            return None
+        site = Site.objects.filter(pk=site_id, employer=user).first()
+        if site is None:
+            return None
+        # A site with live contractor/worker associations must not be deleted —
+        # release/unbind them first so no binding points at a removed site.
+        has_workers = WorkerContractorBinding.objects.filter(
+            site=site, binding_status__in=["PENDING", "ACCEPTED"]).exists()
+        has_contractors = ContractorSiteAllotment.objects.filter(
+            site=site, status__in=["PENDING", "APPROVED"]).exists()
+        if has_workers or has_contractors:
+            raise PortalMutationError(
+                "This site still has contractors or workers attached. Release the site and unbind "
+                "its workers before deleting it.", 409)
+        site.delete()
+        return site_id
     if resource == "default-site" and method in ("POST", "PATCH"):
         return _handle_default_site(user, body)
     if resource == "job-postings" and role_path == "contractor" and method in ("POST", "PATCH"):
