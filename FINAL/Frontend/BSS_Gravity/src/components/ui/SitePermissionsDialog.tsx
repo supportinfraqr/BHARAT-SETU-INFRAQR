@@ -210,7 +210,7 @@ export default function SitePermissionsDialog({
                         onClick={() => onReject(row.siteId)}
                         className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
                       >
-                        Withdraw
+                        Cancel request
                       </button>
                     )}
                     {row.releaseRequested && !row.canApproveRelease && !row.canRejectRelease && !row.canCancelRelease && (
@@ -251,9 +251,9 @@ export default function SitePermissionsDialog({
                         type="button"
                         disabled={busy}
                         onClick={() => onRejectRelease(row.siteId)}
-                        className="h-8 px-3 rounded-lg border border-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-50 transition-colors disabled:opacity-60"
+                        className="h-8 px-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold hover:bg-amber-100 transition-colors disabled:opacity-60"
                       >
-                        Keep site
+                        Cancel request
                       </button>
                     )}
                     {row.canPropose && (
