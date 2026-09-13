@@ -3134,7 +3134,12 @@ def _notification(nid, category, title, message, href, created, read=False,
         "priority": priority,
         "requiresAction": requires_action,
         "read": read,
-        "resolved": read,
+        # `read` only clears the unread highlight. `resolved` means the underlying
+        # workflow is finished and the item may be hidden — it must NOT be tied to
+        # read, or marking a notification read (e.g. "mark all as read") makes it
+        # vanish. The feed is derived from live state, so finished workflows simply
+        # stop being emitted; emitted items are therefore never "resolved".
+        "resolved": False,
     }
 
 
