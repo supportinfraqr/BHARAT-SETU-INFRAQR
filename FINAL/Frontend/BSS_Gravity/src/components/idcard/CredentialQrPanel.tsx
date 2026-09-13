@@ -5,9 +5,37 @@ import { Download } from "lucide-react";
 import QRCode from "qrcode";
 import WorkerQr, { createWorkerQrPayload } from "@/components/qr/WorkerQr";
 
+const LOGO_SRC = "/bss-original-logo.png";
+// Overlay geometry matches the on-screen panel: 46px tile / 36px logo / 9px
+// radius over a 240px QR. Ratios are reused so the download looks identical.
+const TILE_RATIO = 46 / 240;
+const LOGO_RATIO = 36 / 240;
+const RADIUS_RATIO = 9 / 240;
+
+function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 /**
  * The large "scan to verify" QR block shown under every BSS identity card
  * (worker / contractor / employer), with an individual QR download button.
+ * The downloaded PNG is composited exactly like the displayed QR (same
+ * payload, margin, colours and BSS logo overlay).
  */
 export default function CredentialQrPanel({
   bssId,
@@ -28,14 +56,43 @@ export default function CredentialQrPanel({
     setBusy(true);
     setError("");
     try {
+      const size = 1024;
       const dataUrl = await QRCode.toDataURL(createWorkerQrPayload(bssId), {
         errorCorrectionLevel: "H",
-        margin: 2,
-        width: 1024,
-        color: { dark: "#0A192F", light: "#FFFFFF" },
+        margin: 1,
+        width: size,
       });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas is unavailable.");
+
+      const qrImg = await loadImage(dataUrl);
+      ctx.drawImage(qrImg, 0, 0, size, size);
+
+      const tile = Math.round(size * TILE_RATIO);
+      const logo = Math.round(size * LOGO_RATIO);
+      const radius = Math.round(size * RADIUS_RATIO);
+      const tileX = (size - tile) / 2;
+      const tileY = (size - tile) / 2;
+
+      ctx.save();
+      roundedRect(ctx, tileX, tileY, tile, tile, radius);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill();
+      ctx.restore();
+
+      try {
+        const logoImg = await loadImage(LOGO_SRC);
+        ctx.drawImage(logoImg, (size - logo) / 2, (size - logo) / 2, logo, logo);
+      } catch {
+        /* logo is a cosmetic overlay — the QR still scans without it */
+      }
+
       const link = document.createElement("a");
-      link.href = dataUrl;
+      link.href = canvas.toDataURL("image/png");
       link.download = `BSS-QR-${bssId}.png`;
       link.rel = "noopener";
       document.body.appendChild(link);
@@ -54,7 +111,7 @@ export default function CredentialQrPanel({
         <WorkerQr bssId={bssId} className="w-full h-full" />
         <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span className="w-[46px] h-[46px] bg-white rounded-[9px] grid place-items-center shadow-sm">
-            <img src="/bss-original-logo.png" alt="" className="w-[36px] h-[36px] object-contain" />
+            <img src={LOGO_SRC} alt="" className="w-[36px] h-[36px] object-contain" />
           </span>
         </span>
       </div>
