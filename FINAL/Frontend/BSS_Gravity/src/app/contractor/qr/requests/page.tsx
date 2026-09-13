@@ -156,7 +156,7 @@ export default function ContractorBindingRequestsPage() {
       if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'accept' })} className="text-green-700 font-semibold">Accept binding</button>;
       if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r)} className="text-[#073B67] font-semibold inline-flex items-center gap-1"><KeyRound size={13}/>Send OTP to worker</button>;
       if (r.status === 'Pending' && !r.consentWorker) return <span className="text-gray-400">Awaiting worker</span>;
-      if (r.status === 'Accepted') return <span className="text-green-700">Active</span>;
+      if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="text-green-700">Active</span><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="text-red-700 font-semibold">Request unbind</button></div>;
       return <span className="text-gray-400">—</span>;
     } },
   ];
