@@ -110,7 +110,7 @@ export default function ContractorRozgarPage() {
     <div className="flex border-b">
       <button onClick={() => setTab('jobs')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'jobs' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Job Dashboard & History</button>
       <button onClick={() => setTab('applicants')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'applicants' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Workforce Sourcing — Applicants</button>
-      <button onClick={() => setTab('available')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'available' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Available Workers ({contractor.availableWorkers.length})</button>
+      <button onClick={() => setTab('available')} className={`px-4 py-3 text-sm font-semibold border-b-2 ${tab === 'available' ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500'}`}>Available Workers ({contractor.availableWorkers?.length ?? 0})</button>
     </div>
 
     {tab === 'jobs' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -152,16 +152,16 @@ export default function ContractorRozgarPage() {
     </div>}
 
     {tab === 'available' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Workers available for work</h2><p className="text-xs text-gray-400 mt-0.5">Workers who turned on Rozgar Setu availability. Send a binding request to engage them at your default site.</p></header>
+      <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">Workers available for work</h2><p className="text-xs text-gray-400 mt-0.5">Workers who turned on Rozgar Setu availability. Send a binding request to engage them at your default site.</p>{!(contractor.sites?.length) && <p className="text-[11px] text-orange-600 mt-2">You have no allotted site yet — a principal employer must allot a site before you can bind workers.</p>}</header>
       <div className="divide-y divide-gray-100">
-        {contractor.availableWorkers.length ? contractor.availableWorkers.map(worker => (
+        {(contractor.availableWorkers ?? []).length ? (contractor.availableWorkers ?? []).map(worker => (
           <div key={worker.id} className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2"><h3 className="font-semibold text-gray-900">{worker.workerName}</h3><span className="text-[10px] font-bold uppercase text-green-700 bg-green-50 rounded px-1.5 py-0.5">Available</span></div>
               <p className="font-mono text-[11px] text-gray-400 mt-0.5">{worker.workerId}</p>
               <p className="text-xs text-gray-500 mt-1">{[worker.trade, worker.location].filter(Boolean).join(' · ') || '—'}{worker.skills.length ? ` · ${worker.skills.join(', ')}` : ''}</p>
             </div>
-            <button disabled={busy} onClick={() => void inviteToBind(worker)} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-60">Invite to bind</button>
+            <button disabled={busy || !(contractor.sites?.length)} onClick={() => void inviteToBind(worker)} title={!(contractor.sites?.length) ? 'Allot a site first — a principal employer allots sites to you' : undefined} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] disabled:opacity-40 disabled:cursor-not-allowed">Invite to bind</button>
           </div>
         )) : <p className="p-10 text-center text-sm text-gray-400">No workers are currently available. They appear here when a worker turns on “Available for work”.</p>}
       </div>
