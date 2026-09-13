@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { IScannerControls } from "@zxing/browser";
-import { Camera, CheckCircle2, Handshake, Home, MapPin, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from "lucide-react";
+import { Camera, CheckCircle2, Handshake, Home, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
-import { useNotifications } from "@/contexts/NotificationContext";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 import ScanFrame from "@/components/qr/ScanFrame";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -20,8 +19,7 @@ type ScanResult = {
 };
 
 export default function QRScannerWorkflow() {
-  const { worker, portal } = useWorker();
-  const { addNotification } = useNotifications();
+  const { worker } = useWorker();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controls = useRef<IScannerControls | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -30,25 +28,14 @@ export default function QRScannerWorkflow() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [contractor, setContractor] = useState<{bssId:string; name:string} | null>(null);
-  const [selectedSite, setSelectedSite] = useState("");
-  const [siteDraft, setSiteDraft] = useState("");
   const [bindSent, setBindSent] = useState(false);
+  const [sentSite, setSentSite] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   // A worker can only be bound to one contractor at a time — while bound, a new
   // binding request is blocked until they unbind.
   const boundContractor = (worker.employment.status === 'Active' && worker.employment.contractor?.trim()) ? worker.employment.contractor : null;
-
-  // Site-specific binding (E·C·S·W): a worker binds to a contractor AT a site.
-  // Candidate sites come from the employer/contractor job requests already on
-  // the worker portal; if none match, the worker types the site explicitly.
-  const contractorSites = contractor ? portal.jobRequests
-    .filter(request => {
-      const token = contractor.name.split(" ")[0].toLowerCase();
-      return request.contractor.toLowerCase().includes(token) || request.employer.toLowerCase().includes(token);
-    })
-    .map(request => ({ id: request.id, label: `${request.site} · ${request.employer}`, site: request.site })) : [];
-  const uniqueSites = contractorSites.filter((item, index, all) => all.findIndex(other => other.site === item.site) === index);
-  const siteValue = uniqueSites.length ? selectedSite : siteDraft.trim();
 
   useEffect(() => () => controls.current?.stop(), []);
 
@@ -59,9 +46,11 @@ export default function QRScannerWorkflow() {
       const isContractor = p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC");
       const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E");
       if (isContractor) {
-        // Contractor QR → binding request flow (worker binds with contractor at a site)
+        // Contractor QR → binding request. The worker never picks a site: the
+        // request always targets the contractor's default (or first) site.
         setContractor({ bssId:p.bssId, name:p.name || "Contractor " + p.bssId.slice(-4) });
-        setSelectedSite(""); setSiteDraft(""); setBindSent(false); setState("binding"); setMessage("Contractor identified — choose the site before sending a binding request");
+        setBindSent(false); setSentSite(""); setError(""); setState("binding");
+        setMessage("Contractor identified — send a binding request to their default site");
       } else if (isEmployer) {
         // Principal Employer QR → informational only for workers
         setState("error"); setMessage(`Principal Employer credential (${p.bssId}). No binding action is available for workers here.`);
@@ -79,10 +68,22 @@ export default function QRScannerWorkflow() {
     }
   };
 
-  const sendBinding = () => {
-    if (!siteValue) { setMessage("Choose the site where you will work before sending the binding request."); return; }
-    setBindSent(true);
-    addNotification({ id:'bind-scan', entityId:`BIND-${Date.now()}`, category:'Cards', title:'Binding request sent', message:`Binding request sent to ${contractor?.name} for ${siteValue}. Binding is site-specific — the contractor and employer must approve it against this site.`, createdAt:new Date().toISOString(), href:'/worker/binding', actionLabel:'View binding requests', priority:'high', requiresAction:false, read:false, resolved:false });
+  const sendBinding = async () => {
+    if (!contractor) return;
+    setBusy(true); setError("");
+    try {
+      const response = await fetch('/api/bindings/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'BSS_CONTRACTOR', bssId: contractor.bssId }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { site?: string } };
+      if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
+      setBindSent(true);
+      setSentSite(result.data?.site ?? "");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Binding request could not be created.');
+    } finally { setBusy(false); }
   };
 
   const startCamera = async () => {
@@ -104,11 +105,11 @@ export default function QRScannerWorkflow() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setConfirmOpen(false); setMessage(""); setState("idle"); };
 
   const requestSendBinding = () => {
-    if (!siteValue) { setMessage("Choose the site where you will work before sending the binding request."); return; }
     if (boundContractor) { setState("error"); setMessage(`You are already bound to ${boundContractor}. Unbind first before binding with another contractor.`); return; }
+    setError("");
     setConfirmOpen(true);
   };
 
@@ -142,22 +143,11 @@ export default function QRScannerWorkflow() {
           {state==="binding"&&contractor?(
             <div className="space-y-4">
               <div className="flex items-center gap-4"><span className="w-14 h-14 rounded-full bg-orange-50 text-[#F47A32] grid place-items-center"><Handshake size={26}/></span><div><h2 className="font-bold text-lg">{contractor.name}</h2><code className="text-xs text-[#073B67]">{contractor.bssId}</code><p className="text-xs text-orange-600 mt-1 font-semibold">Contractor QR identified</p></div></div>
-              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">Binding is site-specific (Employer · Contractor · <strong>Site</strong> · Worker). Choose the site where the contractor will employ you — the binding request is sent for this site only.</p>
-              {!bindSent && (
-                <label className="block text-xs font-semibold text-gray-700">
-                  <span className="inline-flex items-center gap-1.5"><MapPin size={14} className="text-[#073B67]"/>Work site for this binding *</span>
-                  {uniqueSites.length ? (
-                    <select required value={selectedSite} onChange={event => setSelectedSite(event.target.value)} className="mt-1.5 w-full h-11 border border-gray-200 rounded-xl px-3 text-sm bg-white">
-                      <option value="">Select the site for this binding…</option>
-                      {uniqueSites.map(item => <option key={item.id} value={item.site}>{item.label}</option>)}
-                    </select>
-                  ) : (
-                    <input required value={siteDraft} onChange={event => setSiteDraft(event.target.value)} placeholder="Type the site name (e.g. Mumbai Metro Line 3)" className="mt-1.5 w-full h-11 border border-gray-200 rounded-xl px-3 text-sm"/>
-                  )}
-                  {!uniqueSites.length && <span className="mt-1 block text-[10px] text-gray-400">No listed job request matched this contractor on your portal — type the site name so the contractor can confirm it.</span>}
-                </label>
-              )}
-              {bindSent?<p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent for <strong>{siteValue}</strong>! Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>:<button onClick={requestSendBinding} disabled={!siteValue} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>Send binding request for this site</button>}
+              <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">Your request goes to the contractor&apos;s <strong>default site</strong> — you never choose a site. Binding completes only after the contractor approves.</p>
+              {error && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-sm font-semibold">{error}</p>}
+              {bindSent
+                ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent{sentSite ? ` for ${sentSite}` : ''}! Track it in <Link href="/worker/binding" className="underline font-bold">Binding Requests</Link>.</p>
+                : <button onClick={requestSendBinding} disabled={busy} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F] disabled:opacity-50 disabled:cursor-not-allowed"><Handshake size={17}/>{busy ? 'Sending…' : 'Send binding request'}</button>}
             </div>
           ):result?(
             <div className="space-y-5">
@@ -174,15 +164,16 @@ export default function QRScannerWorkflow() {
       open={confirmOpen && !!contractor}
       tone="positive"
       title="Confirm binding request"
-      description={`A binding request will be sent to ${contractor?.name ?? 'this contractor'} for ${siteValue || 'the selected site'}. Binding completes only after the contractor and the principal employer approve it.`}
+      description={`A binding request will be sent to ${contractor?.name ?? 'this contractor'}. It goes to the contractor's default site; binding completes only after the contractor approves.`}
       details={contractor ? [
         { label: 'Contractor', value: contractor.name },
         { label: 'Contractor ID', value: contractor.bssId },
-        { label: 'Site', value: siteValue || '—' },
+        { label: 'Site', value: 'Contractor default site' },
       ] : []}
       confirmLabel="Send binding request"
+      busy={busy}
       onCancel={() => setConfirmOpen(false)}
-      onConfirm={() => { setConfirmOpen(false); sendBinding(); }}
+      onConfirm={() => { setConfirmOpen(false); void sendBinding(); }}
     />
   </div>;
 }

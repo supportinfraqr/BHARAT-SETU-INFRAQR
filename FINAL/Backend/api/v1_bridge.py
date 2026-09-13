@@ -2281,6 +2281,19 @@ def _contractor_site_ids(user):
         .values_list("site_id", flat=True))
 
 
+def _contractor_default_site(contractor):
+    """The contractor's default site: their explicit default while it is still
+    allotted, otherwise the first allotted site (the first site is always the
+    default when none was chosen), or None when they have no site."""
+    allowed = _contractor_site_ids(contractor)
+    if not allowed:
+        return None
+    cp = getattr(contractor, "contractor_profile", None)
+    if cp and cp.default_site_id and cp.default_site_id in allowed:
+        return cp.default_site
+    return Site.objects.filter(id__in=allowed).order_by("id").first()
+
+
 def _release_contractor_workers(binding):
     """When a contractor↔employer binding ends, release that contractor's worker
     bindings at the employer's sites — a contractor cannot keep workers at a site
@@ -3094,6 +3107,44 @@ def _request_worker_binding(worker, contractor, site, **defaults):
     return binding
 
 
+def _worker_requests_contractor(worker_user, contractor_user):
+    """Worker-initiated worker<->contractor binding. The worker never picks a
+    site — the request always targets the contractor's default (or first) site.
+    Blocked entirely when the contractor has no site allotted."""
+    if not _binding_enabled(worker_user) or not _binding_enabled(contractor_user):
+        return Response({"error": "Binding is disabled in one party's settings."},
+                        status=status.HTTP_403_FORBIDDEN)
+    site = _contractor_default_site(contractor_user)
+    if site is None:
+        return Response({
+            "error": "This contractor has no site allotted yet, so a binding cannot be "
+                     "requested. Ask the contractor to get a site allotted first."},
+            status=status.HTTP_400_BAD_REQUEST)
+    existing = (WorkerContractorBinding.objects
+                .filter(worker=worker_user, binding_status__in=("PENDING", "ACCEPTED"))
+                .select_related("site", "contractor").order_by("-created_at").first())
+    if existing is not None and not (existing.contractor_id == contractor_user.id
+                                     and existing.site_id == site.id):
+        cp_existing = getattr(existing.contractor, "contractor_profile", None)
+        cname = ""
+        if cp_existing:
+            cname = (cp_existing.contractor_name or cp_existing.trade_name or "").strip()
+        cname = cname or existing.contractor.username
+        site_name = (existing.site.site_name if existing.site else "") or "a site"
+        state = "already bound" if existing.binding_status == "ACCEPTED" else "has a pending binding request"
+        return Response({
+            "error": (f"You are {state} with {cname} at {site_name}. "
+                      "Unbind the current binding before requesting another.")},
+            status=status.HTTP_409_CONFLICT)
+    binding = _request_worker_binding(worker_user, contractor_user, site)
+    binding.binding_status = "PENDING"
+    binding.consent_worker = True
+    binding.consent_contractor = False
+    binding.consent_method = "app"
+    binding.save()
+    return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
+
+
 def _apply_binding_terms(binding, data):
     """Capture the offered terms (designation/department/shift/offered wage) at
     bind time. These drive the worker's Current Employment Details."""
@@ -3438,8 +3489,12 @@ def binding_scan(request):
         cp = ContractorProfile.objects.filter(contractor_code=str(body.get("bssId") or "")).first()
         if cp is None:
             return Response({"error": "Unknown contractor."}, status=status.HTTP_404_NOT_FOUND)
+        if user.role == "worker":
+            # A worker scanning a contractor QR never picks a site — the request
+            # targets the contractor's default (or first allotted) site.
+            return _worker_requests_contractor(user, cp.user)
         if user.role != "employer":
-            return Response({"error": "Only employers can scan a contractor QR."},
+            return Response({"error": "Only employers or workers can scan a contractor QR."},
                             status=status.HTTP_403_FORBIDDEN)
         contractor, employer, source = cp.user, user, "contractor_qr"
     elif qr_type == "BSS_WORKER":

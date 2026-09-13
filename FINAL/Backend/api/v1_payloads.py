@@ -1234,17 +1234,26 @@ def _ce_initiator_acceptor(b):
 
 
 def _wc_initiator_acceptor(b):
-    """(initiated_by, accepted_by) for a worker<->contractor binding: the
-    contractor raises it from a worker QR scan and the worker accepts."""
-    return "Contractor", ("Worker" if b.consent_worker else "")
+    """(initiated_by, accepted_by) for a worker<->contractor binding. The
+    contractor usually raises it from a worker QR scan, but a worker can also
+    initiate by scanning the contractor's QR (consent_worker set first)."""
+    worker_initiated = bool(b.consent_worker) and not bool(b.consent_contractor)
+    if worker_initiated:
+        initiated = "Worker"
+        accepted = "Contractor" if b.consent_contractor else ""
+    else:
+        initiated = "Contractor"
+        accepted = "Worker" if b.consent_worker else ""
+    return initiated, accepted
 
 
 def _wc_history(b):
     """Chronological binding/unbinding events for a worker<->contractor binding."""
-    events = [{"label": "Requested", "by": "Contractor", "at": _dts(b.created_at)}]
+    initiated, accepted = _wc_initiator_acceptor(b)
+    events = [{"label": "Requested", "by": initiated, "at": _dts(b.created_at)}]
     if b.accepted_at:
         events.append({"label": "Binding accepted",
-                       "by": "Worker" if b.consent_worker else "Contractor",
+                       "by": accepted or ("Worker" if b.consent_worker else "Contractor"),
                        "at": _dts(b.accepted_at)})
     if str(b.binding_status).upper() == "REJECTED":
         by = {"worker": "Worker", "contractor": "Contractor"}.get(str(b.rejected_by or "").lower(), "")
@@ -2189,8 +2198,8 @@ def _contractor_binding_requests(user):
             "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
                        "CANCELLED": "Cancelled", "EXPIRED": "Expired"}.get(
                            str(b.binding_status).upper(), "Pending"),
-            "initiatedBy": "Contractor",
-            "acceptedBy": "Worker" if b.consent_worker else "",
+            "initiatedBy": _wc_initiator_acceptor(b)[0],
+            "acceptedBy": _wc_initiator_acceptor(b)[1],
             "consentWorker": bool(b.consent_worker),
             "consentContractor": bool(b.consent_contractor),
             "unbindRequested": bool(b.unbind_requested_at),
@@ -2580,12 +2589,12 @@ def _employer_profile_sections(user):
 
 def build_contractor_portal(user):
     sites = _contractor_sites(user)
-    # A default site is only meaningful while it is still allotted — drop a stale
-    # default left over from a binding/allotment that has since ended.
     allowed_site_ids = {str(s["id"]) for s in sites}
     default_site = _default_site_info(getattr(user, "contractor_profile", None))
-    if default_site and default_site["id"] not in allowed_site_ids:
-        default_site = None
+    if default_site is None or default_site["id"] not in allowed_site_ids:
+        # The first allotted site is always the implicit default when none was chosen.
+        default_site = ({"id": str(sites[0]["id"]), "name": sites[0]["name"], "code": sites[0]["code"]}
+                        if sites else None)
     return {
         "identity": _contractor_identity(user),
         "stats": _contractor_stats(user),
@@ -2983,11 +2992,17 @@ def _employer_payroll(user):
 
 
 def build_employer_portal(user):
+    default_site = _default_site_info(getattr(user, "employer_profile", None))
+    if default_site is None:
+        # The first owned site is the implicit default when none was chosen.
+        first = Site.objects.filter(employer=user).order_by("id").first()
+        if first is not None:
+            default_site = {"id": str(first.id), "name": _d(first.site_name), "code": _d(first.site_code)}
     return {
         "identity": _employer_identity(user),
         "stats": _employer_stats(user),
         "sites": _employer_sites(user),
-        "defaultSite": _default_site_info(getattr(user, "employer_profile", None)),
+        "defaultSite": default_site,
         "contractors": _employer_contractors(user),
         "workers": _employer_workers(user),
         "grievances": _employer_grievances(user),
