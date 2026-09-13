@@ -18,7 +18,7 @@ export default function ContractorBindingRequestsPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpMode, setOtpMode] = useState<'bind' | 'unbind'>('bind');
-  const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' } | null>(null);
+  const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' | 'worker-decline' } | null>(null);
   const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
   const [historyFor, setHistoryFor] = useState<ContractorBindingRequest | null>(null);
 
@@ -33,6 +33,18 @@ export default function ContractorBindingRequestsPage() {
       const accepted = result.data?.status === 'Accepted';
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: (accepted ? 'Accepted' : 'Pending') as ContractorBindingRequest['status'], consentContractor: true } : item) });
       setNotice(accepted ? `Bound to ${row.entityName}.` : `Accepted — awaiting the worker's consent.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
+    finally { setBusy(false); }
+  }
+
+  async function declineWorker(row: ContractorBindingRequest) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'decline' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Binding request could not be declined.');
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: 'Rejected' as ContractorBindingRequest['status'] } : item) });
+      setNotice(`Binding request from ${row.entityName} declined.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -132,6 +144,7 @@ export default function ContractorBindingRequestsPage() {
     const { row, kind } = confirm;
     setConfirm(null);
     if (kind === 'accept') { await accept(row); return; }
+    if (kind === 'worker-decline') { await declineWorker(row); return; }
     if (kind === 'ce-unbind') { await decideCeUnbind(row); return; }
     if (kind === 'worker-unbind') { await consentUnbind(row); return; }
     await decideBinding(row, kind === 'approve' ? 'approve-binding' : 'reject');
@@ -163,7 +176,7 @@ export default function ContractorBindingRequestsPage() {
       }
       if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button>;
       if (r.status === 'Accepted' && r.unbindRequested) return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting worker</span><button disabled={busy} onClick={() => void sendWorkerOtp(r, 'unbind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button></div>;
-      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'accept' })} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button>;
+      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'accept' })} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-decline' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
       if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r, 'bind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button>;
       if (r.status === 'Pending' && !r.consentWorker) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/60">Awaiting worker</span>;
       if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
@@ -251,9 +264,9 @@ export default function ContractorBindingRequestsPage() {
     <ConfirmDialog
       open={!!confirm}
       tone={confirm?.kind === 'approve' || confirm?.kind === 'accept' ? 'positive' : 'negative'}
-      title={confirm?.kind === 'reject' ? 'Decline this binding?' : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind') ? 'Unbind this binding?' : 'Accept this binding?'}
-      description={confirm?.kind === 'reject'
-        ? 'The other party will be notified and this binding will be declined. This cannot be undone.'
+      title={confirm?.kind === 'reject' || confirm?.kind === 'worker-decline' ? 'Decline this request?' : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind') ? 'Unbind this binding?' : 'Accept this binding?'}
+      description={confirm?.kind === 'reject' || confirm?.kind === 'worker-decline'
+        ? 'The other party will be notified and this request will be declined. This cannot be undone.'
         : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind')
           ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
           : 'Both parties must consent before the binding is complete. Confirming records your consent.'}
@@ -263,7 +276,7 @@ export default function ContractorBindingRequestsPage() {
         { label: 'Type', value: confirm.row.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker' },
         { label: 'Site', value: confirm.row.site || '—' },
       ] : []}
-      confirmLabel={confirm?.kind === 'reject' ? 'Confirm decline' : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind') ? 'Confirm unbind' : 'Confirm accept'}
+      confirmLabel={confirm?.kind === 'reject' || confirm?.kind === 'worker-decline' ? 'Confirm decline' : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind') ? 'Confirm unbind' : 'Confirm accept'}
       busy={busy}
       onCancel={() => setConfirm(null)}
       onConfirm={() => void runConfirm()}
