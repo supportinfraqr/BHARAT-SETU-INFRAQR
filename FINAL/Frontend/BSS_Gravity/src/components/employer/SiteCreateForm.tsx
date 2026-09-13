@@ -447,7 +447,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     status: !status.trim(),
   };
   const hasMissing = Object.values(missing).some(Boolean);
-  const fieldCls = (bad: boolean) => `mt-1 w-full h-10 border rounded-lg px-3 text-sm ${bad ? 'border-red-400 bg-red-50/50 focus:border-red-500 focus:ring-2 focus:ring-red-100' : 'border-gray-200'}`;
+  const fieldCls = 'mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm';
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -496,15 +496,15 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
-            <label className="text-xs font-semibold text-gray-700">Site name<input required value={name} onChange={e => setName(e.target.value)} className={fieldCls(missing.name)} /></label>
-            <label className="text-xs font-semibold text-gray-700">Site code<input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls(missing.code)} /></label>
-            <label className="text-xs font-semibold text-gray-700">City / location<input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls(missing.location)} /></label>
-            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input list="site-state-options" value={state} onChange={event => setState(event.target.value)} className={fieldCls(missing.state)} /></label>
+            <label className="text-xs font-semibold text-gray-700">Site name<input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">Site code<input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">City / location<input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input list="site-state-options" value={state} onChange={event => setState(event.target.value)} className={fieldCls} /></label>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <datalist id="site-state-options">{stateOptions.map(s => <option key={s} value={s} />)}</datalist>
-            <label className="text-xs font-semibold text-gray-700">Start date<input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls(missing.startDate)} /></label>
-            <label className="text-xs font-semibold text-gray-700">End date<input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls(missing.endDate)} /></label>
-            <label className="text-xs font-semibold text-gray-700">Status<select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls(missing.status)} bg-white`}><option>Active</option><option>Planned</option></select></label>
+            <label className="text-xs font-semibold text-gray-700">Start date<input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">End date<input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">Status<select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-100">
