@@ -30,6 +30,9 @@ Staging and production are separate servers with separate databases. Data on one
 5. Never overwrite a server `.env`.
 6. **Other-session coordination** still applies (see below).
 7. **Deploy only the service that changed.** Frontend-only change → rebuild **only `frontend`**; backend change → rebuild `backend`. Restarting the backend briefly 502s the site, so never rebuild it for a frontend-only change. (`docker compose up -d --build frontend` vs `… backend`.)
+8. **Prefer `up -d --build <svc>` (NOT `--force-recreate`).** `--force-recreate` removes the container first; if the other session deploys at the same time you can end up with **no container** → nginx 502s (`Host is unreachable`). After every deploy, verify the container is running:
+   `docker compose ps --format "{{.Name}} {{.Status}}"` — if the service is missing, run `up -d <svc>` again.
+   Recovery for a missing frontend: `cd ~/bss/FINAL/deploy-prod && sudo docker compose up -d frontend`.
 
 ## Coordination: another session deploys to prod
 
