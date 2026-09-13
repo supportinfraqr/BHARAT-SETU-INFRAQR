@@ -908,7 +908,7 @@ export default function WorkerProfilePage() {
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Current Employment Status</label>
                    <select 
-                     value={employmentStatus}
+                     defaultValue={employmentStatus}
                      onChange={(e) => setEmploymentStatus(e.target.value)}
                      className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"
                    >
@@ -918,7 +918,7 @@ export default function WorkerProfilePage() {
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Worker Category</label>
                    <select 
-                     value={workerCategory}
+                     defaultValue={workerCategory}
                      onChange={(e) => setWorkerCategory(e.target.value)}
                      className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"
                    >
