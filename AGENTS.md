@@ -11,18 +11,36 @@
 | Compose dir | `~/bss/FINAL/deploy` | `~/bss/FINAL/deploy-prod` |
 | Docker | `docker compose …` (no sudo) | `sudo docker compose …` |
 | Database | `bss_final` | `bss_prod` |
-| URL | (EC2 hostname only) | **`login.bharatshramsetu.com`** |
+| URL | **`bharat-shram-setu-staging.bharatshramsetu.com`** | **`login.bharatshramsetu.com`** |
 | Purpose | pre-prod testing | real / demo users |
 
 Staging and production are separate servers with separate databases. Data on one does not affect the other.
 
+## Terminology (important)
+
+- **Push** = `git push` to GitHub (`origin`, branch `main`). Version control only — **never** touches a server.
+- **Deploy staging** = rsync + `docker compose up --build` on the staging server. Safe, testable.
+- **Deploy prod** = rsync + rebuild on the production server. **LIVE.** Only on the user's explicit "deploy to prod".
+
 ## Rules (agreed with the user)
 
-1. **Code changes → staging first.** Deploy to staging, the user tests, then promote the *same* code to production.
-2. **Destructive data actions (delete profile, wipe test data) → staging only**, unless the user explicitly says "do it on prod".
-3. **Never delete/modify data on prod without an explicit instruction.** "Don't immediately delete anything from prod."
-4. **Back up the prod database before any prod data change.**
-5. Never overwrite a server `.env`.
+1. **Push ≠ deploy.** When the user says "push" they mean GitHub only.
+2. **Big changes → staging first**, the user tests, then ask before prod. Never auto-promote.
+3. **Small/urgent fixes may go straight to prod**, then report to the user:
+   - Small/hotfix: text/copy, styling, a single-field bug fix, a clear 500 blocker.
+   - Big (always ask first): DB migrations/schema, auth/session, binding/permission logic, payments/Aadhaar, multi-file features.
+   - Unsure → ask.
+4. **Back up the prod DB before ANY prod deploy** (even a small hotfix).
+5. **Destructive data actions (delete/wipe) → staging only**, unless the user explicitly says "do it on prod". Never delete/modify prod data without an explicit instruction.
+6. Never overwrite a server `.env`.
+
+## Coordination: another session deploys to prod
+
+Another session/agent also deploys straight to prod and commits to the same `origin/main`. Before ANY prod deploy:
+1. `git pull` (or `git fetch` + check) so the local tree includes their committed work — otherwise rsync would overwrite/revert their prod changes.
+2. `git status` — if there are uncommitted files that may be theirs, STOP and flag it.
+3. State the exact commit(s) being deployed.
+4. Deploy, then report.
 
 ## Deploy commands
 
@@ -60,6 +78,12 @@ Restore (only with explicit approval):
 ```bash
 ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && gunzip -c ~/bss_prod_backup_<stamp>.sql.gz | \
   sudo docker compose exec -T db psql -U bss -d bss_prod'
+```
+
+## Seed demo accounts (staging)
+
+```bash
+ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy && docker compose exec -T backend python manage.py seed_demo_accounts'
 ```
 
 ## DB shell (read/inspect or staging mutations)
