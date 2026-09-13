@@ -44,7 +44,8 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
     setBusy(true); setError('');
     try {
       const payload: Record<string, unknown> = { id: current.id };
-      for (const name of TAB_FIELDS[tab]) {
+      // Edit spans every tab: save any changed field across the whole site master.
+      for (const name of Object.values(TAB_FIELDS).flat()) {
         if (draft[name] !== data[name]) payload[name] = draft[name];
       }
       if (Object.keys(payload).length === 1) { setEditing(false); return; }
@@ -84,7 +85,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       <button onClick={() => setConfirmDelete(true)} disabled={busy} className="h-10 px-4 rounded-lg border border-red-200 text-red-600 text-sm font-semibold flex items-center gap-2 hover:bg-red-50"><Trash2 size={15}/>Delete</button>
     </div></div></header>
 
-    <nav className="flex gap-1 overflow-x-auto bg-white border border-gray-200 rounded-2xl p-2">{tabs.map(([id, label, Icon]) => <button key={id} onClick={() => { setTab(id); setEditing(false); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={16}/>{label}</button>)}</nav>
+    <nav className="flex gap-1 overflow-x-auto bg-white border border-gray-200 rounded-2xl p-2">{tabs.map(([id, label, Icon]) => <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={16}/>{label}</button>)}</nav>
 
     <section className="bg-white border border-gray-200 rounded-2xl p-6">
       {error && <p role="alert" className="mb-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-3">{error}</p>}
