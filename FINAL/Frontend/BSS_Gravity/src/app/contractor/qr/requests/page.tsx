@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, Handshake, History, KeyRound, Link2, UserRound } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SitePermissionsDialog from '@/components/ui/SitePermissionsDialog';
+import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorBindingRequest } from '@/types/portal';
 
@@ -19,6 +20,7 @@ export default function ContractorBindingRequestsPage() {
   const [otpMode, setOtpMode] = useState<'bind' | 'unbind'>('bind');
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' } | null>(null);
   const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
+  const [historyFor, setHistoryFor] = useState<ContractorBindingRequest | null>(null);
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
@@ -167,6 +169,7 @@ export default function ContractorBindingRequestsPage() {
       if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
       return <span className="text-gray-400">—</span>;
     } },
+    { id:'history', header:'History', filterable:false, value:() => '', render:r => <button disabled={busy} onClick={() => setHistoryFor(r)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><History size={13}/>History</button> },
   ];
 
   const pending = rows.filter(r => r.status === 'Pending').length;
@@ -228,6 +231,13 @@ export default function ContractorBindingRequestsPage() {
       onApprove={id => void contractorSiteAction('approve-site', id)}
       onReject={id => void contractorSiteAction('reject-site', id)}
       onPropose={() => {}}
+    />
+    <BindingHistoryDialog
+      open={!!historyFor}
+      title="Binding history"
+      subtitle={historyFor ? `${historyFor.entityName} · ${historyFor.bssId}` : ''}
+      events={historyFor?.history ?? []}
+      onClose={() => setHistoryFor(null)}
     />
     <ConfirmDialog
       open={!!confirm}

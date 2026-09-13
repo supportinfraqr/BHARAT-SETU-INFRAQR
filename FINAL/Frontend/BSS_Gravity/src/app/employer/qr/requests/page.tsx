@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, Clock3, UserRoundCheck } from 'lucide-react';
+import { Building2, Clock3, History, UserRoundCheck } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SitePermissionsDialog, { type SitePermissionStatus } from '@/components/ui/SitePermissionsDialog';
+import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import BindingSitesExplainer from '@/components/qr/BindingSitesExplainer';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerApproval } from '@/types/portal';
@@ -18,6 +19,7 @@ export default function EmployerQrBindingRequestsPage() {
   const [notice, setNotice] = useState('');
   const [allotFor, setAllotFor] = useState<EmployerApproval | null>(null);
   const [confirm, setConfirm] = useState<{ row: EmployerApproval; kind: 'approve' | 'reject' | 'unbind' } | null>(null);
+  const [historyFor, setHistoryFor] = useState<EmployerApproval | null>(null);
 
   async function runConfirm() {
     if (!confirm) return;
@@ -146,6 +148,7 @@ export default function EmployerQrBindingRequestsPage() {
       }
       return <span className="text-gray-400">—</span>;
     } },
+    { id:'history', header:'History', filterable:false, value:() => '', render:row => <button disabled={busy} onClick={() => setHistoryFor(row)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><History size={13}/>History</button> },
   ];
   const rows: Row[] = employer.approvals;
 
@@ -208,6 +211,13 @@ export default function EmployerQrBindingRequestsPage() {
       busy={busy}
       onCancel={() => setConfirm(null)}
       onConfirm={() => void runConfirm()}
+    />
+    <BindingHistoryDialog
+      open={!!historyFor}
+      title="Binding history"
+      subtitle={historyFor ? `${historyFor.name} · ${historyFor.bssId}` : ''}
+      events={historyFor?.history ?? []}
+      onClose={() => setHistoryFor(null)}
     />
   </div>;
 }

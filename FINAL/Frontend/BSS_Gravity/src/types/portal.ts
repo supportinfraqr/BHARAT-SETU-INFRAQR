@@ -188,12 +188,16 @@ export type ContractorBindingRequest = {
   bindingId?: number;
   /** Per-site allotment permissions for a Contractor ↔ Employer binding. */
   allotments?: SiteAllotment[];
+  /** Lifecycle timeline (requested / accepted / unbind / unbound). */
+  history?: BindingHistoryEvent[];
 };
 
 export type SiteAllotment = {
   siteId: number; site: string; siteCode: string;
   status: 'Pending' | 'Approved' | 'Rejected'; source: string;
 };
+
+export type BindingHistoryEvent = { label: string; by?: string; at?: string };
 
 export type ContractorRegister = {
   id: string; documentName: string; documentType: string; formNo: string; criticality: 'High' | 'Medium' | 'Low'; frequency: string; registerLevel: string;
@@ -483,6 +487,7 @@ export type EmployerApproval = {
   unbindRequested?: boolean;
   unbindConsentEmployer?: boolean;
   unbindConsentContractor?: boolean;
+  history?: BindingHistoryEvent[];
 };
 
 export type EmployerComplianceReport = {
@@ -560,7 +565,7 @@ export type LeaveEncashmentRecord = { id:string; period:string; days:number; rat
 export type WorkerDocument = { name:string; mandatory:boolean; owner:'Worker'|'Contractor'|'System'; status:string; date:string|null; downloadUrl?:string };
 export type WorkerJobRequest = { id:string; employer:string; contractor:string; site:string; designation:string; wage:number; currency:string; payPeriod:string; duration:string; facilities:string[]; status:'Pending'|'Accepted'|'Rejected'|'Cancelled'|'Expired'; dateReceived:string };
 export type WorkerAvailableJob = { id:string; jobId:number; title:string; subTitle:string; employer:string; postedDate:string; description:string; wage:string; state:string; city:string; designation:string; experience:string; dobLimit:string; vacancies:number; matchBadge:boolean };
-export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'; initiatedBy?:string; acceptedBy?:string; contractorDetails?:{name:string;code:string;tradeName:string;lin:string;contactPerson:string;email:string;state:string;address:string}; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
+export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'; initiatedBy?:string; acceptedBy?:string; contractorDetails?:{name:string;code:string;tradeName:string;lin:string;contactPerson:string;email:string;state:string;address:string}; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean; history?: BindingHistoryEvent[] };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
 export type EmployerLabourCompliance = { ruleId: import('@/lib/labour-compliance').RuleId; scope: import('@/lib/labour-compliance').GovtScope; status: import('@/lib/labour-compliance').RuleStatus; note: string; verifiedAt: string };
 export type CourseSubmissionView = { content:string; fileUrl:string; status:string; score:number|null; feedback:string; submittedAt:string };
 export type CourseAssignmentView = { id:string; title:string; passScore:number; score:number|null; passed:boolean; type:'QUIZ'|'WRITING'|'UPLOAD'; instructions:string; questions:Array<{id:string;question:string;options:string[]}>; submission:CourseSubmissionView|null };

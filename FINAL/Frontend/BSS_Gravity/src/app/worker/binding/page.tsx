@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Building2, CheckCircle2, Handshake, Home, Link2, MapPin, QrCode, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Handshake, History, Home, Link2, MapPin, QrCode, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useWorker } from '@/contexts/WorkerContext';
 import RebindAuthModal from '@/components/worker/RebindAuthModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import BindingHistoryDialog, { type BindingHistoryEvent } from '@/components/ui/BindingHistoryDialog';
 import { recordBindingApproval, formatApprovalDate } from '@/lib/workerDocumentWorkflow';
 
 type BindingRequest = {
@@ -28,6 +29,7 @@ type BindingRequest = {
   unbindRequested?: boolean;
   unbindConsentWorker?: boolean;
   unbindConsentContractor?: boolean;
+  history?: BindingHistoryEvent[];
 };
 
 
@@ -55,6 +57,7 @@ export default function BindingRequestsPage() {
     unbindRequested: Boolean(req.unbindRequested),
     unbindConsentWorker: Boolean(req.unbindConsentWorker),
     unbindConsentContractor: Boolean(req.unbindConsentContractor),
+    history: (req.history as BindingHistoryEvent[]) ?? [],
   }));
 
   const [requests, setRequests] = useState<BindingRequest[]>(apiRequests.length > 0 ? apiRequests : []);
@@ -65,6 +68,7 @@ export default function BindingRequestsPage() {
   const [authRequestId, setAuthRequestId] = useState<number | null>(null);
   const authRequest = requests.find(r => r.id === authRequestId) ?? null;
   const [confirm, setConfirm] = useState<{ req: BindingRequest; kind: 'accept' | 'decline' | 'unbind' } | null>(null);
+  const [historyFor, setHistoryFor] = useState<BindingRequest | null>(null);
 
   function runConfirm() {
     if (!confirm) return;
@@ -159,7 +163,7 @@ export default function BindingRequestsPage() {
                 <p className="text-xs text-gray-500 mt-0.5 font-mono">{req.contractorCode} · {req.lin}</p>
               </div>
             </div>
-            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {req.requestedOn}</p><p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p></div>
+            <div className="text-left sm:text-right flex-shrink-0 text-xs text-gray-500"><p>Requested {req.requestedOn}</p><p className="font-mono text-[11px] text-gray-400 mt-0.5">{req.ref}</p><p className="mt-0.5">Initiated by {req.initiatedBy || '—'}{req.acceptedBy ? ` · Accepted by ${req.acceptedBy}` : ''}</p><button onClick={() => setHistoryFor(req)} className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#073B67] hover:underline"><History size={12}/>History</button></div>
           </div>
 
           <dl className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -232,6 +236,13 @@ export default function BindingRequestsPage() {
       busy={!!confirm && busyId === confirm.req.id}
       onCancel={() => setConfirm(null)}
       onConfirm={runConfirm}
+    />
+    <BindingHistoryDialog
+      open={!!historyFor}
+      title="Binding history"
+      subtitle={historyFor ? `${historyFor.contractor} · ${historyFor.ref}` : ''}
+      events={historyFor?.history ?? []}
+      onClose={() => setHistoryFor(null)}
     />
   </div>;
 }

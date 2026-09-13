@@ -1238,6 +1238,47 @@ def _wc_initiator_acceptor(b):
     return "Contractor", ("Worker" if b.consent_worker else "")
 
 
+def _wc_history(b):
+    """Chronological binding/unbinding events for a worker<->contractor binding."""
+    events = [{"label": "Requested", "by": "Contractor", "at": _dts(b.created_at)}]
+    if b.accepted_at:
+        events.append({"label": "Binding accepted",
+                       "by": "Worker" if b.consent_worker else "Contractor",
+                       "at": _dts(b.accepted_at)})
+    if b.unbind_requested_at:
+        if b.unbind_consent_contractor and not b.unbind_consent_worker:
+            by = "Contractor"
+        elif b.unbind_consent_worker and not b.unbind_consent_contractor:
+            by = "Worker"
+        else:
+            by = "Both parties"
+        events.append({"label": "Unbind requested", "by": by, "at": _dts(b.unbind_requested_at)})
+    if b.unbound_at:
+        events.append({"label": "Unbound", "by": "Both parties", "at": _dts(b.unbound_at)})
+    return events
+
+
+def _ce_history(b):
+    """Chronological binding/unbinding events for a contractor<->employer binding."""
+    initiated, accepted = _ce_initiator_acceptor(b)
+    events = [{"label": "Requested", "by": initiated, "at": _dts(b.created_at)}]
+    if b.accepted_at:
+        events.append({"label": "Binding accepted",
+                       "by": accepted or ("Employer" if initiated == "Contractor" else "Contractor"),
+                       "at": _dts(b.accepted_at)})
+    if b.unbind_requested_at:
+        if b.unbind_consent_contractor and not b.unbind_consent_employer:
+            by = "Contractor"
+        elif b.unbind_consent_employer and not b.unbind_consent_contractor:
+            by = "Employer"
+        else:
+            by = "Both parties"
+        events.append({"label": "Unbind requested", "by": by, "at": _dts(b.unbind_requested_at)})
+    if b.unbound_at:
+        events.append({"label": "Unbound", "by": "Both parties", "at": _dts(b.unbound_at)})
+    return events
+
+
 def _binding_row(b):
     """Canonical binding payload (E·C·S·W), shared by worker/contractor/employer views."""
     initiated_by, accepted_by = _wc_initiator_acceptor(b)
@@ -1303,6 +1344,7 @@ def _binding_row(b):
         "unbindConsentWorker": bool(b.unbind_consent_worker),
         "unbindConsentContractor": bool(b.unbind_consent_contractor),
         "unbindRequested": bool(b.unbind_requested_at),
+        "history": _wc_history(b),
     }
 
 
@@ -1349,6 +1391,7 @@ def _ce_binding_row(b):
         "unbindConsentEmployer": bool(b.unbind_consent_employer),
         "requestedOn": _dts(b.created_at),
         "allotments": allotments,
+        "history": _ce_history(b),
     }
 
 
@@ -2131,13 +2174,18 @@ def _contractor_binding_requests(user):
             "unbindRequested": bool(b.unbind_requested_at),
             "unbindConsentWorker": bool(b.unbind_consent_worker),
             "unbindConsentContractor": bool(b.unbind_consent_contractor),
+            "history": _wc_history(b),
         })
     # Contractor <-> employer bindings (scanning an employer/site QR). Every
     # request is surfaced — rows are never replaced or hidden; a fresh request
     # after a decline is an additional row, not an overwrite.
     for e in ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at"):
         ep = getattr(e.employer, "employer_profile", None)
-        sites = [a.site.site_name for a in e.allotments.all() if a.site and a.status == "APPROVED"]
+        approved_sites = [a.site.site_name for a in e.allotments.all()
+                          if a.site and a.status == "APPROVED"]
+        pending_sites = [f"{a.site.site_name} (pending)" for a in e.allotments.all()
+                         if a.site and a.status == "PENDING"]
+        sites = approved_sites + pending_sites
         rows.append({
             "id": f"ce-{e.id}", "bindingId": e.id, "type": "Employer",
             "entityName": _org_name(e.employer),
@@ -2166,6 +2214,7 @@ def _contractor_binding_requests(user):
             "unbindRequested": bool(e.unbind_requested_at),
             "unbindConsentWorker": bool(e.unbind_consent_employer),
             "unbindConsentContractor": bool(e.unbind_consent_contractor),
+            "history": _ce_history(e),
         })
     rows.sort(key=lambda row: str(row.get("requestedOn") or ""), reverse=True)
     return rows
@@ -2751,7 +2800,11 @@ def _employer_approvals(user):
                          "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
     for e in ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at"):
         cp = getattr(e.contractor, "contractor_profile", None)
-        sites = [a.site.site_name for a in e.allotments.all() if a.site and a.status == "APPROVED"]
+        approved_sites = [a.site.site_name for a in e.allotments.all()
+                          if a.site and a.status == "APPROVED"]
+        pending_sites = [f"{a.site.site_name} (pending)" for a in e.allotments.all()
+                         if a.site and a.status == "PENDING"]
+        sites = approved_sites + pending_sites
         rows.append({
             "id": f"ce-{e.id}", "bindingId": str(e.id),
             "entityType": "Contractor", "entityId": str(e.contractor_id),
@@ -2779,6 +2832,7 @@ def _employer_approvals(user):
             "unbindRequested": bool(e.unbind_requested_at),
             "unbindConsentEmployer": bool(e.unbind_consent_employer),
             "unbindConsentContractor": bool(e.unbind_consent_contractor),
+            "history": _ce_history(e),
         })
     return rows
 
