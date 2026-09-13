@@ -9,6 +9,7 @@ import {
   type MobilityAddress,
   type MobilityPayload,
 } from '@/lib/mobility';
+import { INDIA_CITY_STATES, citiesForState } from '@/data/indiaCities';
 
 export type MobilitySectionHandle = { save: () => Promise<boolean> };
 
@@ -166,12 +167,12 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
 
 function AddressEditor({ title, kind, prefix = '', address, reference, disabled = false, readOnly = false, error, onChange }: { title?: string; kind: string; prefix?: string; address: MobilityAddress; reference: GeographyReference; disabled?: boolean; readOnly?: boolean; error?: string; onChange: (value: MobilityAddress) => void }) {
   const label = (name: string) => prefix ? `${prefix} ${name}` : name;
-  const states = Object.keys(reference);
+  const states = [...new Set([...Object.keys(reference), ...INDIA_CITY_STATES])];
   const districts = Object.keys(reference[address.state] || {});
   const places = reference[address.state]?.[address.district] || [];
-  // City suggestions span the whole selected state so the worker can pick one or
-  // simply type their own — it is never forced to equal the district.
-  const cities = [...new Set(Object.values(reference[address.state] || {}).flatMap(list => list.map(place => place.city)))];
+  // Prefer the full bundled state->cities list; fall back to the reference data.
+  const bundledCities = citiesForState(address.state);
+  const cities = bundledCities.length ? bundledCities : [...new Set(Object.values(reference[address.state] || {}).flatMap(list => list.map(place => place.city)))];
   const pins = places.find(place => place.city === address.city)?.pins || [];
   const id = kind.replace('Address', '');
   const frozen = `${inputClass} bg-[#F5F5F7] text-gray-500 cursor-not-allowed`;
@@ -188,8 +189,8 @@ function AddressEditor({ title, kind, prefix = '', address, reference, disabled 
     <Field label="Address Line">{readOnly ? <textarea rows={2} readOnly value={address.line} placeholder="—" className={`${frozen} resize-none`}/> : <textarea rows={2} value={address.line} onChange={event => onChange({ ...address, line: event.target.value })} disabled={disabled} className={`${inputClass} resize-none`}/>}</Field>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Field label={label('State')}>{readOnly ? <input readOnly value={address.state} placeholder="—" className={frozen}/> : <select value={address.state} onChange={event => selectState(event.target.value)} disabled={disabled || !states.length} className={inputClass}>{!states.length ? <option value="">Loading…</option> : <><option value="">Select state</option>{states.map(state => <option key={state}>{state}</option>)}</>}</select>}</Field>
-      <Field label={label('District')}>{readOnly ? <input readOnly value={address.district} placeholder="—" className={frozen}/> : <select value={address.district} onChange={event => selectDistrict(event.target.value)} disabled={disabled || !districts.length} className={inputClass}><option value="">Select district</option>{districts.map(district => <option key={district}>{district}</option>)}</select>}</Field>
-      <Field label={label('City')}>{readOnly ? <input readOnly value={address.city} placeholder="—" className={frozen}/> : <><input list={`${id}-cities`} value={address.city} onChange={event => onChange({ ...address, city: event.target.value })} disabled={disabled} placeholder="Type or select city" className={inputClass}/><datalist id={`${id}-cities`}>{cities.map(city => <option key={city} value={city}/>)}</datalist></>}</Field>
+      <Field label={label('District')}>{readOnly ? <input readOnly value={address.district} placeholder="—" className={frozen}/> : (districts.length ? <select value={address.district} onChange={event => selectDistrict(event.target.value)} disabled={disabled} className={inputClass}><option value="">Select district</option>{districts.map(district => <option key={district}>{district}</option>)}</select> : <input value={address.district} onChange={event => onChange({ ...address, district: event.target.value })} disabled={disabled} placeholder="District" className={inputClass}/>)}</Field>
+      <Field label={label('City')}>{readOnly ? <input readOnly value={address.city} placeholder="—" className={frozen}/> : (cities.length ? <select value={address.city} onChange={event => onChange({ ...address, city: event.target.value })} disabled={disabled} className={inputClass}><option value="">Select city</option>{cities.map(city => <option key={city}>{city}</option>)}</select> : <input value={address.city} onChange={event => onChange({ ...address, city: event.target.value })} disabled={disabled} placeholder="City" className={inputClass}/>)}</Field>
       <Field label={label('Locality / Area')}>{readOnly ? <input readOnly value={address.locality} placeholder="—" className={frozen}/> : <input value={address.locality} onChange={event => onChange({ ...address, locality: event.target.value })} disabled={disabled} placeholder="Locality / area / mohalla" className={inputClass}/>}</Field>
       <Field label={label('PIN Code')}>{readOnly ? <input readOnly value={address.pin} placeholder="—" className={frozen}/> : <div className="relative"><input list={`${id}-pins`} inputMode="numeric" value={address.pin} onChange={event => onChange({ ...address, pin: event.target.value.replace(/\D/g, '').slice(0, 6) })} onBlur={resolvePin} disabled={disabled} className={`${inputClass} pr-10`}/><RefreshCw size={15} className="absolute right-3.5 top-3.5 text-gray-400"/><datalist id={`${id}-pins`}>{pins.map(pin => <option key={pin} value={pin}/>)}</datalist></div>}</Field>
     </div>
