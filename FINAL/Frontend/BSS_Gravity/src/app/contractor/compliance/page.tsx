@@ -4,13 +4,14 @@ import { CheckCircle2, Download, FileClock, FileSpreadsheet, FileText, Landmark,
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
+import { INDIA_STATES } from '@/data/indiaStates';
 type Row = ContractorPortalData['compliances'][number];
 type RowDraft = { item:string; category:string; reference:string; site:string; worker:string; issue:string; expiry:string };
 
 type Tab = 'records' | 'registers' | 'master' | 'report';
 const FYS = ['FY 2026-27', 'FY 2025-26', 'FY 2024-25'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
-const STATES = ['Maharashtra', 'Gujarat', 'Karnataka', 'Uttar Pradesh'];
+const STATES = INDIA_STATES;
 
 const registerColumns: DataColumn<ContractorPortalData['registers'][number]>[] = [
   { id:'name', header:'Document Name', value:r => r.documentName },

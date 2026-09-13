@@ -3,11 +3,12 @@ import { useMemo, useState } from 'react';
 import { Briefcase, CheckCircle2, MapPin, Search, Send, UserRound, X, Eye, FileText, ArrowRight, ChevronLeft } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorJobPosting, ContractorPortalData } from '@/types/portal';
+import { INDIA_STATES } from '@/data/indiaStates';
 
 type Application = ContractorPortalData['applications'][number];
 const money = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 });
 
-const STATES = ['Maharashtra', 'Gujarat', 'Karnataka', 'Uttar Pradesh', 'West Bengal', 'Bihar'];
+const STATES = INDIA_STATES;
 const CITIES: Record<string, string[]> = { Maharashtra:['Mumbai','Pune','Navi Mumbai','Nagpur'], Gujarat:['Ahmedabad','Surat','Vadodara'], Karnataka:['Bengaluru','Hubli'], 'Uttar Pradesh':['Noida','Lucknow'], 'West Bengal':['Kolkata'], Bihar:['Patna'] };
 const CATEGORIES = ['Skilled Construction', 'Semi-skilled Construction', 'Unskilled Construction', 'Electrical', 'Plumbing', 'Carpentry', 'Other'];
 const WORKPLACE = ['On-site', 'Hybrid', 'Off-site'];
@@ -178,7 +179,7 @@ export default function ContractorRozgarPage() {
           <label className="text-xs font-semibold">Trade<input value={draft.trade} onChange={e => setD('trade', e.target.value)} placeholder="e.g. Bar Bender (Rebar)" className={input}/></label>
           <label className="text-xs font-semibold">Workplace Type<select value={draft.workplaceType} onChange={e => setD('workplaceType', e.target.value)} className={input}>{WORKPLACE.map(w => <option key={w}>{w}</option>)}</select></label>
           <label className="text-xs font-semibold">State<select value={draft.state} onChange={e => { setD('state', e.target.value); setD('city', ''); }} className={input}><option value="">Select state</option>{STATES.map(s => <option key={s}>{s}</option>)}</select></label>
-          <label className="text-xs font-semibold">City<select value={draft.city} onChange={e => setD('city', e.target.value)} disabled={!draft.state} className={input}><option value="">Select city</option>{(CITIES[draft.state] ?? []).map(c => <option key={c}>{c}</option>)}</select></label>
+          <label className="text-xs font-semibold">City<input value={draft.city} onChange={e => setD('city', e.target.value)} list="rozgar-cities" placeholder="Type or pick a city" className={input}/><datalist id="rozgar-cities">{(CITIES[draft.state] ?? []).map(c => <option key={c} value={c}/>)}</datalist></label>
           <label className="text-xs font-semibold">Site<select value={draft.site} onChange={e => setD('site', e.target.value)} className={input}><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id}>{s.name}</option>)}</select></label>
           <label className="text-xs font-semibold">Vacancies<input value={draft.vacancies} onChange={e => setD('vacancies', e.target.value.replace(/\D/g, ''))} type="number" min="1" className={input}/></label>
           <label className="text-xs font-semibold">Monthly Wage (₹)<input value={draft.monthlyWage} onChange={e => setD('monthlyWage', e.target.value.replace(/\D/g, ''))} type="number" min="0" className={input}/></label>

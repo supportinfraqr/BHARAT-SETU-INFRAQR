@@ -5,12 +5,13 @@ import { Award, CalendarDays, CheckCircle2, FileCheck2, FileUp, Plus, ShieldChec
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
+import { INDIA_STATES } from '@/data/indiaStates';
 
 type DocumentRow = ContractorPortalData['submissions']['documents'][number] & { fileName?: string; checksum?: string };
 type Tab = 'submissions' | 'create' | 'audit';
 
 const documentTypes = ['PF Challan', 'ESIC Return', 'Wage Register', 'Attendance Register', 'Safety Audit', 'Medical & Insurance'] as const;
-const STATES = ['Maharashtra', 'Gujarat', 'Karnataka', 'Uttar Pradesh'];
+const STATES = INDIA_STATES;
 const FYS = ['FY 2026-27', 'FY 2025-26'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October'];
 
