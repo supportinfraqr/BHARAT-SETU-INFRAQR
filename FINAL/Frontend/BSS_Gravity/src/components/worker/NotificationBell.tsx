@@ -5,7 +5,7 @@ import { Bell, CheckCheck, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useNotifications } from '@/contexts/NotificationContext';
 
-export default function NotificationBell({ viewAllHref = '/worker/Notifications' }: { viewAllHref?: string }) {
+export default function NotificationBell({ viewAllHref = '/worker/notifications' }: { viewAllHref?: string }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();

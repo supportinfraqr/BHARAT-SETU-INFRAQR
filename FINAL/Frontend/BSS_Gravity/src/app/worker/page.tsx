@@ -51,7 +51,7 @@ export default function WorkerOverview() {
     {label:t('nav.compliance'),detail:'Medical, safety and gate passes',href:'/worker/Compliance',icon:ShieldCheck},
     {label:t('nav.skills'),detail:'Skills, courses and certificates',href:'/worker/Skills',icon:GraduationCap},
     {label:'Announcements',detail:announcement?.title??'No announcements',href:'/worker/Announcements',icon:Megaphone},
-    {label:'Notifications',detail:`${actionCount} pending actions and alerts`,href:'/worker/Notifications',icon:Bell},
+    {label:'Notifications',detail:`${actionCount} pending actions and alerts`,href:'/worker/notifications',icon:Bell},
     {label:'Grievances',detail:'Raise or track a worker concern',href:'/worker/grievances',icon:MessageSquareText},
     {label:'Binding Requests',detail:'Approve or decline contractor binding',href:'/worker/binding',icon:Handshake},
     {label:t('nav.settings'),detail:'Language, privacy and security',href:'/worker/Settings',icon:Settings},
@@ -83,7 +83,7 @@ export default function WorkerOverview() {
 
     <div className="grid lg:grid-cols-[1.3fr_1fr] gap-5 items-start">
       <div className="space-y-5">
-        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden"><div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-gray-950">Needs your attention</h2><p className="text-xs text-gray-400 mt-0.5">Priority actions affecting work or benefits</p></div><Link href="/worker/Notifications" aria-label={`${actionCount} pending actions`} className="min-w-6 h-6 px-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center">{actionCount}</Link></div><div className="divide-y divide-gray-100">
+        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden"><div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-gray-950">Needs your attention</h2><p className="text-xs text-gray-400 mt-0.5">Priority actions affecting work or benefits</p></div><Link href="/worker/notifications" aria-label={`${actionCount} pending actions`} className="min-w-6 h-6 px-1.5 rounded-full bg-red-50 text-red-600 text-xs font-bold flex items-center justify-center">{actionCount}</Link></div><div className="divide-y divide-gray-100">
           {missingDocuments.length>0&&<Attention href="/worker/Documents" icon={FileText} title={`${missingDocuments.length} mandatory document actions`} text={missingDocuments.map(item=>item.name).join(', ')} tone="red"/>}
           <Attention href="/worker/Compliance" icon={Clock3} title={`Medical fitness: ${worker.compliance.medicalFitnessDaysLeft} days remaining`} text="Review examination and renewal details." tone="orange"/>
           {portal.jobRequests.some(item=>item.status==='Pending')&&<Attention href="/worker/binding" icon={BriefcaseBusiness} title="Employment request pending" text={portal.jobRequests.find(item=>item.status==='Pending')?.site??''} tone="blue"/>}
