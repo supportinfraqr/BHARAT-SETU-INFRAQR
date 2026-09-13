@@ -161,9 +161,12 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     });
   }
   if (resource === 'job-postings' && method === 'POST') {
-    requiredString(body, 'title'); requiredString(body, 'trade'); requiredString(body, 'site');
-    const vacancies = Number(body.vacancies); const wage = Number(body.wage);
-    if (!Number.isInteger(vacancies) || vacancies < 1 || vacancies > 100_000 || !Number.isFinite(wage) || wage <= 0) fail('Enter valid vacancy and wage values.');
+    // Drafts may be incomplete; only a published posting must be fully specified.
+    if (String(body.status ?? '').toLowerCase() !== 'draft') {
+      requiredString(body, 'title'); requiredString(body, 'trade'); requiredString(body, 'site');
+      const vacancies = Number(body.vacancies); const wage = Number(body.monthlyWage ?? body.wage);
+      if (!Number.isInteger(vacancies) || vacancies < 1 || vacancies > 100_000 || !Number.isFinite(wage) || wage <= 0) fail('Enter valid vacancy and wage values.');
+    }
   }
   if (role === 'Contractor' && resource === 'attendance' && method === 'POST') {
     if (!bssId.test(requiredString(body, 'bssId', 20))) fail('Enter a valid worker BSS ID.');
