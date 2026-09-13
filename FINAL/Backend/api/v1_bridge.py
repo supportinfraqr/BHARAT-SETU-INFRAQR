@@ -2581,16 +2581,27 @@ def _handle_site(user, body, method):
 
     for field in _SITE_EDITABLE_FIELDS:
         if field in body and body.get(field) is not None:
-            setattr(site, field, _coerce_site_value(Site._meta.get_field(field), body.get(field)))
+            model_field = Site._meta.get_field(field)
+            coerced = _coerce_site_value(model_field, body.get(field))
+            # A non-nullable field must never be written as NULL (e.g. an empty
+            # pincode is "" not None) — keep the model default instead.
+            if coerced is None and not model_field.null:
+                continue
+            setattr(site, field, coerced)
 
     site.save()
     return site.id
 
 
+_TEXT_FIELD_TYPES = ("CharField", "TextField", "SlugField", "EmailField", "URLField")
+
+
 def _coerce_site_value(field, value):
-    if value is None or value == "":
-        return None
     internal = field.get_internal_type()
+    if value is None or value == "":
+        # Text columns are NOT NULL with blank=True — an empty value is "" not
+        # NULL. Everything else may use NULL when the column allows it.
+        return "" if internal in _TEXT_FIELD_TYPES else None
     if internal == "DecimalField":
         from decimal import Decimal, InvalidOperation
         try:
