@@ -19,20 +19,16 @@ Staging and production are separate servers with separate databases. Data on one
 ## Terminology (important)
 
 - **Push** = `git push` to GitHub (`origin`, branch `main`). Version control only — **never** touches a server.
-- **Deploy staging** = rsync + `docker compose up --build` on the staging server. Safe, testable.
-- **Deploy prod** = rsync + rebuild on the production server. **LIVE.** Only on the user's explicit "deploy to prod".
+- **Deploy prod** = rsync + rebuild on the production server (`login.bharatshramsetu.com`). **This is the default target for every change.**
 
-## Rules (agreed with the user)
+## Rules (agreed with the user — revised)
 
 1. **Push ≠ deploy.** When the user says "push" they mean GitHub only.
-2. **Big changes → staging first**, the user tests, then ask before prod. Never auto-promote.
-3. **Small/urgent fixes may go straight to prod**, then report to the user:
-   - Small/hotfix: text/copy, styling, a single-field bug fix, a clear 500 blocker.
-   - Big (always ask first): DB migrations/schema, auth/session, binding/permission logic, payments/Aadhaar, multi-file features.
-   - Unsure → ask.
-4. **Back up the prod DB before ANY prod deploy** (even a small hotfix).
-5. **Destructive data actions (delete/wipe) → staging only**, unless the user explicitly says "do it on prod". Never delete/modify prod data without an explicit instruction.
-6. Never overwrite a server `.env`.
+2. **Deploy every change straight to PROD** (`login.bharatshramsetu.com`). The user reviews on the live site — staging is no longer part of the normal flow.
+3. **Back up the prod DB before ANY prod deploy** (cheap and reversible).
+4. **Destructive data actions (delete/wipe) → only with the user's explicit instruction.** Never delete/modify prod data otherwise.
+5. Never overwrite a server `.env`.
+6. **Other-session coordination** still applies (see below).
 
 ## Coordination: another session deploys to prod
 
