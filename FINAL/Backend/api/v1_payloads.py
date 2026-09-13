@@ -2726,11 +2726,52 @@ def _employer_sites(user):
             "endDate": _dts(s.expected_end_date) or "",
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "contractorIds": list(cids), "workers": wcount,
+            "pastContractors": _site_past_contractors(s, user, set(cids)),
             "compliance": 0,
             "qrToken": _d(s.site_qr_token),
             "bssId": _d(s.bss_site_id),
             "data": _site_scalar_data(s),
         })
+    return rows
+
+
+def _site_past_contractors(site, employer, active_ids):
+    """Terminal (cancelled/rejected/released) relationships at a site, so history
+    stays visible without being shown as a live connection. Active contractors are
+    excluded. One row per contractor, carrying the most recent terminal event."""
+    TERMINAL_BINDING = {"CANCELLED": "Cancelled", "REJECTED": "Rejected", "EXPIRED": "Expired"}
+    latest = {}
+    for b in (WorkerContractorBinding.objects
+              .filter(site=site, binding_status__in=list(TERMINAL_BINDING))
+              .only("contractor_id", "binding_status", "updated_at", "created_at")):
+        when = b.updated_at or b.created_at
+        prev = latest.get(b.contractor_id)
+        if prev is None or when > prev["at"]:
+            latest[b.contractor_id] = {"at": when, "status": TERMINAL_BINDING[b.binding_status]}
+    for a in (ContractorSiteAllotment.objects
+              .filter(site=site, binding__employer=employer, status__in=["REJECTED", "RELEASED"])
+              .select_related("binding")):
+        when = a.updated_at or a.created_at
+        cid = a.binding.contractor_id
+        prev = latest.get(cid)
+        if prev is None or when > prev["at"]:
+            latest[cid] = {"at": when, "status": "Released" if a.status == "RELEASED" else "Rejected"}
+    rows = []
+    for cid, info in latest.items():
+        if cid in active_ids:
+            continue
+        c = User.objects.filter(id=cid).first()
+        if not c:
+            continue
+        cp = getattr(c, "contractor_profile", None)
+        rows.append({
+            "id": str(cid),
+            "name": _d(cp.contractor_name if cp else "", c.username),
+            "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(cid)),
+            "status": info["status"],
+            "endedAt": _dts(info["at"]) or "",
+        })
+    rows.sort(key=lambda r: r["endedAt"], reverse=True)
     return rows
 
 

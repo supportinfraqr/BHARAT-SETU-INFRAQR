@@ -346,6 +346,7 @@ export type EmployerSite = {
   status: 'Active' | 'Planned' | 'Completed';
   contractorIds: string[];
   workers: number;
+  pastContractors?: Array<{ id: string; name: string; bssId: string; status: string; endedAt: string }>;
   compliance: number;
   qrToken?: string;
   bssId?: string;

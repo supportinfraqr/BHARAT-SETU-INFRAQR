@@ -4,7 +4,7 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Building2, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Building2, History, MapPin, Pencil, QrCode, Save, Trash2, UserRound, X } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerSite } from '@/types/portal';
 import { parseCoordinate } from '@/components/employer/SiteMap';
@@ -116,6 +116,26 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
         <div className="grid md:grid-cols-2 gap-4"><div className="border border-gray-100 rounded-xl p-4"><p className="text-[11px] uppercase text-gray-400 font-bold flex items-center gap-1"><Building2 size={12}/>Contractors at this site</p><div className="mt-2 space-y-2">{contractors.length ? contractors.map(c => <div key={c.id} className="flex justify-between text-xs"><span className="text-gray-700">{c.name}</span><span className={`font-semibold ${c.status === 'Active' ? 'text-green-700' : 'text-orange-700'}`}>{c.status}</span></div>) : <p className="text-xs text-gray-400">No contractors assigned.</p>}</div></div>
           <div className="border border-gray-100 rounded-xl p-4"><p className="text-[11px] uppercase text-gray-400 font-bold flex items-center gap-1"><UserRound size={12}/>Workers at this site</p><div className="mt-2 space-y-2">{siteWorkers.length ? siteWorkers.map(w => <div key={w.id} className="flex justify-between text-xs"><span className="text-gray-700">{w.name}</span><span className="text-gray-400">{w.contractor}</span></div>) : <p className="text-xs text-gray-400">No workers assigned.</p>}</div></div></div>
       </div>
+
+      {!!current.pastContractors?.length && (
+        <details className="border-t border-gray-100 mt-6 pt-5 group">
+          <summary className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none">
+            <History size={12}/>Past relationships ({current.pastContractors.length})
+            <span className="text-gray-300 transition-transform group-open:rotate-90">›</span>
+          </summary>
+          <div className="mt-3 space-y-2">
+            {current.pastContractors.map(c => (
+              <div key={c.id} className="flex items-center justify-between gap-3 text-xs border border-gray-100 rounded-lg px-3 py-2">
+                <span className="text-gray-700 truncate">{c.name}<span className="ml-2 font-mono text-[10px] text-gray-400">{c.bssId}</span></span>
+                <span className="flex items-center gap-3 shrink-0">
+                  <span className="text-gray-400">{formatDate(c.endedAt)}</span>
+                  <span className="font-semibold text-gray-500">{c.status}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </section>
 
     {qrOpen && (
@@ -137,3 +157,4 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
 }
 
 function Status({ value }: { value:string }) { const tone = value === 'Active' ? 'bg-green-50 text-green-700' : value === 'Planned' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'; return <span className={`text-[10px] font-bold px-2 py-1 rounded ${tone}`}>{value}</span>; }
+function formatDate(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('en-IN', { day:'2-digit', month:'short', year:'numeric' }).format(date); }
