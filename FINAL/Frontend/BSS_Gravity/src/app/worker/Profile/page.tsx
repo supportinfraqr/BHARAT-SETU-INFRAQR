@@ -658,7 +658,7 @@ export default function WorkerProfilePage() {
                           <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Share %</label>
                           <div className="relative">
                             <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-                            <input type="number" min={0} max={100} step={1} value={nominees.length === 1 ? 100 : (Number.isFinite(n.percent) ? n.percent : 0)} onChange={e => updateNominee(n.id, { percent: Math.min(100, Math.max(0, Math.round(Number(e.target.value) || 0))) })} disabled={nominees.length === 1} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-500"/>
+                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={nominees.length === 1 ? '100' : (n.percent ? String(n.percent) : '')} placeholder="0" onChange={e => { const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''); const others = totalPercent - (Number.isFinite(n.percent) ? n.percent : 0); const max = Math.max(0, 100 - others); const num = digits === '' ? 0 : Math.min(max, parseInt(digits, 10)); updateNominee(n.id, { percent: num }); }} disabled={nominees.length === 1} className="w-full bg-white border border-black/10 rounded-xl pl-8 pr-2 py-2.5 text-[13px] font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] disabled:bg-[#F5F5F7] disabled:text-gray-500"/>
                           </div>
                           {nominees.length === 1 && <p className="text-[10px] text-gray-400 mt-1">A single nominee receives 100%.</p>}
                         </div>
@@ -684,7 +684,7 @@ export default function WorkerProfilePage() {
                         <span key={n.id} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-600"><span className={`w-2.5 h-2.5 rounded-full ${segColors[index % segColors.length]}`}/>{n.name || ('Nominee ' + (index + 1))} — {n.percent}%</span>
                       ))}
                     </div>
-                    {!percentBalanced && <p className="mt-3 text-[12px] text-[#F47A32] font-semibold flex items-center gap-1.5">Shares add up to {totalPercent}%. They must total exactly 100% — adjust them, or split equally.</p>}
+                    {!percentBalanced && <p className="mt-3 text-[12px] text-[#F47A32] font-semibold flex items-center gap-1.5">Shares add up to {totalPercent}% — {Math.max(0, 100 - totalPercent)}% still to allocate. The total must be exactly 100%.</p>}
                     {nominees.length > 1 && <button type="button" onClick={splitEqually} className="mt-3 inline-flex items-center gap-1.5 text-[#0066CC] text-[12px] font-semibold hover:underline"><RefreshCw size={13}/> Split equally</button>}
                   </div>
                 )}
