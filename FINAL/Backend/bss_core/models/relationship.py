@@ -677,8 +677,8 @@ class ContractorJob(models.Model):
 class RozgarRequest(models.Model):
     """Worker -> job application / request (Rozgar & Request flow)."""
 
-    STATUS = [("PENDING", "Pending"), ("ACCEPTED", "Accepted"), ("REJECTED", "Rejected"),
-              ("CANCELLED", "Cancelled"), ("EXPIRED", "Expired")]
+    STATUS = [("PENDING", "Pending"), ("SHORTLISTED", "Shortlisted"), ("ACCEPTED", "Accepted"),
+              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled"), ("EXPIRED", "Expired")]
 
     job = models.ForeignKey(ContractorJob, on_delete=models.CASCADE, related_name="requests")
     contractor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="rozgar_requests")

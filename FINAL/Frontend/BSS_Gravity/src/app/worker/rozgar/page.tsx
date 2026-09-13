@@ -128,7 +128,7 @@ export default function WorkerRozgarSetuPage() {
                     <h3 className="text-base font-bold text-gray-900">{job.title} — {job.subTitle}</h3>
                     {job.matchBadge && (
                       <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                        MATCH
+                        {job.matchScore}% match
                       </span>
                     )}
                   </div>

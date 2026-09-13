@@ -31,6 +31,7 @@ export default function ContractorRozgarPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [jobFilter, setJobFilter] = useState<{ status:string; state:string; city:string; site:string }>({ status:'All', state:'All', city:'All', site:'All' });
   const [draft, setDraft] = useState<PostingDraft>({ title:'', trade:'', category:'', workplaceType:'On-site', state:'', city:'', site:'', vacancies:'', monthlyWage:'', closingDate:'', description:'', skills:[], experience:'', minSalary:'', maxSalary:'', salaryVisibility:'Visible to all', visibility:'Public', duration:'' });
+  const [customSkill, setCustomSkill] = useState('');
 
   const apps = useMemo(() => contractor.applications.filter(a => [a.workerName, a.workerId, a.trade, a.location].some(value => value.toLowerCase().includes(query.toLowerCase()))), [contractor.applications, query]);
   const selected = contractor.applications.find(a => a.id === selectedId);
@@ -47,10 +48,22 @@ export default function ContractorRozgarPage() {
     if (!selected) return;
     setBusy(true); setError('');
     try {
-      await mutate('applications', 'PATCH', { id: selected.id, status });
+      await mutate('applications', 'PATCH', { id: String(selected.id), status });
       replaceContractor({ ...contractor, applications: contractor.applications.map(a => a.id === selected.id ? { ...a, status } : a) });
       setNotice(status === 'Hired' ? 'Binding workflow started for ' + selected.workerName + '.' : 'Application marked ' + status.toLowerCase() + '.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Application could not be updated.'); }
+    finally { setBusy(false); }
+  }
+
+  async function setJobStatus(job: ContractorJobPosting, next: 'Open' | 'Closed') {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await mutate('job-postings', 'PATCH', { id: job.id, status: next === 'Closed' ? 'Closed' : 'Submitted' });
+      replaceContractor({ ...contractor, jobHistory: contractor.jobHistory.map(j => j.id === job.id ? { ...j, status: next } : j) });
+      setNotice(next === 'Closed'
+        ? `Job "${job.title}" closed — it is no longer shown to workers.`
+        : `Job "${job.title}" reopened.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The job could not be updated.'); }
     finally { setBusy(false); }
   }
 
@@ -86,6 +99,13 @@ export default function ContractorRozgarPage() {
 
   const setD = (key: keyof PostingDraft, value: string | string[]) => setDraft(current => ({ ...current, [key]: value }));
   const toggleSkill = (skill: string) => setDraft(current => ({ ...current, skills: current.skills.includes(skill) ? current.skills.filter(s => s !== skill) : [...current.skills, skill] }));
+  const removeSkill = (skill: string) => setDraft(current => ({ ...current, skills: current.skills.filter(s => s !== skill) }));
+  const addCustomSkill = () => {
+    const value = customSkill.trim().replace(/\s+/g, ' ');
+    if (!value) return;
+    if (!draft.skills.some(s => s.toLowerCase() === value.toLowerCase())) setD('skills', [...draft.skills, value]);
+    setCustomSkill('');
+  };
 
   const input = 'mt-1 w-full h-10 border rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20';
   const stepHead = (n: 1 | 2 | 3, label: string) => <span className={`flex items-center gap-2 text-xs font-bold ${step === n ? 'text-blue-700' : step > n ? 'text-green-700' : 'text-gray-400'}`}><span className={`w-6 h-6 rounded-full grid place-items-center ${step === n ? 'bg-blue-700 text-white' : step > n ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500'}`}>{step > n ? '✓' : n}</span>{label}</span>;
@@ -118,7 +138,7 @@ export default function ContractorRozgarPage() {
         <div className="flex flex-wrap gap-2">{(Object.entries({ status: jobStatuses, state: jobStates, city: jobCities, site: jobSites }) as Array<[keyof typeof jobFilter, string[]]>).map(([key, options]) => <select key={key} value={jobFilter[key]} onChange={e => setJobFilter(current => ({ ...current, [key]: e.target.value }))} aria-label={`Filter by ${key}`} className="h-9 rounded-lg border border-gray-200 px-2 pr-6 text-xs bg-white"><option value="All">{key === 'status' ? 'Status' : key === 'state' ? 'State' : key === 'city' ? 'City' : 'Site'}: All</option>{options.filter(option => option !== 'All').map(option => <option key={option}>{option}</option>)}</select>)}</div>
       </header>
       <div className="overflow-x-auto"><table className="w-full text-sm text-left">
-        <thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Job</th><th className="px-5 py-3">Location</th><th className="px-5 py-3">Experience</th><th className="px-5 py-3">Wage</th><th className="px-5 py-3">Applications</th><th className="px-5 py-3">Hires</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Posted</th></tr></thead>
+        <thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Job</th><th className="px-5 py-3">Location</th><th className="px-5 py-3">Experience</th><th className="px-5 py-3">Wage</th><th className="px-5 py-3">Applications</th><th className="px-5 py-3">Hires</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Posted</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
         <tbody className="divide-y divide-gray-100">{filteredJobs.map(job => (
           <tr key={job.id} className="hover:bg-gray-50">
             <td className="px-5 py-3"><p className="font-semibold text-gray-900">{job.title}</p><p className="text-xs text-gray-500 mt-0.5">{job.trade} · {job.category} · {job.site}</p></td>
@@ -129,6 +149,9 @@ export default function ContractorRozgarPage() {
             <td className="px-5 py-3 font-medium text-green-700">{job.hires}</td>
             <td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${job.status === 'Open' ? 'bg-green-50 text-green-700' : job.status === 'Closed' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'}`}>{job.status}</span></td>
             <td className="px-5 py-3 text-gray-500">{job.postedOn || '—'}</td>
+            <td className="px-5 py-3 text-right">{job.status === 'Closed'
+              ? <button disabled={busy} onClick={() => void setJobStatus(job, 'Open')} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Reopen</button>
+              : <button disabled={busy} onClick={() => void setJobStatus(job, 'Closed')} className="h-8 px-3 rounded-lg border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">{job.hires >= job.vacancies && job.vacancies > 0 ? 'Close (filled)' : 'Close'}</button>}</td>
           </tr>
         ))}</tbody></table></div>
       {filteredJobs.length === 0 && <p className="p-10 text-center text-sm text-gray-400">No jobs match the selected filters.</p>}
@@ -188,7 +211,11 @@ export default function ContractorRozgarPage() {
           <label className="sm:col-span-2 text-xs font-semibold">Job Description<textarea value={draft.description} onChange={e => setD('description', e.target.value)} rows={4} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"/></label>
           <label className="text-xs font-semibold">Required Experience<input value={draft.experience} onChange={e => setD('experience', e.target.value)} placeholder="e.g. 2–8 years" className={input}/></label>
           <label className="text-xs font-semibold">Posting Duration<input value={draft.duration} onChange={e => setD('duration', e.target.value)} placeholder="e.g. 6 months" className={input}/></label>
-          <div className="sm:col-span-2"><p className="text-xs font-semibold">Required Skills</p><div className="mt-2 flex flex-wrap gap-2">{SKILL_OPTIONS.map(skill => <button key={skill} type="button" onClick={() => toggleSkill(skill)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${draft.skills.includes(skill) ? 'bg-blue-700 text-white border-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>{skill}</button>)}</div></div>
+          <div className="sm:col-span-2"><p className="text-xs font-semibold">Required Skills</p><div className="mt-2 flex flex-wrap gap-2">{SKILL_OPTIONS.map(skill => <button key={skill} type="button" onClick={() => toggleSkill(skill)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${draft.skills.includes(skill) ? 'bg-blue-700 text-white border-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>{skill}</button>)}</div>
+            {draft.skills.some(s => !SKILL_OPTIONS.includes(s)) && <div className="mt-2 flex flex-wrap gap-2">{draft.skills.filter(s => !SKILL_OPTIONS.includes(s)).map(skill => <span key={skill} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border bg-blue-700 text-white border-blue-700">{skill}<button type="button" onClick={() => removeSkill(skill)} aria-label={`Remove ${skill}`} className="hover:text-blue-100"><X size={12}/></button></span>)}</div>}
+            <div className="mt-2 flex gap-2"><input value={customSkill} onChange={e => setCustomSkill(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill(); } }} placeholder="Add another skill (e.g. Tower crane operation)" className="flex-1 h-9 border border-gray-200 rounded-lg px-3 text-xs"/><button type="button" onClick={addCustomSkill} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">Add skill</button></div>
+            <p className="text-[11px] text-gray-400 mt-1.5">Pick from the list or type your own — custom skills are matched fuzzily against worker skills.</p>
+          </div>
           <label className="text-xs font-semibold">Annual Salary Range — Min (₹)<input value={draft.minSalary} onChange={e => setD('minSalary', e.target.value.replace(/\D/g, ''))} type="number" min="0" className={input}/></label>
           <label className="text-xs font-semibold">Annual Salary Range — Max (₹)<input value={draft.maxSalary} onChange={e => setD('maxSalary', e.target.value.replace(/\D/g, ''))} type="number" min="0" className={input}/></label>
           <label className="text-xs font-semibold">Salary Visibility<select value={draft.salaryVisibility} onChange={e => setD('salaryVisibility', e.target.value)} className={input}><option>Visible to all</option><option>Visible to matched only</option><option>Hidden</option></select></label>

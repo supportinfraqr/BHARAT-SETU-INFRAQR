@@ -2581,11 +2581,20 @@ def _handle_rozgar_apply(user, body):
             job = ContractorJob.objects.filter(pk=jid, is_active=True).first()
     if job is None:
         return None
-    req, _created = RozgarRequest.objects.get_or_create(
-        job=job, worker=user,
-        defaults={"contractor": job.contractor, "status": "PENDING",
-                  "notes": str(body.get("notes") or "")[:500]},
-    )
+    notes = str(body.get("notes") or "")[:500]
+    req = RozgarRequest.objects.filter(job=job, worker=user).order_by("-created_at").first()
+    if req is None:
+        req = RozgarRequest.objects.create(job=job, worker=user, contractor=job.contractor,
+                                           status="PENDING", notes=notes)
+    elif str(req.status).upper() in ("REJECTED", "CANCELLED", "EXPIRED"):
+        # Re-applying after a decline/expiry re-opens the application (and the
+        # posting becomes visible again in Available Jobs) instead of no-op'ing.
+        req.contractor = job.contractor
+        req.status = "PENDING"
+        req.responded_at = None
+        if notes:
+            req.notes = notes
+        req.save(update_fields=["contractor", "status", "responded_at", "notes", "updated_at"])
     # Applying also raises a site-specific binding request to the job's
     # contractor (worker-initiated consent). The contractor accepts it in
     # Binding Requests; the binding completes only after both sides consent.
@@ -2607,10 +2616,19 @@ def _handle_rozgar_respond(user, body):
     if req is None:
         return None
     status = str(body.get("status") or "").strip().upper()
-    mapping = {"HIRED": "ACCEPTED", "ACCEPTED": "ACCEPTED", "REJECTED": "REJECTED",
-               "CANCELLED": "CANCELLED", "PENDING": "PENDING"}
+    mapping = {"HIRED": "ACCEPTED", "ACCEPTED": "ACCEPTED", "SHORTLISTED": "SHORTLISTED",
+               "REJECTED": "REJECTED", "CANCELLED": "CANCELLED", "PENDING": "PENDING"}
     if status in mapping:
-        req.status = mapping[status]
+        mapped = mapping[status]
+        # Hiring a matched applicant also opens the worker<->contractor binding
+        # request (same flow as scanning the worker's QR), so it appears on both
+        # the worker's and the contractor's binding-request pages with the normal
+        # consent/permission flow. If the worker already has a live binding, the
+        # conflict is surfaced and the application is left unchanged.
+        if mapped == "ACCEPTED":
+            job = getattr(req, "job", None)
+            _contractor_binds_worker(user, req.worker, site=getattr(job, "site", None))
+        req.status = mapped
         req.responded_at = timezone.now()
         req.save(update_fields=["status", "responded_at", "updated_at"])
     return req.id
@@ -3166,6 +3184,101 @@ def _worker_requests_contractor(worker_user, contractor_user):
     return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
 
 
+def _contractor_binds_worker(contractor_user, worker_user, site=None):
+    """Contractor-initiated worker<->contractor binding.
+
+    Shared by the worker-QR scan (BSS_WORKER) and the Rozgar 'Hire & bind'
+    action, so both routes create the same PENDING request, consent state and
+    notification — and land on the worker's and contractor's binding-request
+    pages. Enforces the one-live-binding-per-worker rule and raises
+    PortalMutationError with a clear message on any rejection."""
+    from bss_core.models import WorkerContractorBinding
+
+    if worker_user is None or worker_user.role != "worker":
+        raise PortalMutationError("The selected worker credential is not valid.", 400)
+    if worker_user.id == contractor_user.id:
+        raise PortalMutationError("You cannot bind your own account.", 400)
+
+    # Resolve the site: the explicitly requested one (restricted to sites the
+    # contractor can legitimately use), else the contractor's default site, else
+    # any bound or approved-allotted site.
+    allowed_ids = _contractor_site_ids(contractor_user)
+    if site is not None and site.id not in allowed_ids:
+        site = None
+    cp = getattr(contractor_user, "contractor_profile", None)
+    if site is None and cp and cp.default_site_id and cp.default_site_id in allowed_ids:
+        site = cp.default_site
+    if site is None:
+        site = Site.objects.filter(id__in=allowed_ids).first()
+    if site is None:
+        raise PortalMutationError(
+            "No site available for this binding. Ask the employer to allot a site first.", 400)
+
+    if not _binding_enabled(worker_user) or not _binding_enabled(contractor_user):
+        raise PortalMutationError("Binding is disabled in one party's settings.", 403)
+
+    # One live binding per worker. A worker is always bound to a single site; to
+    # move them to a different site the current binding must be unbound first.
+    existing = (WorkerContractorBinding.objects
+                .filter(worker=worker_user, binding_status__in=("PENDING", "ACCEPTED"))
+                .select_related("site", "contractor")
+                .order_by("-created_at").first())
+    if existing is not None and not (existing.contractor_id == contractor_user.id
+                                     and existing.site_id == site.id):
+        cp_existing = getattr(existing.contractor, "contractor_profile", None)
+        cname = ""
+        if cp_existing:
+            cname = (cp_existing.contractor_name or cp_existing.trade_name or "").strip()
+        cname = cname or existing.contractor.username
+        site_name = (existing.site.site_name if existing.site else "") or "a site"
+        state = "already bound" if existing.binding_status == "ACCEPTED" else "has a pending binding request"
+        raise PortalMutationError(
+            f"This worker is {state} with {cname} at {site_name}. "
+            "Unbind the current binding before binding the worker to a different site.", 409)
+
+    binding = _request_worker_binding(worker_user, contractor_user, site, initiated_by="contractor")
+    if binding.binding_status == "ACCEPTED":
+        # Already bound to this contractor at this site — nothing to request.
+        return binding
+    binding.consent_contractor = True
+    binding.consent_method = "app"
+    # If the worker already consented (they applied / scanned the QR first), the
+    # contractor hiring completes the two-sided consent straight away.
+    if str(binding.initiated_by or "").lower() == "worker":
+        binding.consent_worker = True
+    if binding.consent_worker and binding.consent_contractor:
+        binding.binding_status = "ACCEPTED"
+        binding.accepted_at = timezone.now()
+        binding.save()
+        _sync_employment_from_binding(binding)
+        _create_notification(
+            user=binding.worker,
+            title="Binding approved",
+            body=f"Your binding with {payloads._notification_actor_name(contractor_user)} is active.",
+            notif_type="APPROVAL",
+            link="/worker/binding",
+        )
+        _create_notification(
+            user=contractor_user,
+            title="Worker bound successfully",
+            body=f"Worker {payloads._notification_actor_name(worker_user)} accepted binding request.",
+            notif_type="APPROVAL",
+            link="/contractor/qr/requests",
+        )
+        return binding
+    binding.binding_status = "PENDING"
+    binding.save()
+    _create_notification(
+        user=worker_user,
+        title="Binding request",
+        body=f"{payloads._notification_actor_name(contractor_user)} wants to bind you at "
+             f"{payloads._d(site.site_name) or 'their site'}. Approve to complete the binding.",
+        notif_type="APPROVAL",
+        link="/worker/binding",
+    )
+    return binding
+
+
 def _apply_binding_terms(binding, data):
     """Capture the offered terms (designation/department/shift/offered wage) at
     bind time. These drive the worker's Current Employment Details."""
@@ -3540,66 +3653,12 @@ def binding_scan(request):
         wi = WorkerIdentity.objects.filter(bss_worker_id=str(body.get("bssId") or "")).first()
         if wi is None:
             return Response({"error": "Unknown worker."}, status=status.HTTP_404_NOT_FOUND)
-        worker_user = wi.user
-        # A binding must connect two different roles.
-        if worker_user.role != "worker":
-            return Response({"error": "The scanned QR is not a worker credential."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        if worker_user.id == user.id:
-            return Response({"error": "You cannot bind your own account."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        # Resolve the site: explicit name (restricted to sites the contractor can
-        # legitimately use), else the contractor's default site, else any bound
-        # or approved-allotted site (only from an ACCEPTED employer binding).
-        allowed_ids = _contractor_site_ids(user)
         requested = str(body.get("site") or "").strip()
-        site = (Site.objects.filter(site_name__iexact=requested, id__in=allowed_ids).first()
-                if requested else None)
-        cp = getattr(user, "contractor_profile", None)
-        if site is None and cp and cp.default_site_id and cp.default_site_id in allowed_ids:
-            site = cp.default_site
-        if site is None:
-            site = Site.objects.filter(id__in=allowed_ids).first()
-        if site is None:
-            return Response({"error": "No site available for this binding. Ask the employer to allot a site first."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        if not _binding_enabled(worker_user) or not _binding_enabled(user):
-            return Response({"error": "Binding is disabled in one party's settings."},
-                            status=status.HTTP_403_FORBIDDEN)
-        # One live binding per worker. A worker is always bound to a single site;
-        # to move them to a different site the current binding must be unbound
-        # first — never silently re-pointed.
-        existing = (WorkerContractorBinding.objects
-                    .filter(worker=worker_user, binding_status__in=("PENDING", "ACCEPTED"))
-                    .select_related("site", "contractor")
-                    .order_by("-created_at").first())
-        if existing is not None and not (existing.contractor_id == user.id
-                                         and existing.site_id == site.id):
-            cp_existing = getattr(existing.contractor, "contractor_profile", None)
-            cname = ""
-            if cp_existing:
-                cname = (cp_existing.contractor_name or cp_existing.trade_name or "").strip()
-            cname = cname or existing.contractor.username
-            site_name = (existing.site.site_name if existing.site else "") or "a site"
-            state = "already bound" if existing.binding_status == "ACCEPTED" else "has a pending binding request"
-            return Response({
-                "error": (f"This worker is {state} with {cname} at {site_name}. "
-                          "Unbind the current binding before binding the worker to a different site.")},
-                status=status.HTTP_409_CONFLICT)
-        binding = _request_worker_binding(worker_user, user, site, initiated_by="contractor")
-        binding.binding_status = "PENDING"
-        binding.consent_contractor = True
-        binding.consent_worker = False
-        binding.consent_method = "app"
-        binding.save()
-        _create_notification(
-            user=worker_user,
-            title="Binding request",
-            body=f"{payloads._notification_actor_name(user)} wants to bind you at "
-                 f"{payloads._d(site.site_name) or 'their site'}. Approve to complete the binding.",
-            notif_type="APPROVAL",
-            link="/worker/binding",
-        )
+        requested_site = Site.objects.filter(site_name__iexact=requested).first() if requested else None
+        try:
+            binding = _contractor_binds_worker(user, wi.user, site=requested_site)
+        except PortalMutationError as exc:
+            return Response({"error": exc.message}, status=exc.status_code)
         return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
     else:
         return Response({"error": "Unsupported QR."}, status=status.HTTP_400_BAD_REQUEST)

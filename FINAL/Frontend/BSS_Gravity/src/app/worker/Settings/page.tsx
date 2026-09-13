@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, CheckCircle2, ChevronRight, Download, Eye, Globe2, KeyRound, LockKeyhole, MessageCircle, MonitorCog, PackageCheck, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { applyAccessibilityPrefs } from '@/components/accessibility/AccessibilityEffects';
 import ConsentPanel from '@/components/ConsentPanel';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -68,9 +69,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    document.documentElement.classList.toggle('bss-large-text', prefs.largeText);
-    document.documentElement.classList.toggle('bss-high-contrast', prefs.highContrast);
-    document.documentElement.classList.toggle('bss-reduce-motion', prefs.reduceMotion);
+    applyAccessibilityPrefs({ largeText: prefs.largeText, highContrast: prefs.highContrast, reduceMotion: prefs.reduceMotion });
   }, [prefs.largeText, prefs.highContrast, prefs.reduceMotion]);
 
   const updateSetting = async <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {

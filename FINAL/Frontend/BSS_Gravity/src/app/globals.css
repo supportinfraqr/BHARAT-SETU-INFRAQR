@@ -101,10 +101,31 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+/* Accessibility preferences (worker Settings → Accessibility). The classes are
+   applied to <html> app-wide by AccessibilityEffects; rem-based sizes only
+   scale when the root font-size changes. */
 html.bss-large-text { font-size: 18px; }
-html.bss-high-contrast { --foreground: #000; --color-bss-text-secondary: #26313a; --color-bss-border: #aab4bd; }
+
+html.bss-high-contrast {
+  --foreground: #000;
+  --color-bss-text-primary: #000;
+  --color-bss-text-secondary: #1f2937;
+  --color-bss-text-muted: #334155;
+  --color-bss-border: #94a3b8;
+}
 html.bss-high-contrast body { color: #000; }
-html.bss-high-contrast .border-gray-200 { border-color: #aab4bd; }
+/* Deepen the muted greys Tailwind emits for secondary text so copy stops
+   washing out, and strengthen the hairline borders/dividers. */
+html.bss-high-contrast .text-gray-300 { color: #475569; }
+html.bss-high-contrast .text-gray-400 { color: #334155; }
+html.bss-high-contrast .text-gray-500 { color: #1f2937; }
+html.bss-high-contrast .text-gray-600 { color: #111827; }
+html.bss-high-contrast .border-gray-100,
+html.bss-high-contrast .border-gray-200,
+html.bss-high-contrast .border-gray-300 { border-color: #94a3b8; }
+html.bss-high-contrast .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.bss-high-contrast .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #94a3b8; }
+
 html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-motion *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;

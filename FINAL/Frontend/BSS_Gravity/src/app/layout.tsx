@@ -29,7 +29,7 @@ export default async function RootLayout({
   const initialLocale = getLocale(initialLanguage);
 
   return (
-    <html lang={initialLocale.code} dir={initialLocale.dir} translate="no" className="h-full antialiased">
+    <html lang={initialLocale.code} dir={initialLocale.dir} translate="no" className="h-full antialiased" suppressHydrationWarning>
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-[var(--color-bss-bg)] text-[var(--color-bss-text-primary)]">
         <ClientProviders initialLanguage={initialLanguage}>
           {children}

@@ -1152,22 +1152,21 @@ def _worker_available_jobs(user):
     State, City, Designation, Experience, DOB limit, Description, View/Apply.
     """
     from bss_core.models import ContractorJob
+    from api import matching
 
+    # Hide only jobs with a *live* application (pending/shortlisted/hired). A
+    # rejected/cancelled/expired application frees the posting so the worker sees
+    # it again in Available Jobs and can re-apply.
     applied_job_ids = set()
     if hasattr(user, "rozgar_applications"):
-        applied_job_ids = set(user.rozgar_applications.values_list("job_id", flat=True))
+        applied_job_ids = set(
+            user.rozgar_applications
+            .filter(status__in=("PENDING", "SHORTLISTED", "ACCEPTED"))
+            .values_list("job_id", flat=True)
+        )
 
-    worker_skills = set()
-    if hasattr(user, "worker_skills"):
-        worker_skills = {str(getattr(s, "name", "") or "").strip().lower() for s in user.worker_skills.all()}
-    primary = getattr(getattr(user, "skills", None), "primary_skill", "") or ""
-    if primary:
-        worker_skills.add(str(primary).strip().lower())
-
-    addr = getattr(user, "worker_address", None)
-    worker_state = str(
-        getattr(addr, "current_state", "") or getattr(addr, "permanent_state", "") or ""
-    ).strip().lower()
+    # Compute the worker's fuzzy-match profile once; reuse it for every posting.
+    profile = matching.worker_profile(user)
 
     qs = (
         ContractorJob.objects.filter(is_active=True)
@@ -1183,14 +1182,7 @@ def _worker_available_jobs(user):
         site = j.site
         state = _d(j.state or (site.state if site else ""))
         city = _d(j.city or (site.city if site else ""))
-        skills = {str(s).strip().lower() for s in (j.skills or [])}
-        if not worker_skills or not skills:
-            # Nothing to compare against -> don't hide the posting.
-            match = True
-        else:
-            match = bool(worker_skills & skills) or bool(
-                worker_state and state and worker_state == state.strip().lower()
-            )
+        score = matching.score(user, j, profile=profile)
         posted = j.created_at.strftime("%d %b %Y") if j.created_at else ""
         raw_wage = _d(j.wage_offered)
         try:
@@ -1212,8 +1204,11 @@ def _worker_available_jobs(user):
             "experience": _d(j.experience),
             "dobLimit": _d(j.dob_limit),
             "vacancies": j.vacancies or 1,
-            "matchBadge": bool(match),
+            "matchScore": score,
+            "matchBadge": score >= 50,
         })
+    # Best matches first so the worker sees the most relevant postings up top.
+    rows.sort(key=lambda r: r["matchScore"], reverse=True)
     return rows
 
 
@@ -1987,23 +1982,31 @@ def _contractor_gate_passes(user):
 
 
 def _contractor_applications(user):
+    from api import matching
+
     rows = []
     reqs = user.rozgar_requests.all()[:20] if hasattr(user, "rozgar_requests") else []
+    # RozgarRequest.status is stored uppercase; the contractor UI (shortlist /
+    # hire & bind / reject buttons) matches on the display labels below.
+    status_map = {"PENDING": "Pending", "SHORTLISTED": "Shortlisted", "ACCEPTED": "Hired",
+                  "REJECTED": "Rejected", "CANCELLED": "Cancelled", "EXPIRED": "Expired"}
     for r in reqs:
         job = getattr(r, "job", None)
         wi = WorkerIdentity.objects.filter(user=r.worker).first()
+        profile = matching.worker_profile(r.worker)
+        location = ", ".join(part for part in (profile.get("city"), profile.get("state")) if part)
         rows.append({
-            "id": r.id,
+            "id": str(r.id),
             "workerName": _d(wi.name if wi else r.worker.username),
             "workerId": _d(wi.bss_worker_id if wi else ""),
             "employer": "",
-            "trade": _d(job.job_title) if job else "",
-            "experience": "",
+            "trade": _d(profile.get("trade") or (job.job_title if job else "")),
+            "experience": (f"{profile['years']:g} yrs" if profile.get("years") else ""),
             "expectedWage": _num(job.wage_offered if job else 0),
-            "location": "",
-            "status": _d(r.status),
+            "location": _d(location),
+            "status": status_map.get(str(r.status).upper(), "Pending"),
             "dateApplied": _dts(r.requested_at),
-            "matchScore": 0,
+            "matchScore": matching.score(r.worker, job, profile=profile),
         })
     return rows
 
