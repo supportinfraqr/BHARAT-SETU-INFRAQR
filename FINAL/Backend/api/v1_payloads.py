@@ -3039,6 +3039,16 @@ def build_notifications(user):
                  f"{_notification_actor_name(b.contractor)} wants to engage you"
                  f"{' at ' + _d(b.site.site_name) if b.site else ''}.",
                  "/worker/binding", b.created_at, priority="high", entity_id=str(b.id))
+        # Contractor asked to unbind — worker must confirm.
+        for b in (WorkerContractorBinding.objects
+                  .filter(worker=user, binding_status="ACCEPTED",
+                          unbind_requested_at__isnull=False, unbind_consent_worker=False,
+                          unbind_consent_contractor=True)
+                  .select_related("contractor", "site").order_by("-unbind_requested_at")[:10]):
+            emit(f"wc-unbind-{b.id}", "Approvals", "Unbind requested",
+                 f"{_notification_actor_name(b.contractor)} wants to end your binding"
+                 f"{' at ' + _d(b.site.site_name) if b.site else ''}. Confirm to unbind.",
+                 "/worker/binding", b.unbind_requested_at, priority="high", entity_id=str(b.id))
         for r in (RozgarRequest.objects.filter(worker=user, status="PENDING")
                   .select_related("job").order_by("-created_at")[:10]):
             emit(f"rozgar-{r.id}", "Jobs", "New job offer",
@@ -3097,6 +3107,25 @@ def build_notifications(user):
                  f"{_notification_actor_name(a.binding.employer)} proposed "
                  f"{_d(a.site.site_name) if a.site else 'a site'} for your approval.",
                  "/contractor/qr/requests", a.created_at, priority="high", entity_id=str(a.id))
+        # Employer asked to unbind a CE binding — contractor must confirm.
+        for b in (ContractorEmployerBinding.objects
+                  .filter(contractor=user, binding_status="ACCEPTED",
+                          unbind_requested_at__isnull=False, unbind_consent_contractor=False,
+                          unbind_consent_employer=True)
+                  .select_related("employer").order_by("-unbind_requested_at")[:10]):
+            emit(f"ce-unbind-{b.id}", "Approvals", "Unbind requested",
+                 f"{_notification_actor_name(b.employer)} wants to end your binding. Confirm to unbind.",
+                 "/contractor/qr/requests", b.unbind_requested_at, priority="high", entity_id=str(b.id))
+        # Worker asked to unbind a WC binding — contractor must confirm.
+        for b in (WorkerContractorBinding.objects
+                  .filter(contractor=user, binding_status="ACCEPTED",
+                          unbind_requested_at__isnull=False, unbind_consent_contractor=False,
+                          unbind_consent_worker=True)
+                  .select_related("worker", "site").order_by("-unbind_requested_at")[:10]):
+            emit(f"wc-unbind-{b.id}", "Approvals", "Unbind requested",
+                 f"{_notification_actor_name(b.worker)} wants to end their binding"
+                 f"{' at ' + _d(b.site.site_name) if b.site else ''}. Confirm to unbind.",
+                 "/contractor/qr/requests", b.unbind_requested_at, priority="high", entity_id=str(b.id))
         worker_ids = list(WorkerContractorBinding.objects
                           .filter(contractor=user).values_list("worker_id", flat=True))
         for g in (WorkerGrievance.objects.filter(worker_id__in=worker_ids)
@@ -3131,6 +3160,15 @@ def build_notifications(user):
                  f"{_notification_actor_name(a.binding.contractor)} requested "
                  f"{_d(a.site.site_name) if a.site else 'a site'}.",
                  "/employer/qr/requests", a.created_at, priority="high", entity_id=str(a.id))
+        # Contractor asked to unbind — employer must confirm.
+        for b in (ContractorEmployerBinding.objects
+                  .filter(employer=user, binding_status="ACCEPTED",
+                          unbind_requested_at__isnull=False, unbind_consent_employer=False,
+                          unbind_consent_contractor=True)
+                  .select_related("contractor").order_by("-unbind_requested_at")[:10]):
+            emit(f"ce-unbind-{b.id}", "Approvals", "Unbind requested",
+                 f"{_notification_actor_name(b.contractor)} wants to end the binding. Confirm to unbind.",
+                 "/employer/qr/requests", b.unbind_requested_at, priority="high", entity_id=str(b.id))
         for g in (WorkerGatePass.objects.filter(site__employer=user, status="PENDING")
                   .select_related("worker", "site").order_by("-created_at")[:10]):
             emit(f"gp-{g.id}", "Approvals", "Gate pass approval pending",

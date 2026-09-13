@@ -5,6 +5,7 @@ import { Building2, Camera, CheckCircle2, Handshake, Home, Link2, ScanLine, Shie
 import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
 import ScanFrame from "@/components/qr/ScanFrame";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus } from "@/lib/qrScanner";
 
@@ -28,6 +29,7 @@ export default function ContractorScanPage() {
   const [unbindRequested, setUnbindRequested] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => () => controls.current?.stop(), []);
 
@@ -169,7 +171,7 @@ export default function ContractorScanPage() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setUnbindRequested(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setUnbindRequested(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
   // A live binding unlocks the worker's verified identity details for this contractor.
   const boundWorker = entity ? contractor.workers.find(w => w.bssId === entity.bssId) : undefined;
 
@@ -242,7 +244,7 @@ export default function ContractorScanPage() {
                   ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                   : requestSent
                     ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
-                    : <button onClick={sendBinding} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                    : <button onClick={() => setConfirmOpen(true)} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
             </div>
           ):result?(
             <div className="space-y-5">
@@ -254,5 +256,25 @@ export default function ContractorScanPage() {
         </div>
       </section>
     </div>
+
+    <ConfirmDialog
+      open={confirmOpen && !!entity}
+      tone="positive"
+      title="Confirm binding request"
+      description={entity?.kind === 'worker'
+        ? `A binding request will be sent to ${entity.name}. Binding completes only after the worker approves it.`
+        : scanned?.type === 'BSS_SITE'
+          ? 'A binding request will be sent to this site\u2019s principal employer, requesting this site. The employer approves the binding and the site.'
+          : `A binding request will be sent to ${entity?.name ?? 'this employer'}. The employer approves the binding, then allots sites.`}
+      details={entity ? [
+        { label: entity.kind === 'worker' ? 'Worker' : scanned?.type === 'BSS_SITE' ? 'Site' : 'Employer', value: entity.name },
+        { label: 'BSS ID', value: entity.bssId || '—' },
+        { label: 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
+        { label: 'Designation', value: entity.designation || '—' },
+      ] : []}
+      confirmLabel="Send binding request"
+      onCancel={() => setConfirmOpen(false)}
+      onConfirm={() => { setConfirmOpen(false); void sendBinding(); }}
+    />
   </div>;
 }

@@ -26,8 +26,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     let active = true;
-    fetch('/api/notifications')
-      .then(async response => {
+    const load = async () => {
+      try {
+        const response = await fetch('/api/notifications', { cache: 'no-store' });
         if (response.status === 401) {
           if (active) router.push('/?reason=session');
           return;
@@ -35,10 +36,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const result = await response.json() as { data?: WorkerNotification[] };
         if (!response.ok || !result.data) throw new Error('Notification feed could not be loaded.');
         if (active) setNotifications(result.data);
-      })
-      .catch(() => { if (active) setNotifications([]); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      } catch {
+        if (active) setNotifications([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    void load();
+    // Refresh periodically and when the tab regains focus so new requests
+    // (bindings, site permissions, unbind confirmations) appear without a reload.
+    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 30000);
+    const onFocus = () => void load();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
   }, [portalScope, router]);
 
   const updateNotification = useCallback(async (id: string, action: NotificationUpdate) => {

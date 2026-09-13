@@ -7,6 +7,7 @@ import { useWorker } from "@/contexts/WorkerContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 import ScanFrame from "@/components/qr/ScanFrame";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus } from "@/lib/qrScanner";
 
@@ -32,6 +33,7 @@ export default function QRScannerWorkflow() {
   const [selectedSite, setSelectedSite] = useState("");
   const [siteDraft, setSiteDraft] = useState("");
   const [bindSent, setBindSent] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   // A worker can only be bound to one contractor at a time — while bound, a new
   // binding request is blocked until they unbind.
   const boundContractor = (worker.employment.status === 'Active' && worker.employment.contractor?.trim()) ? worker.employment.contractor : null;
@@ -102,12 +104,12 @@ export default function QRScannerWorkflow() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
 
   const requestSendBinding = () => {
     if (!siteValue) { setMessage("Choose the site where you will work before sending the binding request."); return; }
     if (boundContractor) { setState("error"); setMessage(`You are already bound to ${boundContractor}. Unbind first before binding with another contractor.`); return; }
-    sendBinding();
+    setConfirmOpen(true);
   };
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
@@ -168,5 +170,19 @@ export default function QRScannerWorkflow() {
       </section>
     </div>
 
+    <ConfirmDialog
+      open={confirmOpen && !!contractor}
+      tone="positive"
+      title="Confirm binding request"
+      description={`A binding request will be sent to ${contractor?.name ?? 'this contractor'} for ${siteValue || 'the selected site'}. Binding completes only after the contractor and the principal employer approve it.`}
+      details={contractor ? [
+        { label: 'Contractor', value: contractor.name },
+        { label: 'Contractor ID', value: contractor.bssId },
+        { label: 'Site', value: siteValue || '—' },
+      ] : []}
+      confirmLabel="Send binding request"
+      onCancel={() => setConfirmOpen(false)}
+      onConfirm={() => { setConfirmOpen(false); sendBinding(); }}
+    />
   </div>;
 }
