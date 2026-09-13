@@ -269,21 +269,26 @@ export default function WorkerProfilePage() {
     const fd = new FormData(form);
 
     // Block saving until the required fields on the active tab are complete.
-    const requiredErrors: string[] = [];
+    const requiredErrors: { message: string; selector: string }[] = [];
     if (activeTab === 'personal') {
-      if (!String(fd.get('identity.placeOfBirth') ?? '').trim()) requiredErrors.push('Place of Birth is required.');
+      if (!String(fd.get('identity.placeOfBirth') ?? '').trim()) requiredErrors.push({ message: 'Place of Birth is required.', selector: '[name="identity.placeOfBirth"]' });
     }
     if (activeTab === 'family') {
       nominees.forEach((n, i) => {
-        if (!n.name.trim()) requiredErrors.push(`Nominee ${i + 1} — name is required.`);
-        if (!n.relationship.trim()) requiredErrors.push(`Nominee ${i + 1} — relationship is required.`);
+        if (!n.name.trim()) requiredErrors.push({ message: `Nominee ${i + 1} — name is required.`, selector: `[data-nominee-name="${n.id}"]` });
+        if (!n.relationship.trim()) requiredErrors.push({ message: `Nominee ${i + 1} — relationship is required.`, selector: `[data-nominee-relationship="${n.id}"]` });
       });
     }
     if (requiredErrors.length) {
       setShowSuccess(false);
       setSaveAttempted(true);
-      setProfileError(`Please complete the required fields before saving — ${requiredErrors.join(' ')}`);
-      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+      setProfileError(`Please complete the required fields before saving — ${requiredErrors.map(e => e.message).join(' ')}`);
+      // Scroll to (and focus) the first invalid field so it's obvious what's missing.
+      const target = requiredErrors.map(e => form.querySelector(e.selector)).find(Boolean) as HTMLElement | undefined;
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.setTimeout(() => target.focus?.(), 300);
+      }
       return;
     }
 
@@ -633,11 +638,11 @@ export default function WorkerProfilePage() {
                       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-4">
                         <div className="lg:col-span-1">
                           <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Name <span className="text-[#FF3B30]">*</span></label>
-                          <input type="text" value={n.name} onChange={e => updateNominee(n.id, { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.name.trim() ? 'border-red-400' : 'border-black/10'}`}/>
+                          <input type="text" data-nominee-name={n.id} value={n.name} onChange={e => updateNominee(n.id, { name: e.target.value })} placeholder="Nominee full name" className={`w-full bg-white border rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] ${saveAttempted && !n.name.trim() ? 'border-red-400' : 'border-black/10'}`}/>
                         </div>
                         <div>
                           <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Relationship with you <span className="text-[#FF3B30]">*</span></label>
-                          <select value={n.relationship} onChange={e => updateNominee(n.id, { relationship: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                          <select data-nominee-relationship={n.id} value={n.relationship} onChange={e => updateNominee(n.id, { relationship: e.target.value })} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
                             {BssTaxonomies.NomineeRelationship.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
                         </div>
