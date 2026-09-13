@@ -17,13 +17,17 @@ export async function POST(request: Request) {
     if (!Number.isInteger(bindingId) || bindingId <= 0) {
       return NextResponse.json({ error: 'Binding ID is required.' }, { status: 400 });
     }
-    if (!['approve-binding', 'reject', 'unbind'].includes(action)) {
+    if (!['approve-binding', 'approve-site', 'reject-site', 'request-site', 'reject', 'unbind'].includes(action)) {
       return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }
     const config = getRuntimeConfig();
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/contractor/binding-requests/${bindingId}/action`, session, {
       method: 'POST',
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({
+        action,
+        siteId: Number(body.siteId) || undefined,
+        siteIds: Array.isArray(body.siteIds) ? body.siteIds.map(Number).filter(Number.isInteger) : undefined,
+      }),
     });
     return NextResponse.json(result);
   } catch (error) {

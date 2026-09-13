@@ -3088,6 +3088,15 @@ def build_notifications(user):
                  f"{_notification_actor_name(b.worker)} has a pending binding"
                  f"{' at ' + _d(b.site.site_name) if b.site else ''}.",
                  "/contractor/qr/requests", b.created_at, priority="high", entity_id=str(b.id))
+        # Sites an employer has proposed that the contractor must approve.
+        for a in (ContractorSiteAllotment.objects
+                  .filter(binding__contractor=user, binding__binding_status="ACCEPTED",
+                          status="PENDING", source="employer_allot")
+                  .select_related("binding__employer", "site").order_by("-created_at")[:10]):
+            emit(f"site-perm-{a.id}", "Sites", "Site permission requested",
+                 f"{_notification_actor_name(a.binding.employer)} proposed "
+                 f"{_d(a.site.site_name) if a.site else 'a site'} for your approval.",
+                 "/contractor/qr/requests", a.created_at, priority="high", entity_id=str(a.id))
         worker_ids = list(WorkerContractorBinding.objects
                           .filter(contractor=user).values_list("worker_id", flat=True))
         for g in (WorkerGrievance.objects.filter(worker_id__in=worker_ids)
@@ -3113,6 +3122,15 @@ def build_notifications(user):
             emit(f"ce-binding-{b.id}", "Approvals", "New contractor binding request",
                  f"{_notification_actor_name(b.contractor)} has requested to be bound to your organisation.",
                  "/employer/qr/requests", b.created_at, priority="high", entity_id=str(b.id))
+        # Sites a contractor has requested that the employer must approve.
+        for a in (ContractorSiteAllotment.objects
+                  .filter(binding__employer=user, binding__binding_status="ACCEPTED",
+                          status="PENDING", source="contractor_request")
+                  .select_related("binding__contractor", "site").order_by("-created_at")[:10]):
+            emit(f"site-perm-{a.id}", "Sites", "Site permission requested",
+                 f"{_notification_actor_name(a.binding.contractor)} requested "
+                 f"{_d(a.site.site_name) if a.site else 'a site'}.",
+                 "/employer/qr/requests", a.created_at, priority="high", entity_id=str(a.id))
         for g in (WorkerGatePass.objects.filter(site__employer=user, status="PENDING")
                   .select_related("worker", "site").order_by("-created_at")[:10]):
             emit(f"gp-{g.id}", "Approvals", "Gate pass approval pending",
