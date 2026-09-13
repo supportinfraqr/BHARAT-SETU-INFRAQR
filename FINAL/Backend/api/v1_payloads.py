@@ -246,14 +246,14 @@ def _worker_employment_section(user, identity):
             officer_contact = getattr(site, "officer_contact", "") or ""
         if binding.contractor:
             cp = getattr(binding.contractor, "contractor_profile", None)
-            contractor_name = _d(cp.contractor_name if cp else "")
+            contractor_name = _org_name(binding.contractor)
             contractor_code = _bss_contractor_code(binding.contractor.id) if binding.contractor else ""
             contractor_contact = _d(getattr(cp, "mobile", "") or getattr(cp, "contact_person", "") if cp else "")
             contractor_email = _d(getattr(cp, "email", "") if cp else "")
             contractor_lin = _d(getattr(cp, "lin", "") if cp else "")
         if binding.site and binding.site.employer:
             emp_profile = getattr(binding.site.employer, "employer_profile", None)
-            employer_name = _d(emp_profile.employer_name if emp_profile else "")
+            employer_name = _org_name(binding.site.employer)
             employer_code = _bss_employer_code(binding.site.employer.id) if binding.site.employer else ""
             employer_industry = _d(getattr(emp_profile, "industry", "") if emp_profile else "")
             employer_email = _d(getattr(emp_profile, "email", "") if emp_profile else "")
@@ -1244,17 +1244,30 @@ def _binding_row(b):
     site = b.site
     employer_name = ""
     if site and site.employer:
-        ep = getattr(site.employer, "employer_profile", None)
-        employer_name = _d(ep.employer_name if ep else site.employer.username)
+        employer_name = _org_name(site.employer)
     contractor = b.contractor
     contractor_name = ""
     contractor_code = ""
     contractor_lin = ""
     if contractor:
         cp = getattr(contractor, "contractor_profile", None)
-        contractor_name = _d(cp.contractor_name if cp else contractor.username)
+        contractor_name = _org_name(contractor)
         contractor_code = _d(cp.contractor_code if cp else _bss_contractor_code(contractor.id))
         contractor_lin = _d(getattr(cp, "lin", ""))
+    # A live binding unlocks the contractor's business identity for the worker.
+    contractor_details = {}
+    if contractor and str(b.binding_status).upper() == "ACCEPTED":
+        cp = getattr(contractor, "contractor_profile", None)
+        contractor_details = {
+            "name": contractor_name,
+            "code": contractor_code,
+            "tradeName": _d(getattr(cp, "trade_name", "") if cp else ""),
+            "lin": contractor_lin,
+            "contactPerson": _d(getattr(cp, "contact_person", "") if cp else ""),
+            "email": _d(getattr(cp, "email", "") if cp else ""),
+            "state": _d(getattr(cp, "state", "") if cp else ""),
+            "address": _d(getattr(cp, "address", "") if cp else ""),
+        }
     wi = WorkerIdentity.objects.filter(user=b.worker).first()
     worker_name = _d(wi.name if wi else b.worker.username)
     worker_bss = _d(wi.bss_worker_id if wi else _bss_worker_code(b.worker_id))
@@ -1272,6 +1285,7 @@ def _binding_row(b):
         "contractor": contractor_name,
         "contractorCode": contractor_code,
         "lin": contractor_lin,
+        "contractorDetails": contractor_details,
         "employer": employer_name,
         "site": site.site_name if site else "",
         "siteId": b.site_id,
@@ -1322,9 +1336,9 @@ def _ce_binding_row(b):
         "ref": f"CEB-2026-{b.id:03d}",
         "initiatedBy": initiated_by,
         "acceptedBy": accepted_by,
-        "contractor": _d(cp.contractor_name if cp else "", b.contractor.username),
+        "contractor": _org_name(b.contractor),
         "contractorCode": _d(cp.contractor_code if cp else "", _bss_contractor_code(b.contractor_id)),
-        "employer": _d(ep.employer_name if ep else "", b.employer.username),
+        "employer": _org_name(b.employer),
         "employerCode": _d(ep.employer_code if ep else "", _bss_employer_code(b.employer_id)),
         "status": status_map.get(str(b.binding_status).upper(), "Pending"),
         "consentContractor": bool(b.consent_contractor),
@@ -1615,8 +1629,8 @@ def build_worker_portal(user):
 def _contractor_identity(user):
     cp = getattr(user, "contractor_profile", None)
     return {
-        "name": _d(cp.contractor_name if cp else ""),
-        "company": _d(cp.trade_name if cp else ""),
+        "name": _org_name(user),
+        "company": _d(cp.trade_name if cp else "") or _org_name(user),
         "bssId": _d(cp.contractor_code if cp else _bss_contractor_code(user.id)),
         "incorpDate": _dts(cp.incorporation_date if cp else None),
         "entity": _d(cp.constitution if cp else ""),
@@ -1645,13 +1659,36 @@ def _contractor_principal_employer(user):
     if binding and binding.site and binding.site.employer:
         ep = getattr(binding.site.employer, "employer_profile", None)
         return {
-            "name": _d(ep.employer_name if ep else binding.site.employer.username),
+            "name": _org_name(binding.site.employer),
             "code": _d(ep.employer_code if ep else ""),
             "industry": _d(ep.industry if ep else ""),
             "email": _d(ep.email if ep else ""),
             "lin": _d(ep.lin if ep else ""),
         }
     return {"name": "", "code": "", "industry": "", "email": "", "lin": ""}
+
+
+def _org_name(user_obj):
+    """Best display name for an organisation/worker account — never blank.
+
+    Falls back trade_name -> legal name -> worker name -> username so site rows,
+    binding rows and employment cards never render an empty party name."""
+    if user_obj is None:
+        return ""
+    cp = getattr(user_obj, "contractor_profile", None)
+    if cp:
+        name = _d(cp.contractor_name) or _d(cp.trade_name)
+        if name:
+            return name
+    ep = getattr(user_obj, "employer_profile", None)
+    if ep:
+        name = _d(ep.employer_name) or _d(ep.trade_name)
+        if name:
+            return name
+    wi = getattr(user_obj, "worker_identity", None)
+    if wi and _d(wi.name):
+        return _d(wi.name)
+    return _d(getattr(user_obj, "username", ""))
 
 
 def _default_site_info(profile):
@@ -1669,9 +1706,7 @@ def _contractor_sites(user):
     sites = Site.objects.filter(id__in=site_ids)
     rows = []
     for s in sites:
-        emp_name = ""
-        ep = getattr(s.employer, "employer_profile", None)
-        emp_name = _d(ep.employer_name if ep else s.employer.username)
+        emp_name = _org_name(s.employer)
         rows.append({
             "id": s.id, "code": _d(s.site_code), "name": _d(s.site_name),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
@@ -1697,7 +1732,7 @@ def _contractor_workers(user):
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "mobile": _d(wi.mobile_number if wi else ""),
             "site": site.site_name if site else "",
-            "employer": _d(emp.employer_name if emp else ""),
+            "employer": _org_name(b.site.employer) if b.site else "",
             "designation": _d(b.designation),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": 0,
@@ -1875,7 +1910,7 @@ def _contractor_employers(user):
             ep = getattr(e, "employer_profile", None)
             employers[e.id] = {
                 "id": e.id,
-                "name": _d(ep.employer_name if ep else e.username),
+                "name": _org_name(e),
                 "employerId": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
                 "sites": [],
                 "status": "ACTIVE",
@@ -1887,7 +1922,7 @@ def _contractor_employers(user):
         ep = getattr(e, "employer_profile", None)
         employers[e.id] = {
             "id": e.id,
-            "name": _d(ep.employer_name if ep else e.username),
+            "name": _org_name(e),
             "employerId": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
             "sites": [],
             "status": "ACTIVE",
@@ -2112,7 +2147,7 @@ def _contractor_binding_requests(user):
         sites = [a.site.site_name for a in e.allotments.all() if a.site and a.status == "APPROVED"]
         rows.append({
             "id": f"ce-{e.id}", "bindingId": e.id, "type": "Employer",
-            "entityName": _d(ep.employer_name if ep else "", e.employer.username),
+            "entityName": _org_name(e.employer),
             "bssId": _d(ep.employer_code if ep else "", _bss_employer_code(e.employer_id)),
             "site": ", ".join(sites) if sites else "Sites to be allotted",
             "allotments": [{
@@ -2123,7 +2158,7 @@ def _contractor_binding_requests(user):
                            "REJECTED": "Rejected"}.get(str(a.status).upper(), "Pending"),
                 "source": _d(a.source),
             } for a in e.allotments.all()],
-            "employer": _d(ep.employer_name if ep else "", e.employer.username),
+            "employer": _org_name(e.employer),
             "designation": "Principal employer binding",
             "wage": 0,
             "requestedOn": _dts(e.created_at),
@@ -2524,8 +2559,8 @@ def build_contractor_portal(user):
 def _employer_identity(user):
     ep = getattr(user, "employer_profile", None)
     return {
-        "name": _d(ep.employer_name if ep else ""),
-        "company": _d(ep.trade_name if ep else ""),
+        "name": _org_name(user),
+        "company": _d(ep.trade_name if ep else "") or _org_name(user),
         "bssId": _d(ep.employer_code if ep else _bss_employer_code(user.id)),
         "entity": _d(ep.entity_class if ep else ""),
         "verified": _d(ep.verification_status if ep else "PENDING") == "APPROVED",

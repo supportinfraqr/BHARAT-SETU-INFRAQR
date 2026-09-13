@@ -5,6 +5,7 @@ import { Building2, Clock3, UserRoundCheck } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SitePermissionsDialog, { type SitePermissionStatus } from '@/components/ui/SitePermissionsDialog';
+import BindingSitesExplainer from '@/components/qr/BindingSitesExplainer';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerApproval } from '@/types/portal';
 
@@ -123,6 +124,7 @@ export default function EmployerQrBindingRequestsPage() {
 
   return <div className="space-y-6">
     <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">Binding Requests</h1><p className="text-sm text-gray-500 mt-1">Manage contractor and worker requests to bind to your organisation and sites.</p></header>
+    <BindingSitesExplainer/>
     <div className="grid grid-cols-3 gap-3"><Metric label="Pending" value={rows.filter(r => r.status === 'Pending').length} icon={Clock3} tone="bg-orange-50 text-orange-700"/><Metric label="Contractors" value={new Set(rows.filter(r => r.entityType === 'Contractor').map(r => r.entityId || r.bssId)).size} icon={Building2} tone="bg-blue-50 text-blue-700"/><Metric label="Workers" value={new Set(rows.filter(r => r.entityType === 'Worker').map(r => r.entityId || r.bssId)).size} icon={UserRoundCheck} tone="bg-green-50 text-green-700"/></div>
     {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
     {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}

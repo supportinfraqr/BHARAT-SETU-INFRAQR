@@ -22,6 +22,7 @@ type BindingRequest = {
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled';
   initiatedBy?: string;
   acceptedBy?: string;
+  contractorDetails?: { name: string; code: string; tradeName: string; lin: string; contactPerson: string; email: string; state: string; address: string };
   consentWorker?: boolean;
   consentContractor?: boolean;
   unbindRequested?: boolean;
@@ -48,6 +49,7 @@ export default function BindingRequestsPage() {
     status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
     initiatedBy: String(req.initiatedBy || ''),
     acceptedBy: String(req.acceptedBy || ''),
+    contractorDetails: req.contractorDetails,
     consentWorker: Boolean(req.consentWorker),
     consentContractor: Boolean(req.consentContractor),
     unbindRequested: Boolean(req.unbindRequested),
@@ -166,6 +168,19 @@ export default function BindingRequestsPage() {
             <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.designation}</dd></div>
             <div><dt className="text-gray-400">Offered wage</dt><dd className="font-semibold text-green-700 mt-0.5">{req.wage}</dd></div>
           </dl>
+
+          {req.status === 'Accepted' && req.contractorDetails && (
+            <div className="mt-4 rounded-xl border border-green-100 bg-green-50/40 p-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-green-700 mb-2">Contractor details — unlocked by your binding</p>
+              <dl className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                <div><dt className="text-gray-400">Trade name</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.tradeName || '—'}</dd></div>
+                <div><dt className="text-gray-400">Contact person</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.contactPerson || '—'}</dd></div>
+                <div><dt className="text-gray-400">Email</dt><dd className="font-semibold text-gray-800 mt-0.5 break-all">{req.contractorDetails.email || '—'}</dd></div>
+                <div><dt className="text-gray-400">State</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.state || '—'}</dd></div>
+                <div className="col-span-2"><dt className="text-gray-400">Registered address</dt><dd className="font-semibold text-gray-800 mt-0.5">{req.contractorDetails.address || '—'}</dd></div>
+              </dl>
+            </div>
+          )}
 
           {req.status === 'Pending' && (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">

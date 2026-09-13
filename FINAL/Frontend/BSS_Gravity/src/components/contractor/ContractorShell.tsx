@@ -17,7 +17,7 @@ const groups = [
   { key:'nav.master', icon:Database, items:[['nav.gatePass','/contractor/gate-pass'],['nav.rozgar','/contractor/rozgar'],['nav.leaveApprovals','/contractor/leave'],['nav.siteCalendar','/contractor/calendar'],['nav.compliance','/contractor/compliance'],['nav.workerMaster','/contractor/workers'],['nav.workerCompliance','/contractor/worker-compliance'],['nav.skills','/contractor/skills'],['nav.salaries','/contractor/salaries'],['nav.workerBenefits','/contractor/benefits'],['nav.submissions','/contractor/submissions']] },
   { key:'nav.operations', icon:Briefcase, items:[['nav.payroll','/contractor/payroll'],['nav.advances','/contractor/advances'],['nav.grievanceCentre','/contractor/grievances']] },
   { key:'nav.reports', icon:BarChart2, items:[['nav.complianceReport','/contractor/compliance-report']] },
-  { key:'nav.qrSystem', icon:ScanLine, items:[['nav.myWorkers','/contractor/qr/workers'],['nav.myEmployers','/contractor/qr/employers'],['nav.bindingRequestsCentre','/contractor/qr/requests'],['nav.idCard','/contractor/idcard'],['nav.scanQr','/contractor/scan']] },
+  { key:'nav.qrSystem', icon:ScanLine, items:[['nav.mySites','/contractor/qr/sites'],['nav.myWorkers','/contractor/qr/workers'],['nav.myEmployers','/contractor/qr/employers'],['nav.bindingRequestsCentre','/contractor/qr/requests'],['nav.idCard','/contractor/idcard'],['nav.scanQr','/contractor/scan']] },
 ] as const;
 
 export default function ContractorShell({ children }: { children:React.ReactNode }) {
