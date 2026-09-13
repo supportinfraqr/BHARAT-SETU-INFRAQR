@@ -3000,6 +3000,15 @@ def _request_worker_binding(worker, contractor, site, **defaults):
         raise PortalMutationError("A binding must connect a worker and a contractor.", 400)
     binding = _active_worker_binding(worker, contractor, site)
     if binding is None:
+        # A worker may hold only one live binding. Any other live binding must be
+        # unbound before the worker can be bound to a different site.
+        other = (WorkerContractorBinding.objects
+                 .filter(worker=worker, binding_status__in=("PENDING", "ACCEPTED"))
+                 .exclude(contractor=contractor, site=site)
+                 .first())
+        if other is not None:
+            raise PortalMutationError(
+                "This worker already has an active binding at another site. Unbind it before binding to a different site.", 409)
         binding = WorkerContractorBinding.objects.create(
             worker=worker, contractor=contractor, site=site,
             binding_status="PENDING", **defaults)
@@ -3323,9 +3332,26 @@ def binding_scan(request):
         if not _binding_enabled(worker_user) or not _binding_enabled(user):
             return Response({"error": "Binding is disabled in one party's settings."},
                             status=status.HTTP_403_FORBIDDEN)
-        if WorkerContractorBinding.objects.filter(worker=worker_user, binding_status="ACCEPTED").exists():
-            return Response({"error": "This worker is already bound to a contractor."},
-                            status=status.HTTP_409_CONFLICT)
+        # One live binding per worker. A worker is always bound to a single site;
+        # to move them to a different site the current binding must be unbound
+        # first — never silently re-pointed.
+        existing = (WorkerContractorBinding.objects
+                    .filter(worker=worker_user, binding_status__in=("PENDING", "ACCEPTED"))
+                    .select_related("site", "contractor")
+                    .order_by("-created_at").first())
+        if existing is not None and not (existing.contractor_id == user.id
+                                         and existing.site_id == site.id):
+            cp_existing = getattr(existing.contractor, "contractor_profile", None)
+            cname = ""
+            if cp_existing:
+                cname = (cp_existing.contractor_name or cp_existing.trade_name or "").strip()
+            cname = cname or existing.contractor.username
+            site_name = (existing.site.site_name if existing.site else "") or "a site"
+            state = "already bound" if existing.binding_status == "ACCEPTED" else "has a pending binding request"
+            return Response({
+                "error": (f"This worker is {state} with {cname} at {site_name}. "
+                          "Unbind the current binding before binding the worker to a different site.")},
+                status=status.HTTP_409_CONFLICT)
         binding = _request_worker_binding(worker_user, user, site)
         binding.binding_status = "PENDING"
         binding.consent_contractor = True
@@ -3437,19 +3463,42 @@ def employer_binding_action(request, binding_id):
             # Unbinding invalidates the site allotments so they can't be reused.
             ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
     elif action == "approve-site":
-        if user.role != "employer":
-            return Response({"error": "Only the employer can approve a site."},
-                            status=status.HTTP_403_FORBIDDEN)
+        # Two-step: whoever did NOT raise the proposal approves it.
         site_id = request.data.get("siteId")
         a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
         if a is None:
             return Response({"error": "Site allotment not found."}, status=status.HTTP_404_NOT_FOUND)
+        if user.role == "employer" and a.source == "employer_allot":
+            return Response({"error": "You proposed this site — the contractor must approve it."},
+                            status=status.HTTP_403_FORBIDDEN)
+        if user.role == "contractor" and a.source == "contractor_request":
+            return Response({"error": "You requested this site — the employer must approve it."},
+                            status=status.HTTP_403_FORBIDDEN)
         a.status = "APPROVED"
         a.approved_at = timezone.now()
         a.save()
+    elif action == "reject-site":
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
+        if a is None:
+            return Response({"error": "Site allotment not found."}, status=status.HTTP_404_NOT_FOUND)
+        a.status = "REJECTED"
+        a.save()
+    elif action == "request-site":
+        if user.role != "contractor":
+            return Response({"error": "Only the contractor can request a site."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        site = Site.objects.filter(pk=site_id, employer=b.employer).first()
+        if site is None:
+            return Response({"error": "That site is not owned by the employer."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        ContractorSiteAllotment.objects.update_or_create(
+            binding=b, site=site,
+            defaults={"status": "PENDING", "source": "contractor_request"})
     elif action == "allot":
         if user.role != "employer":
-            return Response({"error": "Only the employer can allot sites."},
+            return Response({"error": "Only the employer can propose sites."},
                             status=status.HTTP_403_FORBIDDEN)
         site_ids = request.data.get("siteIds") or []
         if not site_ids:
@@ -3457,14 +3506,17 @@ def employer_binding_action(request, binding_id):
             ep = getattr(request.user, "employer_profile", None)
             if ep and ep.default_site_id:
                 site_ids = [ep.default_site_id]
+        if not site_ids:
+            return Response({"error": "Select at least one site to propose."},
+                            status=status.HTTP_400_BAD_REQUEST)
         for sid in site_ids:
             site = Site.objects.filter(pk=sid, employer=request.user).first()
             if site is None:
                 continue
+            # Two-step: the employer proposes (PENDING); the contractor approves.
             ContractorSiteAllotment.objects.update_or_create(
                 binding=b, site=site,
-                defaults={"status": "APPROVED", "source": "employer_allot",
-                          "approved_at": timezone.now()})
+                defaults={"status": "PENDING", "source": "employer_allot"})
     else:
         return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"data": payloads._ce_binding_row(b)}, status=status.HTTP_200_OK)

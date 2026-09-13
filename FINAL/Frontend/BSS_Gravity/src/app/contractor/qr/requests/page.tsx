@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useContractor } from '@/contexts/ContractorContext';
@@ -16,6 +16,7 @@ export default function ContractorBindingRequestsPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' } | null>(null);
+  const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
@@ -100,6 +101,21 @@ export default function ContractorBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
+  async function contractorSiteAction(action: 'approve-site' | 'reject-site', siteId: number) {
+    if (!sitesFor?.bindingId) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/contractor/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: sitesFor.bindingId, action, siteId }) });
+      const result = await response.json().catch(() => ({})) as { error?: string; data?: { allotments?: ContractorBindingRequest['allotments'] } };
+      if (!response.ok) throw new Error(result.error || 'Site permission could not be updated.');
+      const allotments = result.data?.allotments ?? sitesFor.allotments;
+      setSitesFor(prev => prev ? { ...prev, allotments } : prev);
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.bindingId === sitesFor.bindingId ? { ...item, allotments } : item) });
+      setNotice(action === 'approve-site' ? 'Site approved.' : 'Site rejected.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site permission could not be updated.'); }
+    finally { setBusy(false); }
+  }
+
   async function runConfirm() {
     if (!confirm) return;
     const { row, kind } = confirm;
@@ -130,7 +146,7 @@ export default function ContractorBindingRequestsPage() {
               ? <span className="text-orange-700">Awaiting employer</span>
               : <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="text-red-700 font-semibold">Confirm unbind</button>;
           }
-          return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="text-red-700 font-semibold">Request unbind</button>;
+          return <div className="flex gap-2"><button disabled={busy} onClick={() => setSitesFor(r)} className="text-[#073B67] font-semibold">Site permissions</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="text-red-700 font-semibold">Request unbind</button></div>;
         }
         return <span className="text-gray-400">—</span>;
       }
@@ -180,6 +196,31 @@ export default function ContractorBindingRequestsPage() {
             {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : 'Verify & Approve'}</button>}
           </div>
         </section>
+      </div>
+    )}
+    {sitesFor && (
+      <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Site permissions">
+        <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div><h2 className="font-semibold text-gray-900">Site permissions</h2><p className="text-xs text-gray-500 mt-0.5">{sitesFor.entityName} · {sitesFor.bssId}</p></div>
+            <button onClick={() => setSitesFor(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
+          </header>
+          <div className="p-5 space-y-2">
+            <p className="text-xs text-gray-500">Two-step: the employer proposes a site and you approve. To request a new site, scan that site&apos;s QR — the employer then approves it.</p>
+            {(sitesFor.allotments ?? []).length === 0 && <p className="text-xs text-gray-400">No sites proposed or allotted yet.</p>}
+            {(sitesFor.allotments ?? []).map(a => (
+              <div key={a.siteId} className="flex flex-wrap items-center justify-between gap-2 border border-gray-200 rounded-lg px-3 py-2">
+                <div><p className="font-semibold text-sm text-gray-900">{a.site}</p><p className="text-[11px] text-gray-400 font-mono">{a.siteCode}</p></div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${a.status === 'Approved' ? 'bg-green-50 text-green-700' : a.status === 'Pending' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>{a.status}</span>
+                  {a.status === 'Pending' && a.source === 'employer_allot' && <button disabled={busy} onClick={() => void contractorSiteAction('approve-site', a.siteId)} className="text-green-700 text-xs font-bold">Approve</button>}
+                  {a.status === 'Pending' && <button disabled={busy} onClick={() => void contractorSiteAction('reject-site', a.siteId)} className="text-red-600 text-xs font-semibold">Reject</button>}
+                  {a.status === 'Pending' && a.source !== 'employer_allot' && <span className="text-orange-700 text-xs font-semibold">Awaiting employer</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )}
     <ConfirmDialog

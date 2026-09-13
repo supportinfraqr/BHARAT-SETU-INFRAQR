@@ -179,6 +179,13 @@ export type ContractorBindingRequest = {
   unbindRequested?: boolean; unbindConsentWorker?: boolean; unbindConsentContractor?: boolean;
   /** Present on Contractor ↔ Employer binding rows. */
   bindingId?: number;
+  /** Per-site allotment permissions for a Contractor ↔ Employer binding. */
+  allotments?: SiteAllotment[];
+};
+
+export type SiteAllotment = {
+  siteId: number; site: string; siteCode: string;
+  status: 'Pending' | 'Approved' | 'Rejected'; source: string;
 };
 
 export type ContractorRegister = {
@@ -464,6 +471,8 @@ export type EmployerApproval = {
   source?: string;
   /** Site IDs already allotted to this contractor↔employer binding. */
   siteIds?: number[];
+  /** Per-site allotment permissions (requested / approved / rejected). */
+  allotments?: SiteAllotment[];
   unbindRequested?: boolean;
   unbindConsentEmployer?: boolean;
   unbindConsentContractor?: boolean;

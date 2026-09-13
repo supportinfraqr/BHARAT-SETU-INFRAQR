@@ -588,7 +588,8 @@ class ContractorSiteAllotment(models.Model):
     """A site the employer allots to a bound contractor (one row per site)."""
 
     STATUS = [("PENDING", "Pending"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")]
-    SOURCE = [("site_qr", "Site QR"), ("employer_allot", "Employer Allotment")]
+    SOURCE = [("site_qr", "Site QR"), ("employer_allot", "Employer Allotment"),
+              ("contractor_request", "Contractor Request")]
 
     binding = models.ForeignKey(ContractorEmployerBinding, on_delete=models.CASCADE,
                                 related_name="allotments")
