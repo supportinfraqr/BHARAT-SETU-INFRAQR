@@ -1200,22 +1200,19 @@ def notifications(request, role_path):
     action = body.get("action")
     if not notif_id:
         return Response({"error": "id is required"}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        notif = Notification.objects.get(id=notif_id, user=user)
-    except Notification.DoesNotExist:
-        return Response({"error": "Notification not found"}, status=status.HTTP_404_NOT_FOUND)
-    if action == "read":
-        notif.is_read = True
-        notif.save(update_fields=["is_read"])
-    elif action == "unread":
-        notif.is_read = False
-        notif.save(update_fields=["is_read"])
-    elif action == "resolve":
-        notif.is_read = True
-        notif.save(update_fields=["is_read"])
-    else:
+    if action not in ("read", "unread", "resolve"):
         return Response({"error": "invalid action"}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({"success": True, "data": {"id": notif.id, "action": action}},
+    # The feed mixes persisted Notification rows (numeric id, optionally "db-<id>")
+    # with derived live-feed items whose ids are synthetic strings such as
+    # "wc-binding-12" or "rozgar-5". The shared mutation handler knows how to
+    # persist read state for both (model rows; derived items in
+    # UserPreference.notification_prefs) and never coerces a non-numeric id to the
+    # PK — doing that here raised an uncaught ValueError -> HTTP 500.
+    try:
+        resolved_id = _persist_mutation(user, role_path, "notifications", "PATCH", body)
+    except PortalMutationError as exc:
+        return Response({"error": exc.message}, status=exc.status_code)
+    return Response({"success": True, "data": {"id": resolved_id, "action": action}},
                     status=status.HTTP_200_OK)
 
 
