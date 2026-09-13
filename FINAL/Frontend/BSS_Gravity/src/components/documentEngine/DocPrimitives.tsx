@@ -30,13 +30,13 @@ export function DocStatusBadge({ status }: { status: string }) {
 
 export function DocModal({ title, subtitle, onClose, children, wide = false }: { title: string; subtitle?: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   return (
-    <div className="fixed inset-0 z-[120] bg-black/50 p-4 grid place-items-center overflow-y-auto" role="presentation">
-      <section role="dialog" aria-modal="true" className={`w-full ${wide ? 'max-w-6xl' : 'max-w-2xl'} bg-white rounded-2xl overflow-hidden my-6 shadow-2xl`}>
-        <header className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4 sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 z-[120] bg-black/50 p-4 flex items-center justify-center" role="presentation">
+      <section role="dialog" aria-modal="true" className={`w-full ${wide ? 'max-w-6xl' : 'max-w-2xl'} max-h-[calc(100vh-2rem)] bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col`}>
+        <header className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4 flex-shrink-0 bg-white">
           <div><h2 className="font-semibold text-gray-950">{title}</h2>{subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}</div>
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-100 text-gray-500"><X size={17}/></button>
         </header>
-        <div className="p-5">{children}</div>
+        <div className="p-5 overflow-y-auto flex-1">{children}</div>
       </section>
     </div>
   );

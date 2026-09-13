@@ -455,9 +455,9 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
   }
 
   return (
-    <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center overflow-y-auto">
-      <section role="dialog" aria-modal="true" aria-labelledby="add-site-title" className="w-full max-w-3xl bg-white rounded-2xl overflow-hidden my-4">
-        <header className="p-5 border-b border-gray-100 flex justify-between items-start">
+    <div className="fixed inset-0 z-[80] bg-black/50 p-4 flex items-center justify-center">
+      <section role="dialog" aria-modal="true" aria-labelledby="add-site-title" className="w-full max-w-3xl max-h-[calc(100vh-2rem)] bg-white rounded-2xl overflow-hidden flex flex-col">
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start flex-shrink-0">
           <div>
             <h2 id="add-site-title" className="font-semibold">{initial ? 'Edit site' : 'Register a project site'}</h2>
             <p className="text-xs text-gray-500 mt-1 max-w-lg">A site is the E·C·S·W anchor. Fill the identity + location basics, then complete the site master fields across the sections below.</p>
@@ -465,7 +465,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
           <button onClick={onClose} aria-label="Close"><X /></button>
         </header>
 
-        <form onSubmit={handleSubmit} className="p-5">
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
             <label className="text-xs font-semibold text-gray-700">Site name<input required name="name" defaultValue={String(initial?.site_name ?? initial?.name ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
             <label className="text-xs font-semibold text-gray-700">Site code<input required name="code" defaultValue={String(initial?.site_code ?? initial?.code ?? '')} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm" /></label>
