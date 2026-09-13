@@ -68,10 +68,10 @@ export default function MyEmployersPage() {
       <select
         value={defaultSiteId}
         onChange={e => void setDefaultSite(e.target.value)}
-        disabled={saving}
+        disabled={saving || !contractor.sites.length}
         className="w-full sm:w-96 h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white disabled:opacity-60"
       >
-        <option value="">No default site</option>
+        {!contractor.sites.length && <option value="">No sites allotted</option>}
         {contractor.sites.map(s => (
           <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}{s.employer ? ` — ${s.employer}` : ''}</option>
         ))}

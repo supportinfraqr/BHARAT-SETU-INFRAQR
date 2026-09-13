@@ -3156,6 +3156,14 @@ def _worker_requests_contractor(worker_user, contractor_user):
     binding.consent_contractor = False
     binding.consent_method = "app"
     binding.save()
+    _create_notification(
+        user=contractor_user,
+        title="Worker binding request",
+        body=f"{payloads._notification_actor_name(worker_user)} requested to bind to you at "
+             f"{payloads._d(site.site_name) or 'your site'}. Approve to complete the binding.",
+        notif_type="APPROVAL",
+        link="/contractor/qr/requests",
+    )
     return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
 
 
@@ -3251,6 +3259,10 @@ def worker_bindings(request):
     if not worker or worker.role != "worker" or not site:
         return Response({"error": "A valid worker and site are required."},
                         status=status.HTTP_400_BAD_REQUEST)
+    # A contractor may only bind workers at a site that is allotted to them.
+    if site.id not in _contractor_site_ids(user):
+        return Response({"error": "That site is not allotted to you. Ask the principal employer to allot it first."},
+                        status=status.HTTP_403_FORBIDDEN)
     if site.employer_id and not _binding_enabled(site.employer):
         return Response({"error": "The principal employer has disabled binding."},
                         status=status.HTTP_403_FORBIDDEN)
@@ -3571,6 +3583,14 @@ def binding_scan(request):
         binding.consent_worker = False
         binding.consent_method = "app"
         binding.save()
+        _create_notification(
+            user=worker_user,
+            title="Binding request",
+            body=f"{payloads._notification_actor_name(user)} wants to bind you at "
+                 f"{payloads._d(site.site_name) or 'their site'}. Approve to complete the binding.",
+            notif_type="APPROVAL",
+            link="/worker/binding",
+        )
         return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
     else:
         return Response({"error": "Unsupported QR."}, status=status.HTTP_400_BAD_REQUEST)
@@ -3621,6 +3641,19 @@ def binding_scan(request):
             ContractorSiteAllotment.objects.get_or_create(
                 binding=binding, site=chosen,
                 defaults={"status": "PENDING", "source": "employer_allot"})
+
+    # Tell the other party a binding request is waiting for them. Skip when the
+    # scan already completed the binding (both consents present).
+    if binding.binding_status == "PENDING":
+        other = employer if user == contractor else contractor
+        _create_notification(
+            user=other,
+            title="Binding request",
+            body=f"{payloads._notification_actor_name(user)} requested a binding"
+                 + (f" for {payloads._d(site.site_name)}." if site is not None else "."),
+            notif_type="APPROVAL",
+            link="/contractor/qr/requests" if other.role == "contractor" else "/employer/qr/requests",
+        )
 
     return Response({"data": payloads._ce_binding_row(binding)}, status=status.HTTP_200_OK)
 
@@ -3757,7 +3790,7 @@ def employer_binding_action(request, binding_id):
         if user.role == "employer" and a.source == "employer_allot":
             return Response({"error": "You proposed this site — the contractor must approve it."},
                             status=status.HTTP_403_FORBIDDEN)
-        if user.role == "contractor" and a.source == "contractor_request":
+        if user.role == "contractor" and a.source in ("contractor_request", "site_qr"):
             return Response({"error": "You requested this site — the employer must approve it."},
                             status=status.HTTP_403_FORBIDDEN)
         a.status = "APPROVED"

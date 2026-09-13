@@ -1794,6 +1794,30 @@ def _contractor_sites(user):
     return rows
 
 
+def _contractor_pending_sites(user):
+    """Sites proposed to the contractor but not yet approved (PENDING allotment
+    on an ACCEPTED contractor<->employer binding). Surfaced so the contractor can
+    see a site request is waiting for their approval instead of a bare empty list."""
+    rows = []
+    qs = (ContractorSiteAllotment.objects
+          .filter(binding__contractor=user, binding__binding_status="ACCEPTED",
+                  status="PENDING")
+          .select_related("site"))
+    for a in qs:
+        s = a.site
+        if s is None:
+            continue
+        rows.append({
+            "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
+            "bssId": _d(s.bss_site_id),
+            "employer": _org_name(s.employer),
+            "location": _d(s.location) or _d(s.city),
+            "state": _d(s.state),
+            "source": _d(a.source),
+        })
+    return rows
+
+
 def _contractor_workers(user):
     bindings = WorkerContractorBinding.objects.filter(contractor=user, binding_status="ACCEPTED")
     rows = []
@@ -2600,6 +2624,7 @@ def build_contractor_portal(user):
         "stats": _contractor_stats(user),
         "principalEmployer": _contractor_principal_employer(user),
         "sites": sites,
+        "pendingSites": _contractor_pending_sites(user),
         "defaultSite": default_site,
         "workers": _contractor_workers(user),
         "compliances": _contractor_compliances(user),
