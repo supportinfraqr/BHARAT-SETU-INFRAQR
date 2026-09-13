@@ -106,7 +106,12 @@ export default function EmployerQrBindingRequestsPage() {
       if (row.status === 'Pending') {
         // A contractor↔employer binding the employer already consented to (they
         // scanned the contractor's QR) only needs the contractor's consent.
-        if (row.bindingId && row.consentEmployer) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>;
+        if (row.bindingId && row.consentEmployer) return (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
+            <button disabled={busy} onClick={() => setAllotFor(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+          </div>
+        );
         return (
           <div className="flex items-center gap-1.5">
             <button
@@ -168,8 +173,8 @@ export default function EmployerQrBindingRequestsPage() {
           status,
           source: a?.source,
           isDefault: employer.defaultSite?.id === site.id,
-          canApprove: status === 'Pending' && a?.source === 'contractor_request',
-          canReject: status === 'Pending' && a?.source === 'contractor_request',
+          canApprove: status === 'Pending' && (a?.source === 'contractor_request' || a?.source === 'site_qr'),
+          canReject: status === 'Pending' && (a?.source === 'contractor_request' || a?.source === 'site_qr'),
           canWithdraw: status === 'Pending' && a?.source === 'employer_allot',
           canPropose: status === 'None' || status === 'Rejected',
         };
