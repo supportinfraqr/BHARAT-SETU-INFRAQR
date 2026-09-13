@@ -18,7 +18,6 @@ export default function EmployerQrBindingRequestsPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [allotFor, setAllotFor] = useState<EmployerApproval | null>(null);
-  const [secondaryBindingIds, setSecondaryBindingIds] = useState<number[]>([]);
   const [confirm, setConfirm] = useState<{ row: EmployerApproval; kind: 'approve' | 'reject' | 'unbind' } | null>(null);
   const [historyFor, setHistoryFor] = useState<EmployerApproval | null>(null);
 
@@ -112,7 +111,7 @@ export default function EmployerQrBindingRequestsPage() {
         if (row.bindingId && row.consentEmployer) return (
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
-            <button disabled={busy} onClick={() => { setAllotFor(row); setSecondaryBindingIds([]); }} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <button disabled={busy} onClick={() => setAllotFor(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
           </div>
         );
         return (
@@ -142,7 +141,7 @@ export default function EmployerQrBindingRequestsPage() {
         }
         return (
           <div className="flex items-center gap-1.5">
-            <button disabled={busy} onClick={() => { setAllotFor(row); setSecondaryBindingIds([]); }} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <button disabled={busy} onClick={() => setAllotFor(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
             <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Unbind</button>
           </div>
         );
@@ -191,9 +190,6 @@ export default function EmployerQrBindingRequestsPage() {
       secondaryContractors={employer.contractors
         .filter(c => c.status === 'Active' && c.bindingId && String(c.bindingId) !== String(allotFor?.bindingId))
         .map<SecondaryContractor>(c => ({ id: Number(c.id), name: c.name, bindingId: Number(c.bindingId) }))}
-      footer={employer.defaultSite ? (
-        <button type="button" disabled={busy} onClick={() => void bindingSiteAction('allot', { siteIds: [Number(employer.defaultSite!.id)], bindingIds: [Number(allotFor?.bindingId), ...secondaryBindingIds] })} className="h-10 px-4 rounded-xl bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] transition-colors disabled:opacity-60">Propose default site ({employer.defaultSite.name})</button>
-      ) : undefined}
       onClose={() => { setAllotFor(null); setError(''); }}
       onApprove={id => void bindingSiteAction('approve-site', { siteId: id })}
       onReject={id => void bindingSiteAction('reject-site', { siteId: id })}
@@ -201,7 +197,6 @@ export default function EmployerQrBindingRequestsPage() {
       onRelease={() => {}}
       onApproveRelease={id => void bindingSiteAction('approve-site-release', { siteId: id })}
       onRejectRelease={id => void bindingSiteAction('reject-site-release', { siteId: id })}
-      onSelectionChange={setSecondaryBindingIds}
     />
     <ConfirmDialog
       open={!!confirm}
