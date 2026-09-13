@@ -1,31 +1,44 @@
-# Local development mode (temporary)
+# Local development (active phase)
 
-> **While this file is in effect: do NOT deploy to prod.** Develop locally and let
-> the user review on http://localhost:3000. Prod is frozen until the user explicitly
-> says **"deploy to prod"** at the end of development.
+**Development is now LOCAL. Do NOT deploy to prod during development.**
 
-## Local stack (already running on the workstation)
+The user reviews changes on a **local instance** on the workstation
+(`/home/yasser/BSS_Project`). Make all changes locally; the user reviews on
+`http://localhost:3000`. **Do not deploy to prod until the user explicitly says
+"deploy to prod"** at the end of development.
 
-| Piece | Where |
-|---|---|
-| Frontend (Next dev server) | http://localhost:3000 — hot-reloads on file changes, **no build needed** |
-| Backend (Django) | `manage.py runserver 0.0.0.0:8000` → http://localhost:8000 (`/admin`) |
-| Database | local Postgres `bss_local` via the Docker `bss-postgres` container on `127.0.0.1:5433` (user `bss`) |
-| Frontend env | `Frontend/BSS_Gravity/.env.local` already points at `http://127.0.0.1:8000` |
+## Local stack (already running on this machine)
 
-### Demo logins (OTP `123456`)
-- Worker: `1111111111` (also `2222222222`, `3333333333`)
-- Contractor: `4444444444` (also `5555555555`, `6666666666`)
-- Employer: `7777777777` (also `8888888888`)
+| Piece | How | URL |
+|---|---|---|
+| Frontend | Next **dev** server (`next dev --webpack`) — hot-reloads, no build | `http://localhost:3000` |
+| Backend | `manage.py runserver 0.0.0.0:8000 --noreload` | `http://localhost:8000` (admin `/admin`) |
+| Database | local Postgres `bss_local` via Docker `bss-postgres` | `127.0.0.1:5433`, user `bss` |
 
-## Prod — leave it alone
-`login.bharatshramsetu.com` currently runs on the **host (non-Docker)** setup
-(see `FINAL/deploy-prod/HOST_RUN.md`): host Postgres/Redis/nginx + gunicorn backend +
-Next.js standalone frontend.
+- Frontend env `Frontend/BSS_Gravity/.env.local` already points at `http://127.0.0.1:8000`.
+- To run a Django management command locally with the right env, reuse the running
+  backend process env: `tr '\0' '\n' < /proc/<runserver-pid>/environ > /tmp/bss_local_env`
+  then `set -a; . /tmp/bss_local_env; set +a`.
 
-- **Do NOT** run `docker compose up` on prod — it will fight the host nginx for ports 80/443.
-- **Do NOT** rsync/deploy anything to prod while local development is in progress.
+## Demo logins (OTP `123456`)
+
+| Role | Mobile | Account |
+|---|---|---|
+| Worker | `1111111111` | Ramesh Kumar (also 2222222222, 3333333333) |
+| Contractor | `4444444444` | BuildWell Contractors (also 5555555555, 6666666666) |
+| Employer | `7777777777` | Adani Infra Pvt Ltd (also 8888888888) |
+
+Password login also works with the seeded passwords.
+
+## Prod status — leave it alone
+
+- Prod `login.bharatshramsetu.com` currently runs on the **host (non-Docker)**
+  setup — see `FINAL/deploy-prod/HOST_RUN.md`.
+- **Do NOT run `docker compose up` on prod** (it fights the host nginx for ports
+  80/443).
+- Do not rsync/deploy anything to prod while local development is in progress.
 
 ## When development finishes
-The user will say so; then prod is switched back to the Docker stack. Until then,
-work locally only. (Pushing to GitHub is fine — push ≠ deploy.)
+
+The user will say so; then we switch prod back to the Docker stack. Until then,
+work locally only.
