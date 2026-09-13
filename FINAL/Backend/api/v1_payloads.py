@@ -1906,21 +1906,11 @@ def _contractor_applications(user):
 
 
 def _contractor_employers(user):
+    """Principal employers the contractor is actually bound to (ACCEPTED
+    contractor↔employer bindings) and the sites those employers allotted
+    (APPROVED allotments). Derived only from live relationships — a contractor
+    has no employer relationship without an accepted binding."""
     employers = {}
-    # Derived from worker bindings' sites.
-    for b in WorkerContractorBinding.objects.filter(contractor=user):
-        if b.site and b.site.employer:
-            e = b.site.employer
-            ep = getattr(e, "employer_profile", None)
-            employers[e.id] = {
-                "id": e.id,
-                "name": _org_name(e),
-                "employerId": _d(ep.employer_code if ep else _bss_employer_code(e.id)),
-                "sites": [],
-                "status": "ACTIVE",
-                "boundSince": None,
-            }
-    # Direct contractor<->employer bindings (accepted).
     for eng in ContractorEmployerBinding.objects.filter(contractor=user, binding_status="ACCEPTED"):
         e = eng.employer
         ep = getattr(e, "employer_profile", None)
@@ -1935,11 +1925,10 @@ def _contractor_employers(user):
     rows = []
     for k, v in employers.items():
         allotted = set(ContractorSiteAllotment.objects.filter(
-            binding__contractor=user, binding__employer_id=k, status="APPROVED"
+            binding__contractor=user, binding__employer_id=k,
+            binding__binding_status="ACCEPTED", status="APPROVED"
         ).values_list("site_id", flat=True))
-        site_rows = [s for s in Site.objects.filter(employer_id=k) if
-                     WorkerContractorBinding.objects.filter(contractor=user, site=s).exists()
-                     or s.id in allotted]
+        site_rows = [s for s in Site.objects.filter(employer_id=k, id__in=allotted)]
         # Human-readable site names (the UI previously showed raw site IDs) plus
         # the full detail rows so the contractor can see exactly what is allotted.
         v["sites"] = [_d(s.site_name) for s in site_rows]
