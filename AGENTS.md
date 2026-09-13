@@ -33,6 +33,7 @@ Staging and production are separate servers with separate databases. Data on one
 8. **Prefer `up -d --build <svc>` (NOT `--force-recreate`).** `--force-recreate` removes the container first; if the other session deploys at the same time you can end up with **no container** → nginx 502s (`Host is unreachable`). After every deploy, verify the container is running:
    `docker compose ps --format "{{.Name}} {{.Status}}"` — if the service is missing, run `up -d <svc>` again.
    Recovery for a missing frontend: `cd ~/bss/FINAL/deploy-prod && sudo docker compose up -d frontend`.
+9. **Watchdog (self-heal):** prod runs `~/ensure_services.sh` (source: `FINAL/scripts/ensure_services.sh`) **every minute via cron**. It starts any missing core container (`backend/frontend/nginx/db/redis`), so a concurrent-deploy removal self-heals within ~60s instead of leaving the site 502. Log: `~/bss_watchdog.log`.
 
 ## Coordination: another session deploys to prod
 
