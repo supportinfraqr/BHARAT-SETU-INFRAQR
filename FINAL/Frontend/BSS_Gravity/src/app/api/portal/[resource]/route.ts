@@ -6,8 +6,8 @@ import { validatePortalMutation } from '@/server/portal-validation';
 
 const resourcesByRole = {
   Worker: new Set(['profile','notifications','documents','grievances','availability','leave','applications','advances','gratuity','bank-verify','card-orders','settings','courses']),
-  Contractor: new Set(['workers','compliances','salaries','gate-passes','applications','job-postings','attendance','leave','site-calendar','worker-compliance','advances','submissions','benefits','grievances','profile','notifications','settings']),
-  Employer: new Set(['contractors','workers','sites','approvals','gate-passes','compliances','submissions','reports','grievances','profile','notifications','settings']),
+  Contractor: new Set(['workers','compliances','salaries','gate-passes','applications','job-postings','attendance','leave','site-calendar','worker-compliance','advances','submissions','benefits','grievances','profile','notifications','settings','default-site']),
+  Employer: new Set(['contractors','workers','sites','approvals','gate-passes','compliances','submissions','reports','grievances','profile','notifications','settings','default-site']),
   'BSS Admin': new Set(['notifications','settings','bindings']),
   'BSS Staff': new Set(['notifications','settings','bindings','documents','workers']),
   Government: new Set(['notifications','settings']),

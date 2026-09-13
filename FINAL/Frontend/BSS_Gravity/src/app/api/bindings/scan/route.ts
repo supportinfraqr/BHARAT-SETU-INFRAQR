@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         bssId: typeof body.bssId === 'string' ? body.bssId : '',
         siteToken: typeof body.siteToken === 'string' ? body.siteToken : '',
         site: typeof body.site === 'string' ? body.site : '',
+        siteIds: Array.isArray(body.siteIds) ? body.siteIds.filter(id => Number.isInteger(id)) : [],
       }),
     });
     return NextResponse.json(result, { status: 200 });

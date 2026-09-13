@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IScannerControls } from '@zxing/browser';
-import { Building2, Camera, CheckCircle2, Home, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from 'lucide-react';
+import { Building2, Camera, Check, CheckCircle2, Home, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
 import ScanFrame from '@/components/qr/ScanFrame';
@@ -32,6 +32,8 @@ export default function EmployerScanPage() {
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [notice, setNotice] = useState('');
   const [alreadyRequested, setAlreadyRequested] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [chosenSiteIds, setChosenSiteIds] = useState<number[]>([]);
 
   useEffect(() => () => controls.current?.stop(), []);
 
@@ -106,16 +108,18 @@ export default function EmployerScanPage() {
   const confirmBinding = async () => {
     if (!entity) return;
     if (entity.kind === 'contractor' && scanned?.type === 'BSS_CONTRACTOR') {
+      setConfirmOpen(false);
       try {
         const response = await fetch('/api/bindings/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'BSS_CONTRACTOR', bssId: scanned.bssId }),
+          body: JSON.stringify({ type: 'BSS_CONTRACTOR', bssId: scanned.bssId, siteIds: chosenSiteIds }),
         });
         const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
         if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
         setState('confirmed');
-        setNotice(`Binding request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Binding Requests.`);
+        const siteNote = chosenSiteIds.length ? ' Site(s) proposed for the contractor to approve.' : ' No site proposed — allot sites later from Binding Requests.';
+        setNotice(`Binding request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Binding Requests.${siteNote}`);
         setMessage('Binding request sent');
       } catch (e) {
         setState('error');
@@ -153,7 +157,7 @@ export default function EmployerScanPage() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setEntity(null); setScanned(null); setNotice(''); setMessage(''); setAlreadyRequested(null); setState('idle'); };
+  const reset = () => { controls.current?.stop(); setEntity(null); setScanned(null); setNotice(''); setMessage(''); setAlreadyRequested(null); setConfirmOpen(false); setChosenSiteIds([]); setState('idle'); };
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
@@ -205,7 +209,7 @@ export default function EmployerScanPage() {
                 state === 'confirmed' || alreadyRequested ? (
                   <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request already {alreadyRequested ? alreadyRequested.toLowerCase() : 'sent'} — track it in <Link href="/employer/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                 ) : (
-                  <button onClick={confirmBinding} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>
+                  <button onClick={() => { setChosenSiteIds(employer.defaultSite ? [Number(employer.defaultSite.id)] : []); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>
                 )
               ) : (
                 <p className="p-3 bg-gray-50 border border-gray-100 text-gray-600 rounded-xl text-sm font-semibold flex items-center gap-2"><ShieldCheck size={16}/>{entity.kind === 'worker' ? 'No binding action for workers here.' : 'No binding action between employers.'}</p>
@@ -217,5 +221,47 @@ export default function EmployerScanPage() {
         </div>
       </section>
     </div>
+
+    {confirmOpen && entity && (
+      <div className="fixed inset-0 z-[95] grid place-items-center p-4 bg-slate-950/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Confirm binding request" onClick={() => setConfirmOpen(false)}>
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="p-6 pb-4 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-gray-950">Confirm binding request</h2>
+            <p className="text-xs text-gray-500 mt-1">Sending a binding request to <span className="font-semibold text-gray-800">{entity.name}</span> <span className="font-mono text-gray-400">{entity.bssId}</span></p>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Site for this binding</p>
+              <div className="space-y-2 max-h-56 overflow-y-auto">
+                {employer.sites.map(site => {
+                  const id = Number(site.id);
+                  const on = chosenSiteIds.includes(id);
+                  const isDefault = employer.defaultSite?.id === site.id;
+                  return (
+                    <button key={site.id} type="button" onClick={() => setChosenSiteIds(current => on ? current.filter(x => x !== id) : [...current, id])} className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${on ? 'border-[#073B67] bg-[#073B67]/5' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-gray-900 truncate">{site.name}{isDefault && <span className="ml-1.5 text-[10px] font-bold text-[#F47A32]">Default</span>}</span>
+                        <span className="block text-[11px] text-gray-400 font-mono truncate">{site.code}{site.location ? ` · ${site.location}` : ''}</span>
+                      </span>
+                      <span className={`w-5 h-5 rounded-md border grid place-items-center flex-shrink-0 ${on ? 'bg-[#073B67] border-[#073B67] text-white' : 'border-gray-300'}`}>{on && <Check size={13}/>}</span>
+                    </button>
+                  );
+                })}
+                {!employer.sites.length && <p className="text-xs text-gray-400">No sites yet — you can still send the request without a site and allot later.</p>}
+              </div>
+            </div>
+            <p className={`text-xs rounded-xl px-3 py-2.5 border leading-5 ${chosenSiteIds.length ? 'bg-blue-50/60 border-blue-100 text-[#073B67]' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+              {chosenSiteIds.length
+                ? `Binding request for ${employer.sites.filter(s => chosenSiteIds.includes(Number(s.id))).map(s => s.name).join(', ')} — the contractor must approve each site.`
+                : 'Binding request without a site — no site will be proposed. You can allot sites later from Binding Requests.'}
+            </p>
+          </div>
+          <div className="p-6 pt-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
+            <button type="button" onClick={() => setConfirmOpen(false)} className="h-11 px-5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => void confirmBinding()} className="h-11 px-6 rounded-xl bg-[#073B67] text-white text-sm font-bold hover:bg-[#062D4F]">Send binding request</button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>;
 }

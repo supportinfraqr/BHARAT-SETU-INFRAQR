@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -49,14 +49,36 @@ const adminGroup = { key:'nav.administration', icon:ShieldCheck, items:[
 export default function EmployerShell({ children }: { children:React.ReactNode }) {
   const [mobile, setMobile] = useState(false);
   const [profile, setProfile] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const pathname = usePathname();
+  const headerRef = useRef<HTMLElement>(null);
   const { employer } = useEmployer();
   const { t } = useLanguage();
   const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, { key:'nav.reports', href:'/employer/reports', icon:BarChart2 }, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
+  // Close every popover on navigation (adjust state during render — the
+  // documented pattern for reacting to prop/route changes without an effect).
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname);
+    setOpenMenu(null); setProfile(false); setMobile(false);
+  }
+  useEffect(() => {
+    if (!openMenu && !profile && !mobile) return;
+    const handler = (event: PointerEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setOpenMenu(null); setProfile(false); setMobile(false);
+      }
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [openMenu, profile, mobile]);
+
+  const toggleMenu = (key: string) => setOpenMenu(current => (current === key ? null : key));
+
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
-    <header className="bss-shell-header sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
+    <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
       <div className="bss-shell-bar max-w-[1200px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-4">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-8 w-auto" alt="Bharat Shram Setu"/>
@@ -65,13 +87,13 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
         <nav aria-label={t('nav.primary')} className="bss-desktop-nav gap-1">
           {groups.map(group => 'href' in group
             ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`px-3 py-2 rounded-full text-[13px] font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
-            : <div key={group.key} className="relative group">
-                <button type="button" className={`px-3 py-2 rounded-full text-[13px] font-medium ${group.items.some(item => pathname === item[1]) ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</button>
-                <div className="hidden group-hover:block group-focus-within:block absolute top-full left-0 pt-2 w-56">
+            : <div key={group.key} className="relative">
+                <button type="button" aria-haspopup="menu" aria-expanded={openMenu === group.key} onClick={() => toggleMenu(group.key)} className={`px-3 py-2 rounded-full text-[13px] font-medium flex items-center gap-1 ${group.items.some(item => pathname === item[1]) || openMenu === group.key ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}<ChevronDown size={12} className={`transition-transform ${openMenu === group.key ? 'rotate-180' : ''}`}/></button>
+                {openMenu === group.key && <div role="menu" className="absolute top-full left-0 pt-2 w-56 z-50">
                   <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-1">
-                    {group.items.map(item => <Link key={item[0]} href={item[1]} className="block px-3 py-2.5 rounded-lg text-xs hover:bg-gray-50">{t(item[0])}</Link>)}
+                    {group.items.map(item => <Link key={item[0]} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className="block px-3 py-2.5 rounded-lg text-xs hover:bg-gray-50">{t(item[0])}</Link>)}
                   </div>
-                </div>
+                </div>}
               </div>)}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">

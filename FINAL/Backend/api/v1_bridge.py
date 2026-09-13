@@ -3408,6 +3408,17 @@ def binding_scan(request):
         ContractorSiteAllotment.objects.get_or_create(
             binding=binding, site=site, defaults={"status": "PENDING", "source": "site_qr"})
 
+    # The employer may pick the site(s) at scan time. These are proposals
+    # (PENDING) the contractor must approve, exactly like the in-app allot flow.
+    if qr_type == "BSS_CONTRACTOR" and user.role == "employer":
+        for sid in (body.get("siteIds") or []):
+            chosen = Site.objects.filter(pk=sid, employer=user).first()
+            if chosen is None:
+                continue
+            ContractorSiteAllotment.objects.get_or_create(
+                binding=binding, site=chosen,
+                defaults={"status": "PENDING", "source": "employer_allot"})
+
     return Response({"data": payloads._ce_binding_row(binding)}, status=status.HTTP_200_OK)
 
 
