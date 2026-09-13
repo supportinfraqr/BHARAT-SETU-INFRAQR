@@ -29,6 +29,7 @@ Staging and production are separate servers with separate databases. Data on one
 4. **Destructive data actions (delete/wipe) → only with the user's explicit instruction.** Never delete/modify prod data otherwise.
 5. Never overwrite a server `.env`.
 6. **Other-session coordination** still applies (see below).
+7. **Deploy only the service that changed.** Frontend-only change → rebuild **only `frontend`**; backend change → rebuild `backend`. Restarting the backend briefly 502s the site, so never rebuild it for a frontend-only change. (`docker compose up -d --build frontend` vs `… backend`.)
 
 ## Coordination: another session deploys to prod
 
