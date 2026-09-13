@@ -1781,7 +1781,7 @@ def _contractor_sites(user):
     for s in sites:
         emp_name = _org_name(s.employer)
         rows.append({
-            "id": s.id, "code": _d(s.site_code), "name": _d(s.site_name),
+            "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
             "bssId": _d(s.bss_site_id),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
             "state": _d(s.state),

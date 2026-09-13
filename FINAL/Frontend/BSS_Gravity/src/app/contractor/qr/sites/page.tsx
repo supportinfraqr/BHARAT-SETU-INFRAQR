@@ -51,7 +51,7 @@ export default function ContractorQrSitesPage() {
       ) : (
         <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           {contractor.sites.map(site => {
-            const isDefault = site.id === defaultId;
+            const isDefault = String(site.id) === String(defaultId);
             return (
               <article key={site.id} className={`bg-white border rounded-2xl overflow-hidden ${isDefault ? 'border-[#F47A32] ring-1 ring-[#F47A32]/20' : 'border-gray-200'}`}>
                 <div className="p-5">
