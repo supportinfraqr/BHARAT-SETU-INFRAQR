@@ -92,7 +92,7 @@ export default function EmployerSitesPage() {
             <button onClick={() => setQrSite(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
           </header>
           <div className="p-5">
-            {qrSite.qrToken ? <SiteQrPanel siteToken={qrSite.qrToken} siteCode={qrSite.code} name={qrSite.name}/> : <p className="text-sm text-gray-500">No QR token for this site yet.</p>}
+            {qrSite.qrToken ? <SiteQrPanel siteToken={qrSite.qrToken} siteCode={qrSite.code} bssId={qrSite.bssId} name={qrSite.name}/> : <p className="text-sm text-gray-500">No QR token for this site yet.</p>}
           </div>
         </div>
       </div>

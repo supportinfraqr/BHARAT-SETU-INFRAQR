@@ -346,6 +346,7 @@ export type EmployerSite = {
   workers: number;
   compliance: number;
   qrToken?: string;
+  bssId?: string;
   details?: EmployerSiteDetail;
   /** Raw scalar site-master fields (snake_case model column names) from the Site Detail sheet. */
   data?: Record<string, unknown>;

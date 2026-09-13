@@ -13,6 +13,8 @@ class Site(models.Model):
 
     site_name = models.CharField(max_length=120, blank=True)
     site_code = models.CharField(max_length=40, unique=True)
+    # Globally-unique BSS site identifier, e.g. BSS-S7KQ2M9X4RT (auto-generated).
+    bss_site_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sites",
                                  limit_choices_to={"role": "employer"})
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -360,6 +362,9 @@ class Site(models.Model):
         if not self.site_qr_token:
             import uuid
             self.site_qr_token = str(uuid.uuid4())
+        if not self.bss_site_id:
+            from api import bss_ids
+            self.bss_site_id = bss_ids.new_bss_site_code()
         super().save(*args, **kwargs)
 
     def __str__(self):

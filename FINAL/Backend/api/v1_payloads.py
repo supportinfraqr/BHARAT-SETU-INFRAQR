@@ -1769,6 +1769,7 @@ def _contractor_sites(user):
         emp_name = _org_name(s.employer)
         rows.append({
             "id": s.id, "code": _d(s.site_code), "name": _d(s.site_name),
+            "bssId": _d(s.bss_site_id),
             "employer": emp_name, "location": _d(s.location) or _d(s.city),
             "workers": WorkerContractorBinding.objects.filter(
                 contractor=user, site=s, binding_status="ACCEPTED").count(),
@@ -2666,6 +2667,7 @@ def _employer_sites(user):
             "contractorIds": list(cids), "workers": wcount,
             "compliance": 0,
             "qrToken": _d(s.site_qr_token),
+            "bssId": _d(s.bss_site_id),
             "data": _site_scalar_data(s),
         })
     return rows

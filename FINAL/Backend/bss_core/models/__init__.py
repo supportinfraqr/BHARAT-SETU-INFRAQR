@@ -23,6 +23,7 @@ from .relationship import (
     RozgarRequest,
 )
 from .consent import ConsentChallenge, SmsOtp
+from .system import BssIdSequence
 from .worker import (
     WorkerIdentity,
     WorkerAddressMobility,
