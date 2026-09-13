@@ -78,12 +78,12 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
 
   return <div className="bss-shell min-h-screen text-[#1D1D1F] flex flex-col">
     <header ref={headerRef} className="bss-shell-header sticky top-0 z-50 bg-white border-b border-gray-200 shadow-[0_1px_3px_0_rgba(100,116,139,0.18)]">
-      <div className="bss-shell-bar w-full max-w-[1560px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between gap-6">
+      <div className="bss-shell-bar w-full max-w-[1280px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between min-[1181px]:justify-center gap-5">
         <Link href="/employer/dashboard" className="flex items-center gap-2 shrink-0">
           <Image src="/bss-original-logo.png" width={154} height={40} className="h-8 w-auto" alt="Bharat Shram Setu"/>
           <BrandText className="hidden lg:block text-base"/>
         </Link>
-        <div className="flex-1 min-w-0 flex items-center justify-center gap-4">
+        <div className="min-w-0 flex items-center justify-center gap-4">
           <nav aria-label={t('nav.primary')} className="bss-desktop-nav items-center gap-1.5">
           {groups.map(group => 'href' in group
             ? <Link key={group.key} href={group.href} aria-current={pathname === group.href ? 'page' : undefined} className={`inline-flex items-center whitespace-nowrap px-2.5 py-2 rounded-full text-[12.5px] leading-none font-medium ${pathname === group.href ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>{t(group.key)}</Link>
