@@ -25,6 +25,7 @@ export default function ContractorScanPage() {
   const [requestSent, setRequestSent] = useState(false);
   const [alreadyPending, setAlreadyPending] = useState(false);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
+  const [unbindRequested, setUnbindRequested] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
 
@@ -74,6 +75,7 @@ export default function ContractorScanPage() {
         setRequestSent(false);
         setAlreadyPending(Boolean(pending));
         setAttendanceMarked(false);
+        setUnbindRequested(false);
         setState("binding");
         setMessage(known ? "Worker is bound to you — mark today's attendance." : pending ? "Binding request already sent — awaiting the worker's approval." : "Worker identified — review current relationship before requesting binding");
       } else {
@@ -129,6 +131,25 @@ export default function ContractorScanPage() {
     }
   };
 
+  const requestUnbind = async () => {
+    if (!entity) return;
+    const row = contractor.bindingRequests.find(b => b.bssId === entity.bssId && b.type === 'Worker' && (b.status === 'Accepted' || b.status === 'Pending'));
+    if (!row) { setMessage('No active binding found for this worker.'); return; }
+    try {
+      const response = await fetch('/api/worker/bindings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id, action: 'unbind', side: 'contractor' }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Unbind could not be requested.');
+      setUnbindRequested(true);
+      setMessage(`Unbind requested for ${entity.name} — the worker must confirm. Once unbound you can bind the worker to a different site.`);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Unbind could not be requested.');
+    }
+  };
+
   const startCamera = async () => {
     primeAudio();
     setState("scanning"); setMessage("Point the camera at a BSS Worker or Employer QR code");
@@ -148,7 +169,9 @@ export default function ContractorScanPage() {
     finally { URL.revokeObjectURL(url); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setUnbindRequested(false); setMessage(""); setState("idle"); };
+  // A live binding unlocks the worker's verified identity details for this contractor.
+  const boundWorker = entity ? contractor.workers.find(w => w.bssId === entity.bssId) : undefined;
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
@@ -197,9 +220,24 @@ export default function ContractorScanPage() {
                 </div>
               )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
-                ? (attendanceMarked
-                    ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
-                    : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>)
+                ? <div className="space-y-3">
+                    <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — to move them to a different site, unbind this binding first, then bind again.</p>
+                    {boundWorker && (
+                      <dl className="grid grid-cols-2 gap-3 text-xs rounded-xl border border-green-100 bg-green-50/40 p-3">
+                        <div><dt className="text-gray-400">Aadhaar</dt><dd className="font-mono font-semibold text-gray-800 mt-0.5">{boundWorker.aadhaar || '—'}</dd></div>
+                        <div><dt className="text-gray-400">Date of birth</dt><dd className="font-semibold text-gray-800 mt-0.5">{boundWorker.dob || '—'}</dd></div>
+                        <div><dt className="text-gray-400">Father&apos;s name</dt><dd className="font-semibold text-gray-800 mt-0.5">{boundWorker.fatherName || '—'}</dd></div>
+                        <div><dt className="text-gray-400">Blood group</dt><dd className="font-semibold text-gray-800 mt-0.5">{boundWorker.bloodGroup || '—'}</dd></div>
+                        <div className="col-span-2 text-[10px] text-green-700">Verified identity details unlocked because this worker is bound to you.</div>
+                      </dl>
+                    )}
+                    {attendanceMarked
+                      ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
+                      : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>}
+                    {unbindRequested
+                      ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Unbind requested — awaiting {entity.name}&apos;s confirmation. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
+                      : <button onClick={requestUnbind} className="w-full h-11 rounded-xl border border-red-200 text-red-700 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-50">Unbind to change site</button>}
+                  </div>
                 : alreadyPending
                   ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                   : requestSent

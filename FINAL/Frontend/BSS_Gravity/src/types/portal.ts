@@ -121,6 +121,8 @@ export type ContractorWorker = {
   designation: string; doj: string; compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Active' | 'Inactive'; verified: boolean;
   refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
+  /** Extended identity — only present for workers bound to the requesting contractor. */
+  aadhaar?: string; dob?: string; fatherName?: string; bloodGroup?: string;
   eligibility?: GatePassEligibility;
 };
 
