@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     if (!Number.isInteger(bindingId) || bindingId <= 0) {
       return NextResponse.json({ error: 'Binding ID is required.' }, { status: 400 });
     }
-    if (!['approve-binding', 'reject'].includes(action)) {
+    if (!['approve-binding', 'reject', 'unbind'].includes(action)) {
       return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }
     const config = getRuntimeConfig();

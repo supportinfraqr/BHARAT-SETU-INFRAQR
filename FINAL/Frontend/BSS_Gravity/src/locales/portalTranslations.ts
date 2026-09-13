@@ -15,7 +15,7 @@ const en = {
   'nav.governance':'Governance', 'nav.approvals':'Approvals',
   'nav.mySites':'My Sites', 'nav.siteOverview':'Site Overview', 'nav.contractorCompliance':'Contractor Compliance',
   'nav.complianceSubmission':'Compliance Submission', 'nav.myContractors':'My Contractors',
-  'nav.qrMySites':'My Sites (QR)', 'nav.administration':'Administration', 'nav.adminContractors':'Contractor Management',
+  'nav.administration':'Administration', 'nav.adminContractors':'Contractor Management',
   'nav.userManagement':'User Management', 'nav.permissions':'Permissions', 'nav.siteManagement':'Site Management',
   'nav.workerDocuments':'Worker Compliance Documents', 'nav.auditLog':'Audit Log', 'nav.transport':'Transport Management', 'nav.labourCompliance':'Labour Law Compliance',
 };

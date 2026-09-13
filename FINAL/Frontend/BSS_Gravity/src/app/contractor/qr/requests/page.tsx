@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound, X, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, Handshake, KeyRound, Link2, UserRound } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorBindingRequest } from '@/types/portal';
 
@@ -181,35 +182,26 @@ export default function ContractorBindingRequestsPage() {
         </section>
       </div>
     )}
-    {confirm && (
-      <div className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-sm grid place-items-center p-4" role="dialog" aria-modal="true" aria-label="Confirm binding action">
-        <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-          <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {confirm.kind === 'approve' || confirm.kind === 'accept' ? <CheckCircle2 size={18} className="text-green-600"/> : <XCircle size={18} className="text-red-600"/>}
-              <h2 className="font-semibold text-gray-900">{confirm.kind === 'reject' ? 'Decline this binding?' : (confirm.kind === 'ce-unbind' || confirm.kind === 'worker-unbind') ? 'Unbind this binding?' : 'Accept this binding?'}</h2>
-            </div>
-            <button onClick={() => setConfirm(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:bg-gray-100"><X size={16}/></button>
-          </header>
-          <div className="p-5 space-y-4">
-            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 text-sm">
-              <p className="font-semibold text-gray-900">{confirm.row.entityName}</p>
-              <p className="font-mono text-[11px] text-gray-400 mt-0.5">{confirm.row.bssId}</p>
-              <p className="text-xs text-gray-500 mt-1.5">{confirm.row.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker'} · {confirm.row.site || '—'}</p>
-            </div>
-            <p className="text-xs text-gray-500 leading-5">{confirm.kind === 'reject'
-              ? 'The other party will be notified and this binding will be declined. This cannot be undone.'
-              : (confirm.kind === 'ce-unbind' || confirm.kind === 'worker-unbind')
-                ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
-                : 'Both parties must consent before the binding is complete. Confirming records your consent.'}</p>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setConfirm(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-semibold">Cancel</button>
-              <button onClick={() => void runConfirm()} disabled={busy} className={`h-10 px-5 rounded-xl text-white text-sm font-bold disabled:opacity-60 ${confirm.kind === 'approve' || confirm.kind === 'accept' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>{busy ? 'Working…' : confirm.kind === 'reject' ? 'Confirm decline' : (confirm.kind === 'ce-unbind' || confirm.kind === 'worker-unbind') ? 'Confirm unbind' : 'Confirm accept'}</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
+    <ConfirmDialog
+      open={!!confirm}
+      tone={confirm?.kind === 'approve' || confirm?.kind === 'accept' ? 'positive' : 'negative'}
+      title={confirm?.kind === 'reject' ? 'Decline this binding?' : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind') ? 'Unbind this binding?' : 'Accept this binding?'}
+      description={confirm?.kind === 'reject'
+        ? 'The other party will be notified and this binding will be declined. This cannot be undone.'
+        : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind')
+          ? 'This requests unbinding. The binding is cancelled only when both parties confirm.'
+          : 'Both parties must consent before the binding is complete. Confirming records your consent.'}
+      details={confirm ? [
+        { label: 'Entity', value: confirm.row.entityName },
+        { label: 'BSS ID', value: confirm.row.bssId },
+        { label: 'Type', value: confirm.row.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker' },
+        { label: 'Site', value: confirm.row.site || '—' },
+      ] : []}
+      confirmLabel={confirm?.kind === 'reject' ? 'Confirm decline' : (confirm?.kind === 'ce-unbind' || confirm?.kind === 'worker-unbind') ? 'Confirm unbind' : 'Confirm accept'}
+      busy={busy}
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => void runConfirm()}
+    />
   </div>;
 }
 

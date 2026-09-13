@@ -25,7 +25,7 @@ const tabs = [
   ['settings','Preferences',Settings],
 ] as const;
 
-type Field = { label: string; value: string; sensitive?: boolean; note?: string };
+type Field = { label: string; value: string; sensitive?: boolean; note?: string; type?: string };
 const isLocked = (field: Field) => (field.note ?? '').includes('System-calculated') || (field.note ?? '').includes('auto-generated') || (field.note ?? '').includes('Calculated');
 
 export default function EmployerProfilePage() {
@@ -95,7 +95,7 @@ export default function EmployerProfilePage() {
             return <label key={field.label} className="text-xs font-semibold text-gray-500">
               <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-gray-300"/>}{field.sensitive && <Lock size={11} className="text-amber-500"/>}</span>
               {editing && !field.sensitive && !locked
-                ? <input name={`field-${index}`} defaultValue={field.value} className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900"/>
+                ? <input type={field.type==='date'?'date':'text'} name={`field-${index}`} defaultValue={field.value} className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900"/>
                 : <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value || '—'}</span>}
               {field.note && <span className="mt-1 block text-[10px] font-normal text-gray-400">{field.note}</span>}
             </label>;

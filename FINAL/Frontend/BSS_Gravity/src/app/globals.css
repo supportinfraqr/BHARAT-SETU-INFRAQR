@@ -567,11 +567,11 @@ input[type="range"],
 
 /* QR scanner viewfinder scan line */
 @keyframes bss-scanline {
-  0% { transform: translate(-50%, -64px); opacity: 0.3; }
-  50% { transform: translate(-50%, 64px); opacity: 1; }
-  100% { transform: translate(-50%, -64px); opacity: 0.3; }
+  0% { top: 6%; opacity: 0.3; }
+  50% { top: 94%; opacity: 1; }
+  100% { top: 6%; opacity: 0.3; }
 }
 .bss-scanline {
-  animation: bss-scanline 2s ease-in-out infinite;
+  animation: bss-scanline 2.4s ease-in-out infinite;
 }
 

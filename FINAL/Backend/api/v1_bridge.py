@@ -2231,10 +2231,14 @@ def _handle_course_action(user, body):
 
 
 def _contractor_site_ids(user):
+    """Sites a contractor may legitimately use: sites of their worker bindings
+    plus APPROVED allotments on an ACCEPTED contractor↔employer binding. Sites
+    from rejected/cancelled employer bindings are NOT included."""
     ids = set(WorkerContractorBinding.objects.filter(contractor=user)
               .values_list("site_id", flat=True))
     ids.update(ContractorSiteAllotment.objects.filter(
-        binding__contractor=user, status="APPROVED").values_list("site_id", flat=True))
+        binding__contractor=user, binding__binding_status="ACCEPTED", status="APPROVED")
+        .values_list("site_id", flat=True))
     return ids
 
 
@@ -3303,12 +3307,8 @@ def binding_scan(request):
                             status=status.HTTP_400_BAD_REQUEST)
         # Resolve the site: explicit name (restricted to sites the contractor can
         # legitimately use), else the contractor's default site, else any bound
-        # or approved-allotted site.
-        allowed_ids = set(WorkerContractorBinding.objects.filter(contractor=user)
-                          .values_list("site_id", flat=True))
-        allowed_ids |= set(ContractorSiteAllotment.objects
-                           .filter(binding__contractor=user, status="APPROVED")
-                           .values_list("site_id", flat=True))
+        # or approved-allotted site (only from an ACCEPTED employer binding).
+        allowed_ids = _contractor_site_ids(user)
         requested = str(body.get("site") or "").strip()
         site = (Site.objects.filter(site_name__iexact=requested, id__in=allowed_ids).first()
                 if requested else None)
@@ -3418,6 +3418,8 @@ def employer_binding_action(request, binding_id):
     elif action == "reject":
         b.binding_status = "REJECTED"
         b.save(update_fields=["binding_status"])
+        # A rejected employer binding invalidates its site allotments.
+        ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
     elif action == "unbind":
         # Two-sided unbinding — either party may request; the binding is
         # cancelled only once both consents are recorded.
@@ -3431,6 +3433,9 @@ def employer_binding_action(request, binding_id):
             b.binding_status = "CANCELLED"
             b.unbound_at = timezone.now()
         b.save()
+        if b.binding_status == "CANCELLED":
+            # Unbinding invalidates the site allotments so they can't be reused.
+            ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
     elif action == "approve-site":
         if user.role != "employer":
             return Response({"error": "Only the employer can approve a site."},

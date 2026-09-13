@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
+import { IScannerControls } from "@zxing/browser";
 import { Camera, CheckCircle2, Handshake, Home, MapPin, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 import ScanFrame from "@/components/qr/ScanFrame";
-import { playScanBeep } from "@/lib/scanFeedback";
+import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
+import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus } from "@/lib/qrScanner";
 
 type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string; name?: string };
 
@@ -83,10 +84,12 @@ export default function QRScannerWorkflow() {
   };
 
   const startCamera = async () => {
+    primeAudio();
     setState("scanning"); setMessage("Point the camera at a BSS Worker or Contractor QR code");
     try {
-      const reader = new BrowserQRCodeReader();
-      controls.current = await reader.decodeFromConstraints({ video: { facingMode: { ideal: "environment" } } }, videoRef.current!, r => { if (r) verify(r.getText()); });
+      const reader = createQrReader();
+      controls.current = await reader.decodeFromConstraints(QR_VIDEO_CONSTRAINTS, videoRef.current!, r => { if (r) verify(r.getText()); });
+      applyContinuousFocus(controls.current);
     } catch { setState("error"); setMessage("Camera access was unavailable. Allow permission or upload a QR image."); }
   };
 
@@ -94,7 +97,7 @@ export default function QRScannerWorkflow() {
     if (!file) return;
     setState("scanning"); setMessage("Reading QR image…");
     const url = URL.createObjectURL(file);
-    try { verify((await new BrowserQRCodeReader().decodeFromImageUrl(url)).getText()); }
+    try { verify((await createQrReader().decodeFromImageUrl(url)).getText()); }
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
     finally { URL.revokeObjectURL(url); }
   };

@@ -1,20 +1,97 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, MapPin, QrCode, Users } from 'lucide-react';
+import { Building2, CheckCircle2, MapPin, Star, Users } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 
 export default function EmployerQrSitesPage() {
-  const { employer } = useEmployer();
-  return <div className="space-y-6">
-    <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold mt-1">My Sites (QR)</h1><p className="text-sm text-gray-500 mt-1">Site records drawn from the shared site model rather than a separate QR dataset.</p></header>
-    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {employer.sites.map(site => <article key={site.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div className="p-5"><div className="flex items-start justify-between gap-3"><span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 grid place-items-center"><QrCode size={19}/></span><span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{site.status}</span></div><h2 className="font-semibold text-gray-950 mt-4">{site.name}</h2><p className="font-mono text-[11px] text-gray-400 mt-1">{site.code}</p><p className="text-xs text-gray-500 flex items-center gap-1 mt-3"><MapPin size={12}/>{site.location}, {site.state}</p></div>
-        <div className="grid grid-cols-3 divide-x divide-gray-100 border-y border-gray-100"><Small icon={Users} value={site.workers} label="Workers"/><Small icon={Building2} value={site.contractorIds.length} label="Contractors"/><Small icon={MapPin} value={`${site.compliance}%`} label="Compliance"/></div>
-        <Link href={`/employer/sites/${site.id}`} className="h-10 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center gap-1 hover:bg-gray-100">View Site <ArrowRight size={14}/></Link>
-      </article>)}
+  const { employer, replaceEmployer, mutate } = useEmployer();
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const defaultId = employer.defaultSite?.id ?? '';
+
+  async function setDefault(siteId: string) {
+    setBusy(siteId || 'clear');
+    setError('');
+    setNotice('');
+    try {
+      await mutate('default-site', 'POST', { siteId: siteId || null });
+      const site = employer.sites.find(s => s.id === siteId);
+      replaceEmployer({ ...employer, defaultSite: site ? { id: site.id, name: site.name, code: site.code } : null });
+      setNotice(site ? `${site.name} is now your default site.` : 'Default site cleared.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The default site could not be saved.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p>
+        <h1 className="text-2xl font-bold mt-1">My Sites</h1>
+        <p className="text-sm text-gray-500 mt-1">Sites owned by <strong className="text-gray-700">{employer.identity.company}</strong>. Pick the default site used when allotting sites to a contractor.</p>
+      </header>
+
+      {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{error}</p>}
+      {notice && <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">{notice}</p>}
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Metric label="Total sites" value={employer.sites.length} icon={Building2} tone="bg-blue-50 text-blue-700" />
+        <Metric label="Default site" value={employer.defaultSite?.name ?? '—'} icon={Star} tone="bg-orange-50 text-[#F47A32]" text />
+        <Metric label="Workers on sites" value={employer.sites.reduce((sum, s) => sum + (s.workers || 0), 0)} icon={Users} tone="bg-green-50 text-green-700" />
+      </div>
+
+      {employer.sites.length === 0 ? (
+        <p className="text-sm text-gray-500">No sites yet. <Link href="/employer/sites" className="text-[#073B67] font-semibold underline">Add a site</Link>.</p>
+      ) : (
+        <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {employer.sites.map(site => {
+            const isDefault = site.id === defaultId;
+            return (
+              <article key={site.id} className={`bg-white border rounded-2xl overflow-hidden ${isDefault ? 'border-[#F47A32] ring-1 ring-[#F47A32]/20' : 'border-gray-200'}`}>
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 grid place-items-center"><Building2 size={19} /></span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${site.status === 'Active' ? 'bg-green-50 text-green-700' : site.status === 'Planned' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{site.status}</span>
+                  </div>
+                  <h2 className="font-semibold text-gray-950 mt-4">{site.name}</h2>
+                  <p className="font-mono text-[11px] text-gray-400 mt-1">{site.code}</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-3"><MapPin size={12} />{site.location}{site.state ? `, ${site.state}` : ''}</p>
+                  <p className="text-xs text-gray-500 mt-1.5">Employer: <span className="font-semibold text-gray-700">{employer.identity.company}</span></p>
+                  {isDefault && <span className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-[#F47A32] bg-orange-50 px-2 py-1 rounded"><Star size={11} />Default site</span>}
+                </div>
+                {isDefault ? (
+                  <button
+                    type="button"
+                    disabled={busy === 'clear'}
+                    onClick={() => void setDefault('')}
+                    className="w-full h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-orange-50 text-[#F47A32] hover:bg-orange-100 disabled:opacity-70"
+                  >
+                    {busy === 'clear' ? 'Clearing…' : <><CheckCircle2 size={14} />Default — click to clear</>}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy === site.id}
+                    onClick={() => void setDefault(site.id)}
+                    className="w-full h-10 text-xs font-bold flex items-center justify-center gap-1.5 bg-gray-50 text-[#073B67] hover:bg-gray-100 disabled:opacity-70"
+                  >
+                    {busy === site.id ? 'Saving…' : <><Star size={14} />Set as default site</>}
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      )}
     </div>
-  </div>;
+  );
 }
-function Small({ icon:Icon, value, label }: { icon:typeof Users; value:string | number; label:string }) { return <div className="p-3 text-center"><Icon size={13} className="mx-auto text-gray-400"/><strong className="block text-sm mt-1">{value}</strong><span className="text-[9px] uppercase tracking-wider text-gray-400">{label}</span></div>; }
+
+function Metric({ label, value, icon: Icon, tone, text }: { label: string; value: string | number; icon: typeof Building2; tone: string; text?: boolean }) {
+  return <div className="bg-white border border-gray-200 rounded-xl p-4"><span className={`w-8 h-8 rounded-lg grid place-items-center ${tone}`}><Icon size={16} /></span><strong className={`block mt-2 ${text ? 'text-sm' : 'text-2xl'}`}>{value}</strong><p className="text-xs text-gray-500">{label}</p></div>;
+}

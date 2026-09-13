@@ -16,13 +16,15 @@ export default function ScanFrame({ active, className = "" }: { active: boolean;
   return (
     <div aria-hidden="true" className={`pointer-events-none absolute inset-0 z-10 overflow-hidden flex items-center justify-center ${className}`}>
       {/* clear window + dimmed surroundings */}
-      <div className="relative h-40 w-40 sm:h-44 sm:w-44 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]">
+      <div className="relative h-48 w-48 sm:h-56 sm:w-56 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]">
         {/* corner brackets */}
         <div className="absolute inset-0">
-          {corners.map(c => <span key={c} className={`absolute h-6 w-6 sm:h-7 sm:w-7 border-[#F47A32] ${c}`} />)}
+          {corners.map(c => <span key={c} className={`absolute h-7 w-7 sm:h-8 sm:w-8 border-[#F47A32] ${c}`} />)}
         </div>
-        {/* animated scan line bounded inside window */}
-        <span className="bss-scanline absolute left-1/2 top-1/2 h-0.5 w-32 sm:w-36 -translate-x-1/2 rounded-full bg-[#F47A32] shadow-[0_0_12px_3px_rgba(244,122,50,0.8)]" />
+        {/* animated scan line bounded inside window. The keyframes animate `top`
+            (percentage of the window); horizontal centring uses Tailwind
+            -translate-x-1/2, so there is no transform conflict. */}
+        <span className="bss-scanline absolute left-1/2 -translate-x-1/2 h-0.5 w-40 sm:w-48 rounded-full bg-[#F47A32] shadow-[0_0_12px_3px_rgba(244,122,50,0.8)]" />
       </div>
     </div>
   );

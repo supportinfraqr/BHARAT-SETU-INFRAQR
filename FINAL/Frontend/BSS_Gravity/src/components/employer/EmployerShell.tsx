@@ -29,10 +29,10 @@ const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
   ['nav.complianceReport','/employer/compliance-report'],
 ] };
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
+  ['nav.mySites','/employer/qr/sites'],
   ['nav.myWorkers','/employer/qr/workers'],
   ['nav.myContractors','/employer/qr/contractors'],
   ['nav.bindingRequests','/employer/qr/requests'],
-  ['nav.qrMySites','/employer/qr/sites'],
   ['nav.idCard','/employer/idcard'],
   ['nav.scanQr','/employer/scan'],
 ] };

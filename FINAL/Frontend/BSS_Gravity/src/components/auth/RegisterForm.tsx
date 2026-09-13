@@ -23,6 +23,10 @@ interface RegisterFormProps {
   t: (key: string) => string;
 }
 
+// Demo mobiles that use the fixed OTP (see BSS_DEMO_OTP_MOBILES) and are exempt
+// from the standard Indian mobile (6-9) format check.
+const DEMO_MOBILES = ['2222222222', '3333333333'];
+
 export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChange, t }: RegisterFormProps) {
   const [selectedRole, setSelectedRole] = useState("Worker");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -41,7 +45,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const requestOtp = async () => {
     setError("");
     if (!isSelfService) return setError("This role requires administrator approval. Please contact BSS support.");
-    if (!/^[6-9]\d{9}$/.test(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number.");
+    if (!/^[6-9]\d{9}$/.test(contact.trim()) && !DEMO_MOBILES.includes(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number.");
     setIsCreating(true);
     try {
       const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:selectedRole, identifier:contact }) });
