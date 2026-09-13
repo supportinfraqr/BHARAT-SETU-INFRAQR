@@ -34,6 +34,7 @@ Staging and production are separate servers with separate databases. Data on one
    `docker compose ps --format "{{.Name}} {{.Status}}"` — if the service is missing, run `up -d <svc>` again.
    Recovery for a missing frontend: `cd ~/bss/FINAL/deploy-prod && sudo docker compose up -d frontend`.
 9. **Watchdog (self-heal):** prod runs `~/ensure_services.sh` (source: `FINAL/scripts/ensure_services.sh`) **every minute via cron**. It starts any missing core container (`backend/frontend/nginx/db/redis`), so a concurrent-deploy removal self-heals within ~60s instead of leaving the site 502. Log: `~/bss_watchdog.log`.
+10. **Upstream retry:** `src/server/http.ts` `upstreamRequest` retries transient failures (network error / 502 / 503 / 504) for **idempotent** (GET/HEAD) requests with a 1s→4s backoff (~10s), so a brief backend restart during a deploy doesn't surface as a 502 to users.
 
 ## Coordination: another session deploys to prod
 
