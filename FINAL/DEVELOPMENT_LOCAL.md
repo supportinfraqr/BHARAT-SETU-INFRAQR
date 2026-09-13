@@ -32,13 +32,15 @@ Password login also works with the seeded passwords.
 
 ## Prod status — leave it alone
 
-- Prod `login.bharatshramsetu.com` currently runs on the **host (non-Docker)**
-  setup — see `FINAL/deploy-prod/HOST_RUN.md`.
-- **Do NOT run `docker compose up` on prod** (it fights the host nginx for ports
-  80/443).
-- Do not rsync/deploy anything to prod while local development is in progress.
+- Prod `login.bharatshramsetu.com` is back on the **Docker** stack (all
+  containers up: `nginx`, `frontend`, `backend`, `db`, `redis`). The temporary
+  host run has been stopped (host `nginx` disabled; host `postgresql`/`redis`
+  stopped).
+- See `FINAL/deploy-prod/HOST_RUN.md` for the host run (historical / fallback).
+- **Do not deploy anything to prod** while local development is in progress —
+  only the user says "deploy to prod" when ready.
 
 ## When development finishes
 
-The user will say so; then we switch prod back to the Docker stack. Until then,
-work locally only.
+The user will host properly on prod; then a normal Docker deploy applies. Until
+then, work locally only.
