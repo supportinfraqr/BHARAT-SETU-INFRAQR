@@ -16,6 +16,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
 from django.http import FileResponse
@@ -1719,6 +1720,8 @@ def _persist_mutation(user, role_path, resource, method, body):
             Site.objects.filter(pk=site_id, employer=user).delete()
             return site_id
         return None
+    if resource == "default-site" and method in ("POST", "PATCH"):
+        return _handle_default_site(user, body)
     if resource == "job-postings" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_job_posting(user, body, method)
     if resource == "applications" and role_path == "worker" and method == "POST":
@@ -2548,6 +2551,37 @@ _SITE_EDITABLE_FIELDS = tuple(
 )
 
 
+def _handle_default_site(user, body):
+    """Set (or clear) the caller's pre-selected default site.
+
+    The site must be one the caller can legitimately use — a contractor's bound
+    or approved-allotted site, or a site the employer owns. Worker QR bindings
+    inherit this default (and the contractor may override it at scan time)."""
+    site_id = body.get("siteId")
+    if user.role == "contractor":
+        prof, _ = ContractorProfile.objects.get_or_create(user=user)
+        allowed = set(WorkerContractorBinding.objects.filter(contractor=user)
+                      .values_list("site_id", flat=True))
+        allowed |= set(ContractorSiteAllotment.objects
+                       .filter(binding__contractor=user, status="APPROVED")
+                       .values_list("site_id", flat=True))
+    elif user.role == "employer":
+        prof, _ = EmployerProfile.objects.get_or_create(user=user)
+        allowed = set(Site.objects.filter(employer=user).values_list("id", flat=True))
+    else:
+        return None
+    if site_id in (None, "", "none"):
+        prof.default_site = None
+        prof.save()
+        return None
+    site = Site.objects.filter(pk=site_id, id__in=allowed).first()
+    if site is None:
+        raise PortalMutationError("That site is not available to you.", 400)
+    prof.default_site = site
+    prof.save()
+    return site.id
+
+
 def _handle_site(user, body, method):
     site = None
     site_id = body.get("id")
@@ -3187,6 +3221,24 @@ def _contractor_engaged_at_site(contractor, site_id):
         site_id=site_id, status="APPROVED").exists()
 
 
+def _rate_limit(key, limit, window_seconds):
+    """Best-effort fixed-window rate limit backed by the cache (Redis in prod,
+    local memory in dev). Returns True when the request is allowed, False when
+    the limit is exceeded. Fails open so a cache outage never blocks scans."""
+    try:
+        full = f"rl:{key}"
+        if cache.add(full, 1, window_seconds):
+            return True
+        try:
+            count = cache.incr(full)
+        except ValueError:
+            cache.set(full, 1, window_seconds)
+            return True
+        return count <= limit
+    except Exception:
+        return True
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -3199,6 +3251,10 @@ def binding_scan(request):
     """
     user = request.user
     body = request.data or {}
+    # Per-user scan throttle (QR binding is a high-abuse surface).
+    if not _rate_limit(f"binding-scan:{user.id}", 20, 60):
+        return Response({"error": "Too many scan requests. Please wait a moment and try again."},
+                        status=status.HTTP_429_TOO_MANY_REQUESTS)
     qr_type = str(body.get("type") or "").upper()
     site = None
     contractor = None
@@ -3245,14 +3301,22 @@ def binding_scan(request):
         if worker_user.id == user.id:
             return Response({"error": "You cannot bind your own account."},
                             status=status.HTTP_400_BAD_REQUEST)
-        # Resolve the site: explicit name, else a site the contractor is bound to,
-        # else an approved allotment.
-        site = Site.objects.filter(site_name__iexact=str(body.get("site") or "")).first() if body.get("site") else None
+        # Resolve the site: explicit name (restricted to sites the contractor can
+        # legitimately use), else the contractor's default site, else any bound
+        # or approved-allotted site.
+        allowed_ids = set(WorkerContractorBinding.objects.filter(contractor=user)
+                          .values_list("site_id", flat=True))
+        allowed_ids |= set(ContractorSiteAllotment.objects
+                           .filter(binding__contractor=user, status="APPROVED")
+                           .values_list("site_id", flat=True))
+        requested = str(body.get("site") or "").strip()
+        site = (Site.objects.filter(site_name__iexact=requested, id__in=allowed_ids).first()
+                if requested else None)
+        cp = getattr(user, "contractor_profile", None)
+        if site is None and cp and cp.default_site_id and cp.default_site_id in allowed_ids:
+            site = cp.default_site
         if site is None:
-            site = Site.objects.filter(bindings__contractor=user).first()
-        if site is None:
-            site = Site.objects.filter(contractor_allotments__binding__contractor=user,
-                                       contractor_allotments__status="APPROVED").first()
+            site = Site.objects.filter(id__in=allowed_ids).first()
         if site is None:
             return Response({"error": "No site available for this binding. Ask the employer to allot a site first."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -3354,6 +3418,19 @@ def employer_binding_action(request, binding_id):
     elif action == "reject":
         b.binding_status = "REJECTED"
         b.save(update_fields=["binding_status"])
+    elif action == "unbind":
+        # Two-sided unbinding — either party may request; the binding is
+        # cancelled only once both consents are recorded.
+        if user.role == "contractor":
+            b.unbind_consent_contractor = True
+        else:
+            b.unbind_consent_employer = True
+        if not b.unbind_requested_at:
+            b.unbind_requested_at = timezone.now()
+        if b.unbind_consent_contractor and b.unbind_consent_employer:
+            b.binding_status = "CANCELLED"
+            b.unbound_at = timezone.now()
+        b.save()
     elif action == "approve-site":
         if user.role != "employer":
             return Response({"error": "Only the employer can approve a site."},
@@ -3370,6 +3447,11 @@ def employer_binding_action(request, binding_id):
             return Response({"error": "Only the employer can allot sites."},
                             status=status.HTTP_403_FORBIDDEN)
         site_ids = request.data.get("siteIds") or []
+        if not site_ids:
+            # Fall back to the employer's default site.
+            ep = getattr(request.user, "employer_profile", None)
+            if ep and ep.default_site_id:
+                site_ids = [ep.default_site_id]
         for sid in site_ids:
             site = Site.objects.filter(pk=sid, employer=request.user).first()
             if site is None:

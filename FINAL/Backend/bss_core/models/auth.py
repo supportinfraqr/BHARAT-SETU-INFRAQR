@@ -140,6 +140,9 @@ class ContractorProfile(models.Model):
     lin = models.CharField(max_length=40, blank=True)
     approval_status = models.CharField(max_length=20, choices=APPROVAL, default="PENDING")
     is_active = models.BooleanField(default=True)
+    # Site pre-selected for worker bindings created by scanning a worker QR.
+    default_site = models.ForeignKey("bss_core.Site", null=True, blank=True,
+                                     on_delete=models.SET_NULL, related_name="+")
 
     class Meta:
         db_table = "contractor_profiles"
@@ -209,6 +212,9 @@ class EmployerProfile(models.Model):
     compliance_reminder_window_days = models.SmallIntegerField(default=7)
     preferred_reporting_period = models.CharField(max_length=40, blank=True)
     escalation_contact = models.CharField(max_length=120, blank=True)
+    # Site pre-selected for contractor bindings / site allotments.
+    default_site = models.ForeignKey("bss_core.Site", null=True, blank=True,
+                                     on_delete=models.SET_NULL, related_name="+")
     contact_person = models.CharField(max_length=120, blank=True)
     mobile = models.CharField(max_length=20, blank=True)
     email = models.EmailField(max_length=120, blank=True)

@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
+import { IScannerControls } from "@zxing/browser";
 import { Building2, Camera, CheckCircle2, Handshake, Home, Link2, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
 import ScanFrame from "@/components/qr/ScanFrame";
-import { playScanBeep } from "@/lib/scanFeedback";
+import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
+import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus } from "@/lib/qrScanner";
 
 type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER" | "BSS_SITE"; bssId?: string; siteToken?: string; siteCode?: string; issuer: string };
 
@@ -25,6 +26,7 @@ export default function ContractorScanPage() {
   const [alreadyPending, setAlreadyPending] = useState(false);
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
+  const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
 
   useEffect(() => () => controls.current?.stop(), []);
 
@@ -32,6 +34,7 @@ export default function ContractorScanPage() {
     try {
       const p = JSON.parse(text) as Payload;
       if (p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
+      if (p.bssId && p.bssId === contractor.identity.bssId) throw new Error("This is your own QR — scan an employer's or a worker's QR.");
       playScanBeep(true);
       setScanned(p);
       setAlreadyPending(false);
@@ -46,10 +49,12 @@ export default function ContractorScanPage() {
       }
       if (p.type === "BSS_EMPLOYER") {
         const known = contractor.employers.find(e => e.employerId === bssId);
-        setEntity({ kind: 'employer', bssId, name: known?.name ?? 'Principal Employer ' + bssId.slice(-4), employer: known?.name ?? 'Principal Employer', site: known?.sites?.[0] ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
+        const existing = contractor.bindingRequests.find(b => b.type === 'Employer' && b.bssId === bssId && ['Pending', 'Accepted'].includes(b.status));
+        setAlreadyPending(Boolean(existing));
+        setEntity({ kind: 'employer', bssId, name: known?.name ?? existing?.entityName ?? 'Principal Employer ' + bssId.slice(-4), employer: known?.name ?? existing?.entityName ?? 'Principal Employer', site: known?.sites?.[0] ?? existing?.site ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
         setRequestSent(false);
         setState("binding");
-        setMessage("Employer QR identified — request binding; the employer approves the binding then allots sites.");
+        setMessage(existing ? `Binding request already ${existing.status.toLowerCase()} with this employer.` : "Employer QR identified — request binding; the employer approves the binding then allots sites.");
         controls.current?.stop();
         return;
       }
@@ -57,11 +62,13 @@ export default function ContractorScanPage() {
         // Worker QR → identify worker, show relationship, request binding (never auto-bind)
         const known = contractor.workers.find(w => w.bssId === bssId);
         const pending = contractor.bindingRequests.find(b => b.bssId === bssId && b.status === 'Pending');
+        const resolvedSite = known?.site ?? pending?.site ?? contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? 'Unassigned site';
+        setSelectedSite(resolvedSite);
         setEntity({
           kind: 'worker', bssId,
           name: known?.name ?? pending?.entityName ?? 'BSS Worker ' + bssId.slice(-4),
           employer: known?.employer ?? contractor.principalEmployer.name,
-          site: known?.site ?? pending?.site ?? contractor.sites[0]?.name ?? 'Unassigned site',
+          site: resolvedSite,
           designation: known?.designation ?? pending?.designation ?? 'Not disclosed',
         });
         setRequestSent(false);
@@ -92,7 +99,7 @@ export default function ContractorScanPage() {
       const response = await fetch('/api/bindings/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.site }),
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
@@ -123,10 +130,12 @@ export default function ContractorScanPage() {
   };
 
   const startCamera = async () => {
+    primeAudio();
     setState("scanning"); setMessage("Point the camera at a BSS Worker or Employer QR code");
     try {
-      const reader = new BrowserQRCodeReader();
-      controls.current = await reader.decodeFromConstraints({ video: { facingMode: { ideal: "environment" } } }, videoRef.current!, r => { if (r) verify(r.getText()); });
+      const reader = createQrReader();
+      controls.current = await reader.decodeFromConstraints(QR_VIDEO_CONSTRAINTS, videoRef.current!, r => { if (r) verify(r.getText()); });
+      applyContinuousFocus(controls.current);
     } catch { setState("error"); setMessage("Camera access was unavailable. Allow permission or upload a QR image."); }
   };
 
@@ -134,7 +143,7 @@ export default function ContractorScanPage() {
     if (!file) return;
     setState("scanning"); setMessage("Reading QR image…");
     const url = URL.createObjectURL(file);
-    try { verify((await new BrowserQRCodeReader().decodeFromImageUrl(url)).getText()); }
+    try { verify((await createQrReader().decodeFromImageUrl(url)).getText()); }
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
     finally { URL.revokeObjectURL(url); }
   };
@@ -178,6 +187,15 @@ export default function ContractorScanPage() {
                 <div><dt className="text-gray-400">Current relationship</dt><dd className="font-semibold text-gray-800 mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
               </dl>
               <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
+              {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length > 0 && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Site for this binding</label>
+                  <select value={selectedSite} onChange={e => setSelectedSite(e.target.value)} className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+                    {contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}{s.employer ? ` — ${s.employer}` : ''}</option>)}
+                  </select>
+                  {contractor.defaultSite && <p className="text-[11px] text-gray-400 mt-1">Default site: {contractor.defaultSite.name}</p>}
+                </div>
+              )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
                 ? (attendanceMarked
                     ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>

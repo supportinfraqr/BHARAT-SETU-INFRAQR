@@ -263,18 +263,19 @@ export type ContractorPortalData = {
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
   sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number }>;
+  defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;
   complianceReports: Array<{ id: string; site: string; employer: string; period: string; type: string; status: 'Compliant' | 'Pending' | 'Non-compliant' }>;
   gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; eligibility?: GatePassEligibility }>;
   applications: Array<{ id: string; workerName: string; workerId: string; employer: string; trade: string; experience: string; expectedWage: number; location: string; status: 'Pending' | 'Shortlisted' | 'Hired' | 'Rejected'; dateApplied: string; matchScore: number }>;
-  employers: Array<{ id: string; name: string; employerId: string; sites: string[]; status: 'Active' | 'Inactive'; boundSince: string }>;
+  employers: Array<{ id: string; name: string; employerId: string; sites: string[]; siteDetails?: Array<{ id: string; name: string; code: string; location: string; state: string }>; status: 'Active' | 'Inactive'; boundSince: string }>;
   submissions: {
     documents: Array<{ id: string; uniqueNo?: string; type: string; employer: string; site: string; state?: string; financialYear?: string; month?: string; period: string; status: string; submittedAt: string; updatedAt?: string; daysLeft?: number; mandatory?: boolean; frequency?: string; accuracy?: number; fileName?: string; checksum?: string }>;
   };
   workerBenefits: WorkerBenefitsData;
   salaries: ContractorSalaryRecord[];
-  profileSections: Record<string, Array<{ label: string; value: string; sensitive?: boolean }>>;
+  profileSections: Record<string, Array<{ label: string; value: string; sensitive?: boolean; type?: string }>>;
   // Contract-specific additions (dashboards / modules)
   licenses: ContractorLicence[];
   workerDocuments: ContractorWorkerDocument[];
@@ -454,6 +455,14 @@ export type EmployerApproval = {
   status: 'Pending' | 'Approved' | 'Rejected' | 'Accepted' | 'Cancelled';
   /** Present on Contractor ↔ Employer binding rows. */
   bindingId?: string;
+  consentEmployer?: boolean;
+  consentContractor?: boolean;
+  source?: string;
+  /** Site IDs already allotted to this contractor↔employer binding. */
+  siteIds?: number[];
+  unbindRequested?: boolean;
+  unbindConsentEmployer?: boolean;
+  unbindConsentContractor?: boolean;
 };
 
 export type EmployerComplianceReport = {
@@ -490,6 +499,7 @@ export type EmployerPortalData = {
     pendingApprovals: number;
   };
   sites: EmployerSite[];
+  defaultSite?: { id: string; name: string; code: string } | null;
   contractors: EmployerContractor[];
   workers: EmployerWorker[];
   grievances: ContractorGrievance[];

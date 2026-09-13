@@ -1301,6 +1301,9 @@ def _ce_binding_row(b):
         "consentContractor": bool(b.consent_contractor),
         "consentEmployer": bool(b.consent_employer),
         "source": _d(b.source),
+        "unbindRequested": bool(b.unbind_requested_at),
+        "unbindConsentContractor": bool(b.unbind_consent_contractor),
+        "unbindConsentEmployer": bool(b.unbind_consent_employer),
         "requestedOn": _dts(b.created_at),
         "allotments": allotments,
     }
@@ -1622,6 +1625,14 @@ def _contractor_principal_employer(user):
     return {"name": "", "code": "", "industry": "", "email": "", "lin": ""}
 
 
+def _default_site_info(profile):
+    """The role's pre-selected default site, or None."""
+    site = getattr(profile, "default_site", None) if profile else None
+    if site is None:
+        return None
+    return {"id": str(site.id), "name": _d(site.site_name), "code": _d(site.site_code)}
+
+
 def _contractor_sites(user):
     site_ids = set(WorkerContractorBinding.objects.filter(contractor=user).values_list("site_id", flat=True))
     site_ids.update(ContractorSiteAllotment.objects.filter(
@@ -1852,9 +1863,16 @@ def _contractor_employers(user):
         allotted = set(ContractorSiteAllotment.objects.filter(
             binding__contractor=user, binding__employer_id=k, status="APPROVED"
         ).values_list("site_id", flat=True))
-        v["sites"] = [s.id for s in Site.objects.filter(employer_id=k) if
-                      WorkerContractorBinding.objects.filter(contractor=user, site=s).exists()
-                      or s.id in allotted]
+        site_rows = [s for s in Site.objects.filter(employer_id=k) if
+                     WorkerContractorBinding.objects.filter(contractor=user, site=s).exists()
+                     or s.id in allotted]
+        # Human-readable site names (the UI previously showed raw site IDs) plus
+        # the full detail rows so the contractor can see exactly what is allotted.
+        v["sites"] = [_d(s.site_name) for s in site_rows]
+        v["siteDetails"] = [{
+            "id": str(s.id), "name": _d(s.site_name), "code": _d(s.site_code),
+            "location": _d(s.location) or _d(s.city), "state": _d(s.state),
+        } for s in site_rows]
         rows.append(v)
     return rows
 
@@ -2049,8 +2067,18 @@ def _contractor_binding_requests(user):
             "unbindConsentWorker": bool(b.unbind_consent_worker),
             "unbindConsentContractor": bool(b.unbind_consent_contractor),
         })
-    # Contractor <-> employer bindings (scanning an employer/site QR).
+    # Contractor <-> employer bindings (scanning an employer/site QR). The
+    # register shows ONE row per principal employer — prefer a live binding
+    # (PENDING/ACCEPTED), otherwise the most recent terminal one — instead of
+    # every historical decline/cancel.
+    _LIVE = {"PENDING", "ACCEPTED"}
+    ce_latest = {}
     for e in ContractorEmployerBinding.objects.filter(contractor=user).order_by("-created_at"):
+        current = ce_latest.get(e.employer_id)
+        if current is None or (str(current.binding_status).upper() not in _LIVE
+                               and str(e.binding_status).upper() in _LIVE):
+            ce_latest[e.employer_id] = e
+    for e in ce_latest.values():
         ep = getattr(e.employer, "employer_profile", None)
         sites = [a.site.site_name for a in e.allotments.all() if a.site]
         rows.append({
@@ -2068,9 +2096,9 @@ def _contractor_binding_requests(user):
             # consent occupies the "worker" slot so the shared row shape works.
             "consentWorker": bool(e.consent_employer),
             "consentContractor": bool(e.consent_contractor),
-            "unbindRequested": False,
-            "unbindConsentWorker": False,
-            "unbindConsentContractor": False,
+            "unbindRequested": bool(e.unbind_requested_at),
+            "unbindConsentWorker": bool(e.unbind_consent_employer),
+            "unbindConsentContractor": bool(e.unbind_consent_contractor),
         })
     rows.sort(key=lambda row: str(row.get("requestedOn") or ""), reverse=True)
     return rows
@@ -2416,6 +2444,7 @@ def build_contractor_portal(user):
         "stats": _contractor_stats(user),
         "principalEmployer": _contractor_principal_employer(user),
         "sites": _contractor_sites(user),
+        "defaultSite": _default_site_info(getattr(user, "contractor_profile", None)),
         "workers": _contractor_workers(user),
         "compliances": _contractor_compliances(user),
         "complianceReports": _contractor_compliance_reports(user),
@@ -2638,11 +2667,19 @@ def _employer_approvals(user):
             "checks": checks, "status": status_label.get(str(a.status).upper(), "Pending"),
         })
     # Contractor <-> employer bindings (contractor scanned this employer's QR
-    # or a site QR). Every status is surfaced so accepted/rejected requests stay
-    # visible in the Binding Requests register instead of disappearing.
+    # or a site QR). ONE row per contractor: prefer a live binding
+    # (PENDING/ACCEPTED), otherwise the most recent terminal one — the register
+    # is not a per-request history log.
     binding_status = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                          "REJECTED": "Rejected", "CANCELLED": "Cancelled"}
+    _LIVE = {"PENDING", "ACCEPTED"}
+    ce_latest = {}
     for e in ContractorEmployerBinding.objects.filter(employer=user).order_by("-created_at"):
+        current = ce_latest.get(e.contractor_id)
+        if current is None or (str(current.binding_status).upper() not in _LIVE
+                               and str(e.binding_status).upper() in _LIVE):
+            ce_latest[e.contractor_id] = e
+    for e in ce_latest.values():
         cp = getattr(e.contractor, "contractor_profile", None)
         sites = [a.site.site_name for a in e.allotments.all() if a.site]
         rows.append({
@@ -2652,9 +2689,16 @@ def _employer_approvals(user):
             "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(e.contractor_id)),
             "contractor": None,
             "site": ", ".join(sites) if sites else "Sites to be allotted",
+            "siteIds": [a.site_id for a in e.allotments.all() if a.site_id],
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
             "status": binding_status.get(str(e.binding_status).upper(), "Pending"),
+            "consentEmployer": bool(e.consent_employer),
+            "consentContractor": bool(e.consent_contractor),
+            "source": _d(e.source),
+            "unbindRequested": bool(e.unbind_requested_at),
+            "unbindConsentEmployer": bool(e.unbind_consent_employer),
+            "unbindConsentContractor": bool(e.unbind_consent_contractor),
         })
     return rows
 
@@ -2769,6 +2813,7 @@ def build_employer_portal(user):
         "identity": _employer_identity(user),
         "stats": _employer_stats(user),
         "sites": _employer_sites(user),
+        "defaultSite": _default_site_info(getattr(user, "employer_profile", None)),
         "contractors": _employer_contractors(user),
         "workers": _employer_workers(user),
         "grievances": _employer_grievances(user),
@@ -2951,7 +2996,7 @@ def build_notifications(user):
 
     elif user.role == "contractor":
         for b in (ContractorEmployerBinding.objects
-                  .filter(contractor=user, binding_status="PENDING")
+                  .filter(contractor=user, binding_status="PENDING", consent_contractor=False)
                   .select_related("employer").order_by("-created_at")[:10]):
             emit(f"ce-binding-{b.id}", "Approvals", "New employer binding request",
                  f"{_notification_actor_name(b.employer)} has requested to engage your firm.",
@@ -2983,7 +3028,7 @@ def build_notifications(user):
 
     elif user.role == "employer":
         for b in (ContractorEmployerBinding.objects
-                  .filter(employer=user, binding_status="PENDING")
+                  .filter(employer=user, binding_status="PENDING", consent_employer=False)
                   .select_related("contractor").order_by("-created_at")[:10]):
             emit(f"ce-binding-{b.id}", "Approvals", "New contractor binding request",
                  f"{_notification_actor_name(b.contractor)} has requested to be bound to your organisation.",
