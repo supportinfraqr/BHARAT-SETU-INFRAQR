@@ -3634,12 +3634,10 @@ def binding_scan(request):
         binding.accepted_at = timezone.now()
     binding.save()
 
-    if site is not None:
-        ContractorSiteAllotment.objects.get_or_create(
-            binding=binding, site=site, defaults={"status": "PENDING", "source": "site_qr"})
-
-    # The employer may pick the site(s) at scan time. These are proposals
-    # (PENDING) the contractor must approve, exactly like the in-app allot flow.
+    # Site proposals are employer-only: a contractor scanning a site QR raises
+    # the binding request, but the employer proposes the sites afterwards. The
+    # employer may also pick the site(s) at scan time (proposals the contractor
+    # approves).
     if qr_type == "BSS_CONTRACTOR" and user.role == "employer":
         for sid in (body.get("siteIds") or []):
             chosen = Site.objects.filter(pk=sid, employer=user).first()

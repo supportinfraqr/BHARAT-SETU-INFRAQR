@@ -46,7 +46,7 @@ export default function ContractorScanPage() {
         setEntity({ kind: 'employer', bssId: p.bssId ?? '', name: `Site ${p.siteCode ?? ''}`.trim(), employer: 'Principal Employer', site: p.siteCode ?? '', designation: 'Site binding' });
         setRequestSent(false);
         setState("binding");
-        setMessage("Site QR identified — request binding. The employer approves the binding and this site.");
+        setMessage("Site QR identified — request a binding. The employer approves the binding, then proposes sites for you to approve.");
         controls.current?.stop();
         return;
       }
@@ -109,7 +109,7 @@ export default function ContractorScanPage() {
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
       setMessage(entity.kind === 'worker'
         ? `Binding request sent to ${entity.name}. The worker must approve before binding is complete.`
-        : `Binding request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding${scanned.type === 'BSS_SITE' ? ' and this site.' : ' then allots sites.'}`);
+        : `Binding request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding, then proposes sites.`);
     } catch (e) {
       setRequestSent(false);
       setMessage(e instanceof Error ? e.message : 'Binding request could not be created.');
@@ -264,8 +264,8 @@ export default function ContractorScanPage() {
       description={entity?.kind === 'worker'
         ? `A binding request will be sent to ${entity.name}. Binding completes only after the worker approves it.`
         : scanned?.type === 'BSS_SITE'
-          ? 'A binding request will be sent to this site\u2019s principal employer, requesting this site. The employer approves the binding and the site.'
-          : `A binding request will be sent to ${entity?.name ?? 'this employer'}. The employer approves the binding, then allots sites.`}
+          ? 'A binding request will be sent to this site\u2019s principal employer. The employer approves the binding, then proposes sites for you to approve.'
+          : `A binding request will be sent to ${entity?.name ?? 'this employer'}. The employer approves the binding, then proposes sites.`}
       details={entity ? [
         { label: entity.kind === 'worker' ? 'Worker' : scanned?.type === 'BSS_SITE' ? 'Site' : 'Employer', value: entity.name },
         ...(entity.bssId ? [{ label: 'BSS ID', value: entity.bssId }] : []),
