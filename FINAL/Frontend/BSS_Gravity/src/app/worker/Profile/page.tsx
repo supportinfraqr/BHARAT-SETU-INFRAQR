@@ -308,8 +308,8 @@ export default function WorkerProfilePage() {
       if (activeTab === 'family') {
         patch.family = {
           ...(patch.family ?? {}),
-          nominees: nominees.map(n => ({
-            name: n.name, dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
+          nominees: nominees.filter(n => n.name.trim()).map(n => ({
+            name: n.name.trim(), dependant: n.dependant, relation: n.relationship, nomineeType: n.nomineeType,
             dob: n.dob, age: nomineeAge(n.dob), contact: n.contact, address: n.address, documents: n.documents,
             percent: n.percent,
           })),

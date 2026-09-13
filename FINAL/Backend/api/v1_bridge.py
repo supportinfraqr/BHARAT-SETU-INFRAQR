@@ -1567,9 +1567,11 @@ def _persist_mutation(user, role_path, resource, method, body):
         if nominees is not None:
             WorkerFamilyDependant.objects.filter(user=user, nominee=True).delete()
             for nm in nominees:
+                if not str(nm.get("name") or "").strip():
+                    continue  # never persist a blank nominee row
                 WorkerFamilyDependant.objects.create(
                     user=user, nominee=True,
-                    name=nm.get("name", ""), dependant=nm.get("dependant", ""),
+                    name=str(nm.get("name") or "").strip(), dependant=nm.get("dependant", ""),
                     relation=nm.get("relation", ""), nominee_type=nm.get("nomineeType", ""),
                     nominee_dob=nm.get("dob") or None, nominee_age=_coerce_int(nm.get("age")),
                     contact=nm.get("contact", ""), address=nm.get("address", ""),
