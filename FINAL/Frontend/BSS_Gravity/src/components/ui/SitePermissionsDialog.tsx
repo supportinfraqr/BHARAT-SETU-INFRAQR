@@ -134,7 +134,7 @@ export default function SitePermissionsDialog({
               >
                 <span className="inline-flex items-center gap-1.5">
                   <Users size={14} className="text-[#073B67]" />
-                  Also propose to other bound contractors{selectedBindings.length ? ` (${selectedBindings.length})` : ""}
+                  Secondary contractors{selectedBindings.length ? ` (${selectedBindings.length})` : ""}
                 </span>
                 <ChevronDown size={14} className={`transition-transform ${secondaryOpen ? "rotate-180" : ""}`} />
               </button>
@@ -156,7 +156,7 @@ export default function SitePermissionsDialog({
                   })}
                 </div>
               )}
-              <p className="mt-1 text-[10px] text-gray-400">The site is proposed to the current contractor and to each selected bound contractor; each approves independently.</p>
+              <p className="mt-1 text-[10px] text-gray-400">The site is proposed to the current contractor and to each selected secondary contractor; each approves independently.</p>
             </div>
           )}
           {rows.length === 0 ? (
