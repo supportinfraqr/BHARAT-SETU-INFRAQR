@@ -24,6 +24,9 @@ export default function WorkerProfilePage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [saveAttempted, setSaveAttempted] = useState(false);
+  // Save Persona stays disabled until the user actually changes something.
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => { setDirty(false); }, [activeTab]);
 
   // ── Multiple nominees (dynamic rows) with individual share % ─────────────
   type Nominee = { id: number; name: string; dependant: string; nomineeType: string; relationship: string; dob: string; contact: string; address: string; documents: string[]; percent: number };
@@ -69,8 +72,8 @@ export default function WorkerProfilePage() {
     return String(Math.max(0, age));
   };
   const updateNominee = (id: number, patch: Partial<Nominee>) => setNominees(current => current.map(n => n.id === id ? { ...n, ...patch } : n));
-  const addNominee = () => { setNominees(current => balanceNominees([...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: 0 }])); setNextNomineeId(id => id + 1); };
-  const removeNominee = (id: number) => setNominees(current => balanceNominees(current.filter(n => n.id !== id)));
+  const addNominee = () => { setDirty(true); setNominees(current => balanceNominees([...current, { id: nextNomineeId, name: '', dependant: '', nomineeType: 'Nominee', relationship: BssTaxonomies.NomineeRelationship[0], dob: '', contact: '', address: '', documents: [], percent: 0 }])); setNextNomineeId(id => id + 1); };
+  const removeNominee = (id: number) => { setDirty(true); setNominees(current => balanceNominees(current.filter(n => n.id !== id))); };
   const pickNomineeDoc = (id: number) => { setDocTargetId(id); window.setTimeout(() => nomineeFileRef.current?.click(), 0); };
   const addNomineeDoc = (file?: File) => {
     if (!file || docTargetId === null) return;
@@ -80,8 +83,9 @@ export default function WorkerProfilePage() {
       : file.name;
     updateNominee(docTargetId, { documents: [...(nominees.find(n => n.id === docTargetId)?.documents ?? []), label] });
     setDocTargetId(null);
+    setDirty(true);
   };
-  const splitEqually = () => setNominees(current => balanceNominees(current));
+  const splitEqually = () => { setDirty(true); setNominees(current => balanceNominees(current)); };
   const segColors = ['bg-[#073B67]', 'bg-[#F47A32]', 'bg-[#2F9E67]', 'bg-[#7A5AF8]', 'bg-[#0EA5E9]', 'bg-[#E11D48]'];
   
   // ── Government ID integrations (sourced from the worker profile) ────────
@@ -242,12 +246,12 @@ export default function WorkerProfilePage() {
       .map(s => ({ name: s.name ?? '', experienceYears: s.experienceYears ?? '' })),
   });
   const setSkill = (key: 'languages', value: string) => setSkillsForm(current => ({ ...current, [key]: value }));
-  const addEducation = () => setSkillsForm(current => ({ ...current, educations: [...current.educations, { qualificationCourse: '', boardUniversity: '', passingYear: '' }] }));
+  const addEducation = () => { setDirty(true); setSkillsForm(current => ({ ...current, educations: [...current.educations, { qualificationCourse: '', boardUniversity: '', passingYear: '' }] })); };
   const updateEducation = (index: number, key: 'qualificationCourse' | 'boardUniversity' | 'passingYear', value: string) => setSkillsForm(current => ({ ...current, educations: current.educations.map((e, i) => i === index ? { ...e, [key]: value } : e) }));
-  const removeEducation = (index: number) => setSkillsForm(current => ({ ...current, educations: current.educations.filter((_, i) => i !== index) }));
-  const addSkill = () => setSkillsForm(current => ({ ...current, items: [...current.items, { name: '', experienceYears: '' }] }));
+  const removeEducation = (index: number) => { setDirty(true); setSkillsForm(current => ({ ...current, educations: current.educations.filter((_, i) => i !== index) })); };
+  const addSkill = () => { setDirty(true); setSkillsForm(current => ({ ...current, items: [...current.items, { name: '', experienceYears: '' }] })); };
   const updateSkill = (index: number, key: 'name' | 'experienceYears', value: string) => setSkillsForm(current => ({ ...current, items: current.items.map((s, i) => i === index ? { ...s, [key]: value } : s) }));
-  const removeSkill = (index: number) => setSkillsForm(current => ({ ...current, items: current.items.filter((_, i) => i !== index) }));
+  const removeSkill = (index: number) => { setDirty(true); setSkillsForm(current => ({ ...current, items: current.items.filter((_, i) => i !== index) })); };
 
   // On a successful save: show the success toast, jump to the top, then hard
   // reload the whole portal so every screen reflects the freshly saved data.
@@ -455,7 +459,7 @@ export default function WorkerProfilePage() {
         
         {/* CONTENT AREA */}
         <div className="flex-1 w-full bg-white rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.03)] overflow-hidden">
-          <form onSubmit={handleSave} className="p-6 md:p-8">
+          <form onSubmit={handleSave} onChange={() => setDirty(true)} onInput={() => setDirty(true)} className="p-6 md:p-8">
           
           {/* TAB: PERSONAL */}
           {activeTab === 'personal' && (
@@ -1665,8 +1669,9 @@ export default function WorkerProfilePage() {
           <div className="mt-10 flex justify-end">
             <button 
               type="submit" 
-              disabled={isSaving}
-              className="bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-full font-bold text-[14px] shadow-sm transition-all flex justify-center items-center gap-2 min-w-[160px]"
+              disabled={isSaving || !dirty}
+              title={!dirty ? 'Make a change to enable saving' : undefined}
+              className="bg-[#0F172A] hover:bg-black text-white px-8 py-3 rounded-full font-bold text-[14px] shadow-sm transition-all flex justify-center items-center gap-2 min-w-[160px] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 <>Updating Persona...</>
