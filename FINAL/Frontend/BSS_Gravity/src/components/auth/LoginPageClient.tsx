@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   HardHat, 
   Briefcase, 
@@ -34,6 +34,7 @@ export default function OriginalLoginPage() {
   const [mpin, setMpin] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const identifierRef = useRef<HTMLInputElement>(null);
   const [loginError, setLoginError] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
@@ -398,7 +399,12 @@ export default function OriginalLoginPage() {
                   <div className="mt-2">
                     {loginMethod === 'OTP' && (
                       <div className="flex flex-col gap-4 w-full animate-in fade-in zoom-in-95 duration-200">
-                        <input type="text" value={loginIdentifier} onChange={(e) => setLoginIdentifier(e.target.value)} disabled={otpSent} className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800" placeholder={t('bssIdOrMobile')} />
+                        <div className="relative">
+                          <input ref={identifierRef} type="text" value={loginIdentifier} onChange={(e) => setLoginIdentifier(e.target.value)} disabled={otpSent} className={`w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] shadow-[inset_0_2px_5px_rgba(0,0,0,0.04)] focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10 focus:border-[#1E3A8A]/30 outline-none transition-all placeholder:text-[13px] placeholder:text-gray-400 font-medium text-gray-800 ${otpSent ? 'pr-16 opacity-70' : ''}`} placeholder={t('bssIdOrMobile')} />
+                          {otpSent && (
+                            <button type="button" onClick={() => { setOtpSent(false); setOtp(''); setLoginError(''); requestAnimationFrame(() => identifierRef.current?.focus()); }} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1.5 text-[12px] font-bold text-[#1E3A8A] hover:bg-[#1E3A8A]/5 active:scale-95 transition-all cursor-pointer">{t('edit')}</button>
+                          )}
+                        </div>
                         {otpSent && <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] text-center tracking-[0.4em] font-bold outline-none focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10" placeholder="Six-digit OTP" />}
                         <button onClick={handleOtpLogin} className="mt-1 w-full bg-[#1E3A8A] hover:bg-[#152960] text-white rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold tracking-wide flex items-center justify-center transition-all shadow-[0_4px_14px_0_rgba(30,58,138,0.39)] hover:shadow-[0_6px_20px_rgba(30,58,138,0.23)] hover:-translate-y-[1px] active:scale-[0.98] group cursor-pointer">
                           {otpSent ? t('secureLogin') : t('sendOtp')}

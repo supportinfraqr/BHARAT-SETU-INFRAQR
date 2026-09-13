@@ -29,7 +29,8 @@ export const loginTranslations: Record<string, Record<string, string>> = {
     whatsapp: "WhatsApp",
     aadhaar: "Aadhaar",
     callUs: "Call Us",
-    credentialRecovery: "Credential Recovery"
+    credentialRecovery: "Credential Recovery",
+    edit: "Edit"
   },
   hi: {
     secureAuth: "सुरक्षित प्रमाणीकरण",
@@ -61,7 +62,8 @@ export const loginTranslations: Record<string, Record<string, string>> = {
     whatsapp: "व्हाट्सएप",
     aadhaar: "आधार",
     callUs: "हमें कॉल करें",
-    credentialRecovery: "क्रेडेंशियल पुनर्प्राप्ति"
+    credentialRecovery: "क्रेडेंशियल पुनर्प्राप्ति",
+    edit: "बदलें"
   },
   bn: {
     secureAuth: "নিরাপদ প্রমাণীকরণ",
