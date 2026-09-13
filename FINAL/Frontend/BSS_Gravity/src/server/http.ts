@@ -57,25 +57,50 @@ function buildUpstreamHeaders(session: PortalSession | null, init: RequestInit):
   return headers;
 }
 
+// Transient upstream failures we retry for idempotent (GET/HEAD) requests so a
+// brief backend restart (deploy) doesn't surface as a 502 to the user.
+const RETRYABLE_STATUS = new Set([502, 503, 504]);
+const RETRY_BACKOFF_MS = [1000, 2000, 3000, 4000]; // ~10s total coverage
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function upstreamRequest<T>(baseUrl: string | undefined, path: string, session: PortalSession | null, init: RequestInit = {}): Promise<T> {
   const config = assertRuntimeConfigured();
   if (!baseUrl) throw new UpstreamError('The upstream service is not configured.', 503);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
-  try {
-    const headers = buildUpstreamHeaders(session, init);
-    headers.set('Accept', 'application/json');
-    const response = await fetch(`${baseUrl}${path}`, { ...init, headers, cache: 'no-store', signal: controller.signal });
-    const contentType = response.headers.get('content-type') ?? '';
-    const payload = contentType.includes('application/json') ? await response.json() : await response.text();
-    if (!response.ok) throw new UpstreamError(upstreamErrorMessage(response.status, payload, 'The BSS service rejected the request.'), response.status, payload);
-    return payload as T;
-  } catch (error) {
-    if (error instanceof UpstreamError) throw error;
-    if (error instanceof Error && error.name === 'AbortError') throw new UpstreamError('The BSS service timed out.', 504);
-    throw new UpstreamError('The BSS service is unavailable.', 503);
-  } finally {
-    clearTimeout(timer);
+  const method = (init.method ?? 'GET').toUpperCase();
+  const idempotent = method === 'GET' || method === 'HEAD';
+  let attempt = 0;
+  for (;;) {
+    attempt += 1;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), config.requestTimeoutMs);
+    try {
+      const headers = buildUpstreamHeaders(session, init);
+      headers.set('Accept', 'application/json');
+      const response = await fetch(`${baseUrl}${path}`, { ...init, headers, cache: 'no-store', signal: controller.signal });
+      const contentType = response.headers.get('content-type') ?? '';
+      const payload = contentType.includes('application/json') ? await response.json() : await response.text();
+      if (!response.ok) {
+        const error = new UpstreamError(upstreamErrorMessage(response.status, payload, 'The BSS service rejected the request.'), response.status, payload);
+        if (idempotent && RETRYABLE_STATUS.has(response.status) && attempt <= RETRY_BACKOFF_MS.length) {
+          await delay(RETRY_BACKOFF_MS[attempt - 1]);
+          continue;
+        }
+        throw error;
+      }
+      return payload as T;
+    } catch (error) {
+      if (error instanceof UpstreamError) throw error;
+      const aborted = error instanceof Error && error.name === 'AbortError';
+      if (idempotent && !aborted && attempt <= RETRY_BACKOFF_MS.length) {
+        await delay(RETRY_BACKOFF_MS[attempt - 1]);
+        continue;
+      }
+      if (aborted) throw new UpstreamError('The BSS service timed out.', 504);
+      throw new UpstreamError('The BSS service is unavailable.', 503);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 
