@@ -496,15 +496,15 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
 
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1">
           <div className="grid sm:grid-cols-2 gap-4">
-            <label className="text-xs font-semibold text-gray-700">Site name<input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">Site code<input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">City / location<input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin)<input list="site-state-options" value={state} onChange={event => setState(event.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">Site name <span className="text-red-500">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">Site code <span className="text-red-500">*</span><input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">City / location <span className="text-red-500">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span><input list="site-state-options" value={state} onChange={event => setState(event.target.value)} className={fieldCls} /></label>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
             <datalist id="site-state-options">{stateOptions.map(s => <option key={s} value={s} />)}</datalist>
-            <label className="text-xs font-semibold text-gray-700">Start date<input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">End date<input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">Status<select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
+            <label className="text-xs font-semibold text-gray-700">Start date <span className="text-red-500">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">End date <span className="text-red-500">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">Status <span className="text-red-500">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-100">
