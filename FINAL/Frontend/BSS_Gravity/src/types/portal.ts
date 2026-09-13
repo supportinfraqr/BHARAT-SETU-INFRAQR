@@ -174,7 +174,7 @@ export type ContractorComplianceHistory = {
 export type ContractorJobPosting = {
   id: string; title: string; trade: string; category: string; workplaceType: string; state: string; city: string; site: string; description: string; skills: string[];
   experience: string; minSalary: number; maxSalary: number; salaryVisibility: string; vacancies: number; monthlyWage: number; closingDate: string; duration: string;
-  visibility: string; status: 'Draft' | 'Submitted' | 'Approved' | 'Closed'; postedOn: string; applications: number; hires: number;
+  visibility: string; status: 'Draft' | 'Open' | 'Closed'; postedOn: string; applications: number; hires: number;
 };
 
 export type ContractorBindingRequest = {

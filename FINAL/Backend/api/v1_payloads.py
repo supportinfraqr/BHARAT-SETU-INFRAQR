@@ -2238,8 +2238,8 @@ def _contractor_job_history(user):
             "monthlyWage": _num(j.wage_offered),
             "closingDate": _dts(j.validity_until), "duration": _d(j.duration),
             "visibility": _d(j.visibility, "Public"),
-            "status": {"DRAFT": "Draft", "SUBMITTED": "Submitted", "APPROVED": "Approved",
-                       "CLOSED": "Closed"}.get(str(j.status).upper(), "Submitted"),
+            "status": {"DRAFT": "Draft", "SUBMITTED": "Open", "APPROVED": "Open",
+                       "CLOSED": "Closed"}.get(str(j.status).upper(), "Open"),
             "postedOn": _dts(j.created_at),
             "applications": applications, "hires": hires,
         })

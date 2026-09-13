@@ -65,10 +65,10 @@ export default function ContractorRozgarPage() {
         id: String(result?.data?.id ?? `JOB-${Date.now()}`), title: draft.title, trade: draft.trade, category: draft.category, workplaceType: draft.workplaceType, state: draft.state, city: draft.city,
         site: draft.site, description: draft.description, skills: draft.skills, experience: draft.experience, minSalary: Number(draft.minSalary) || 0, maxSalary: Number(draft.maxSalary) || 0,
         salaryVisibility: draft.salaryVisibility, vacancies: Number(draft.vacancies) || 1, monthlyWage: Number(draft.monthlyWage) || 0, closingDate: draft.closingDate, duration: draft.duration,
-        visibility: draft.visibility, status: asDraft ? 'Draft' : 'Submitted', postedOn: asDraft ? '' : new Date().toISOString().slice(0, 10), applications: 0, hires: 0,
+        visibility: draft.visibility, status: asDraft ? 'Draft' : 'Open', postedOn: asDraft ? '' : new Date().toISOString().slice(0, 10), applications: 0, hires: 0,
       };
       replaceContractor({ ...contractor, jobHistory: [postingRecord, ...contractor.jobHistory] });
-      setNotice(asDraft ? 'Posting saved as Draft — publish it from the job dashboard when ready.' : 'Job posting submitted for approval and applicant matching.');
+      setNotice(asDraft ? 'Posting saved as Draft — publish it from the job dashboard when ready.' : 'Job published — it is now visible to matching workers.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Posting could not be created.'); }
     finally { setBusy(false); }
   }
@@ -127,7 +127,7 @@ export default function ContractorRozgarPage() {
             <td className="px-5 py-3 font-medium text-gray-900">{money.format(job.monthlyWage)}/mo</td>
             <td className="px-5 py-3 font-medium text-gray-900">{job.applications}</td>
             <td className="px-5 py-3 font-medium text-green-700">{job.hires}</td>
-            <td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${job.status === 'Approved' ? 'bg-green-50 text-green-700' : job.status === 'Submitted' ? 'bg-orange-50 text-orange-700' : job.status === 'Closed' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'}`}>{job.status}</span></td>
+            <td className="px-5 py-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${job.status === 'Open' ? 'bg-green-50 text-green-700' : job.status === 'Closed' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'}`}>{job.status}</span></td>
             <td className="px-5 py-3 text-gray-500">{job.postedOn || '—'}</td>
           </tr>
         ))}</tbody></table></div>
@@ -199,7 +199,7 @@ export default function ContractorRozgarPage() {
           <dl className="grid grid-cols-2 gap-3 text-xs"><Fact label="Location" value={`${draft.city || '—'}, ${draft.state || '—'}`}/><Fact label="Site" value={draft.site || '—'}/><Fact label="Vacancies" value={draft.vacancies || '—'}/><Fact label="Monthly wage" value={draft.monthlyWage ? money.format(Number(draft.monthlyWage)) : '—'}/><Fact label="Experience" value={draft.experience || '—'}/><Fact label="Closing date" value={draft.closingDate || '—'}/><Fact label="Salary range" value={draft.minSalary || draft.maxSalary ? `${draft.minSalary ? money.format(Number(draft.minSalary)) : '—'} – ${draft.maxSalary ? money.format(Number(draft.maxSalary)) : '—'}` : '—'}/><Fact label="Duration" value={draft.duration || '—'}/></dl>
           <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Description</p><p className="text-xs text-gray-700 leading-5">{draft.description || '—'}</p></div>
           {draft.skills.length > 0 && <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Required skills</p><div className="flex flex-wrap gap-1.5">{draft.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
-          <p className="text-[11px] text-gray-400 flex items-center gap-1.5"><Eye size={13}/>Salary visibility: {draft.salaryVisibility} · Posting visibility: {draft.visibility}. Submission sends the job for approval and applicant matching.</p>
+          <p className="text-[11px] text-gray-400 flex items-center gap-1.5"><Eye size={13}/>Salary visibility: {draft.salaryVisibility} · Posting visibility: {draft.visibility}. Publishing makes this job visible to matching workers.</p>
         </div>}
         {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
       </div>
@@ -208,7 +208,7 @@ export default function ContractorRozgarPage() {
         <div className="flex gap-2">
           {step > 1 && <button onClick={() => setStep(s => (s - 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg border text-sm font-semibold flex items-center gap-1"><ChevronLeft size={15}/>Back</button>}
           {step < 3 && <button onClick={() => setStep(s => (s + 1) as 1 | 2 | 3)} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold flex items-center gap-1">Next<ArrowRight size={15}/></button>}
-          {step === 3 && <><button onClick={() => submitPosting(true)} disabled={busy} className="px-4 py-2 rounded-lg border text-sm font-semibold">Save Draft</button><button onClick={() => submitPosting(false)} disabled={busy} className="px-4 py-2 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-1"><Send size={14}/>{busy ? 'Submitting…' : 'Submit for Approval'}</button></>}
+          {step === 3 && <><button onClick={() => submitPosting(true)} disabled={busy} className="px-4 py-2 rounded-lg border text-sm font-semibold">Save Draft</button><button onClick={() => submitPosting(false)} disabled={busy} className="px-4 py-2 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-1"><Send size={14}/>{busy ? 'Publishing…' : 'Publish job'}</button></>}
         </div>
       </footer>
     </section></div>}
