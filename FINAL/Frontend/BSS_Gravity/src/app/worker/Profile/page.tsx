@@ -719,7 +719,7 @@ export default function WorkerProfilePage() {
                   <div>
                     <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">PAN No.</label>
                     <div className="flex items-center gap-3">
-                      <input name="identity.pan" type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" className="w-full bg-white border border-black/10 rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC] uppercase" />
+                      <input name="identity.pan" type="text" defaultValue={worker.identity.pan} placeholder="Enter PAN" readOnly={worker.identity.panVerified} className={`w-full border rounded-xl px-4 py-3 text-[14px] font-mono font-medium text-[#1D1D1F] uppercase focus:outline-none ${worker.identity.panVerified ? 'bg-[#F5F5F7] border-transparent' : 'bg-white border-black/10 focus:border-[#0066CC]'}`} />
                       <span className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider flex-shrink-0 ${worker.identity.panVerified ? 'bg-[#E8F5E9] text-[#2F9E67]' : 'bg-gray-100 text-[#86868B]'}`}>{worker.identity.panVerified ? 'Verified' : 'Pending'}</span>
                     </div>
                   </div>

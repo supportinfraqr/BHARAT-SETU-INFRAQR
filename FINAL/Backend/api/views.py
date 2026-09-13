@@ -744,10 +744,13 @@ def _apply_digilocker_documents(user, items):
         if not kind:
             continue
         uri, name = item.get("uri") or "", item.get("name") or ""
-        if kind == "pan" and identity and not identity.pan:
+        if kind == "pan" and identity:
+            # DigiLocker is authoritative for PAN: a fetched PAN always wins over
+            # a manually-typed value and is the only source that marks it verified.
             pan = dl.extract_pan(uri) or dl.extract_pan(name)
-            if pan:
+            if pan and (identity.pan != pan or not identity.pan_verified):
                 identity.pan = pan
+                identity.pan_verified = True
                 identity_dirty = True
         elif kind == "aadhaar" and identity and not identity.aadhaar:
             num = _first_12_digit(uri, name)

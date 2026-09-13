@@ -29,10 +29,6 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: 'Expired',
 };
 
-// Document types that BSS pulls automatically from DigiLocker — manual upload is
-// disabled for these (the file comes from the linked DigiLocker account).
-const DIGILOCKER_FETCHED_CODES = new Set(['AADHAR', 'PAN', 'UAN', 'EDU']);
-
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   const d = new Date(value);
@@ -143,7 +139,7 @@ export default function DocumentsModule() {
     { id: 'expiry', header: 'Expiry Date', value: d => formatDate(d.expiry) ?? '-', render: d => d.expiry ? <span className={`text-xs font-semibold ${label(d.status) === 'Expired' ? 'text-orange-600' : 'text-gray-700'}`}>{formatDate(d.expiry)}</span> : <span className="text-gray-300">—</span> },
     {
       id: 'actions', header: 'Actions', filterable: false, value: d => label(d.status), render: d => {
-        const locked = Boolean(d.locked) || DIGILOCKER_FETCHED_CODES.has(d.code);
+        const locked = Boolean(d.locked);
         return <div className="flex gap-1.5 items-center">
           {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="View Document"><Eye size={15} /></button>}
           {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Download"><Download size={15} /></a>}
@@ -190,7 +186,7 @@ export default function DocumentsModule() {
 
       <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
         <p className="text-xs text-gray-600">
-          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed. <strong>Aadhaar, PAN, UAN and Educational certificates are fetched automatically from your linked DigiLocker account</strong> and cannot be uploaded manually. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
+          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed — a manual upload is never marked <strong>Verified</strong>. Link your <strong>DigiLocker</strong> account to fetch government-issued copies of Aadhaar, PAN, UAN and Educational certificates; those arrive <strong>Verified</strong> and locked. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
         </p>
       </section>
 

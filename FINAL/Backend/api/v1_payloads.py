@@ -189,7 +189,7 @@ def _worker_identity_section(identity):
         "bssId": _identity_display(identity, "bss_worker_id"),
         "category": category,
         "aadhaarVerified": bool(identity and identity.aadhaar),
-        "panVerified": bool(identity and identity.pan),
+        "panVerified": bool(identity and identity.pan_verified),
         "photoUrl": _identity_display(identity, "photo"),
         "dob": _dts(identity.date_of_birth if identity else None),
         "gender": _identity_display(identity, "gender"),

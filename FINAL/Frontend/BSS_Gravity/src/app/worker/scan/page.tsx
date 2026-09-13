@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
+import ScanFrame from "@/components/qr/ScanFrame";
+import { playScanBeep } from "@/lib/scanFeedback";
 
 type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYER"; bssId: string; issuer: string; name?: string };
 
@@ -21,7 +23,7 @@ export default function QRScannerWorkflow() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controls = useRef<IScannerControls | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [viewerRole, setViewerRole] = useState<Role>("Guest");
+  const viewerRole: Role = "Guest";
   const [state, setState] = useState<"idle"|"scanning"|"verified"|"error"|"binding">("idle");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -65,8 +67,10 @@ export default function QRScannerWorkflow() {
         setResult(sanitizeWorkerProfile(worker, viewerRole));
         setState("verified"); setMessage("Credential verified successfully");
       }
+      playScanBeep(true);
       controls.current?.stop();
     } catch (e) {
+      playScanBeep(false);
       setState("error"); setMessage(e instanceof Error ? e.message : "Invalid QR code");
       controls.current?.stop();
     }
@@ -113,9 +117,9 @@ export default function QRScannerWorkflow() {
       <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
         <header className="p-4 border-b bg-gray-50 flex items-center gap-2 font-bold"><Camera size={18}/> Scanner</header>
         <div className="p-5 space-y-4">
-          <label className="block text-xs font-bold text-gray-500 uppercase">Authorised viewer role<select value={viewerRole} onChange={e=>setViewerRole(e.target.value as Role)} disabled={state==="scanning"} className="mt-2 w-full border rounded-lg px-3 py-2.5 text-sm text-gray-900 normal-case font-medium"><option value="Guest">Public / unknown scanner</option><option value="Contractor Supervisor">Contractor before binding</option><option value="Contractor-Bound Worker">Bound contractor</option><option value="Employer-Bound Worker">Bound employer</option><option value="Government">Government authorised</option><option value="Worker-Own Profile">Worker — own profile</option></select></label>
           <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state==="scanning"?"block":"hidden"}`} muted playsInline/>
+            <ScanFrame active={state==="scanning"} />
             {state!=="scanning"&&<div className="text-center text-white px-6">{state==="verified"?<CheckCircle2 size={48} className="mx-auto text-green-400"/>:state==="error"?<XCircle size={48} className="mx-auto text-red-400"/>:state==="binding"?<Handshake size={48} className="mx-auto text-orange-300"/>:<ScanLine size={48} className="mx-auto text-gray-400"/>}<p className="mt-3 text-sm font-semibold">{message||"Ready to scan a secure credential"}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">

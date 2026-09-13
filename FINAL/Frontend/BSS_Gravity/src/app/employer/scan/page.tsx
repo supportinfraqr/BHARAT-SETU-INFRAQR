@@ -5,6 +5,8 @@ import { BrowserQRCodeReader, IScannerControls } from '@zxing/browser';
 import { Building2, Camera, CheckCircle2, Home, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
+import ScanFrame from '@/components/qr/ScanFrame';
+import { playScanBeep } from '@/lib/scanFeedback';
 
 type Payload = { v: number; type: 'BSS_WORKER' | 'BSS_CONTRACTOR' | 'BSS_EMPLOYER'; bssId: string; issuer: string };
 type ScannedEntity = {
@@ -35,6 +37,7 @@ export default function EmployerScanPage() {
     try {
       const p = JSON.parse(text) as Payload;
       if (!['BSS_WORKER', 'BSS_CONTRACTOR', 'BSS_EMPLOYER'].includes(p.type) || p.v !== 1 || p.issuer !== 'Bharat Shram Setu') throw new Error('Unsupported QR credential');
+      playScanBeep(true);
       setScanned(p);
       const isContractor = p.type === 'BSS_CONTRACTOR' || p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC');
       const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W');
@@ -76,6 +79,7 @@ export default function EmployerScanPage() {
       }
       controls.current?.stop();
     } catch (e) {
+      playScanBeep(false);
       setState('error');
       setMessage(e instanceof Error ? e.message : 'Invalid QR code');
       controls.current?.stop();
@@ -142,6 +146,7 @@ export default function EmployerScanPage() {
         <div className="p-5 space-y-4">
           <div className="relative bg-black rounded-xl h-64 overflow-hidden flex items-center justify-center">
             <video ref={videoRef} className={`w-full h-full object-cover ${state === 'scanning' ? 'block' : 'hidden'}`} muted playsInline/>
+            <ScanFrame active={state === 'scanning'} />
             {state !== 'scanning' && <div className="text-center text-white px-6">{state === 'identified' || state === 'confirmed' ? <ShieldCheck size={48} className="mx-auto text-green-400"/> : state === 'error' ? <XCircle size={48} className="mx-auto text-red-400"/> : <ScanLine size={48} className="mx-auto text-gray-400"/>}<p className="mt-3 text-sm font-semibold">{message || 'Ready to scan a secure credential'}</p></div>}
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -1308,6 +1308,9 @@ def _persist_mutation(user, role_path, resource, method, body):
             "pan": "pan",
         }
         for fe_key, fld in idn_map.items():
+            if fe_key == "pan" and identity.pan_verified:
+                # PAN fetched from DigiLocker is verified and locked (read-only).
+                continue
             v = idn.get(fe_key) if fe_key in idn else body.get(fe_key)
             if v is not None:
                 setattr(identity, fld, v)
@@ -2700,11 +2703,10 @@ def worker_documents(request):
         return Response({"error": "Unknown document type."},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    # Aadhaar / PAN / UAN / Educational documents are pulled from the worker's
-    # linked DigiLocker account — they are read-only here (no upload/replace).
-    if master.code in {"AADHAR", "PAN", "UAN", "EDU"}:
-        return Response({"error": "This document is fetched automatically from DigiLocker and cannot be uploaded or replaced."},
-                        status=status.HTTP_400_BAD_REQUEST)
+    # A DigiLocker-fetched copy is authoritative: once present it cannot be
+    # replaced (or deleted). Every other document — including Aadhaar/PAN/UAN/
+    # Education — may be uploaded manually; such uploads remain "Under
+    # Verification" and never receive the DigiLocker "Verified" badge.
     if WorkerDocument.objects.filter(user=user, document=master, auto_generated=True).exists():
         return Response({"error": "This document is fetched from DigiLocker and cannot be uploaded or replaced."},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -3335,8 +3337,9 @@ def worker_verify_document(request):
 
     Multipart fields: file, docType (aadhaar|pan|uan|esic), number, name.
     Ported from the EesassinErp WorkerController.cs VerifyDoc logic. On success
-    the matched number is persisted to the worker's record, which the payload
-    surfaces as the "verified" flag (e.g. panVerified derives from identity.pan).
+    the matched number is persisted to the worker's record. This is an OCR
+    keyword match, not a DigiLocker fetch, so it never sets the "Verified"
+    badge (only DigiLocker-sourced PAN does).
     """
     user = request.user
     file_obj = request.FILES.get("file")
@@ -3368,7 +3371,10 @@ def worker_verify_document(request):
                 qr_token=uuid.uuid4().hex + uuid.uuid4().hex[:8],
                 name=user.get_full_name() or "")
         if number:
-            setattr(identity, "aadhaar" if doc_type == "aadhaar" else "pan", number)
+            # A DigiLocker-verified PAN is authoritative and locked; OCR must not
+            # overwrite it (and never marks a manual PAN as DigiLocker-verified).
+            if not (doc_type == "pan" and identity.pan_verified):
+                setattr(identity, "aadhaar" if doc_type == "aadhaar" else "pan", number)
         identity.save()
     else:  # uan / esic
         ss, _ = WorkerSocialSecurity.objects.get_or_create(user=user)

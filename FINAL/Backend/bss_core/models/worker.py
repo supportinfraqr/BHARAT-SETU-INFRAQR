@@ -35,6 +35,7 @@ class WorkerIdentity(models.Model):
     caste = models.CharField(max_length=40, blank=True)
     photo = models.CharField(max_length=255, blank=True)
     pan = models.CharField(max_length=20, blank=True)
+    pan_verified = models.BooleanField(default=False)
     aadhaar = models.CharField(max_length=20, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
