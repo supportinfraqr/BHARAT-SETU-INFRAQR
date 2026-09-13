@@ -12,7 +12,7 @@ import {
   Building2, CreditCard, Briefcase, Award, BadgeCheck,
   Clock,
   Database, Fingerprint, RefreshCw, CheckCircle, HardHat,
-  Plus, Trash2, Percent, Upload, X
+  Plus, Trash2, Percent, Upload, X, Eye
 } from 'lucide-react';
 
 export default function WorkerProfilePage() {
@@ -697,7 +697,12 @@ export default function WorkerProfilePage() {
                           <div data-nominee-documents={n.id} className={`flex flex-wrap items-center gap-2 rounded-xl min-h-[42px] ${saveAttempted && n.documents.length === 0 ? 'ring-1 ring-red-400 p-1' : ''}`}>
                             <button type="button" onClick={() => pickNomineeDoc(n.id)} className="inline-flex items-center gap-1.5 bg-white border border-black/10 px-3 py-2 rounded-lg text-[12px] font-medium hover:bg-gray-50"><Upload size={14}/> Upload PAN / Aadhaar Copy</button>
                             {n.documents.map((doc, docIndex) => (
-                              <span key={`${doc.fileName ?? doc.name}-${docIndex}`} className="inline-flex items-center gap-1.5 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-[#2F9E67] px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"><FileText size={12}/>{doc.url ? <a href={doc.url} target="_blank" rel="noopener noreferrer" className="hover:underline" title="View document">{doc.name}</a> : doc.name}<button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc.name}`} className="text-gray-400 hover:text-red-600"><Trash2 size={11}/></button></span>
+                              <span key={`${doc.fileName ?? doc.name}-${docIndex}`} className="inline-flex items-center gap-2 bg-[#E8F5E9]/70 border border-[#2F9E67]/20 text-[#2F9E67] px-2.5 py-1.5 rounded-lg text-[11px] font-semibold">
+                                <FileText size={12}/>
+                                <span className="max-w-[180px] truncate" title={doc.name}>{doc.name}</span>
+                                {doc.url && <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[#073B67] hover:underline" title="View document"><Eye size={12}/>View</a>}
+                                <button type="button" onClick={() => updateNominee(n.id, { documents: n.documents.filter((_, i) => i !== docIndex) })} aria-label={`Remove ${doc.name}`} className="text-gray-400 hover:text-red-600"><Trash2 size={11}/></button>
+                              </span>
                             ))}
                             {!n.documents.length && <span className="text-[11px] text-gray-400">No document uploaded</span>}
                           </div>
