@@ -3508,6 +3508,7 @@ def _employer_submissions(user):
             "period": _d(ev.period),
             "submittedAt": _dts(ev.created_at),
             "status": _submission_review_label(ev.status),
+            "source": "evidence",
         })
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
         rows.append({
@@ -3516,6 +3517,7 @@ def _employer_submissions(user):
             "type": _d(c.master.act if c.master else ""),
             "period": _d(c.period), "submittedAt": _dts(c.updated_at),
             "status": _submission_review_label(c.status),
+            "source": "register",
         })
     return rows
 

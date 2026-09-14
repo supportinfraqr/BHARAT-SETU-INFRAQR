@@ -4920,6 +4920,84 @@ def _submissions(request):
     }, status=status.HTTP_201_CREATED)
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def submission_file_token(request, role_path, submission_id):
+    """Issue a single-use, 5-minute token to view submission evidence inline in a new tab."""
+    import hashlib
+    import secrets
+    from bss_core.models import DocumentAccessToken
+
+    submission = SubmissionEvidence.objects.filter(pk=submission_id).first()
+    if submission is None:
+        return Response({"error": "submission not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    allowed = False
+    if user.is_superuser or user.role in ("government", "bss_staff", "admin"):
+        allowed = True
+    elif submission.user_id == user.id:
+        allowed = True
+    elif user.role == "employer":
+        allowed = SubmissionEvidence.objects.filter(
+            Q(user__worker_bindings__site__employer=user)
+            | Q(user__contractor_bindings__site__employer=user),
+            pk=submission.id,
+        ).exists()
+    if not allowed:
+        return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
+    if not submission.file:
+        return Response({"error": "file missing"}, status=status.HTTP_404_NOT_FOUND)
+
+    raw = secrets.token_urlsafe(32)
+    token = DocumentAccessToken.objects.create(
+        token_type="SUBMISSION_VIEW", requester=user, submission=submission,
+        token_hash=hashlib.sha256(raw.encode()).hexdigest(),
+        expires_at=timezone.now() + timedelta(minutes=5), max_uses=1,
+    )
+    return Response({
+        "token": raw, "expiresAt": payloads._dts(token.expires_at),
+        "fileName": submission.original_name,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def submission_file_serve(request, token):
+    """Exchange a single-use submission-view token → stream the evidence inline."""
+    import hashlib
+    from bss_core.models import DocumentAccessToken
+
+    hashed = hashlib.sha256(str(token).encode()).hexdigest()
+    tok = (DocumentAccessToken.objects.filter(token_hash=hashed, token_type="SUBMISSION_VIEW")
+           .select_related("submission").first())
+    if tok is None:
+        return Response({"error": "Unknown or invalid link."}, status=status.HTTP_404_NOT_FOUND)
+    if not tok.is_valid:
+        return Response({"error": "This link has expired or was already used."},
+                        status=status.HTTP_410_GONE)
+    submission = tok.submission
+    if submission is None or not submission.file:
+        return Response({"error": "File is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    tok.used_at = timezone.now()
+    tok.use_count += 1
+    if tok.use_count >= tok.max_uses:
+        tok.status = "USED"
+    tok.save(update_fields=["used_at", "use_count", "status"])
+    try:
+        response = FileResponse(submission.file.open("rb"), as_attachment=False,
+                                filename=submission.original_name or os.path.basename(submission.file.name))
+    except Exception:
+        return Response({"error": "Stored file is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    response["Content-Type"] = submission.mime_type or "application/octet-stream"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store, max-age=0"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return response
+
+
 @api_view(["GET"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
@@ -4947,7 +5025,7 @@ def submission_file_download(request, role_path, submission_id):
         return Response({"error": "file missing"}, status=status.HTTP_404_NOT_FOUND)
     return FileResponse(
         submission.file.open("rb"),
-        as_attachment=True,
+        as_attachment=False,
         filename=submission.original_name or f"evidence-{submission.id}",
     )
 

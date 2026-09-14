@@ -24,10 +24,23 @@ export default function EmployerComplianceSubmissionPage() {
     finally { setBusy(false); }
   }
 
+  async function viewEvidence(row: EmployerSubmission) {
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`/api/employer/submissions/${row.id}/token`, { method: 'POST' });
+      const json = await response.json() as { token?: string; error?: string };
+      if (!response.ok || !json.token) throw new Error(json.error || 'No secure preview link.');
+      window.open(`/api/employer/submissions/file/${encodeURIComponent(json.token)}`, '_blank', 'noopener,noreferrer');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Evidence could not be opened.');
+    }
+  }
+
   const columns: DataColumn<EmployerSubmission>[] = [
     { id:'contractor', header:'Contractor', value:row => row.contractor, render:row => <div><strong className="text-gray-900">{row.contractor}</strong><p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p></div> },
     { id:'site', header:'Site', value:row => row.site },
-    { id:'type', header:'Compliance type', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong><a href={`/api/employer/submissions/${row.id}/file`} target="_blank" rel="noreferrer" className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</a></div> },
+    { id:'type', header:'Compliance type', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong>{row.source === 'evidence' && <button type="button" disabled={busy} onClick={() => viewEvidence(row)} className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</button>}</div> },
     { id:'period', header:'Period', value:row => row.period },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:row => <Status value={row.status}/> },

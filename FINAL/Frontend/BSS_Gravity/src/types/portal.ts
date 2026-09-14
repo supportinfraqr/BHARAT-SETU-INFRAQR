@@ -394,6 +394,7 @@ export type EmployerSubmission = {
   period: string;
   submittedAt: string;
   status: 'Pending review' | 'Verified' | 'Rejected';
+  source?: 'evidence' | 'register';
 };
 
 export type EmployerUser = {

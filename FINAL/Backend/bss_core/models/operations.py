@@ -315,6 +315,8 @@ class DocumentAccessToken(models.Model):
     token_type = models.CharField(max_length=30, choices=TYPE)
     document = models.ForeignKey(WorkerDocument, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="tokens")
+    submission = models.ForeignKey("SubmissionEvidence", on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name="tokens")
     subject = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
                                 related_name="subject_tokens")
     requester = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
