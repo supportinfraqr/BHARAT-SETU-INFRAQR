@@ -290,7 +290,7 @@ export type ContractorPortalData = {
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
-  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number; bssId?: string; state?: string; status?: string; data?: Record<string, unknown> }>;
+  sites: Array<{ id: string; code: string; name: string; employer: string; location: string; workers: number; compliance: number | null; bssId?: string; state?: string; status?: string; data?: Record<string, unknown> }>;
   pendingSites?: Array<{ id: string; code: string; name: string; employer: string; location: string; state: string; source: string }>;
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
@@ -323,6 +323,7 @@ export type ContractorPortalData = {
   registers: ContractorRegister[];
   complianceBatches: ContractorComplianceBatch[];
   auditReports: ContractorAuditReport[];
+  recentActivities?: Array<{ title: string; time: string; type: string }>;
   grievances: ContractorGrievance[];
   payroll: {
     config: ContractorPayrollConfig;

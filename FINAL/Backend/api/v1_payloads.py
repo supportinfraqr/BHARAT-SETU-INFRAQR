@@ -28,6 +28,7 @@ from bss_core.models import (
     ComplianceBatch,
     ComplianceDocument,
     ComplianceMaster,
+    ComplianceReport,
     EmployerProfile,
     LeaveRequest,
     LeaveType,
@@ -1855,6 +1856,21 @@ def _default_site_info(profile):
     return {"id": str(site.id), "name": _d(site.site_name), "code": _d(site.site_code)}
 
 
+def _site_compliance_pct(user, site):
+    """Real per-site compliance: latest persisted audit report score for the
+    site (Final Submit), else the verification share of evidence submissions.
+    None when the site has no compliance data at all."""
+    rep = ComplianceReport.objects.filter(
+        employer=user, site_name=site.site_name).order_by("-report_date").first()
+    if rep and rep.score_pct is not None:
+        return int(round(float(rep.score_pct)))
+    ev = SubmissionEvidence.objects.filter(user=user, site=site.site_name)
+    total = ev.count()
+    if total:
+        return int(round(100 * ev.filter(status="VERIFIED").count() / total))
+    return None
+
+
 def _contractor_sites(user):
     """Sites allotted to the contractor by an employer (APPROVED on an ACCEPTED
     contractor↔employer binding). A contractor never owns a site — these are the
@@ -1874,7 +1890,7 @@ def _contractor_sites(user):
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "workers": WorkerContractorBinding.objects.filter(
                 contractor=user, site=s, binding_status="ACCEPTED").count(),
-            "compliance": _d(s.compliance_client) if hasattr(s, "compliance_client") else "",
+            "compliance": _site_compliance_pct(user, s),
             "data": _site_scalar_data(s),
         })
     return rows

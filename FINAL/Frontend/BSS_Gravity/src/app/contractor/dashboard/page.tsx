@@ -21,7 +21,8 @@ export default function ContractorDashboardPage() {
   const activeWorkers = workers.filter(worker => worker.status === 'Accepted').length;
   const pendingWorkers = workers.filter(worker => worker.status === 'Pending').length;
   const expiringCompliance = compliances.filter(item => item.status === 'Expiring' || item.status === 'Expired').length;
-  const complianceRate = sites.length ? Math.round(sites.reduce((sum, site) => sum + site.compliance, 0) / sites.length) : contractor.stats.complianceScore;
+  const complianceValues = sites.map(s => s.compliance).filter((v): v is number => v != null);
+  const complianceRate = complianceValues.length ? Math.round(complianceValues.reduce((a, b) => a + b, 0) / complianceValues.length) : 0;
   const activeLicenses = contractor.licenses.filter(l => l.status === 'Active').length;
   const pendingBinding = contractor.bindingRequests.filter(r => r.status === 'Pending');
   const pendingPayroll = contractor.payroll.records.filter(r => ['Draft', 'Reviewed', 'Submitted'].includes(r.status)).length;
@@ -182,9 +183,11 @@ export default function ContractorDashboardPage() {
                       <td className="px-5 py-3 text-gray-600">{site.employer}</td>
                       <td className="px-5 py-3 font-medium text-gray-900">{site.workers}</td>
                       <td className="px-5 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${site.compliance >= 95 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
-                          {site.compliance}%
-                        </span>
+                        {site.compliance != null ? (
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${site.compliance >= 95 ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
+                            {site.compliance}%
+                          </span>
+                        ) : <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-50 text-gray-400">—</span>}
                       </td>
                     </tr>
                   ))}
