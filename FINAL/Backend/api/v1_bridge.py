@@ -3008,13 +3008,34 @@ def _handle_compliances(user, body, method):
         item = str(row.get("item") or "").strip()
         if not item:
             continue
+        reference = str(row.get("reference") or "").strip()
         master, _ = ComplianceMaster.objects.get_or_create(
-            act=item[:160], form_number=str(row.get("reference") or "")[:60])
+            act=item[:160], form_number=reference[:60])
+        category = str(row.get("category") or "").strip()[:120]
+        if category and master.nature != category:
+            master.nature = category
+            master.save(update_fields=["nature"])
         site = Site.objects.filter(site_name__iexact=str(row.get("site") or "").strip()).first()
+        worker = None
+        worker_ref = str(row.get("worker") or "").strip()
+        if worker_ref:
+            from bss_core.models import WorkerIdentity
+            for binding in WorkerContractorBinding.objects.filter(
+                    contractor=user, binding_status="ACCEPTED").select_related("worker"):
+                candidate = binding.worker
+                identity = WorkerIdentity.objects.filter(user=candidate).first()
+                names = {str(candidate.username).lower(),
+                         payloads._party_name(candidate).lower()}
+                if identity:
+                    names.add(str(identity.name or "").lower())
+                    names.add(str(identity.bss_worker_id or "").lower())
+                if worker_ref.lower() in names:
+                    worker = candidate
+                    break
         doc = ComplianceDocument(
-            employer=user, master=master, site=site,
-            unique_no=str(row.get("reference") or "")[:60],
-            form_number=str(row.get("reference") or "")[:40],
+            employer=user, master=master, site=site, worker=worker,
+            unique_no=reference[:60],
+            form_number=reference[:40],
             period=str(row.get("expiry") or "")[:40],
             status={"Active": "SUBMITTED", "Expiring": "PENDING",
                     "Expired": "EXPIRED"}.get(str(row.get("status") or ""), "PENDING"),
@@ -3022,6 +3043,9 @@ def _handle_compliances(user, body, method):
         due = _parse_iso_date(row.get("expiry"))
         if due:
             doc.due_date = due
+        issue = _parse_iso_date(row.get("issue"))
+        if issue:
+            doc.issue_date = issue
         doc.save()
         created.append(payloads._compliance_doc_row(doc))
     return created[0] if len(created) == 1 else created

@@ -73,6 +73,9 @@ class ComplianceDocument(models.Model):
     state = models.CharField(max_length=60, blank=True)
     site = models.ForeignKey("Site", on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="compliance_docs")
+    worker = models.ForeignKey("User", on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="compliance_docs_as_worker")
+    issue_date = models.DateField(null=True, blank=True)
     unique_no = models.CharField(max_length=60, blank=True)
     form_number = models.CharField(max_length=40, blank=True)
     frequency = models.CharField(max_length=40, blank=True)
