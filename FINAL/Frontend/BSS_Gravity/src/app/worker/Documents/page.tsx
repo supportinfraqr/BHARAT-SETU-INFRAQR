@@ -28,6 +28,7 @@ const STATUS_LABELS: Record<string, string> = {
   REJECTED: 'Rejected',
   UNDER_VERIFICATION: 'Under Verification',
   EXPIRED: 'Expired',
+  ISSUED: 'Issued',
 };
 
 function formatDate(value: string | null): string | null {
@@ -128,6 +129,7 @@ export default function DocumentsModule() {
       case 'Rejected': return { bg: 'bg-red-100', text: 'text-red-700', icon: <XCircle size={14} /> };
       case 'Expired': return { bg: 'bg-orange-100', text: 'text-orange-700', icon: <AlertTriangle size={14} /> };
       case 'Missing': return { bg: 'bg-gray-100', text: 'text-gray-500', icon: <FileText size={14} /> };
+      case 'Issued': return { bg: 'bg-sky-100', text: 'text-sky-700', icon: <FileText size={14} /> };
       default: return { bg: 'bg-gray-100', text: 'text-gray-500', icon: <FileText size={14} /> };
     }
   };
@@ -137,7 +139,7 @@ export default function DocumentsModule() {
     { id: 'type', header: 'Mandatory / Optional', value: d => d.mandatory ? 'Mandatory' : 'Optional', render: d => <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${d.mandatory ? 'bg-orange-50 text-[#F47A32]' : 'bg-gray-100 text-gray-500'}`}>{d.mandatory ? 'Mandatory' : 'Optional'}</span> },
     { id: 'owner', header: 'Document Owner', value: d => d.owner, render: d => d.owner === 'System' ? <span className="text-[10px] font-bold bg-[#073B67]/10 text-[#073B67] px-2 py-0.5 rounded">Auto-Generated</span> : d.owner },
     { id: 'status', header: 'Document Status', value: d => label(d.status), render: d => { const config = getStatusConfig(d.status); return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span>; } },
-    { id: 'date', header: 'Upload Date', value: d => formatDate(d.date) ?? '-' },
+    { id: 'date', header: 'Date', value: d => formatDate(d.date) ?? '-' },
     { id: 'expiry', header: 'Expiry Date', value: d => formatDate(d.expiry) ?? '-', render: d => d.expiry ? <span className={`text-xs font-semibold ${label(d.status) === 'Expired' ? 'text-orange-600' : 'text-gray-700'}`}>{formatDate(d.expiry)}</span> : <span className="text-gray-300">—</span> },
     {
       id: 'actions', header: 'Actions', filterable: false, value: d => label(d.status), render: d => {

@@ -3447,6 +3447,35 @@ def worker_document_detail(request, document_id):
     return response
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_worker_document_download(request, document_id):
+    """Stream a worker's stored document to a contractor who has an ACCEPTED
+    binding for that worker (used by the contractor worker compliance drawer)."""
+    from bss_core.models import WorkerDocument
+    doc = (WorkerDocument.objects.select_related("user")
+           .filter(pk=document_id, auto_generated=False).first())
+    if doc is None:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+    bound = WorkerContractorBinding.objects.filter(
+        contractor=request.user, worker=doc.user, binding_status="ACCEPTED").exists()
+    if not bound:
+        return Response({"error": "Not authorised for this worker."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if not doc.file:
+        return Response({"error": "No file stored for this document."},
+                        status=status.HTTP_404_NOT_FOUND)
+    try:
+        response = FileResponse(doc.file.open("rb"), as_attachment=True,
+                                filename=doc.file_name or os.path.basename(doc.file.name))
+    except Exception:
+        return Response({"error": "Stored file is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    response["Content-Type"] = doc.mime_type or "application/octet-stream"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])

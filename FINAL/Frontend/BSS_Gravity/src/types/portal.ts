@@ -153,7 +153,7 @@ export type ContractorLicence = {
 };
 
 export type ContractorWorkerDocument = {
-  id: string; worker: string; workerId: string; document: string; reference: string; verified: boolean; status: 'Verified' | 'Pending' | 'Missing' | 'Expired';
+  id: string; worker: string; workerId: string; document: string; reference: string; verified: boolean; status: 'Verified' | 'Pending' | 'Missing' | 'Expired' | 'Issued'; mandatory: boolean;
 };
 
 export type ContractorWorkerComplianceStatus = {

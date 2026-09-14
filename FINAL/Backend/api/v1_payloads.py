@@ -342,12 +342,18 @@ def _worker_compliance_section(user):
     ppe = []
     given = ws.types_of_ppe_given if ws else ""
     ppe = [p.strip() for p in given.split(",") if p.strip()] if given else []
+    days_left = 0
+    if ws and ws.next_medical_due:
+        today = timezone.now().date()
+        due = ws.next_medical_due.date() if hasattr(ws.next_medical_due, "date") else ws.next_medical_due
+        days_left = max(0, (due - today).days)
+
     return {
         "siteInduction": _d(ws.site_induction_status if ws else ""),
         "ppeIssued": ppe,
         "policeVerification": _d(ws.police_verification if ws else ""),
         "permanentGatePass": gp_status,
-        "medicalFitnessDaysLeft": 0,
+        "medicalFitnessDaysLeft": days_left,
         "medicalExaminationStatus": _d(ws.medical_examination_status if ws else ""),
         "medicalFitnessStatus": _d(ws.medical_fitness_status if ws else ""),
     }
@@ -1151,7 +1157,9 @@ def _worker_documents_display(user):
                 "code": _d(m.code),
                 "mandatory": bool(d.is_mandatory or m.is_mandatory),
                 "owner": _doc_owner_label(d.owner_role or m.uploaded_by),
-                "status": _d(d.status, "UPLOADED"),
+                "status": ("ISSUED"
+                           if bool(d.auto_generated) and _d(m.code) not in _DIGILOCKER_DOC_CODES
+                           else _d(d.status, "UPLOADED")),
                 "date": _dts(d.uploaded_at) if d.uploaded_at else None,
                 "expiry": _dts(d.expiry_date) if d.expiry_date else None,
                 "fileName": _d(d.file_name),
@@ -1183,7 +1191,10 @@ def _worker_documents_display(user):
             "code": _d(d.document.code if d.document else ""),
             "mandatory": bool(d.is_mandatory),
             "owner": _doc_owner_label(d.owner_role),
-            "status": _d(d.status, "UPLOADED"),
+            "status": ("ISSUED"
+                       if bool(d.auto_generated)
+                       and _d(d.document.code if d.document else "") not in _DIGILOCKER_DOC_CODES
+                       else _d(d.status, "UPLOADED")),
             "date": _dts(d.uploaded_at) if d.uploaded_at else None,
             "expiry": _dts(d.expiry_date) if d.expiry_date else None,
             "fileName": _d(d.file_name),
@@ -2336,31 +2347,35 @@ def _contractor_licenses(user):
 
 
 def _contractor_worker_documents(user):
-    """Worker document register for workers bound to this contractor."""
+    """Per-worker document register for workers bound to this contractor: the
+    full catalog merged with each worker's uploads, so compliance documents show
+    Missing rows the same way the worker's own Documents page does."""
     from bss_core.models import WorkerDocument
-    bindings = list(WorkerContractorBinding.objects.filter(
-        contractor=user, binding_status="ACCEPTED").select_related("site", "worker"))
-    by_worker = {b.worker_id: b for b in bindings}
+    bindings = [b for b in (
+        WorkerContractorBinding.objects.filter(
+            contractor=user, binding_status="ACCEPTED").select_related("site", "worker"))
+        if b.worker]
+    _DL_STATUS = {"UPLOADED": "Pending", "VERIFIED": "Verified", "REJECTED": "Rejected",
+                  "MISSING": "Missing", "UNDER_VERIFICATION": "Pending",
+                  "EXPIRED": "Expiring", "ISSUED": "Issued"}
     rows = []
-    if not by_worker:
-        return rows
-    for d in (WorkerDocument.objects.filter(user_id__in=list(by_worker.keys()))
-              .select_related("document", "user").order_by("-updated_at")[:200]):
-        wi = WorkerIdentity.objects.filter(user=d.user).first()
-        b = by_worker.get(d.user_id)
-        st = str(d.status).upper()
-        rows.append({
-            "id": str(d.id),
-            "worker": _d(wi.name if wi else d.user.username),
-            "workerId": _d(wi.bss_worker_id if wi else ""),
-            "site": b.site.site_name if b and b.site else "",
-            "document": _d(d.document.document_name if d.document else ""),
-            "status": {"UPLOADED": "Pending", "VERIFIED": "Verified", "REJECTED": "Rejected",
-                       "MISSING": "Missing", "UNDER_VERIFICATION": "Pending",
-                       "EXPIRED": "Expiring"}.get(st, "Pending"),
-            "verified": st in ("VERIFIED", "APPROVED", "VALIDATED"),
-            "expiry": _dts(d.expiry_date) if d.expiry_date else None,
-        })
+    for b in bindings:
+        wi = _get_identity(b.worker)
+        worker_id = _d(wi.bss_worker_id if wi else "")
+        site = b.site.site_name if b.site else ""
+        for r in _worker_documents_display(b.worker):
+            rows.append({
+                "id": str(r["id"]) if r["id"] else None,
+                "worker": _d(wi.name if wi and wi.name else b.worker.username),
+                "workerId": worker_id,
+                "site": site,
+                "document": r["name"],
+                "reference": r["code"],
+                "mandatory": bool(r["mandatory"]),
+                "status": _DL_STATUS.get(str(r["status"]).upper(), "Pending"),
+                "verified": str(r["status"]).upper() in ("VERIFIED", "APPROVED", "VALIDATED"),
+                "expiry": r["expiry"],
+            })
     return rows
 
 
