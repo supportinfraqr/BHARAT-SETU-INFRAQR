@@ -3133,11 +3133,17 @@ def _employer_gate_passes(user):
 
 def _employer_submissions(user):
     rows = []
+    # Scope to THIS employer: a contractor bound to several employers must not
+    # leak its submissions for another employer's site.
+    my_employer = _org_name(user)
+    my_sites = set(Site.objects.filter(employer=user).values_list("site_name", flat=True))
     uploaded = SubmissionEvidence.objects.filter(
         Q(user__worker_bindings__site__employer=user) |
         Q(user__contractor_bindings__site__employer=user)
-    ).distinct()[:20]
+    ).distinct()[:100]
     for ev in uploaded:
+        if (ev.site and my_sites and ev.site not in my_sites) or (ev.employer and my_employer and ev.employer != my_employer):
+            continue
         cp = getattr(ev.user, "contractor_profile", None) if ev.user.role == "contractor" else None
         rows.append({
             "id": ev.id,
