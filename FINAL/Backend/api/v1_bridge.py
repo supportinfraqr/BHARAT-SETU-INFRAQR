@@ -1704,26 +1704,21 @@ def _persist_mutation(user, role_path, resource, method, body):
         for row in rows:
             row = row if isinstance(row, dict) else {}
             bss_id = str(row.get("bssId") or "").strip().upper()
+            if not bss_id:
+                raise ValidationError("Enter the worker's BSS ID to bind them.")
             site_id = row.get("siteId")
             site = Site.objects.filter(pk=site_id).first() if site_id else None
             if site is None and row.get("site"):
                 site_label = str(row.get("site")).strip()
                 site = (Site.objects.filter(site_name=site_label).first()
                         or Site.objects.filter(site_code=site_label).first())
-            # Bind an existing worker by BSS ID when provided; otherwise create one.
-            w = None
-            if bss_id:
-                ident = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
-                if ident:
-                    w = ident.user
-            if w is None:
-                name = row.get("name") or "Worker"
-                mobile = row.get("mobile") or row.get("contact") or ""
-                username = f"worker_{uuid.uuid4().hex[:8]}"
-                w = User.objects.create_user(username=username, password="Bss@Worker123",
-                                             role="worker", account_active=True, is_active=True)
-                WorkerIdentity.objects.create(user=w, bss_worker_id=bss_id or bss_ids.new_bss_worker_id(),
-                                              name=name, mobile_number=mobile)
+            # Workers are only ever created by the worker themselves. The
+            # contractor can only bind an existing BSS worker by their BSS ID —
+            # never create an account.
+            ident = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
+            if ident is None:
+                raise ValidationError(f"No worker found with BSS ID {bss_id}.")
+            w = ident.user
             if user.role == "contractor" and site:
                 if not _contractor_engaged_at_site(user, site.id):
                     raise ValidationError(

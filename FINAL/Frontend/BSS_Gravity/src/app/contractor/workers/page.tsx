@@ -19,16 +19,15 @@ const columns: DataColumn<ContractorWorker>[] = [
   { id:'site', header:'Site', value:row => row.site },
   { id:'employer', header:'Employer', value:row => row.employer },
   { id:'doj', header:'Joined', value:row => row.doj },
-  { id:'verification', header:'Verification', value:row => row.verified ? 'Verified' : 'Pending', render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.verified ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{row.verified ? 'Verified' : 'Pending'}</span> },
-  { id:'compliance', header:'Compliance', value:row => row.compliance, render:row => <span className={row.compliance === 'Compliant' ? 'text-green-700' : row.compliance === 'Expiring' ? 'text-orange-700' : 'text-red-700'}>{row.compliance}</span> },
   { id:'status', header:'Status', value:row => row.status, render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{row.status}</span> },
 ];
 
-type RowDraft = { bssId:string; name:string; mobile:string; designation:string; site:string; employer:string; department:string; refCode:string };
+type RowDraft = { bssId:string; site:string; employer:string };
+const emptyRow = (): RowDraft => ({ bssId:'', site:'', employer:'' });
 
 export default function WorkerMasterPage() {
-  const { contractor, mutate, employerScope, scoped } = useContractor();
-  const [modal, setModal] = useState<'single' | 'bulk' | 'manual' | null>(null);
+  const { contractor, mutate, scoped } = useContractor();
+  const [modal, setModal] = useState<'single' | 'bulk' | null>(null);
   const [rows, setRows] = useState<RowDraft[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -51,36 +50,24 @@ export default function WorkerMasterPage() {
     try {
       await mutate<{ data: unknown }>('workers', 'POST', data);
       setModal(null);
-      setNotice(`Binding request for ${String(data.name)} sent — the worker must accept before the profile unlocks. Track it under Binding Requests.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Worker could not be added.'); }
-    finally { setBusy(false); }
-  }
-
-  async function submitManual(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError('');
-    const data = Object.fromEntries(new FormData(event.currentTarget));
-    try {
-      const payload = { ...data, doj: new Date().toISOString().slice(0, 10), compliance: 'Non-compliant', status: 'Active', verified: false };
-      await mutate<{ data: unknown }>('workers', 'POST', payload);
-      setModal(null);
-      setNotice(`Worker ${String(data.name)} created. A binding request was sent — the worker must accept to activate the profile.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Worker could not be created.'); }
+      setNotice(`Binding request for ${String(data.bssId)} sent — the worker must accept before the profile unlocks. Track it under Binding Requests.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Worker could not be bound.'); }
     finally { setBusy(false); }
   }
 
   async function submitBulk(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
-    const valid = rows.filter(row => row.bssId && row.name && row.site && row.employer && row.designation);
-    if (!valid.length) { setError('Add at least one complete row.'); setBusy(false); return; }
+    const valid = rows.filter(row => row.bssId && row.site && row.employer);
+    if (!valid.length) { setError('Add at least one row with a BSS ID, site and employer.'); setBusy(false); return; }
     try {
-      const payload = valid.map(row => ({ bssId: row.bssId.toUpperCase(), name: row.name, mobile: row.mobile || '', designation: row.designation, site: row.site, employer: row.employer, department: row.department, refCode: row.refCode, doj: new Date().toISOString().slice(0, 10), compliance: 'Non-compliant', status: 'Active' }));
+      const payload = valid.map(row => ({ bssId: row.bssId.trim().toUpperCase(), site: row.site, employer: row.employer }));
       await mutate<{ data: number[] }>('workers', 'POST', { bulk: payload });
       setNotice(`Binding requests sent for ${valid.length} worker${valid.length === 1 ? '' : 's'} — each worker must accept before their profile unlocks.`); setRows([]); setModal(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Bulk binding could not be completed.'); }
     finally { setBusy(false); }
   }
 
-  function addRow() { setRows(current => [...current, { bssId: '', name: '', mobile: '', designation: '', site: employerScope !== 'all' ? employerScope : '', employer: '', department: '', refCode: '' }]); }
+  function addRow() { setRows(current => [...current, emptyRow()]); }
   function updateRow(index: number, key: keyof RowDraft, value: string) { setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
   function removeRow(index: number) { setRows(current => current.filter((_, i) => i !== index)); }
 
@@ -91,18 +78,18 @@ export default function WorkerMasterPage() {
       const text = String(reader.result ?? '');
       const lines = text.split(/\r?\n/).filter(line => line.trim()).slice(0, 500);
       const parsed = lines.map(line => {
-        const [bssId, name, mobile, designation, site, employer, department, refCode] = parseCsv(line);
-        return { bssId: bssId?.trim() ?? '', name: name?.trim() ?? '', mobile: mobile?.trim() ?? '', designation: designation?.trim() ?? '', site: site?.trim() ?? '', employer: employer?.trim() ?? '', department: department?.trim() ?? '', refCode: refCode?.trim() ?? '' };
+        const [bssId, site, employer] = parseCsv(line);
+        return { bssId: bssId?.trim() ?? '', site: site?.trim() ?? '', employer: employer?.trim() ?? '' };
       }).filter(r => r.bssId);
       setRows(current => [...current, ...parsed]); setError('');
-      if (!parsed.length) setError('No valid rows. Expected: BSS ID, Name, Mobile, Designation, Site, Employer, Department, Ref Code.');
+      if (!parsed.length) setError('No valid rows. Expected: BSS ID, Site, Employer.');
     };
     reader.readAsText(file);
   }
 
   function downloadTemplate() {
     const escape = (v: unknown) => String(v ?? '');
-    const rows2 = [['BSS ID', 'Name', 'Mobile', 'Designation', 'Site', 'Employer', 'Department', 'Ref Worker Code']];
+    const rows2 = [['BSS ID', 'Site', 'Employer']];
     const html = `<html><head><meta charset="UTF-8"></head><body><table>${rows2.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
     const file = new File([html], 'worker-binding-template.xls', { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -114,9 +101,8 @@ export default function WorkerMasterPage() {
     <header className="flex flex-col sm:flex-row justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Master</h1><p className="text-sm text-gray-500 mt-1">Bind and manage workers per site and principal employer — with manual entry, bulk creation and worker-level actions.</p></div>
       <div className="flex gap-2">
-        <button onClick={() => { setModal('bulk'); setRows([{ bssId: '', name: '', mobile: '', designation: '', site: employerScope !== 'all' ? employerScope : '', employer: '', department: '', refCode: '' }]); setError(''); }} className="h-10 px-4 border border-gray-200 rounded-lg text-sm font-semibold flex gap-2 items-center bg-white"><Upload size={16}/>Bulk bind</button>
-        <button onClick={() => { setModal('manual'); setError(''); }} className="h-10 px-4 border border-gray-200 rounded-lg text-sm font-semibold flex gap-2 items-center bg-white"><Plus size={16}/>Manual entry</button>
-        <button onClick={() => { setModal('single'); setError(''); }} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2"><UserRound size={16}/>Add worker</button>
+        <button onClick={() => { setModal('bulk'); setRows([emptyRow()]); setError(''); }} className="h-10 px-4 border border-gray-200 rounded-lg text-sm font-semibold flex gap-2 items-center bg-white"><Upload size={16}/>Bulk bind</button>
+        <button onClick={() => { setModal('single'); setError(''); }} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2"><UserRound size={16}/>Bind worker</button>
       </div>
     </header>
 
@@ -140,29 +126,17 @@ export default function WorkerMasterPage() {
 
     {/* Single bind modal (BSS ID based) */}
     {modal === 'single' && <div className="fixed inset-0 z-50 bg-black/50 p-4 grid place-items-center" role="presentation"><section role="dialog" aria-modal="true" aria-labelledby="add-worker-title" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
-      <header className="p-5 border-b flex justify-between"><div><h2 id="add-worker-title" className="font-semibold">Bind an existing BSS worker</h2><p className="text-xs text-gray-500 mt-0.5">Search by BSS ID — full profile unlocks after worker acceptance.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
+      <header className="p-5 border-b flex justify-between"><div><h2 id="add-worker-title" className="font-semibold">Bind an existing BSS worker</h2><p className="text-xs text-gray-500 mt-0.5">Enter the worker&apos;s BSS ID — the worker must accept before the profile unlocks. Workers register themselves; you cannot create one here.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <form onSubmit={submitSingle} className="p-5 grid sm:grid-cols-2 gap-4">
-        <Field name="name" label="Worker name"/><Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/><Field name="mobile" label="Mobile" pattern="\+?[0-9 ]{10,16}"/><Field name="designation" label="Designation"/><Field name="refCode" label="Ref Worker Code"/><Field name="department" label="Department"/><Field name="offeredWage" label="Offered wage (₹/month)" pattern="[0-9]*"/><Select name="site" label="Site" values={contractor.sites.map(site => site.name)}/><Select name="employer" label="Employer" values={contractor.employers.map(item => item.name)}/>
-        <input type="hidden" name="doj" value={new Date().toISOString().slice(0, 10)}/><input type="hidden" name="compliance" value="Non-compliant"/><input type="hidden" name="status" value="Active"/>
+        <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/><Select name="site" label="Site" values={contractor.sites.map(site => site.name)}/><Select name="employer" label="Employer" values={contractor.employers.map(item => item.name)}/>
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Bind worker'}</button></div>
       </form>
     </section></div>}
 
-    {/* Manual entry modal */}
-    {modal === 'manual' && <div className="fixed inset-0 z-[70] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
-      <header className="p-5 border-b flex justify-between"><div><h2 className="font-semibold">Manual worker creation</h2><p className="text-xs text-gray-500 mt-0.5">Detailed worker information — creates a new worker record bound to your contractor.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
-      <form onSubmit={submitManual} className="p-5 grid sm:grid-cols-2 gap-4">
-        <Field name="name" label="Worker name"/><Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/><Field name="mobile" label="Mobile" pattern="\+?[0-9 ]{10,16}"/><Field name="designation" label="Designation"/><Field name="refCode" label="Ref Worker Code"/><Field name="department" label="Department"/><Field name="gender" label="Gender"/><Field name="category" label="Category"/><Select name="site" label="Site" values={contractor.sites.map(site => site.name)}/><Select name="employer" label="Employer" values={contractor.employers.map(item => item.name)}/>
-        <input type="hidden" name="doj" value={new Date().toISOString().slice(0, 10)}/><input type="hidden" name="compliance" value="Non-compliant"/><input type="hidden" name="status" value="Active"/>
-        {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
-        <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Creating…' : 'Create worker'}</button></div>
-      </form>
-    </section></div>}
-
     {/* Bulk bind modal */}
     {modal === 'bulk' && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-4xl bg-white rounded-2xl overflow-hidden">
-      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk bind workers</h2><p className="text-xs text-gray-500 mt-1">Download the template, import a CSV (BSS ID, Name, Mobile, Designation, Site, Employer, Department, Ref Code) or add rows.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
+      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk bind workers</h2><p className="text-xs text-gray-500 mt-1">Download the template, import a CSV (BSS ID, Site, Employer) or add rows. Workers must already exist in BSS — you can only propose a binding by BSS ID.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <div className="p-5 space-y-4">
         <div className="flex flex-wrap gap-2">
           <button onClick={downloadTemplate} className="text-xs font-semibold text-gray-700 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2"><Download size={14}/>Download template</button>
@@ -171,16 +145,11 @@ export default function WorkerMasterPage() {
         </div>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <form onSubmit={submitBulk} className="space-y-3">
-          <div className="overflow-x-auto min-w-[860px]"><div className="grid grid-cols-[minmax(140px,1fr)_minmax(120px,1fr)_110px_minmax(110px,1fr)_140px_140px_100px_90px_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">BSS ID·Name·Mobile·Designation·Site·Employer·Dept·Ref Code·</div>
-            {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(140px,1fr)_minmax(120px,1fr)_110px_minmax(110px,1fr)_140px_140px_100px_90px_30px] gap-2 items-center mt-2">
-              <input value={row.bssId} onChange={e => updateRow(index, 'bssId', e.target.value)} placeholder="BSS ID" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <input value={row.name} onChange={e => updateRow(index, 'name', e.target.value)} placeholder="Name" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <input value={row.mobile} onChange={e => updateRow(index, 'mobile', e.target.value)} placeholder="Mobile" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <input value={row.designation} onChange={e => updateRow(index, 'designation', e.target.value)} placeholder="Designation" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <select value={row.site} onChange={e => updateRow(index, 'site', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="">Site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
+          <div className="overflow-x-auto"><div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['BSS ID','Site','Employer',''].map((label, i) => <span key={i}>{label}</span>)}</div>
+            {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_30px] gap-2 items-center mt-2">
+              <input value={row.bssId} onChange={e => updateRow(index, 'bssId', e.target.value)} placeholder="BSS-W7KQ2M9X4RT" className="h-9 border border-gray-200 rounded-lg px-2 text-xs font-mono"/>
+              <select value={row.site} onChange={e => { updateRow(index, 'site', e.target.value); const site = contractor.sites.find(s => s.name === e.target.value); if (site?.employer) updateRow(index, 'employer', site.employer); }} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="">Site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
               <select value={row.employer} onChange={e => updateRow(index, 'employer', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="">Employer</option>{contractor.employers.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}</select>
-              <input value={row.department} onChange={e => updateRow(index, 'department', e.target.value)} placeholder="Dept" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <input value={row.refCode} onChange={e => updateRow(index, 'refCode', e.target.value)} placeholder="Ref" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
               <button type="button" onClick={() => removeRow(index)} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600" aria-label="Remove row"><Trash2 size={15}/></button>
             </div>)}
           </div>
@@ -216,7 +185,6 @@ export default function WorkerMasterPage() {
           <Info label="Site" value={profileView.site}/>
           <Info label="Employer" value={profileView.employer}/>
           <Info label="Date of Joining" value={profileView.doj}/>
-          <Info label="Compliance" value={profileView.compliance}/>
         </dl>
         {profileView.skills && profileView.skills.length > 0 && <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Skills</p><div className="flex flex-wrap gap-1.5">{profileView.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
         <p className="text-[11px] text-gray-400">Full worker profile is available after the worker accepts the binding request. Compliance documents and identity card are accessible from the actions menu.</p>
@@ -292,8 +260,6 @@ function WorkerIdentityCardDrawer({ worker, onClose }: { worker: ContractorWorke
             <Info label="Mobile" value={worker.mobile}/>
             <Info label="Employer" value={worker.employer}/>
             <Info label="Date of Joining" value={worker.doj}/>
-            <Info label="Compliance" value={worker.compliance}/>
-            <Info label="Verification" value={worker.verified ? 'Verified' : 'Pending'}/>
           </dl>
         </div>
         <p className="text-[11px] text-gray-400 leading-5">The print-ready identity card is managed in the worker&apos;s own portal (QR carries the signed BSS credential payload). Issue/validity dates shown here are indicative for the current employment binding.</p>
