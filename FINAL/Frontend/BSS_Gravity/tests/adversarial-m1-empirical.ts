@@ -240,7 +240,6 @@ export async function runAdversarialM1Tests() {
     assertEqual(data.identity.company, 'RK Buildcon Pvt. Ltd.');
     assert(data.workers.length >= 4, 'Contractor workers must come from DB');
     assert(data.compliances.length >= 4, 'Compliances must come from DB');
-    assert(data.complianceReports.length >= 4, 'Compliance reports must come from DB');
     assert(data.gatePasses.length >= 3, 'Gate passes must come from DB');
     assert(data.salaries.length >= 3, 'Salaries must come from DB');
   });

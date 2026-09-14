@@ -294,7 +294,6 @@ export type ContractorPortalData = {
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;
-  complianceReports: Array<{ id: string; site: string; employer: string; period: string; type: string; status: 'Compliant' | 'Pending' | 'Non-compliant' }>;
   gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; eligibility?: GatePassEligibility }>;
   applications: Array<{ id: string; workerName: string; workerId: string; employer: string; trade: string; experience: string; expectedWage: number; location: string; status: 'Pending' | 'Shortlisted' | 'Hired' | 'Rejected'; dateApplied: string; matchScore: number }>;
   availableWorkers: Array<{ id: number; workerName: string; workerId: string; trade: string; skills: string[]; experience: string; expectedWage: number; location: string; status: string; dateApplied: string; matchScore: number }>;

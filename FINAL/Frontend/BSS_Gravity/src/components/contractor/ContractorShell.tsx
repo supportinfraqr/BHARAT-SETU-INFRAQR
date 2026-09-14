@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart2, Briefcase, ChevronDown, Database, FileText, Home, Menu, ScanLine, Settings, X } from 'lucide-react';
+import { Briefcase, ChevronDown, Database, FileText, Home, Menu, ScanLine, Settings, X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -16,7 +16,6 @@ const groups = [
   { key:'nav.dashboard', href:'/contractor/dashboard', icon:Home },
   { key:'nav.master', icon:Database, items:[['nav.gatePass','/contractor/gate-pass'],['nav.rozgar','/contractor/rozgar'],['nav.leaveApprovals','/contractor/leave'],['nav.siteCalendar','/contractor/calendar'],['nav.compliance','/contractor/compliance'],['nav.workerMaster','/contractor/workers'],['nav.workerCompliance','/contractor/worker-compliance'],['nav.skills','/contractor/skills'],['nav.salaries','/contractor/salaries'],['nav.workerBenefits','/contractor/benefits'],['nav.submissions','/contractor/submissions']] },
   { key:'nav.operations', icon:Briefcase, items:[['nav.payroll','/contractor/payroll'],['nav.advances','/contractor/advances'],['nav.grievanceCentre','/contractor/grievances']] },
-  { key:'nav.reports', icon:BarChart2, items:[['nav.complianceReport','/contractor/compliance-report']] },
   { key:'nav.qrSystem', icon:ScanLine, items:[['nav.allottedSites','/contractor/qr/sites'],['nav.myWorkers','/contractor/workers'],['nav.myEmployers','/contractor/qr/employers'],['nav.bindingRequestsCentre','/contractor/qr/requests'],['nav.idCard','/contractor/idcard'],['nav.scanQr','/contractor/scan']] },
 ] as const;
 

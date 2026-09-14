@@ -1986,22 +1986,6 @@ def _contractor_compliances(user):
     return rows
 
 
-def _contractor_compliance_reports(user):
-    """Compliance status report for the contractor, derived from its own docs."""
-    rows = []
-    qs = user.compliance_docs.select_related("master", "site").order_by("-created_at")[:60] if hasattr(user, "compliance_docs") else []
-    for c in qs:
-        st = str(c.status).upper()
-        rows.append({
-            "id": str(c.id), "site": c.site.site_name if c.site else "",
-            "employer": _d(c.master.act if c.master else ""),
-            "period": _d(c.period) or _dts(c.due_date),
-            "type": _d(c.master.nature if c.master else ""),
-            "status": "Compliant" if st in ("SUBMITTED", "COMPLETED") else ("Non-compliant" if st == "EXPIRED" else "Pending"),
-        })
-    return rows
-
-
 _GP_TYPE_LABEL = {"TGP": "Temporary", "PGP": "Permanent"}
 _GP_STATUS_LABEL = {"ACTIVE": "Approved", "PENDING": "Pending", "REJECTED": "Rejected",
                     "EXPIRED": "Expired", "REVOKED": "Rejected"}
@@ -2845,7 +2829,6 @@ def build_contractor_portal(user):
         "defaultSite": default_site,
         "workers": _contractor_workers(user),
         "compliances": _contractor_compliances(user),
-        "complianceReports": _contractor_compliance_reports(user),
         "gatePasses": _contractor_gate_passes(user),
         "advances": _contractor_advances(user),
         "applications": _contractor_applications(user),
