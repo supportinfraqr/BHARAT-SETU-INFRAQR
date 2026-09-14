@@ -4872,61 +4872,33 @@ def _submissions(request):
 
     submission_id = (request.data.get("submissionId") or "").strip()
     if submission_id:
-        # Re-upload: the contractor submits BRAND-NEW evidence after a rejection.
-        # The rejected row keeps its status for history; this creates a fresh
-        # pending submission. Only the owner may do this, and only on a
-        # rejected/returned submission.
-        original = SubmissionEvidence.objects.filter(pk=submission_id).first()
+        original = SubmissionEvidence.objects.filter(pk=submission_id, user_id=user.id).first()
         if original is None:
             return Response({"error": "submission not found"}, status=status.HTTP_404_NOT_FOUND)
-        if original.user_id != user.id:
-            return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
-        if str(original.status).upper() not in ("RETURNED", "REJECTED"):
-            return Response({"error": "Only rejected submissions can be re-uploaded."},
+        if str(original.status).upper() in ("RETURNED", "REJECTED"):
+            return Response({"error": "Rejected submissions cannot be re-uploaded. Please submit a new compliance document."},
                             status=status.HTTP_400_BAD_REQUEST)
-        submission = SubmissionEvidence(
-            user=user,
-            role="worker" if user.role == "worker" else "contractor",
-            doc_type=ftype or original.doc_type,
-            site=site or original.site,
-            period=period or original.period,
-            employer=employer or original.employer,
-            state=(state or original.state)[:60],
-            financial_year=(financial_year or original.financial_year)[:12],
-            month=(month or original.month)[:20],
-            location=(location or original.location)[:120],
-            document_type=(document_type or original.document_type)[:40],
-            frequency=(frequency or original.frequency)[:40],
-            is_mandatory=is_mandatory or original.is_mandatory,
-            original_name=file_obj.name if file_obj else "",
-            file_size=file_obj.size if file_obj else 0,
-            mime_type=file_obj.content_type if file_obj else "",
-            checksum_sha256=checksum,
-            ocr_accuracy=accuracy,
-            validation_findings=findings,
-        )
-    else:
-        submission = SubmissionEvidence(
-            user=user,
-            role="worker" if user.role == "worker" else "contractor",
-            doc_type=ftype,
-            site=site,
-            period=period,
-            employer=employer,
-            state=state[:60],
-            financial_year=financial_year[:12],
-            month=month[:20],
-            location=location[:120],
-            document_type=document_type[:40],
-            frequency=frequency[:40],
-            is_mandatory=is_mandatory,
-            original_name=file_obj.name if file_obj else "",
-            file_size=file_obj.size if file_obj else 0,
-            mime_type=file_obj.content_type if file_obj else "",
-            checksum_sha256=checksum,
-            ocr_accuracy=accuracy,
-            validation_findings=findings,
-        )
+    submission = SubmissionEvidence(
+        user=user,
+        role="worker" if user.role == "worker" else "contractor",
+        doc_type=ftype,
+        site=site,
+        period=period,
+        employer=employer,
+        state=state[:60],
+        financial_year=financial_year[:12],
+        month=month[:20],
+        location=location[:120],
+        document_type=document_type[:40],
+        frequency=frequency[:40],
+        is_mandatory=is_mandatory,
+        original_name=file_obj.name if file_obj else "",
+        file_size=file_obj.size if file_obj else 0,
+        mime_type=file_obj.content_type if file_obj else "",
+        checksum_sha256=checksum,
+        ocr_accuracy=accuracy,
+        validation_findings=findings,
+    )
     if file_obj:
         safe_name = os.path.basename(file_obj.name or "evidence")
         submission.file.save(safe_name, file_obj, save=False)
