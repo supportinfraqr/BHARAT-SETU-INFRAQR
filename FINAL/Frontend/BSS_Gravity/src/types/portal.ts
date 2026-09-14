@@ -196,6 +196,8 @@ export type SiteAllotment = {
   siteId: number; site: string; siteCode: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Released'; source: string;
   releaseRequested?: boolean; releaseRequestedBy?: string;
+  /** Workers at this site that would be orphaned if the site is released. */
+  workersAtRisk?: number;
 };
 
 export type BindingHistoryEvent = { label: string; by?: string; at?: string };
@@ -491,6 +493,10 @@ export type EmployerApproval = {
   bindingId?: string;
   /** Employer's saved secondary-contractor tickbox selection (CE binding ids). */
   secondaryBindingIds?: number[];
+  /** Workers that would be orphaned if this contractor's access ends. */
+  workersAtRisk?: number;
+  /** Other ACCEPTED contractors the employer can shift workers to. */
+  successorCandidates?: Array<{ bindingId: number; contractorId: number; name: string }>;
   consentEmployer?: boolean;
   consentContractor?: boolean;
   source?: string;

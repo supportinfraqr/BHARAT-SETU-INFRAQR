@@ -3083,6 +3083,9 @@ def _employer_approvals(user):
                 "source": _d(a.source),
                 "releaseRequested": bool(a.release_requested_at),
                 "releaseRequestedBy": _d(a.release_requested_by),
+                "workersAtRisk": WorkerContractorBinding.objects.filter(
+                    contractor=e.contractor, site_id=a.site_id
+                ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).count(),
             } for a in e.allotments.all()],
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
@@ -3093,6 +3096,17 @@ def _employer_approvals(user):
             "consentContractor": bool(e.consent_contractor),
             "source": _d(e.source),
             "secondaryBindingIds": [int(x) for x in (e.secondary_binding_ids or []) if str(x).isdigit()],
+            # Workers that would be orphaned if this contractor's access ends, and
+            # the candidate successor contractors (other ACCEPTED bindings).
+            "workersAtRisk": WorkerContractorBinding.objects.filter(
+                contractor=e.contractor, site__employer=user
+            ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).count(),
+            "successorCandidates": [{
+                "bindingId": cb.id,
+                "contractorId": cb.contractor_id,
+                "name": _org_name(cb.contractor),
+            } for cb in ContractorEmployerBinding.objects.filter(
+                employer=user, binding_status="ACCEPTED").exclude(pk=e.pk).select_related("contractor")],
             "unbindRequested": bool(e.unbind_requested_at),
             "unbindConsentEmployer": bool(e.unbind_consent_employer),
             "unbindConsentContractor": bool(e.unbind_consent_contractor),

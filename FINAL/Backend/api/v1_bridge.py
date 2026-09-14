@@ -2390,6 +2390,99 @@ def _release_contractor_workers(binding):
         _issue_binding_letter(released_binding, "experience")
 
 
+def _workers_at_risk(contractor, site_ids):
+    """Active worker bindings of `contractor` at the given sites — these would be
+    orphaned if the contractor's access ends."""
+    if contractor is None or not site_ids:
+        return []
+    return list(WorkerContractorBinding.objects.filter(
+        contractor=contractor, site_id__in=list(site_ids)
+    ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"])
+        .select_related("worker", "site", "site__employer"))
+
+
+def _resolve_successor(employer, leaving_binding, successor_binding_id=None):
+    """The successor CE binding for a leaving binding: the explicitly requested CE
+    binding id, else the employer's persisted unbind successor, else the first
+    ACCEPTED designated secondary. Returns a ContractorEmployerBinding or None."""
+    candidates = (ContractorEmployerBinding.objects
+                  .filter(employer=employer, binding_status="ACCEPTED")
+                  .exclude(pk=leaving_binding.pk).select_related("contractor"))
+    try:
+        requested = int(successor_binding_id) if successor_binding_id else None
+    except (TypeError, ValueError):
+        requested = None
+    if not requested and leaving_binding.unbind_successor_id:
+        requested = leaving_binding.unbind_successor_id
+    if requested:
+        chosen = candidates.filter(pk=requested).first()
+        if chosen is not None:
+            return chosen
+    ids = [int(x) for x in (leaving_binding.secondary_binding_ids or []) if str(x).isdigit()]
+    if ids:
+        return candidates.filter(pk__in=ids).order_by("id").first()
+    return None
+
+
+def _shift_workers_to_successor(old_contractor, successor, site_ids):
+    """Move `old_contractor`'s workers at `site_ids` to `successor` so they are
+    never orphaned: each worker gets a new ACCEPTED binding at the same site and
+    the site is auto-allotted (APPROVED) to the successor. Workers who already
+    hold a different live binding are skipped. Returns (moved, skipped) user lists."""
+    from bss_core.models import ContractorSiteAllotment, WorkerContractorBinding
+
+    moved, skipped = [], []
+    if successor is None or successor.role != "contractor":
+        return moved, skipped
+    for wb in _workers_at_risk(old_contractor, site_ids):
+        site = wb.site
+        if site is None:
+            continue
+        # A worker who already has another live binding is left alone.
+        other = (WorkerContractorBinding.objects
+                 .filter(worker=wb.worker, binding_status__in=("PENDING", "ACCEPTED"))
+                 .exclude(pk=wb.pk).exclude(contractor=successor, site=site).exists())
+        if other:
+            skipped.append(wb.worker)
+            continue
+        # The successor must be ACCEPTED-bound to the site's employer; auto-allot it.
+        ce = (ContractorEmployerBinding.objects
+              .filter(contractor=successor, employer=site.employer, binding_status="ACCEPTED").first())
+        if ce is None:
+            skipped.append(wb.worker)
+            continue
+        ContractorSiteAllotment.objects.update_or_create(
+            binding=ce, site=site,
+            defaults={"status": "APPROVED", "source": "successor_shift",
+                      "release_requested_at": None, "release_requested_by": ""})
+        # Cancel the old binding, create the new ACCEPTED one (seamless shift).
+        wb.binding_status = "CANCELLED"
+        wb.unbound_at = timezone.now()
+        wb.save(update_fields=["binding_status", "unbound_at", "updated_at"])
+        new_binding = WorkerContractorBinding.objects.create(
+            worker=wb.worker, contractor=successor, site=site,
+            binding_status="ACCEPTED", consent_worker=True, consent_contractor=True,
+            consent_method="app", accepted_at=timezone.now(), initiated_by="contractor",
+            designation=wb.designation, department=wb.department, shift=wb.shift,
+            offered_wage=wb.offered_wage,
+        )
+        _sync_employment_from_binding(new_binding)
+        moved.append(wb.worker)
+        _create_notification(
+            user=wb.worker,
+            title="You were moved to a new contractor",
+            body=(f"Your contractor changed — you are now engaged by "
+                  f"{payloads._notification_actor_name(successor)} at {payloads._d(site.site_name)}."),
+            notif_type="INFO", link="/worker/binding")
+    if moved:
+        _create_notification(
+            user=successor,
+            title="Workers transferred to you",
+            body=f"{len(moved)} worker(s) were transferred to you by the principal employer.",
+            notif_type="INFO", link="/contractor/workers")
+    return moved, skipped
+
+
 def _handle_site_calendar(user, body, method):
     """Contractor manages a site's holiday calendar + leave policy.
 
@@ -4101,12 +4194,22 @@ def employer_binding_action(request, binding_id):
                 link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
             )
     elif action == "reject":
+        # Never orphan workers: if the contractor still has workers on this
+        # employer's sites, a successor contractor must be supplied.
+        site_ids = list(Site.objects.filter(employer=b.employer).values_list("id", flat=True))
+        at_risk = _workers_at_risk(b.contractor, site_ids)
+        successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId")) if at_risk else None
+        if at_risk and successor is None:
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+                            status=status.HTTP_400_BAD_REQUEST)
         b.binding_status = "REJECTED"
         b.rejected_by = "employer" if user.role == "employer" else "contractor"
         b.rejected_at = timezone.now()
         b.save(update_fields=["binding_status", "rejected_by", "rejected_at"])
+        if successor is not None:
+            _shift_workers_to_successor(b.contractor, successor.contractor, site_ids)
         # A rejected employer binding invalidates its site allotments and releases
-        # the contractor's workers from the employer's sites.
+        # any remaining workers from the employer's sites.
         ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
         _release_contractor_workers(b)
         other_user = b.contractor if user == b.employer else b.employer
@@ -4127,13 +4230,35 @@ def employer_binding_action(request, binding_id):
         if not b.unbind_requested_at:
             b.unbind_requested_at = timezone.now()
             b.unbind_requested_by = user.role
+        site_ids = list(Site.objects.filter(employer=b.employer).values_list("id", flat=True))
+        successor = None
+        # The employer must name a successor when workers are at risk — at request
+        # time (persisted) and again at the final cancel, so no worker is orphaned.
+        if user.role == "employer":
+            at_risk = _workers_at_risk(b.contractor, site_ids)
+            if at_risk:
+                successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"))
+                if successor is None:
+                    b.save()
+                    return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                b.unbind_successor = successor
         if b.unbind_consent_contractor and b.unbind_consent_employer:
+            if successor is None:
+                successor = _resolve_successor(b.employer, b)
+            at_risk = _workers_at_risk(b.contractor, site_ids)
+            if at_risk and successor is None:
+                b.save()
+                return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+                                status=status.HTTP_400_BAD_REQUEST)
             b.binding_status = "CANCELLED"
             b.unbound_at = timezone.now()
         b.save()
         if b.binding_status == "CANCELLED":
-            # Unbinding invalidates the site allotments so they can't be reused,
-            # and releases the contractor's workers from the employer's sites.
+            # Move the workers to the successor, then invalidate the site
+            # allotments and release any remaining workers.
+            if successor is not None:
+                _shift_workers_to_successor(b.contractor, successor.contractor, site_ids)
             ContractorSiteAllotment.objects.filter(binding=b).update(status="REJECTED")
             _release_contractor_workers(b)
             _create_notification(
@@ -4242,10 +4367,19 @@ def employer_binding_action(request, binding_id):
         if a is None:
             return Response({"error": "No release request for that site."},
                             status=status.HTTP_404_NOT_FOUND)
+        # Never orphan workers: if the contractor still has workers at this site,
+        # a successor contractor for the site must be supplied.
+        at_risk = _workers_at_risk(b.contractor, [site_id])
+        successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId")) if at_risk else None
+        if at_risk and successor is None:
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if successor is not None:
+            _shift_workers_to_successor(b.contractor, successor.contractor, [site_id])
         a.status = "RELEASED"
         a.released_at = timezone.now()
         a.save(update_fields=["status", "released_at", "updated_at"])
-        # Release the contractor's workers from that site.
+        # Release any remaining workers from that site (skipped/had another binding).
         WorkerContractorBinding.objects.filter(
             contractor=b.contractor, site_id=site_id
         ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).update(

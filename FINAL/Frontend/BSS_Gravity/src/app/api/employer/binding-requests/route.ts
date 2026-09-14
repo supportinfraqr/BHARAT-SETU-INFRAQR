@@ -41,6 +41,7 @@ export async function POST(request: Request) {
         allotmentId: Number(body.allotmentId) || undefined,
         siteIds: Array.isArray(body.siteIds) ? body.siteIds.map(Number).filter(Number.isInteger) : undefined,
         bindingIds: Array.isArray(body.bindingIds) ? body.bindingIds.map(Number).filter(Number.isInteger) : undefined,
+        successorBindingId: Number(body.successorBindingId) || undefined,
       }),
     });
     return NextResponse.json(result);

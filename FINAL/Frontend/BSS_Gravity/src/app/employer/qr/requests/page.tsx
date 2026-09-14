@@ -21,6 +21,8 @@ export default function EmployerQrBindingRequestsPage() {
   const [confirm, setConfirm] = useState<{ row: EmployerApproval; kind: 'approve' | 'reject' | 'unbind' } | null>(null);
   const [historyFor, setHistoryFor] = useState<EmployerApproval | null>(null);
   const [secondarySel, setSecondarySel] = useState<number[]>([]);
+  const [unbindFor, setUnbindFor] = useState<EmployerApproval | null>(null);
+  const [unbindSuccessor, setUnbindSuccessor] = useState<number | ''>('');
 
   // The secondary-contractor tickboxes are saved on the binding (server-side),
   // so they survive a page refresh / another device.
@@ -49,7 +51,16 @@ export default function EmployerQrBindingRequestsPage() {
     if (!confirm) return;
     const { row, kind } = confirm;
     setConfirm(null);
-    if (kind === 'unbind') { await decideUnbind(row); return; }
+    if (kind === 'unbind') {
+      // Workers must not be orphaned — pick a successor contractor first.
+      if ((row.workersAtRisk ?? 0) > 0) {
+        setUnbindFor(row);
+        setUnbindSuccessor(row.secondaryBindingIds?.[0] ?? '');
+        return;
+      }
+      await decideUnbind(row);
+      return;
+    }
     await decide(row, kind === 'approve' ? 'Approved' : 'Rejected');
   }
 
@@ -96,7 +107,7 @@ export default function EmployerQrBindingRequestsPage() {
     setAllotFor(prev => prev && prev.id === row.id ? { ...prev, ...next } : prev);
   }
 
-  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release', payload: { siteIds?: number[]; siteId?: number; bindingIds?: number[] }) {
+  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release', payload: { siteIds?: number[]; siteId?: number; bindingIds?: number[]; successorBindingId?: number }) {
     if (!allotFor?.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
@@ -128,11 +139,11 @@ export default function EmployerQrBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
-  async function decideUnbind(row: EmployerApproval) {
+  async function decideUnbind(row: EmployerApproval, successorBindingId?: number) {
     if (!row.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(row.bindingId), action: 'unbind' }) });
+      const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(row.bindingId), action: 'unbind', ...(successorBindingId ? { successorBindingId } : {}) }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Unbinding could not be requested.');
       const cancelled = String(result.data?.status ?? '').toLowerCase() === 'cancelled';
@@ -234,6 +245,8 @@ export default function EmployerQrBindingRequestsPage() {
           releaseRequested: !!a?.releaseRequested,
           canApproveRelease: status === 'Approved' && !!a?.releaseRequested,
           canRejectRelease: status === 'Approved' && !!a?.releaseRequested,
+          workersAtRisk: a?.workersAtRisk ?? 0,
+          successorCandidates: (allotFor.successorCandidates ?? []).map(c => ({ bindingId: c.bindingId, name: c.name })),
         };
       }) : []}
       busy={busy}
@@ -248,7 +261,7 @@ export default function EmployerQrBindingRequestsPage() {
       onReject={id => void bindingSiteAction('reject-site', { siteId: id })}
       onPropose={(id, extra) => void bindingSiteAction('allot', { siteIds: [id], bindingIds: [Number(allotFor?.bindingId), ...extra] })}
       onRelease={() => {}}
-      onApproveRelease={id => void bindingSiteAction('approve-site-release', { siteId: id })}
+      onApproveRelease={(id, successorBindingId) => void bindingSiteAction('approve-site-release', { siteId: id, successorBindingId })}
       onRejectRelease={id => void bindingSiteAction('reject-site-release', { siteId: id })}
     />
     <ConfirmDialog
@@ -278,6 +291,31 @@ export default function EmployerQrBindingRequestsPage() {
       events={historyFor?.history ?? []}
       onClose={() => setHistoryFor(null)}
     />
+    {unbindFor && <div className="fixed inset-0 z-[95] grid place-items-center p-4 bg-slate-950/60 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setUnbindFor(null)}>
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+          <h2 className="text-lg font-bold text-gray-950">Move workers before unbinding</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{unbindFor.name} · {unbindFor.bssId}</p>
+        </div>
+        <div className="px-6 py-4 space-y-3">
+          <p className="text-xs text-gray-600 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 leading-5">
+            {unbindFor.name} still has <strong>{unbindFor.workersAtRisk}</strong> worker(s) on your sites. Choose a successor contractor so they are moved instead of becoming orphaned.
+          </p>
+          {(unbindFor.successorCandidates ?? []).length ? (
+            <label className="block text-xs font-bold text-gray-700">Successor contractor
+              <select value={unbindSuccessor} onChange={e => setUnbindSuccessor(e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+                <option value="">Select a contractor…</option>
+                {(unbindFor.successorCandidates ?? []).map(c => <option key={c.bindingId} value={c.bindingId}>{c.name}</option>)}
+              </select>
+            </label>
+          ) : <p className="text-xs text-red-600">No other contractor is bound to your organisation — bind another contractor first, then unbind.</p>}
+        </div>
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+          <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button disabled={busy || !unbindSuccessor} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row, Number(unbindSuccessor)); }} className="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-50">Move workers &amp; unbind</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 }
 

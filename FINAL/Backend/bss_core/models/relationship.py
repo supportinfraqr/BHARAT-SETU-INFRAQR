@@ -585,6 +585,10 @@ class ContractorEmployerBinding(models.Model):
     # Employer's saved secondary-contractor selection for this binding (the
     # tickboxes in the Site permissions dialog) — a list of CE binding ids.
     secondary_binding_ids = models.JSONField(default=list, blank=True)
+    # Successor chosen by the employer when unbinding, so workers are shifted to
+    # them instead of being orphaned (set at request time, used at final cancel).
+    unbind_successor = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name="+")
     accepted_at = models.DateTimeField(null=True, blank=True)
     # Who declined the request and when (contractor / employer).
     rejected_by = models.CharField(max_length=20, blank=True)

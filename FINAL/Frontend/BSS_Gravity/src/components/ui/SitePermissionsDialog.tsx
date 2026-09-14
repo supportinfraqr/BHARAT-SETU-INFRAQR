@@ -21,6 +21,10 @@ export type SitePermissionRow = {
   canCancelRelease?: boolean;
   canApproveRelease?: boolean;
   canRejectRelease?: boolean;
+  /** Workers at this site that would be orphaned if the site is released. */
+  workersAtRisk?: number;
+  /** Candidate successor contractors for this site's workers. */
+  successorCandidates?: Array<{ bindingId: number; name: string }>;
 };
 
 export type SecondaryContractor = { id: number; name: string; bindingId: number; allotments?: Array<{ siteId: number; status: string }> };
@@ -80,11 +84,12 @@ export default function SitePermissionsDialog({
   onReject: (siteId: number) => void;
   onPropose: (siteId: number, extraBindingIds: number[]) => void;
   onRelease: (siteId: number) => void;
-  onApproveRelease: (siteId: number) => void;
+  onApproveRelease: (siteId: number, successorBindingId?: number) => void;
   onRejectRelease: (siteId: number) => void;
   onSelectionChange?: (bindingIds: number[]) => void;
 }) {
   const [secondaryOpen, setSecondaryOpen] = useState(false);
+  const [releaseSuccessor, setReleaseSuccessor] = useState<Record<number, number | undefined>>({});
   const secondary = secondaryContractors ?? [];
   const toggleBinding = (bindingId: number) => {
     // Compute the next value first, then notify — never call the parent's
@@ -233,14 +238,27 @@ export default function SitePermissionsDialog({
                       </button>
                     )}
                     {row.canApproveRelease && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => onApproveRelease(row.siteId)}
-                        className="h-8 px-3 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors disabled:opacity-60 inline-flex items-center gap-1"
-                      >
-                        <Check size={13} />Approve release
-                      </button>
+                      <>
+                        {(row.workersAtRisk ?? 0) > 0 && (
+                          <select
+                            value={releaseSuccessor[row.siteId] ?? ''}
+                            onChange={e => setReleaseSuccessor(cur => ({ ...cur, [row.siteId]: e.target.value ? Number(e.target.value) : undefined }))}
+                            aria-label="Successor contractor for this site's workers"
+                            className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
+                          >
+                            <option value="">Successor…</option>
+                            {(row.successorCandidates ?? []).map(c => <option key={c.bindingId} value={c.bindingId}>{c.name}</option>)}
+                          </select>
+                        )}
+                        <button
+                          type="button"
+                          disabled={busy || ((row.workersAtRisk ?? 0) > 0 && !releaseSuccessor[row.siteId])}
+                          onClick={() => onApproveRelease(row.siteId, releaseSuccessor[row.siteId])}
+                          className="h-8 px-3 rounded-lg bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-colors disabled:opacity-60 inline-flex items-center gap-1"
+                        >
+                          <Check size={13} />Approve release
+                        </button>
+                      </>
                     )}
                     {row.canRejectRelease && (
                       <button
