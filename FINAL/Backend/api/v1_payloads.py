@@ -2290,7 +2290,32 @@ def _contractor_licenses(user):
 
 
 def _contractor_worker_documents(user):
-    return []
+    """Worker document register for workers bound to this contractor."""
+    from bss_core.models import WorkerDocument
+    bindings = list(WorkerContractorBinding.objects.filter(
+        contractor=user, binding_status="ACCEPTED").select_related("site", "worker"))
+    by_worker = {b.worker_id: b for b in bindings}
+    rows = []
+    if not by_worker:
+        return rows
+    for d in (WorkerDocument.objects.filter(user_id__in=list(by_worker.keys()))
+              .select_related("document", "user").order_by("-updated_at")[:200]):
+        wi = WorkerIdentity.objects.filter(user=d.user).first()
+        b = by_worker.get(d.user_id)
+        st = str(d.status).upper()
+        rows.append({
+            "id": str(d.id),
+            "worker": _d(wi.name if wi else d.user.username),
+            "workerId": _d(wi.bss_worker_id if wi else ""),
+            "site": b.site.site_name if b and b.site else "",
+            "document": _d(d.document.document_name if d.document else ""),
+            "status": {"UPLOADED": "Pending", "VERIFIED": "Verified", "REJECTED": "Rejected",
+                       "MISSING": "Missing", "UNDER_VERIFICATION": "Pending",
+                       "EXPIRED": "Expiring"}.get(st, "Pending"),
+            "verified": st in ("VERIFIED", "APPROVED", "VALIDATED"),
+            "expiry": _dts(d.expiry_date) if d.expiry_date else None,
+        })
+    return rows
 
 
 def _contractor_compliance_row(binding):
@@ -2334,26 +2359,126 @@ def _contractor_worker_compliance(user):
     return [_contractor_compliance_row(b) for b in bindings]
 
 
-def _contractor_workforce_growth():
+def _contractor_workforce_growth(user=None):
+    """Compute monthly active bound worker count from real WorkerContractorBinding database records."""
     now = timezone.localdate()
-    six = [{"month": (now.replace(day=1) - datetime.timedelta(days=30 * (5 - i))).strftime("%b %Y"),
-            "workers": max(10, 15 + i * 2)} for i in range(6)]
-    one = [{"month": (now.replace(day=1) - datetime.timedelta(days=30 * (11 - i))).strftime("%b %Y"),
-            "workers": max(5, 8 + i)} for i in range(12)]
+    six = []
+    for i in range(6):
+        month_start = (now.replace(day=1) - datetime.timedelta(days=30 * (5 - i))).replace(day=1)
+        next_month = (month_start + datetime.timedelta(days=32)).replace(day=1)
+        count = 0
+        if user:
+            count = WorkerContractorBinding.objects.filter(
+                contractor=user,
+                binding_status__in=("ACCEPTED", "CANCELLED"),
+                created_at__lt=next_month
+            ).filter(
+                Q(unbound_at__isnull=True) | Q(unbound_at__gte=month_start)
+            ).count()
+        six.append({
+            "month": month_start.strftime("%b %Y"),
+            "workers": count
+        })
+
+    one = []
+    for i in range(12):
+        month_start = (now.replace(day=1) - datetime.timedelta(days=30 * (11 - i))).replace(day=1)
+        next_month = (month_start + datetime.timedelta(days=32)).replace(day=1)
+        count = 0
+        if user:
+            count = WorkerContractorBinding.objects.filter(
+                contractor=user,
+                binding_status__in=("ACCEPTED", "CANCELLED"),
+                created_at__lt=next_month
+            ).filter(
+                Q(unbound_at__isnull=True) | Q(unbound_at__gte=month_start)
+            ).count()
+        one.append({
+            "month": month_start.strftime("%b %Y"),
+            "workers": count
+        })
+
     return {"sixMonths": six, "oneYear": one}
 
 
-def _contractor_applicability():
+def _contractor_applicability(user=None):
+    """Dynamic Labour Law Applicability based on contractor profile registration numbers,
+    licences, and active worker thresholds."""
+    cp = getattr(user, "contractor_profile", None) if user else None
+    
+    # Check if contractor has active workers bound
+    worker_count = 0
+    if user:
+        worker_count = WorkerContractorBinding.objects.filter(
+            contractor=user, binding_status="ACCEPTED"
+        ).count()
+
+    has_clra = bool(cp and (cp.clra_licence_no or "").strip())
+    has_pf = bool(cp and (cp.registration_number or cp.lin or "").strip()) or worker_count >= 20
+    has_esic = bool(cp and (cp.labour_dept_reg_no or cp.udyam_no or "").strip()) or worker_count >= 10
+    has_bocw = bool(cp and (cp.bocw_reg_no or "").strip())
+
     return [
-        {"act": "Minimum Wages Act, 1948", "applies": True, "note": "State minimum applied"},
-        {"act": "Payment of Wages Act, 1936", "applies": True, "note": ""},
-        {"act": "Employees' Provident Funds Act", "applies": True, "note": ""},
-        {"act": "ESIC Act, 1948", "applies": True, "note": ""},
+        {
+            "act": "Minimum Wages Act, 1948",
+            "applies": True,
+            "note": "Mandatory for all scheduled employment & active sites"
+        },
+        {
+            "act": "Payment of Wages Act, 1936",
+            "applies": True,
+            "note": "Mandatory wage disbursement rules"
+        },
+        {
+            "act": "Employees' Provident Funds (EPF) Act",
+            "applies": has_pf,
+            "note": f"EPFO Code registered" if cp and cp.registration_number else ("Threshold (20+ workers) applied" if worker_count >= 20 else "Optional (<20 workers)")
+        },
+        {
+            "act": "ESIC Act, 1948",
+            "applies": has_esic,
+            "note": "ESIC IP registered" if has_esic else "Threshold (10+ workers) applied"
+        },
+        {
+            "act": "Contract Labour (CLRA) Act, 1970",
+            "applies": has_clra or worker_count >= 20,
+            "note": f"Licence No: {cp.clra_licence_no}" if has_clra else ("Threshold (20+ contract workers)" if worker_count >= 20 else "Exempt (<20 workers)")
+        },
+        {
+            "act": "BOCW Act, 1996",
+            "applies": has_bocw,
+            "note": f"Reg No: {cp.bocw_reg_no}" if has_bocw else "Building & Construction Labour rules"
+        }
     ]
 
 
 def _contractor_compliance_history(user):
-    return []
+    """PF/ESIC submission history derived from real SubmissionEvidence records —
+    one row per period + site, with the PF and ESIC challan status per column."""
+    groups = {}
+    status_map = {"PENDING": "Pending", "VERIFIED": "Filed", "RETURNED": "Returned"}
+    for ev in SubmissionEvidence.objects.filter(user=user).order_by("-created_at")[:60]:
+        low = f"{_d(ev.doc_type)} {_d(ev.document_type)}".lower()
+        if "esic" not in low and "pf" not in low and "provident" not in low:
+            continue
+        key = (_d(ev.financial_year), _d(ev.month), _d(ev.site))
+        g = groups.setdefault(key, {
+            "id": f"ch-{abs(hash(key))}",
+            "period": _d(ev.period) or f"{_d(ev.month)} {_d(ev.financial_year)}".strip(),
+            "site": _d(ev.site), "pf": "", "esic": "", "amount": None, "status": "Pending",
+        })
+        label = status_map.get(ev.status, "Pending")
+        if "esic" in low:
+            g["esic"] = label
+        else:
+            g["pf"] = label
+    rows = []
+    for g in groups.values():
+        bits = {v for v in (g["pf"], g["esic"]) if v}
+        if bits:
+            g["status"] = "Returned" if "Returned" in bits else ("Compliant" if bits <= {"Filed"} else "Pending")
+            rows.append(g)
+    return sorted(rows, key=lambda r: (r["period"], r["site"]), reverse=True)[:10]
 
 
 def _contractor_job_history(user):
@@ -2455,6 +2580,85 @@ def _contractor_binding_requests(user):
         })
     rows.sort(key=lambda row: str(row.get("requestedOn") or ""), reverse=True)
     return rows
+
+
+def _contractor_recent_activities(user):
+    """Recent activities derived from real records — gate passes for bound
+    workers, binding requests, job postings and compliance submissions,
+    newest first (max 5)."""
+    from bss_core.models import (
+        WorkerGatePass, WorkerContractorBinding, ContractorJob, SubmissionEvidence
+    )
+    bound_worker_ids = list(WorkerContractorBinding.objects.filter(
+        contractor=user, binding_status="ACCEPTED").values_list("worker_id", flat=True))
+    activities = []
+
+    for gp in WorkerGatePass.objects.filter(worker_id__in=bound_worker_ids).order_by("-created_at")[:3]:
+        wi = WorkerIdentity.objects.filter(user=gp.worker).first()
+        name = _d(wi.name if wi and wi.name else gp.worker.username)
+        activities.append({
+            "title": (f"Gate Pass {_d(gp.gate_pass_no)} issued for {name}"),
+            "raw_time": gp.created_at,
+            "type": "gate_pass"
+        })
+
+    for b in WorkerContractorBinding.objects.filter(contractor=user).order_by("-created_at")[:3]:
+        wi = WorkerIdentity.objects.filter(user=b.worker).first()
+        name = _d(wi.name if wi and wi.name else b.worker.username)
+        status = _WORKER_BINDING_STATUS.get(str(b.binding_status).upper(), _d(b.binding_status))
+        activities.append({
+            "title": f"Worker {name} · binding {status}",
+            "raw_time": b.created_at,
+            "type": "binding"
+        })
+
+    for j in ContractorJob.objects.filter(contractor=user).order_by("-created_at")[:3]:
+        activities.append({
+            "title": f"Job posted: {_d(j.job_title)}",
+            "raw_time": j.created_at,
+            "type": "job"
+        })
+
+    for ev in SubmissionEvidence.objects.filter(user=user).order_by("-created_at")[:3]:
+        label = {"PENDING": "submitted", "VERIFIED": "verified",
+                 "RETURNED": "returned"}.get(ev.status, "submitted")
+        activities.append({
+            "title": f"{_d(ev.doc_type)} · {label}",
+            "raw_time": ev.created_at,
+            "type": "compliance"
+        })
+
+    activities.sort(key=lambda x: x["raw_time"] or timezone.now(), reverse=True)
+    
+    out = []
+    now = timezone.now()
+    for act in activities[:5]:
+        dt = act["raw_time"]
+        if not dt:
+            time_str = "Recently"
+        else:
+            diff = (now - dt).total_seconds()
+            if diff < 3600:
+                time_str = f"{max(1, int(diff // 60))} mins ago"
+            elif diff < 86400:
+                time_str = f"{int(diff // 3600)} hours ago"
+            elif diff < 172800:
+                time_str = "1 day ago"
+            else:
+                time_str = f"{int(diff // 86400)} days ago"
+
+        out.append({
+            "title": act["title"],
+            "time": time_str,
+            "type": act["type"]
+        })
+
+    if not out:
+        out = [
+            {"title": "Contractor account active", "time": "Just now", "type": "system"}
+        ]
+    return out
+
 
 
 def _contractor_registers(user):
@@ -2845,8 +3049,8 @@ def build_contractor_portal(user):
         "licenses": _contractor_licenses(user),
         "workerDocuments": _contractor_worker_documents(user),
         "workerCompliance": _contractor_worker_compliance(user),
-        "workforceGrowth": _contractor_workforce_growth(),
-        "applicability": _contractor_applicability(),
+        "workforceGrowth": _contractor_workforce_growth(user),
+        "applicability": _contractor_applicability(user),
         "complianceHistory": _contractor_compliance_history(user),
         "jobHistory": _contractor_job_history(user),
         "leaveApprovals": _contractor_leave_approvals(user),
@@ -2857,6 +3061,7 @@ def build_contractor_portal(user):
         "registers": _contractor_registers(user),
         "complianceBatches": _contractor_compliance_batches(user),
         "auditReports": _contractor_audit_reports(user),
+        "recentActivities": _contractor_recent_activities(user),
         "grievances": _contractor_grievances(user),
         "payroll": {
             "config": _contractor_payroll_config(user),

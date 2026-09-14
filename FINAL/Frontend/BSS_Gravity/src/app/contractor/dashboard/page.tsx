@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Users, Building2, ShieldCheck, Clock, MapPin, FileText, Activity, AlertCircle, ArrowRight, CheckCircle2,
@@ -38,7 +38,8 @@ export default function ContractorDashboardPage() {
     { label: t('ui.complianceScore'), value: `${complianceRate}%`, icon: ShieldCheck, tone: 'indigo' },
   ];
 
-  const growth = useMemo(() => contractor.workforceGrowth.sixMonths, [contractor.workforceGrowth]);
+  const [growthRange, setGrowthRange] = useState<'6' | '12'>('6');
+  const growth = useMemo(() => growthRange === '6' ? contractor.workforceGrowth.sixMonths : contractor.workforceGrowth.oneYear, [contractor.workforceGrowth, growthRange]);
   const maxWorkers = Math.max(1, ...growth.map(p => p.workers));
 
   const docSummary = useMemo(() => {
@@ -210,7 +211,7 @@ export default function ContractorDashboardPage() {
                       <td className="px-5 py-3 text-gray-600">{item.site}</td>
                       <td className="px-5 py-3"><Pill value={item.pf} /></td>
                       <td className="px-5 py-3"><Pill value={item.esic} /></td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{inr(item.amount)}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900">{item.amount != null ? inr(item.amount) : '—'}</td>
                       <td className="px-5 py-3"><StatusBadge status={item.status} /></td>
                     </tr>
                   ))}
@@ -224,8 +225,8 @@ export default function ContractorDashboardPage() {
             <div className="flex justify-between items-center">
               <div><h2 className="text-sm font-semibold text-gray-950">Workforce Growth Trend</h2><p className="text-xs text-gray-400 mt-0.5">Active workers · last 6 months</p></div>
               <div className="flex gap-1">
-                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">6 Months</span>
-                <span className="text-[10px] font-bold text-gray-400 border border-gray-200 rounded-full px-2 py-0.5">1 Year</span>
+                <button onClick={() => setGrowthRange('6')} className={`text-[10px] font-bold rounded-full px-2 py-0.5 border ${growthRange === '6' ? 'text-blue-700 bg-blue-50 border-blue-100' : 'text-gray-400 border-gray-200'}`}>6 Months</button>
+                <button onClick={() => setGrowthRange('12')} className={`text-[10px] font-bold rounded-full px-2 py-0.5 border ${growthRange === '12' ? 'text-blue-700 bg-blue-50 border-blue-100' : 'text-gray-400 border-gray-200'}`}>1 Year</button>
               </div>
             </div>
             <div className="mt-4 flex items-end gap-2 h-28">
@@ -368,17 +369,20 @@ export default function ContractorDashboardPage() {
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">{t('ui.recentActivity')}</h2></div>
             <div className="p-5 space-y-4">
-              {[
-                { title: 'New Gate Pass issued', time: '2 hours ago', icon: ShieldCheck },
-                { title: 'PF challan verified', time: '5 hours ago', icon: FileText },
-                { title: '3 workers bound via QR', time: '1 day ago', icon: Activity },
-                { title: `Job posted · ${totalJobs} active`, time: '2 days ago', icon: FileText },
-              ].map((act, i) => (
-                <div key={i} className="flex gap-3">
-                  <div className="mt-0.5"><act.icon size={14} className="text-gray-400" /></div>
-                  <div><p className="text-sm font-medium text-gray-800">{act.title}</p><p className="text-xs text-gray-400">{act.time}</p></div>
-                </div>
-              ))}
+              {(contractor.recentActivities && contractor.recentActivities.length > 0 ? contractor.recentActivities : [
+                { title: 'New Gate Pass issued', time: '2 hours ago', type: 'gate_pass' },
+                { title: 'PF challan verified', time: '5 hours ago', type: 'compliance' },
+                { title: '3 workers bound via QR', time: '1 day ago', type: 'binding' },
+                { title: `Job posted · ${totalJobs} active`, time: '2 days ago', type: 'job' },
+              ]).map((act, i) => {
+                const IconComponent = act.type === 'gate_pass' ? ShieldCheck : act.type === 'binding' ? Activity : act.type === 'job' ? FileText : FileText;
+                return (
+                  <div key={i} className="flex gap-3">
+                    <div className="mt-0.5"><IconComponent size={14} className="text-gray-400" /></div>
+                    <div><p className="text-sm font-medium text-gray-800">{act.title}</p><p className="text-xs text-gray-400">{act.time}</p></div>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
