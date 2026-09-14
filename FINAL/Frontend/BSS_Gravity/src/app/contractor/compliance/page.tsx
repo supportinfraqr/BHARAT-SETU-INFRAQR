@@ -6,8 +6,8 @@ import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
 import { INDIA_STATES } from '@/data/indiaStates';
 type Row = ContractorPortalData['compliances'][number];
-type RowDraft = { item:string; category:string; reference:string; employer:string; site:string; worker:string; issue:string; expiry:string; status:string };
-const emptyRow = (site = ''): RowDraft => ({ item:'', category:'', reference:'', employer:'', site, worker:'', issue:'', expiry:'', status:'Active' });
+type RowDraft = { item:string; category:string; reference:string; employer:string; site:string; worker:string; issue:string; expiry:string };
+const emptyRow = (site = ''): RowDraft => ({ item:'', category:'', reference:'', employer:'', site, worker:'', issue:'', expiry:'' });
 
 type Tab = 'records' | 'registers' | 'master' | 'report';
 const FYS = ['FY 2026-27', 'FY 2025-26', 'FY 2024-25'];
@@ -59,7 +59,7 @@ export default function ContractorCompliancePage() {
     e.preventDefault(); setBusy(true); setError('');
     const form = Object.fromEntries(new FormData(e.currentTarget));
     const site = contractor.sites.find(s => s.name === form.site);
-    const payload = { ...form, employer: site?.employer ?? (employerScope !== 'all' ? employerScope : null), worker: form.worker || null, status: 'Active' };
+    const payload = { ...form, employer: site?.employer ?? (employerScope !== 'all' ? employerScope : null), worker: form.worker || null };
     try { const result = await mutate<{ data: Row }>('compliances', 'POST', payload); replaceContractor({ ...contractor, compliances: [result.data, ...contractor.compliances] }); setModal(null); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Compliance could not be created.'); }
     finally { setBusy(false); }
@@ -69,7 +69,7 @@ export default function ContractorCompliancePage() {
     const valid = rows.filter(r => r.item && r.site && r.issue && r.expiry);
     if (!valid.length) { setError('Add at least one complete row.'); setBusy(false); return; }
     try {
-      const payload = valid.map(r => { const site = contractor.sites.find(s => s.name === r.site); return { ...r, employer: r.employer || site?.employer || (employerScope !== 'all' ? employerScope : null), worker: r.worker || null, status: r.status || 'Active' }; });
+      const payload = valid.map(r => { const site = contractor.sites.find(s => s.name === r.site); return { ...r, employer: r.employer || site?.employer || (employerScope !== 'all' ? employerScope : null), worker: r.worker || null }; });
       const result = await mutate<{ data: Row[] }>('compliances', 'POST', { bulk: payload });
       replaceContractor({ ...contractor, compliances: [...result.data, ...contractor.compliances] });
       setNotice(`Added ${result.data.length} compliance records.`); setRows([]); setModal(null);
@@ -85,9 +85,9 @@ export default function ContractorCompliancePage() {
     reader.onload = () => {
       const text = String(reader.result ?? '');
       const lines = text.split(/\r?\n/).filter(line => line.trim()).slice(0, 500);
-      const parsed = lines.map(line => { const [item, category, reference, employer, site, worker, issue, expiry, status] = parseCsv(line); return { ...emptyRow(), item: item?.trim() ?? '', category: category?.trim() ?? '', reference: reference?.trim() ?? '', employer: employer?.trim() ?? '', site: site?.trim() ?? '', worker: worker?.trim() ?? '', issue: issue?.trim() ?? '', expiry: expiry?.trim() ?? '', status: status?.trim() || 'Active' }; }).filter(r => r.item && r.site);
+      const parsed = lines.map(line => { const [item, category, reference, employer, site, worker, issue, expiry] = parseCsv(line); return { ...emptyRow(), item: item?.trim() ?? '', category: category?.trim() ?? '', reference: reference?.trim() ?? '', employer: employer?.trim() ?? '', site: site?.trim() ?? '', worker: worker?.trim() ?? '', issue: issue?.trim() ?? '', expiry: expiry?.trim() ?? '' }; }).filter(r => r.item && r.site);
       setRows(current => [...current, ...parsed]); setError('');
-      if (!parsed.length) setError('No valid rows. Expected: Item, Category, Reference, Employer, Site, Worker, Issue, Expiry, Status.');
+      if (!parsed.length) setError('No valid rows. Expected: Item, Category, Reference, Employer, Site, Worker, Issue, Expiry.');
     };
     reader.readAsText(file);
   }
@@ -210,13 +210,13 @@ export default function ContractorCompliancePage() {
     </section></div>}
 
     {modal === 'bulk' && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-6xl max-h-[90vh] flex flex-col bg-white rounded-2xl overflow-hidden">
-      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk add compliance records</h2><p className="text-xs text-gray-500 mt-1">Add rows or import a CSV (Item, Category, Reference, Employer, Site, Worker, Issue, Expiry, Status).</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
+      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk add compliance records</h2><p className="text-xs text-gray-500 mt-1">Add rows or import a CSV (Item, Category, Reference, Employer, Site, Worker, Issue, Expiry).</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <div className="p-5 space-y-4 overflow-y-auto">
         <div className="flex flex-wrap gap-2"><label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 cursor-pointer">Import CSV <input type="file" accept=".csv" className="hidden" onChange={e => importCsv(e.target.files?.[0])}/></label><button type="button" onClick={addRow} className="h-9 px-3 border border-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1"><Plus size={14}/>Add row</button></div>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <form onSubmit={submitBulk} className="space-y-3">
-          <div className="overflow-x-auto pb-2"><div className="min-w-[1080px]"><div className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_110px_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['Compliance item','Category','Reference','Employer','Site','Worker','Issue','Expiry','Status',''].map((label, i) => <span key={i}>{label}</span>)}</div>
-            {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_110px_30px] gap-2 items-center mt-2">
+          <div className="overflow-x-auto pb-2"><div className="min-w-[1000px]"><div className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['Compliance item','Category','Reference','Employer','Site','Worker','Issue','Expiry',''].map((label, i) => <span key={i}>{label}</span>)}</div>
+            {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_30px] gap-2 items-center mt-2">
               <input value={row.item} onChange={e => updateRow(index, 'item', e.target.value)} placeholder="Compliance item" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
               <input value={row.category} onChange={e => updateRow(index, 'category', e.target.value)} placeholder="Category" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
               <input value={row.reference} onChange={e => updateRow(index, 'reference', e.target.value)} placeholder="Reference" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
@@ -225,7 +225,6 @@ export default function ContractorCompliancePage() {
               <input value={row.worker} onChange={e => updateRow(index, 'worker', e.target.value)} placeholder="Worker" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
               <input value={row.issue} onChange={e => updateRow(index, 'issue', e.target.value)} type="date" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
               <input value={row.expiry} onChange={e => updateRow(index, 'expiry', e.target.value)} type="date" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-              <select value={row.status} onChange={e => updateRow(index, 'status', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option>Active</option><option>Expiring</option><option>Expired</option></select>
               <button type="button" onClick={() => removeRow(index)} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600" aria-label="Remove row"><Trash2 size={15}/></button>
             </div>)}
           </div></div>

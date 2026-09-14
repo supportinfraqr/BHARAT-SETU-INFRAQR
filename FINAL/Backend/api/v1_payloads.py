@@ -1943,10 +1943,20 @@ def _contractor_workers(user):
     return rows
 
 
+def _compliance_status(c):
+    """Register status derived from the expiry date (Active / Expiring / Expired)."""
+    if not c.due_date:
+        return "Active"
+    days = (c.due_date - timezone.localdate()).days
+    if days < 0:
+        return "Expired"
+    if days <= 30:
+        return "Expiring"
+    return "Active"
+
+
 def _compliance_doc_row(c):
     """Canonical statutory-compliance row (shared by the contractor/employer views)."""
-    st = str(c.status).upper()
-    verified = st in ("SUBMITTED", "COMPLETED")
     return {
         "id": str(c.id),
         "item": _d(c.master.act if c.master else ""),
@@ -1958,7 +1968,7 @@ def _compliance_doc_row(c):
         "issue": _dts(c.issue_date) if c.issue_date else (_dts(c.created_at.date()) if c.created_at else ""),
         "expiry": _dts(c.due_date) if c.due_date else "",
         "verification": _d(c.verification) or "Pending",
-        "status": "Active" if verified else ("Expired" if st == "EXPIRED" else "Expiring"),
+        "status": _compliance_status(c),
     }
 
 
