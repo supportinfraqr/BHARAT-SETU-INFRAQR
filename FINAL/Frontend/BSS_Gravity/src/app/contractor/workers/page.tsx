@@ -19,7 +19,7 @@ const columns: DataColumn<ContractorWorker>[] = [
   { id:'site', header:'Site', value:row => row.site },
   { id:'employer', header:'Employer', value:row => row.employer },
   { id:'doj', header:'Joined', value:row => row.doj },
-  { id:'status', header:'Status', value:row => row.status, render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{row.status}</span> },
+  { id:'status', header:'Status', value:row => row.status, render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Accepted' ? 'bg-green-50 text-green-700' : row.status === 'Pending' ? 'bg-amber-50 text-amber-700' : row.status === 'Expired' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{row.status}</span> },
 ];
 
 type RowDraft = { bssId:string; site:string };
@@ -40,9 +40,9 @@ export default function WorkerMasterPage() {
   const docCtx = useContractorDocView();
   const scopedRows = scoped(contractor.workers, w => w.employer);
 
-  const active = scopedRows.filter(w => w.status === 'Active').length;
-  const inactive = scopedRows.filter(w => w.status === 'Inactive').length;
-  const pendingVerification = scopedRows.filter(w => !w.verified).length;
+  const active = scopedRows.filter(w => w.status === 'Accepted').length;
+  const pending = scopedRows.filter(w => w.status === 'Pending').length;
+  const inactive = scopedRows.filter(w => w.status === 'Rejected' || w.status === 'Cancelled' || w.status === 'Expired').length;
 
   async function submitSingle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
@@ -110,10 +110,10 @@ export default function WorkerMasterPage() {
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
 
     <section className="bss-kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3">
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Total Workers</span><span className="bss-kpi-icon bg-blue-50 text-blue-700"><UserRound size={16}/></span></div><strong>{scopedRows.length}</strong><p>Bound workforce</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Active Workers</span><span className="bss-kpi-icon bg-green-50 text-green-700"><CheckCircle2 size={16}/></span></div><strong>{active}</strong><p>Currently active</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Inactive Workers</span><span className="bss-kpi-icon bg-gray-100 text-gray-500"><X size={16}/></span></div><strong>{inactive}</strong><p>Not on site</p></article>
-      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Pending Verification</span><span className="bss-kpi-icon bg-orange-50 text-orange-700"><BadgeCheck size={16}/></span></div><strong>{pendingVerification}</strong><p>Waiting for onboarding</p></article>
+      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Total Workers</span><span className="bss-kpi-icon bg-blue-50 text-blue-700"><UserRound size={16}/></span></div><strong>{scopedRows.length}</strong><p>All bindings</p></article>
+      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Active</span><span className="bss-kpi-icon bg-green-50 text-green-700"><CheckCircle2 size={16}/></span></div><strong>{active}</strong><p>Accepted</p></article>
+      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Pending</span><span className="bss-kpi-icon bg-amber-50 text-amber-700"><BadgeCheck size={16}/></span></div><strong>{pending}</strong><p>Awaiting acceptance</p></article>
+      <article className="bss-kpi-card"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-gray-500">Inactive</span><span className="bss-kpi-icon bg-gray-100 text-gray-500"><X size={16}/></span></div><strong>{inactive}</strong><p>Rejected / cancelled</p></article>
     </section>
 
     <EnterpriseDataTable
@@ -174,7 +174,7 @@ export default function WorkerMasterPage() {
         <button onClick={() => setProfileView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
       </header>
       <div className="p-5 space-y-4 text-xs">
-        <div className="flex flex-wrap gap-2">{profileView.verified ? <span className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5">VERIFIED</span> : <span className="text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5">PENDING VERIFICATION</span>}<span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${profileView.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{profileView.status}</span></div>
+        <div className="flex flex-wrap gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${profileView.status === 'Accepted' ? 'bg-green-50 text-green-700' : profileView.status === 'Pending' ? 'bg-amber-50 text-amber-700' : profileView.status === 'Expired' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{profileView.status}</span></div>
         <dl className="grid grid-cols-2 gap-3">
           <Info label="Ref Worker Code" value={profileView.refCode ?? '—'}/>
           <Info label="Designation" value={profileView.designation}/>
@@ -202,7 +202,7 @@ export default function WorkerMasterPage() {
 
     {/* Identity card drawer — worker-level identity card from the actions menu */}
     {idView && <WorkerIdentityCardDrawer worker={idView} onClose={() => setIdView(null)}/>}
-  {docsView2 && (() => { const row = docsView2; const like: WorkerLike = { id: row.id, name: row.name, bssId: row.bssId, mobile: row.mobile, site: row.site, siteId: row.site, employer: row.employer, designation: row.designation, department: row.department, doj: row.doj, category: row.category, gender: row.gender, age: row.age, photoUrl: row.photoUrl, status: row.status, verified: row.verified, skills: row.skills, refCode: row.refCode }; return <WorkerDocumentsDrawer owner={docCtx.owner} view={docCtx.view} worker={like} onClose={() => setDocsView2(null)} />; })()}
+  {docsView2 && (() => { const row = docsView2; const like: WorkerLike = { id: row.id, name: row.name, bssId: row.bssId, mobile: row.mobile, site: row.site, siteId: row.site, employer: row.employer, designation: row.designation, department: row.department, doj: row.doj, category: row.category, gender: row.gender, age: row.age, photoUrl: row.photoUrl, status: row.status, skills: row.skills, refCode: row.refCode }; return <WorkerDocumentsDrawer owner={docCtx.owner} view={docCtx.view} worker={like} onClose={() => setDocsView2(null)} />; })()}
   </div>;
 }
 

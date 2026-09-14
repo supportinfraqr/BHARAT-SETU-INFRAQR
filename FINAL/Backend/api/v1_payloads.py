@@ -1904,8 +1904,13 @@ def _contractor_pending_sites(user):
     return rows
 
 
+_WORKER_BINDING_STATUS = {"PENDING": "Pending", "ACCEPTED": "Accepted",
+                          "REJECTED": "Rejected", "CANCELLED": "Cancelled",
+                          "EXPIRED": "Expired"}
+
+
 def _contractor_workers(user):
-    bindings = WorkerContractorBinding.objects.filter(contractor=user, binding_status="ACCEPTED")
+    bindings = WorkerContractorBinding.objects.filter(contractor=user).order_by("-created_at")
     rows = []
     for b in bindings:
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
@@ -1924,8 +1929,9 @@ def _contractor_workers(user):
             "designation": _d(b.designation),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
             "compliance": 0,
-            "status": _d(b.binding_status),
-            "verified": bool(wi and wi.aadhaar),
+            # Mirror the binding status shown on the Binding Requests page / DB.
+            "status": _WORKER_BINDING_STATUS.get(str(b.binding_status).upper(),
+                                                 _d(b.binding_status)),
             "refCode": _d(wi.bss_worker_id if wi else ""),
             "department": _d(b.department),
             "gender": _d(wi.gender if wi else ""),
@@ -1933,8 +1939,6 @@ def _contractor_workers(user):
             "skills": "",
             "photoUrl": _d(wi.photo if wi else ""),
             "eligibility": _gate_pass_eligibility(b.worker),
-            # Extended identity revealed to the bound contractor (permission:
-            # a live binding unlocks the worker's verified identity details).
             "aadhaar": _d(wi.aadhaar if wi else ""),
             "dob": _dts(wi.date_of_birth) if wi and wi.date_of_birth else "",
             "fatherName": _d(wi.father_name if wi else ""),

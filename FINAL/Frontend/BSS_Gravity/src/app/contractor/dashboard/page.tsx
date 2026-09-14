@@ -18,8 +18,8 @@ export default function ContractorDashboardPage() {
   const workers = scoped(contractor.workers, w => w.employer);
   const compliances = scoped(contractor.compliances, c => c.employer);
   const recentSubmissions = scoped(contractor.submissions.documents, d => d.employer).slice(0, 3);
-  const activeWorkers = workers.filter(worker => worker.status === 'Active').length;
-  const pendingWorkers = workers.filter(worker => !worker.verified).length;
+  const activeWorkers = workers.filter(worker => worker.status === 'Accepted').length;
+  const pendingWorkers = workers.filter(worker => worker.status === 'Pending').length;
   const expiringCompliance = compliances.filter(item => item.status === 'Expiring' || item.status === 'Expired').length;
   const complianceRate = sites.length ? Math.round(sites.reduce((sum, site) => sum + site.compliance, 0) / sites.length) : contractor.stats.complianceScore;
   const activeLicenses = contractor.licenses.filter(l => l.status === 'Active').length;

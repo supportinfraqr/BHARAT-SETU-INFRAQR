@@ -16,7 +16,7 @@ export function useContractorDocView(): { owner: OwnerScope; view: PortalView; w
       site: worker.site, siteId: worker.site,
       employer: worker.employer, designation: worker.designation, department: worker.department,
       doj: worker.doj, category: worker.category, gender: worker.gender, age: worker.age,
-      photoUrl: worker.photoUrl, status: worker.status, verified: worker.verified, skills: worker.skills, refCode: worker.refCode,
+      photoUrl: worker.photoUrl, status: worker.status, skills: worker.skills, refCode: worker.refCode,
     }));
     const employers = contractor.employers.map(emp => ({ id: emp.id, name: emp.name, bssId: emp.id }));
     const self: { name: string; bssId: string; contact?: string; signatory?: string; address?: string } = { name: contractor.identity.company, bssId: contractor.identity.bssId, contact: contractor.identity.contact, signatory: contractor.identity.name };

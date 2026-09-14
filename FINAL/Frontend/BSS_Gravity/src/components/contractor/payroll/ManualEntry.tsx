@@ -55,7 +55,7 @@ export default function ManualEntry({ portal, onSave }: {
     if (!workerId) issues.push({ level:'error', text:'Select a bound worker before saving the record.' });
     if (computed.gross <= 0) issues.push({ level:'error', text:'Gross pay is ₹0 — add at least one earning amount.' });
     if (!(Number(attendanceDays) > 0)) issues.push({ level:'error', text:'Attendance days must be greater than 0.' });
-    if (worker && !worker.verified) issues.push({ level:'warning', text:`${worker.name} is not fully verified — flag the record for review before submission.` });
+    if (worker && worker.status !== 'Accepted') issues.push({ level:'warning', text:`${worker.name}'s binding is ${worker.status} — flag the record for review before submission.` });
     setValidation(issues);
     return issues.filter(i => i.level === 'error').length === 0;
   };
