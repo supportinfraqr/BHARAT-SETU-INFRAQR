@@ -71,6 +71,8 @@ class ComplianceDocument(models.Model):
     financial_year = models.CharField(max_length=9, blank=True)
     period = models.CharField(max_length=40, blank=True)
     state = models.CharField(max_length=60, blank=True)
+    client_name = models.CharField(max_length=200, blank=True)
+    verification = models.CharField(max_length=20, blank=True)
     site = models.ForeignKey("Site", on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="compliance_docs")
     worker = models.ForeignKey("User", on_delete=models.SET_NULL, null=True, blank=True,

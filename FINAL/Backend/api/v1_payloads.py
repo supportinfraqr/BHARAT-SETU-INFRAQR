@@ -1952,12 +1952,12 @@ def _compliance_doc_row(c):
         "item": _d(c.master.act if c.master else ""),
         "category": _d(c.master.nature if c.master else ""),
         "reference": _d(c.unique_no),
-        "employer": _org_name(c.employer) if c.employer else "",
+        "employer": _d(c.client_name) or (_org_name(c.employer) if c.employer else ""),
         "site": c.site.site_name if c.site else "",
         "worker": _party_name(c.worker) if c.worker else None,
         "issue": _dts(c.issue_date) if c.issue_date else (_dts(c.created_at.date()) if c.created_at else ""),
         "expiry": _dts(c.due_date) if c.due_date else "",
-        "verification": "Verified" if verified else "Pending",
+        "verification": _d(c.verification) or ("Verified" if verified else "Pending"),
         "status": "Active" if verified else ("Expired" if st == "EXPIRED" else "Expiring"),
     }
 

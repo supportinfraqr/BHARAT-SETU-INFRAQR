@@ -3034,6 +3034,8 @@ def _handle_compliances(user, body, method):
                     break
         doc = ComplianceDocument(
             employer=user, master=master, site=site, worker=worker,
+            client_name=str(row.get("employer") or "")[:200],
+            verification=str(row.get("verification") or "")[:20],
             unique_no=reference[:60],
             form_number=reference[:40],
             period=str(row.get("expiry") or "")[:40],
