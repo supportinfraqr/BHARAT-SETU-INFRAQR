@@ -489,6 +489,8 @@ export type EmployerApproval = {
   initiatedBy?: string; acceptedBy?: string;
   /** Present on Contractor ↔ Employer binding rows. */
   bindingId?: string;
+  /** Employer's saved secondary-contractor tickbox selection (CE binding ids). */
+  secondaryBindingIds?: number[];
   consentEmployer?: boolean;
   consentContractor?: boolean;
   source?: string;

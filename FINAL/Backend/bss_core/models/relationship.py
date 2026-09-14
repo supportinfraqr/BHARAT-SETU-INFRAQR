@@ -582,6 +582,9 @@ class ContractorEmployerBinding(models.Model):
     consent_employer = models.BooleanField(default=False)
     consent_method = models.CharField(max_length=20, null=True, blank=True)
     source = models.CharField(max_length=20, choices=SOURCE, default="site_qr")
+    # Employer's saved secondary-contractor selection for this binding (the
+    # tickboxes in the Site permissions dialog) — a list of CE binding ids.
+    secondary_binding_ids = models.JSONField(default=list, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     # Who declined the request and when (contractor / employer).
     rejected_by = models.CharField(max_length=20, blank=True)

@@ -22,21 +22,26 @@ export default function EmployerQrBindingRequestsPage() {
   const [historyFor, setHistoryFor] = useState<EmployerApproval | null>(null);
   const [secondarySel, setSecondarySel] = useState<number[]>([]);
 
-  // The secondary-contractor tickboxes are remembered per binding so they
-  // survive a page refresh.
-  const secondaryKey = (bindingId: unknown) => `bss-site-secondary-${String(bindingId ?? '')}`;
-  function readSecondary(bindingId: unknown): number[] {
-    if (typeof window === 'undefined') return [];
-    try { return JSON.parse(window.localStorage.getItem(secondaryKey(bindingId)) || '[]') as number[]; } catch { return []; }
-  }
+  // The secondary-contractor tickboxes are saved on the binding (server-side),
+  // so they survive a page refresh / another device.
   function openAllot(row: EmployerApproval) {
     setAllotFor(row);
-    setSecondarySel(readSecondary(row.bindingId));
+    setSecondarySel(row.secondaryBindingIds ?? []);
   }
-  function changeSecondary(next: number[]) {
+  async function changeSecondary(next: number[]) {
     setSecondarySel(next);
-    if (typeof window !== 'undefined') {
-      try { window.localStorage.setItem(secondaryKey(allotFor?.bindingId), JSON.stringify(next)); } catch { /* ignore */ }
+    if (!allotFor?.bindingId) return;
+    try {
+      const response = await fetch('/api/employer/binding-requests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bindingId: Number(allotFor.bindingId), action: 'set-secondary', bindingIds: next }),
+      });
+      if (!response.ok) throw new Error();
+      replaceEmployer({ ...employer, approvals: employer.approvals.map(item => item.id === allotFor.id ? { ...item, secondaryBindingIds: next } : item) });
+      setAllotFor(prev => prev ? { ...prev, secondaryBindingIds: next } : prev);
+    } catch {
+      setSecondarySel(allotFor.secondaryBindingIds ?? []);
+      setError('The secondary-contractor selection could not be saved.');
     }
   }
 

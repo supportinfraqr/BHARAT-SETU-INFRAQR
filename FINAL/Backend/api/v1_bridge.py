@@ -4350,6 +4350,24 @@ def employer_binding_action(request, binding_id):
                     notif_type="APPROVAL",
                     link="/contractor/qr/requests"
                 )
+    elif action in ("set-secondary", "set-secondary-contractors"):
+        # Persist the employer's secondary-contractor tickbox selection for this
+        # binding (only ACCEPTED bindings of this employer, never the binding itself).
+        if user.role != "employer":
+            return Response({"error": "Only the employer can set the secondary contractors."},
+                            status=status.HTTP_403_FORBIDDEN)
+        allowed = set(ContractorEmployerBinding.objects.filter(
+            employer=user, binding_status="ACCEPTED").values_list("id", flat=True))
+        ids = []
+        for bid in (request.data.get("bindingIds") or []):
+            try:
+                bid = int(bid)
+            except (TypeError, ValueError):
+                continue
+            if bid in allowed and bid != b.id and bid not in ids:
+                ids.append(bid)
+        b.secondary_binding_ids = ids
+        b.save(update_fields=["secondary_binding_ids", "updated_at"])
     else:
         return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"data": payloads._ce_binding_row(b)}, status=status.HTTP_200_OK)

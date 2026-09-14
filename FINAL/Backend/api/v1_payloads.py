@@ -3092,6 +3092,7 @@ def _employer_approvals(user):
             "consentEmployer": bool(e.consent_employer),
             "consentContractor": bool(e.consent_contractor),
             "source": _d(e.source),
+            "secondaryBindingIds": [int(x) for x in (e.secondary_binding_ids or []) if str(x).isdigit()],
             "unbindRequested": bool(e.unbind_requested_at),
             "unbindConsentEmployer": bool(e.unbind_consent_employer),
             "unbindConsentContractor": bool(e.unbind_consent_contractor),
