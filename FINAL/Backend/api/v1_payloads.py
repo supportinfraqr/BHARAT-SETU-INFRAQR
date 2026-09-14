@@ -2484,6 +2484,9 @@ def _contractor_compliance_batch_row(b):
         "employeeCount": b.employee_count, "locationCount": b.location_count,
         "generatedOn": _dts(b.generated_on) if b.generated_on else "",
         "generatedBy": _d(b.generated_by),
+        "rowsCount": b.rows_count,
+        "hasFile": bool(b.generated_file),
+        "notes": _d(b.notes),
         "status": {"GENERATED": "Generated", "PENDING": "Pending",
                    "FAILED": "Failed"}.get(str(b.status).upper(), "Generated"),
     }

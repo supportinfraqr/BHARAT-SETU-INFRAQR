@@ -208,6 +208,7 @@ export type ContractorRegister = {
 
 export type ContractorComplianceBatch = {
   id: string; financialYear: string; month: string; year: string; state: string; site: string; siteCode: string; employeeCount: number; locationCount: number; generatedOn: string; generatedBy: string; status: 'Generated' | 'Pending' | 'Failed';
+  rowsCount?: number; hasFile?: boolean; notes?: string;
 };
 
 export type ContractorAuditReport = {
