@@ -209,13 +209,13 @@ export default function ContractorCompliancePage() {
       </form>
     </section></div>}
 
-    {modal === 'bulk' && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-3xl bg-white rounded-2xl overflow-hidden">
+    {modal === 'bulk' && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-6xl max-h-[90vh] flex flex-col bg-white rounded-2xl overflow-hidden">
       <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk add compliance records</h2><p className="text-xs text-gray-500 mt-1">Add rows or import a CSV (Item, Category, Reference, Employer, Site, Worker, Issue, Expiry, Verification, Status).</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
-      <div className="p-5 space-y-4">
+      <div className="p-5 space-y-4 overflow-y-auto">
         <div className="flex flex-wrap gap-2"><label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 cursor-pointer">Import CSV <input type="file" accept=".csv" className="hidden" onChange={e => importCsv(e.target.files?.[0])}/></label><button type="button" onClick={addRow} className="h-9 px-3 border border-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1"><Plus size={14}/>Add row</button></div>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <form onSubmit={submitBulk} className="space-y-3">
-          <div className="min-w-[1180px]"><div className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_120px_110px_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['Compliance item','Category','Reference','Employer','Site','Worker','Issue','Expiry','Verification','Status',''].map((label, i) => <span key={i}>{label}</span>)}</div>
+          <div className="overflow-x-auto pb-2"><div className="min-w-[1180px]"><div className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_120px_110px_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['Compliance item','Category','Reference','Employer','Site','Worker','Issue','Expiry','Verification','Status',''].map((label, i) => <span key={i}>{label}</span>)}</div>
             {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(130px,1.1fr)_110px_120px_150px_130px_110px_130px_130px_120px_110px_30px] gap-2 items-center mt-2">
               <input value={row.item} onChange={e => updateRow(index, 'item', e.target.value)} placeholder="Compliance item" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
               <input value={row.category} onChange={e => updateRow(index, 'category', e.target.value)} placeholder="Category" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
@@ -229,7 +229,7 @@ export default function ContractorCompliancePage() {
               <select value={row.status} onChange={e => updateRow(index, 'status', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option>Active</option><option>Expiring</option><option>Expired</option></select>
               <button type="button" onClick={() => removeRow(index)} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600" aria-label="Remove row"><Trash2 size={15}/></button>
             </div>)}
-          </div>
+          </div></div>
           <div className="flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : `Save ${rows.length} record${rows.length === 1 ? '' : 's'}`}</button></div>
         </form>
       </div>
