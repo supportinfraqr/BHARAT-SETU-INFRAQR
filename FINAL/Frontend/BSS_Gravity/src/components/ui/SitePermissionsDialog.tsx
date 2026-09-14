@@ -86,13 +86,13 @@ export default function SitePermissionsDialog({
   const [selectedBindings, setSelectedBindings] = useState<number[]>([]);
   const secondary = secondaryContractors ?? [];
   const toggleBinding = (bindingId: number) => {
-    setSelectedBindings(current => {
-      const next = current.includes(bindingId)
-        ? current.filter(id => id !== bindingId)
-        : [...current, bindingId];
-      onSelectionChange?.(next);
-      return next;
-    });
+    // Compute the next value first, then notify — never call the parent's
+    // setState inside the state updater (that runs during render).
+    const next = selectedBindings.includes(bindingId)
+      ? selectedBindings.filter(id => id !== bindingId)
+      : [...selectedBindings, bindingId];
+    setSelectedBindings(next);
+    onSelectionChange?.(next);
   };
   if (!open) return null;
   return (
