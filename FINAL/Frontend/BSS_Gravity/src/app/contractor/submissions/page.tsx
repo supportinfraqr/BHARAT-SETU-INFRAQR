@@ -47,6 +47,7 @@ export default function ComplianceSubmissionPage() {
   const [location, setLocation] = useState('');
   const [uploads, setUploads] = useState<Record<string, UploadRow>>({});
   const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
+  const [warnSubmit, setWarnSubmit] = useState(false);
 
   const documentMaster = (contractor.submissionDocuments?.length ? contractor.submissionDocuments : FALLBACK_DOCUMENTS);
   const documents = scoped(contractor.submissions.documents as DocumentRow[], row => row.employer);
@@ -112,10 +113,15 @@ export default function ComplianceSubmissionPage() {
   }
 
   const mandatoryDone = documentMaster.filter(d => d.mandatory).every(d => uploads[d.name] && uploads[d.name].status === 'Validated' && uploads[d.name].id);
+  const mandatoryGaps = documentMaster.filter(d => d.mandatory && !(uploads[d.name] && uploads[d.name].status === 'Validated' && uploads[d.name].id));
 
-  async function finalSubmit() {
-    if (!mandatoryDone) { setError('All mandatory documents must be uploaded and validated (100% accuracy) before final submission.'); return; }
+  function finalSubmit() {
     if (!client || !site) { setError('Select a client and site before final submission.'); return; }
+    if (!mandatoryDone) { setError(''); setWarnSubmit(true); return; }
+    void performSubmit();
+  }
+
+  async function performSubmit() {
     setBusy(true); setError(''); setNotice('');
     const uploadIds = documentMaster.map(d => uploads[d.name]?.id).filter((id): id is number => typeof id === 'number');
     try {
@@ -126,7 +132,7 @@ export default function ComplianceSubmissionPage() {
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Compliance could not be submitted.');
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
-      setCreateOpen(false); setUploads({}); setClient(''); setSite(''); setLocation('');
+      setCreateOpen(false); setUploads({}); setClient(''); setSite(''); setLocation(''); setWarnSubmit(false);
       setNotice(`Compliance submitted. Audit report ${result.data.uniqueNo} generated — score ${result.data.scorePercent}%.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Compliance could not be submitted.');
@@ -203,7 +209,7 @@ export default function ComplianceSubmissionPage() {
           </div>
           {error && tab === 'create' && <p role="alert" className="bss-alert bss-alert-error mt-3">{error}</p>}
           <div className="mt-4 flex flex-wrap items-center gap-3 justify-between">
-            <p className={`text-xs flex items-center gap-1.5 ${mandatoryDone ? 'text-green-700' : 'text-orange-700'}`}><FileCheck2 size={14}/>{mandatoryDone ? 'All mandatory documents validated — final submit enabled.' : 'Mandatory documents completion check is in progress.'}</p>
+            <p className={`text-xs flex items-center gap-1.5 ${mandatoryDone ? 'text-green-700' : 'text-orange-700'}`}><FileCheck2 size={14}/>{mandatoryDone ? 'All mandatory documents validated — final submit enabled.' : 'Some mandatory documents are not fully validated — submission is allowed with a warning.'}</p>
             <button onClick={finalSubmit} disabled={busy} className="h-10 px-5 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50">{busy ? 'Submitting…' : 'Final Submit'}</button>
           </div>
         </div>
@@ -243,6 +249,18 @@ export default function ComplianceSubmissionPage() {
       <section role="dialog" aria-modal="true" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
         <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 className="font-semibold text-gray-950">Validation findings</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
         <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-orange-500">•</span>{f}</li>)}</ul>
+      </section>
+    </div>}
+
+    {warnSubmit && <div className="fixed inset-0 z-[85] bg-black/50 grid place-items-center p-4" onMouseDown={event => { if (event.target === event.currentTarget && !busy) setWarnSubmit(false); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="warn-title" className="w-full max-w-md bg-white rounded-2xl shadow-xl">
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 id="warn-title" className="font-semibold text-gray-950">Submit with warning?</h2><p className="text-xs text-gray-500 mt-1">Some mandatory documents are not fully validated.</p></div><button type="button" onClick={() => setWarnSubmit(false)} disabled={busy} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
+        <div className="p-5 text-sm text-gray-700 space-y-3">
+          <p>Mandatory documents still missing or below 100% accuracy:</p>
+          <ul className="space-y-1.5">{mandatoryGaps.map(d => <li key={d.name} className="flex gap-2 items-start"><span className="text-orange-500 mt-px">•</span><span>{d.name} — {uploads[d.name] ? `${uploads[d.name].accuracy}%` : 'Not uploaded'}</span></li>)}</ul>
+          <p className="text-xs text-gray-500 bg-orange-50 border border-orange-100 rounded-lg p-2.5">The submission will proceed, but only fully validated (100% accuracy) evidence counts toward the compliance score. These items will be scored as non-compliant and flagged for the reviewer.</p>
+        </div>
+        <div className="p-5 pt-0 flex flex-col-reverse sm:flex-row justify-end gap-2"><button type="button" onClick={() => setWarnSubmit(false)} disabled={busy} className="bss-secondary-action">Cancel</button><button type="button" disabled={busy} onClick={() => { setWarnSubmit(false); void performSubmit(); }} className="bss-primary-action">{busy ? 'Submitting…' : 'Yes, submit with warning'}</button></div>
       </section>
     </div>}
   </div>;
