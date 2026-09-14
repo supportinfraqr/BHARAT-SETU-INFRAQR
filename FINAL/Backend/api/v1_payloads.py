@@ -2203,30 +2203,63 @@ def _contractor_employers(user):
 
 def _contractor_submissions(user):
     rows = []
+    status_map = {"PENDING": "Pending review", "VERIFIED": "Verified", "RETURNED": "Returned"}
     for ev in SubmissionEvidence.objects.filter(user=user)[:20]:
+        days_left = None
+        if ev.due_date:
+            days_left = (ev.due_date - timezone.localdate()).days
         rows.append({
-            "id": ev.id, "uniqueNo": "",
+            "id": str(ev.id), "uniqueNo": _d(ev.unique_no),
             "type": _d(ev.doc_type),
             "employer": _d(ev.employer), "site": _d(ev.site),
-            "state": "", "financialYear": "",
-            "month": "", "period": _d(ev.period), "status": _d(ev.status),
+            "state": _d(ev.state), "financialYear": _d(ev.financial_year),
+            "month": _d(ev.month), "location": _d(ev.location),
+            "period": _d(ev.period), "status": status_map.get(ev.status, _d(ev.status)),
             "submittedAt": _dts(ev.created_at), "updatedAt": _dts(ev.updated_at),
-            "daysLeft": None, "mandatory": False, "frequency": "",
-            "accuracy": 0, "fileName": _d(ev.original_name), "checksum": _d(ev.checksum_sha256),
+            "daysLeft": days_left, "mandatory": bool(ev.is_mandatory),
+            "frequency": _d(ev.frequency), "documentType": _d(ev.document_type),
+            "accuracy": _num(ev.ocr_accuracy),
+            "findings": list(ev.validation_findings or []),
+            "source": "evidence",
+            "fileName": _d(ev.original_name), "checksum": _d(ev.checksum_sha256),
         })
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
         rows.append({
-            "id": c.id, "uniqueNo": _d(c.unique_no),
+            "id": f"doc-{c.id}", "uniqueNo": _d(c.unique_no),
             "type": _d(c.master.act if c.master else ""),
             "employer": "", "site": c.site.site_name if c.site else "",
             "state": _d(c.state), "financialYear": _d(c.financial_year),
-            "month": "", "period": _d(c.period), "status": _d(c.status),
+            "month": "", "location": "", "period": _d(c.period), "status": _d(c.status),
             "submittedAt": _dts(c.updated_at), "updatedAt": _dts(c.updated_at),
             "daysLeft": c.days_left, "mandatory": bool(c.is_mandatory),
-            "frequency": _d(c.frequency), "accuracy": _num(c.ocr_accuracy),
+            "frequency": _d(c.frequency), "documentType": "",
+            "accuracy": _num(c.ocr_accuracy), "findings": [],
+            "source": "register",
             "fileName": "", "checksum": "",
         })
     return {"documents": rows}
+
+
+def _submission_document_master():
+    """Admin Document Master — the statutory documents/registers a contractor can
+    submit, driving the dynamic client-mapped document list in the wizard."""
+    from bss_core.models import RegisterDocumentMaster
+    rows = []
+    qs = (RegisterDocumentMaster.objects.filter(is_active=True)
+          .order_by("sort_order", "document_name"))
+    for d in qs:
+        rows.append({
+            "name": _d(d.document_name),
+            "code": _d(d.code),
+            "type": {"register": "Register", "document": "Document"}.get(d.kind, _d(d.kind)),
+            "formNo": _d(d.form_number),
+            "act": _d(d.act),
+            "frequency": _d(d.frequency),
+            "mandatory": bool(d.is_mandatory),
+            "format": "PDF",
+            "criticality": _d(d.criticality),
+        })
+    return rows
 
 
 def _benefit_row(r):
@@ -2819,6 +2852,7 @@ def build_contractor_portal(user):
         "availableWorkers": _contractor_available_workers(user),
         "employers": _contractor_employers(user),
         "submissions": _contractor_submissions(user),
+        "submissionDocuments": _submission_document_master(),
         "workerBenefits": _contractor_worker_benefits(user),
         "salaries": _contractor_salaries(user),
         "profileSections": _contractor_profile_sections(user),

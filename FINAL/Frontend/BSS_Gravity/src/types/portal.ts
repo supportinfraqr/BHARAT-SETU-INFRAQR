@@ -300,8 +300,9 @@ export type ContractorPortalData = {
   availableWorkers: Array<{ id: number; workerName: string; workerId: string; trade: string; skills: string[]; experience: string; expectedWage: number; location: string; status: string; dateApplied: string; matchScore: number }>;
   employers: Array<{ id: string; name: string; employerId: string; sites: string[]; siteDetails?: Array<{ id: string; name: string; code: string; location: string; state: string }>; status: 'Active' | 'Inactive'; boundSince: string }>;
   submissions: {
-    documents: Array<{ id: string; uniqueNo?: string; type: string; employer: string; site: string; state?: string; financialYear?: string; month?: string; period: string; status: string; submittedAt: string; updatedAt?: string; daysLeft?: number; mandatory?: boolean; frequency?: string; accuracy?: number; fileName?: string; checksum?: string }>;
+    documents: Array<{ id: string; uniqueNo?: string; type: string; employer: string; site: string; state?: string; financialYear?: string; month?: string; location?: string; documentType?: string; period: string; status: string; submittedAt: string; updatedAt?: string; daysLeft?: number; mandatory?: boolean; frequency?: string; accuracy?: number; findings?: string[]; source?: string; fileName?: string; checksum?: string }>;
   };
+  submissionDocuments: Array<{ name: string; code?: string; type: string; formNo?: string; act?: string; frequency?: string; mandatory: boolean; format: string; criticality?: string }>;
   workerBenefits: WorkerBenefitsData;
   salaries: ContractorSalaryRecord[];
   profileSections: Record<string, Array<{ label: string; value: string; sensitive?: boolean; type?: string }>>;

@@ -68,7 +68,7 @@ class ComplianceDocument(models.Model):
                                related_name="generated_docs")
     register_doc = models.ForeignKey(RegisterDocumentMaster, on_delete=models.SET_NULL,
                                      null=True, blank=True, related_name="generated_docs")
-    financial_year = models.CharField(max_length=9, blank=True)
+    financial_year = models.CharField(max_length=12, blank=True)
     period = models.CharField(max_length=40, blank=True)
     state = models.CharField(max_length=60, blank=True)
     client_name = models.CharField(max_length=200, blank=True)
@@ -113,7 +113,7 @@ class ComplianceReport(models.Model):
     """A compliance audit / scorecard performed on an employer for a period."""
 
     employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_reports")
-    financial_year = models.CharField(max_length=9, blank=True)
+    financial_year = models.CharField(max_length=12, blank=True)
     period = models.CharField(max_length=40, blank=True)
     state = models.CharField(max_length=60, blank=True)
     site_name = models.CharField(max_length=200, blank=True)
@@ -353,7 +353,7 @@ class ComplianceBatch(models.Model):
     contractor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_batches")
     site = models.ForeignKey("Site", on_delete=models.SET_NULL, null=True, blank=True,
                              related_name="compliance_batches")
-    financial_year = models.CharField(max_length=9, blank=True)
+    financial_year = models.CharField(max_length=12, blank=True)
     month = models.CharField(max_length=20, blank=True)
     year = models.CharField(max_length=4, blank=True)
     state = models.CharField(max_length=60, blank=True)

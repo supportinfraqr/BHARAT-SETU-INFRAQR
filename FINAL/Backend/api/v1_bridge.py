@@ -2972,7 +2972,7 @@ def _handle_compliances(user, body, method):
             site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
         batch = ComplianceBatch.objects.create(
             contractor=user, site=site,
-            financial_year=str(body.get("financialYear") or "")[:9],
+            financial_year=str(body.get("financialYear") or "")[:12],
             month=str(body.get("month") or "")[:20], year=str(body.get("year") or "")[:4],
             state=str(body.get("state") or "")[:60],
             employee_count=WorkerContractorBinding.objects.filter(
@@ -2987,13 +2987,17 @@ def _handle_compliances(user, body, method):
     if kind in ("submit", "finalsubmit", "final-submit"):
         upload_ids = body.get("uploadIds") if isinstance(body.get("uploadIds"), list) else []
         submissions = SubmissionEvidence.objects.filter(user=user, id__in=upload_ids)
+        period = str(body.get("period") or "")
         report = compliance.build_audit_report(
             user,
             employer=str(body.get("employer") or ""), site=str(body.get("site") or ""),
-            period=str(body.get("period") or ""),
+            period=period,
             financial_year=str(body.get("financialYear") or ""),
             state=str(body.get("state") or ""), submissions=list(submissions),
         )
+        # Stamp the submitted evidence rows with the package's Unique No. so the
+        # listing can track them (Unique No. + Days Left) like the old app.
+        submissions.update(unique_no=report.unique_no, status="PENDING")
         return payloads._contractor_audit_report_row(report)
 
     rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
@@ -4673,6 +4677,13 @@ def _submissions(request):
     site = (request.data.get("site") or "").strip()
     period = (request.data.get("period") or "").strip()
     employer = (request.data.get("employer") or "").strip()
+    state = (request.data.get("state") or "").strip()
+    financial_year = (request.data.get("financialYear") or request.data.get("financial_year") or "").strip()
+    month = (request.data.get("month") or "").strip()
+    location = (request.data.get("location") or "").strip()
+    document_type = (request.data.get("documentType") or request.data.get("document_type") or "").strip()
+    frequency = (request.data.get("frequency") or "").strip()
+    is_mandatory = str(request.data.get("mandatory") or "").strip().lower() in ("1", "true", "yes", "on")
     user = request.user
 
     checksum = ""
@@ -4700,6 +4711,13 @@ def _submissions(request):
         site=site,
         period=period,
         employer=employer,
+        state=state[:60],
+        financial_year=financial_year[:12],
+        month=month[:20],
+        location=location[:120],
+        document_type=document_type[:40],
+        frequency=frequency[:40],
+        is_mandatory=is_mandatory,
         original_name=file_obj.name if file_obj else "",
         file_size=file_obj.size if file_obj else 0,
         mime_type=file_obj.content_type if file_obj else "",
@@ -4716,6 +4734,9 @@ def _submissions(request):
         "data": {
             "id": submission.id, "type": ftype, "employer": employer,
             "site": site, "period": period, "status": "PENDING",
+            "state": state, "financialYear": financial_year, "month": month,
+            "location": location, "documentType": document_type,
+            "frequency": frequency, "mandatory": is_mandatory,
             "submittedAt": payloads._dts(timezone.now()),
             "fileName": submission.original_name, "checksum": checksum,
             "accuracy": accuracy,

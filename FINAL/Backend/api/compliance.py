@@ -116,7 +116,7 @@ def build_audit_report(contractor, *, employer="", site="", period="",
 
     report = ComplianceReport.objects.create(
         employer=contractor,
-        financial_year=(financial_year or "")[:9],
+        financial_year=(financial_year or "")[:12],
         period=(period or "")[:40],
         state=(state or "")[:60],
         site_name=(site or "")[:200],
@@ -124,7 +124,7 @@ def build_audit_report(contractor, *, employer="", site="", period="",
         auditor=contractor,
         report_date=timezone.localdate(),
     )
-    report.unique_no = f"AUD-{report.id:05d}"
+    report.unique_no = f"UN{report.id:06d}"
 
     total = Decimal("0")
     achieved = Decimal("0")

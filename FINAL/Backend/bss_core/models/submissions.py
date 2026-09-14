@@ -20,6 +20,17 @@ class SubmissionEvidence(models.Model):
     site = models.CharField(max_length=200, blank=True)
     period = models.CharField(max_length=200, blank=True)
     employer = models.CharField(max_length=200, blank=True)
+    # Compliance-submission package metadata (Client → State → FY → Month → Site → Location).
+    state = models.CharField(max_length=60, blank=True)
+    financial_year = models.CharField(max_length=12, blank=True)
+    month = models.CharField(max_length=20, blank=True)
+    location = models.CharField(max_length=120, blank=True)
+    # Document master attributes for this evidence row.
+    document_type = models.CharField(max_length=40, blank=True)
+    frequency = models.CharField(max_length=40, blank=True)
+    is_mandatory = models.BooleanField(default=False)
+    unique_no = models.CharField(max_length=60, blank=True)
+    due_date = models.DateField(null=True, blank=True)
     file = models.FileField(upload_to="submissions/%Y/%m/")
     original_name = models.CharField(max_length=255, blank=True)
     file_size = models.BigIntegerField(default=0)

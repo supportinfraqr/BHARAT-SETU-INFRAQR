@@ -15,8 +15,8 @@ const STATES = INDIA_STATES;
 const FYS = ['FY 2026-27', 'FY 2025-26'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October'];
 
-// Admin document master + client mapping (CSV rows 256-259): documents are configured per employer mapping
-const documentMaster = [
+// Fallback if the Admin Document Master hasn't been seeded yet.
+const FALLBACK_DOCUMENTS = [
   { name:'Form XII — Register of Contract Workers', type:'Register', frequency:'Monthly', mandatory:true, format:'PDF' },
   { name:'Form XVI — Muster Roll', type:'Register', frequency:'Monthly', mandatory:true, format:'PDF' },
   { name:'Form XVII — Wages Register', type:'Register', frequency:'Monthly-Annual', mandatory:true, format:'PDF' },
@@ -46,7 +46,9 @@ export default function ComplianceSubmissionPage() {
   const [site, setSite] = useState('');
   const [location, setLocation] = useState('');
   const [uploads, setUploads] = useState<Record<string, UploadRow>>({});
+  const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
 
+  const documentMaster = (contractor.submissionDocuments?.length ? contractor.submissionDocuments : FALLBACK_DOCUMENTS);
   const documents = scoped(contractor.submissions.documents as DocumentRow[], row => row.employer);
   const availableSites = useMemo(() => contractor.sites.filter(s => !selectedEmployer || s.employer === selectedEmployer), [contractor.sites, selectedEmployer]);
   const verified = documents.filter(row => row.status === 'Verified').length;
@@ -80,8 +82,9 @@ export default function ComplianceSubmissionPage() {
     finally { setBusy(false); }
   }
 
-  async function chooseDocDocument(name: string, next?: File) {
+  async function chooseDocDocument(doc: { name: string; type?: string; frequency?: string; mandatory?: boolean }, next?: File) {
     if (!next) return;
+    const name = doc.name;
     setError('');
     const acceptable = ['application/pdf', 'image/jpeg', 'image/png'].includes(next.type) && next.size <= 10 * 1024 * 1024;
     if (!acceptable) {
@@ -92,6 +95,10 @@ export default function ComplianceSubmissionPage() {
     const form = new FormData();
     form.set('file', next); form.set('type', name);
     form.set('site', site); form.set('employer', client);
+    form.set('state', state); form.set('financialYear', fy); form.set('month', month);
+    form.set('location', location);
+    form.set('documentType', doc.type ?? ''); form.set('frequency', doc.frequency ?? '');
+    form.set('mandatory', doc.mandatory ? 'true' : 'false');
     form.set('period', `${month} ${fy.replace('FY ', '')}`);
     try {
       const response = await fetch('/api/portal/uploads', { method: 'POST', body: form });
@@ -114,7 +121,7 @@ export default function ComplianceSubmissionPage() {
     try {
       const response = await fetch('/api/portal/compliances', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'submit', employer: client, site, period: `${month} ${fy.replace('FY ', '')}`, financialYear: fy, state, uploadIds }),
+        body: JSON.stringify({ kind: 'submit', employer: client, site, period: `${month} ${fy.replace('FY ', '')}`, financialYear: fy, state, month, location, uploadIds }),
       });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Compliance could not be submitted.');
@@ -127,22 +134,25 @@ export default function ComplianceSubmissionPage() {
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
-    { id:'type', header: 'Document', value: row => row.type, render: row => <div><strong className="text-gray-900">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.id && <a href={`/api/portal/uploads/${row.id}`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}</div> },
+    { id:'type', header: 'Document', value: row => row.type, render: row => <div><strong className="text-gray-900">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.source === 'evidence' && row.id && <a href={`/api/portal/uploads/${row.id}`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}{row.findings && row.findings.length > 0 && <button type="button" onClick={() => setViewErrors({ name: row.type, findings: row.findings ?? [] })} className="block text-[10px] text-blue-700 font-semibold hover:underline mt-0.5">View errors ({row.findings.length})</button>}</div> },
     { id:'uniqueNo', header: 'Unique No.', value: row => row.uniqueNo ?? '—', render: row => row.uniqueNo ? <span className="font-mono text-blue-700 font-semibold">{row.uniqueNo}</span> : <span className="text-gray-300">—</span> },
     { id:'employer', header: 'Client / Employer', value: row => row.employer },
+    { id:'state', header: 'State', value: row => row.state ?? '—', render: row => row.state || '—' },
     { id:'site', header: 'Site', value: row => row.site },
+    { id:'month', header: 'Month', value: row => row.month ?? '—', render: row => row.month || '—' },
+    { id:'location', header: 'Location', value: row => row.location ?? '—', render: row => row.location || '—' },
     { id:'period', header: 'Period / FY', value: row => `${row.period}${row.financialYear ? ` · ${row.financialYear}` : ''}` },
+    { id:'accuracy', header: 'Accuracy', value: row => row.accuracy ?? '—', render: row => row.accuracy != null ? <span className={row.accuracy >= 100 ? 'text-green-700' : 'text-orange-700'}>{row.accuracy}%</span> : '—' },
     { id:'created', header: 'Created', value: row => row.submittedAt, render: row => new Date(row.submittedAt).toLocaleDateString('en-IN') },
     { id:'updated', header: 'Updated', value: row => row.updatedAt ?? row.submittedAt, render: row => (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('en-IN') : '—') },
     { id:'daysLeft', header: 'Days Left', value: row => row.daysLeft ?? '—', render: row => row.daysLeft != null ? <span className={row.daysLeft <= 3 ? 'text-red-600 font-bold' : 'text-gray-700'}>{row.daysLeft}</span> : '—' },
     { id:'status', header: 'Status', value: row => row.status, render: row => <span className={row.status === 'Verified' ? 'text-green-700' : row.status === 'Returned' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
-    { id:'submitted', header: 'Submitted', value: row => row.submittedAt, render: row => new Date(row.submittedAt).toLocaleString('en-IN') },
   ];
 
   return <div className="space-y-6 pb-12">
     <header className="bss-page-header flex-col sm:flex-row"><div><p className="bss-eyebrow">Contractor data exchange</p><h1 className="bss-page-title mt-1">Compliance Submission Centre</h1><p className="bss-page-description">Create client-scoped compliance packages, upload evidence with OCR-style accuracy validation, and generate the Compliance Audit Report.</p></div>
       <div className="flex gap-2">
-        <button type="button" onClick={() => { setCreateOpen(true); setError(''); setNotice(''); setUploads({}); }} className="bss-primary-action"><Plus size={16}/>Create Compliance Document</button>
+        <button type="button" onClick={() => { setTab('create'); setCreateOpen(true); setError(''); setNotice(''); setUploads({}); }} className="bss-primary-action"><Plus size={16}/>Create Compliance Document</button>
         <button type="button" onClick={() => { setModal(true); setSelectedEmployer(employerScope === 'all' ? '' : employerScope); setFile(null); setError(''); }} className="bss-secondary-action"><Upload size={16}/>Upload compliance data</button>
       </div>
     </header>
@@ -185,7 +195,8 @@ export default function ComplianceSubmissionPage() {
               return <div key={doc.name} className="rounded-xl border border-gray-100 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.name}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{doc.type} · {doc.frequency} · {doc.format} {doc.mandatory && <span className="text-red-600 font-bold"> · Mandatory</span>}</span></span>
                 {up ? <span title={up.findings?.join(' ')} className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${up.status === 'Validated' ? 'bg-green-50 text-green-700' : up.status === 'Validating' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{up.status === 'Validated' ? '100% Accuracy' : up.status === 'Validating' ? 'Validating…' : `${up.accuracy}% · Errors found`}</span> : <span className="text-[10px] text-gray-300 flex-shrink-0">Not uploaded</span>}
-                <label className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 flex-shrink-0"><Upload size={12}/>Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => chooseDocDocument(doc.name, e.target.files?.[0])}/></label>
+                <label className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 flex-shrink-0"><Upload size={12}/>Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => chooseDocDocument(doc, e.target.files?.[0])}/></label>
+                {up?.findings?.length ? <button type="button" onClick={() => setViewErrors({ name: doc.name, findings: up.findings ?? [] })} className="text-[10px] text-blue-700 font-semibold flex-shrink-0 hover:underline">View errors</button> : null}
                 {up && <button onClick={() => setUploads(current => { const next = { ...current }; delete next[doc.name]; return next; })} className="text-[10px] text-red-600 flex-shrink-0">Remove</button>}
               </div>;
             })}
@@ -225,6 +236,13 @@ export default function ComplianceSubmissionPage() {
           {error && <p role="alert" className="sm:col-span-2 bss-alert bss-alert-error">{error}</p>}
           <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row justify-end gap-2"><button type="button" onClick={() => setModal(false)} disabled={busy} className="bss-secondary-action">Cancel</button><button disabled={busy || !file} className="bss-primary-action"><Upload size={15}/>{busy ? 'Uploading securely…' : 'Submit for verification'}</button></div>
         </form>
+      </section>
+    </div>}
+
+    {viewErrors && <div className="fixed inset-0 z-[85] bg-black/50 grid place-items-center p-4" onMouseDown={e => { if (e.target === e.currentTarget) setViewErrors(null); }}>
+      <section role="dialog" aria-modal="true" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 className="font-semibold text-gray-950">Validation findings</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
+        <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-orange-500">•</span>{f}</li>)}</ul>
       </section>
     </div>}
   </div>;
