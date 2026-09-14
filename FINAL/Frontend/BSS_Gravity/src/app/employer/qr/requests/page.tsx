@@ -22,6 +22,24 @@ export default function EmployerQrBindingRequestsPage() {
   const [historyFor, setHistoryFor] = useState<EmployerApproval | null>(null);
   const [secondarySel, setSecondarySel] = useState<number[]>([]);
 
+  // The secondary-contractor tickboxes are remembered per binding so they
+  // survive a page refresh.
+  const secondaryKey = (bindingId: unknown) => `bss-site-secondary-${String(bindingId ?? '')}`;
+  function readSecondary(bindingId: unknown): number[] {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(window.localStorage.getItem(secondaryKey(bindingId)) || '[]') as number[]; } catch { return []; }
+  }
+  function openAllot(row: EmployerApproval) {
+    setAllotFor(row);
+    setSecondarySel(readSecondary(row.bindingId));
+  }
+  function changeSecondary(next: number[]) {
+    setSecondarySel(next);
+    if (typeof window !== 'undefined') {
+      try { window.localStorage.setItem(secondaryKey(allotFor?.bindingId), JSON.stringify(next)); } catch { /* ignore */ }
+    }
+  }
+
   async function runConfirm() {
     if (!confirm) return;
     const { row, kind } = confirm;
@@ -135,7 +153,7 @@ export default function EmployerQrBindingRequestsPage() {
         if (row.bindingId && row.consentEmployer) return (
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
-            <button disabled={busy} onClick={() => setAllotFor(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <button disabled={busy} onClick={() => openAllot(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
           </div>
         );
         return (
@@ -165,7 +183,7 @@ export default function EmployerQrBindingRequestsPage() {
         }
         return (
           <div className="flex items-center gap-1.5">
-            <button disabled={busy} onClick={() => setAllotFor(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
+            <button disabled={busy} onClick={() => openAllot(row)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button>
             <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Unbind</button>
           </div>
         );
@@ -218,7 +236,8 @@ export default function EmployerQrBindingRequestsPage() {
       secondaryContractors={employer.contractors
         .filter(c => c.status === 'Active' && c.bindingId && String(c.bindingId) !== String(allotFor?.bindingId))
         .map<SecondaryContractor>(c => ({ id: Number(c.id), name: c.name, bindingId: Number(c.bindingId), allotments: c.allotments }))}
-      onSelectionChange={setSecondarySel}
+      selectedBindings={secondarySel}
+      onSelectionChange={changeSecondary}
       onClose={() => { setAllotFor(null); setError(''); setSecondarySel([]); }}
       onApprove={id => void bindingSiteAction('approve-site', { siteId: id })}
       onReject={id => void bindingSiteAction('reject-site', { siteId: id })}

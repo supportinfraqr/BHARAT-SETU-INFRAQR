@@ -55,6 +55,7 @@ export default function SitePermissionsDialog({
   note,
   footer,
   secondaryContractors,
+  selectedBindings = [],
   onClose,
   onApprove,
   onReject,
@@ -73,6 +74,7 @@ export default function SitePermissionsDialog({
   note?: string;
   footer?: ReactNode;
   secondaryContractors?: SecondaryContractor[];
+  selectedBindings?: number[];
   onClose: () => void;
   onApprove: (siteId: number) => void;
   onReject: (siteId: number) => void;
@@ -83,15 +85,13 @@ export default function SitePermissionsDialog({
   onSelectionChange?: (bindingIds: number[]) => void;
 }) {
   const [secondaryOpen, setSecondaryOpen] = useState(false);
-  const [selectedBindings, setSelectedBindings] = useState<number[]>([]);
   const secondary = secondaryContractors ?? [];
   const toggleBinding = (bindingId: number) => {
     // Compute the next value first, then notify — never call the parent's
-    // setState inside the state updater (that runs during render).
+    // setState inside a state updater (that runs during render).
     const next = selectedBindings.includes(bindingId)
       ? selectedBindings.filter(id => id !== bindingId)
       : [...selectedBindings, bindingId];
-    setSelectedBindings(next);
     onSelectionChange?.(next);
   };
   if (!open) return null;
