@@ -189,14 +189,16 @@ export default function SitePermissionsDialog({
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 ${STATUS_STYLE[row.status]}`}>
                       {row.status === "None" ? "Not proposed" : row.status}
                     </span>
-                    {secondary.filter(c => selectedBindings.includes(c.bindingId)).map(c => {
-                      const st = ((c.allotments ?? []).find(a => a.siteId === row.siteId)?.status ?? "None") as SitePermissionStatus;
-                      return (
-                        <span key={c.bindingId} title={`${c.name}: ${st === "None" ? "not proposed" : st}`} className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 max-w-[140px] truncate ${STATUS_STYLE[st] ?? STATUS_STYLE.None}`}>
-                          {c.name}: {st === "None" ? "—" : st}
-                        </span>
-                      );
-                    })}
+                    {secondary
+                      .filter(c => selectedBindings.includes(c.bindingId) || (c.allotments ?? []).some(a => a.siteId === row.siteId))
+                      .map(c => {
+                        const st = ((c.allotments ?? []).find(a => a.siteId === row.siteId)?.status ?? "None") as SitePermissionStatus;
+                        return (
+                          <span key={c.bindingId} title={`${c.name}: ${st === "None" ? "not proposed" : st}`} className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 max-w-[160px] truncate ${STATUS_STYLE[st] ?? STATUS_STYLE.None}`}>
+                            {c.name}: {st === "None" ? "—" : st}
+                          </span>
+                        );
+                      })}
                     {row.canApprove && (
                       <button
                         type="button"
