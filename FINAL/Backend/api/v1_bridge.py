@@ -58,7 +58,7 @@ from bss_core.models import (
     WorkerSocialSecurity,
     WorkerWelfareSafety,
 )
-from . import aadhaar_client, bss_ids, compliance, ocr_client, v1_payloads as payloads
+from . import aadhaar_client, bss_ids, clra, compliance, ocr_client, v1_payloads as payloads
 
 
 def _bss_worker_id(user_id):
@@ -4773,6 +4773,107 @@ def submission_file_download(request, role_path, submission_id):
         as_attachment=True,
         filename=submission.original_name or f"evidence-{submission.id}",
     )
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_compliance_batches(request):
+    """Generate CLRA statutory registers from an uploaded master file.
+
+    Multipart fields: master (CSV/XLSX), signature (optional), site, state,
+    financialYear, month, year.
+    """
+    from django.core.files.base import ContentFile
+    from bss_core.models import ComplianceBatch, RegisterDocumentMaster
+
+    user = request.user
+    if user.role != "contractor":
+        return Response({"error": "Only contractors can generate registers."},
+                        status=status.HTTP_403_FORBIDDEN)
+    master = request.FILES.get("master")
+    if master is None:
+        return Response({"error": "Choose a master file."}, status=status.HTTP_400_BAD_REQUEST)
+
+    site_label = (request.data.get("site") or "").strip()
+    site = None
+    if site_label:
+        site = (Site.objects.filter(site_name=site_label).first()
+                or Site.objects.filter(site_code=site_label).first())
+    if site is None:
+        site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
+
+    state = (request.data.get("state") or "").strip()
+    fy = (request.data.get("financialYear") or "").strip()
+    month = (request.data.get("month") or "").strip()
+    year = (request.data.get("year") or "").strip()
+
+    try:
+        rows = clra.parse_master(master)
+    except clra.MasterFileError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    if not rows:
+        return Response({"error": "No worker rows found in the master file."},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    registers = [
+        {"name": m.document_name, "formNo": m.form_number, "frequency": m.frequency}
+        for m in RegisterDocumentMaster.objects.filter(kind="register", is_active=True)
+        .order_by("sort_order")
+    ]
+    generated_on = timezone.localdate()
+    data = clra.build_workbook(
+        rows, contractor=payloads._party_name(user),
+        site=(site.site_name if site else site_label),
+        site_code=(site.site_code if site else ""), state=state,
+        financial_year=fy, month=month, year=year, registers=registers,
+        generated_on=str(generated_on),
+    )
+
+    batch = ComplianceBatch(
+        contractor=user, site=site,
+        financial_year=fy[:12], month=month[:20], year=year[:4], state=state[:60],
+        employee_count=len(rows),
+        location_count=len({r.get("location", "") for r in rows if r.get("location")}) or 1,
+        generated_on=generated_on, generated_by=payloads._party_name(user),
+        rows_count=len(rows),
+        notes=f"{len(registers)} register(s) generated from {len(rows)} worker row(s).",
+        status="GENERATED",
+    )
+    stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
+    batch.generated_file.save(
+        f"clra-{stamp}-{(site.site_code if site else 'site')}.xlsx",
+        ContentFile(data), save=False)
+    master.seek(0)
+    batch.master_file.save(os.path.basename(master.name or "master.xlsx"), master, save=False)
+    signature = request.FILES.get("signature")
+    if signature is not None:
+        signature.seek(0)
+        batch.signature_file.save(os.path.basename(signature.name or "signature"), signature, save=False)
+    batch.save()
+    return Response({"data": payloads._contractor_compliance_batch_row(batch)},
+                    status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_download(request, role_path, batch_id):
+    from bss_core.models import ComplianceBatch
+    batch = ComplianceBatch.objects.filter(pk=batch_id).first()
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    user = request.user
+    allowed = (user.is_superuser
+               or user.role in ("government", "bss_staff", "admin", "employer")
+               or batch.contractor_id == user.id)
+    if not allowed:
+        return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
+    if not batch.generated_file:
+        return Response({"error": "No generated file for this batch."},
+                        status=status.HTTP_404_NOT_FOUND)
+    return FileResponse(batch.generated_file.open("rb"), as_attachment=True,
+                        filename=os.path.basename(batch.generated_file.name))
 
 
 @api_view(["GET"])
