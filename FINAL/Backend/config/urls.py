@@ -59,6 +59,8 @@ _v1_patterns = _v1(
     ("worker/nominee-document", v1_bridge.worker_nominee_document, "v1_worker_nominee_document"),
     ("worker/documents/<int:document_id>", v1_bridge.worker_document_detail, "v1_worker_document_detail"),
     ("contractor/documents/<int:document_id>/file", v1_bridge.contractor_worker_document_download, "v1_contractor_worker_document_file"),
+    ("contractor/documents/<int:document_id>/token", v1_bridge.contractor_document_view_token, "v1_contractor_document_token"),
+    ("documents/file/<str:token>", v1_bridge.document_file_serve, "v1_document_file_serve"),
     ("worker/grievances", v1_bridge.worker_grievances, "v1_worker_grievances"),
     ("grievances/<int:grievance_id>/action", v1_bridge.grievance_action, "v1_grievance_action"),
     ("grievances/<int:grievance_id>/file-token", v1_bridge.grievance_file_token, "v1_grievance_file_token"),

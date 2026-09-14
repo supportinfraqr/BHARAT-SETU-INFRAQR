@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { BadgeCheck, CheckCircle2, Download, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, Download, Eye, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
-import type { ContractorWorker } from '@/types/portal';
+import type { ContractorWorker, ContractorWorkerDocument } from '@/types/portal';
 import WorkerQr from '@/components/qr/WorkerQr';
 import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
 import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow';
@@ -97,6 +97,20 @@ export default function WorkerMasterPage() {
   }
 
   const workerDocs = (worker: ContractorWorker) => contractor.workerDocuments.filter(d => d.workerId === worker.bssId);
+
+  const viewDocument = async (doc: ContractorWorkerDocument) => {
+    setBusyDocs(true);
+    try {
+      const res = await fetch(`/api/contractor/documents/${doc.id}/token`, { method: 'POST' });
+      const json = await res.json() as { token?: string; error?: string };
+      if (!res.ok || !json.token) throw new Error(json.error || 'No preview link.');
+      window.open(`/api/contractor/documents/file/${encodeURIComponent(json.token)}`, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Preview could not be opened.');
+    } finally {
+      setBusyDocs(false);
+    }
+  };
 
   const downloadAll = async (worker: ContractorWorker | null) => {
     if (!worker) return;
@@ -217,7 +231,10 @@ export default function WorkerMasterPage() {
       <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Compliance Documents</p><h2 className="font-semibold text-gray-950 mt-0.5">{docsView.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{docsView.bssId}</p></div><button onClick={() => setDocsView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
       <div className="p-5 space-y-2.5">{workerDocs(docsView).length ? workerDocs(docsView).map(doc => (
         <div key={`${doc.id}-${doc.reference}`} className="rounded-xl border border-gray-100 p-3 flex items-center justify-between gap-3"><span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.document}{doc.mandatory && <span className="text-red-500 ml-1">*</span>}</strong><span className="block text-[10px] font-mono text-gray-400 mt-0.5">{doc.reference}</span></span>
-          {doc.id && doc.status !== 'Missing' && <a href={`/api/contractor/documents/${doc.id}/file`} download title={`Download ${doc.document}`} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border flex-shrink-0"><Download size={13} /></a>}
+          {doc.id && doc.status !== 'Missing' && <>
+          <a href={`/api/contractor/documents/${doc.id}/file`} download title={`Download ${doc.document}`} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border flex-shrink-0"><Download size={13} /></a>
+          <button onClick={() => void viewDocument(doc)} disabled={busyDocs} title={`Preview ${doc.document}`} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border flex-shrink-0 disabled:opacity-60"><Eye size={13} /></button>
+        </>}
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${doc.status === 'Verified' ? 'bg-green-50 text-green-700' : doc.status === 'Missing' ? 'bg-red-50 text-red-600' : doc.status === 'Issued' ? 'bg-sky-50 text-sky-700' : 'bg-orange-50 text-orange-700'}`}>{doc.status}</span></div>
       )) : <p className="text-xs text-gray-400 text-center py-8 rounded-xl border border-dashed border-gray-200">No compliance documents recorded for this worker.</p>}
       <div className="mt-4 flex gap-2"><button onClick={() => void downloadAll(docsView)} disabled={busyDocs} className="flex-1 h-9 rounded-lg border border-gray-200 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"><Download size={13}/>{busyDocs ? 'Downloading…' : 'Download all'}</button></div></div>

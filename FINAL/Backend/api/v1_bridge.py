@@ -3447,15 +3447,80 @@ def worker_document_detail(request, document_id):
     return response
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_document_view_token(request, document_id):
+    """Issue a single-use, short-lived token to VIEW a worker's stored document
+    inline. Enables previewing in a new tab without exposing the contractor to
+    the worker's raw file endpoint."""
+    import hashlib
+    import secrets
+    from bss_core.models import DocumentAccessToken, WorkerDocument
+
+    doc = (WorkerDocument.objects.select_related("user")
+           .filter(pk=document_id).first())
+    if doc is None:
+        return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+    if not doc.file:
+        return Response({"error": "No file stored for this document."},
+                        status=status.HTTP_404_NOT_FOUND)
+    bound = WorkerContractorBinding.objects.filter(
+        contractor=request.user, worker=doc.user, binding_status="ACCEPTED").exists()
+    if not bound:
+        return Response({"error": "Not authorised for this worker."},
+                        status=status.HTTP_403_FORBIDDEN)
+    raw = secrets.token_urlsafe(32)
+    token = DocumentAccessToken.objects.create(
+        token_type="DOCUMENT_VIEW", document=doc, requester=request.user,
+        token_hash=hashlib.sha256(raw.encode()).hexdigest(),
+        expires_at=timezone.now() + timedelta(minutes=5), max_uses=1,
+    )
+    return Response({"token": raw, "expiresAt": payloads._dts(token.expires_at)},
+                    status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def document_file_serve(request, token):
+    """Exchange a single-use document view token → stream the file once (inline)."""
+    import hashlib
+    from bss_core.models import DocumentAccessToken
+
+    hashed = hashlib.sha256(str(token).encode()).hexdigest()
+    tok = (DocumentAccessToken.objects.filter(token_hash=hashed, token_type="DOCUMENT_VIEW")
+           .select_related("document").first())
+    if tok is None:
+        return Response({"error": "Unknown or invalid link."}, status=status.HTTP_404_NOT_FOUND)
+    if not tok.is_valid:
+        return Response({"error": "This link has expired or was already used."},
+                        status=status.HTTP_410_GONE)
+    doc = tok.document
+    if doc is None or not doc.file:
+        return Response({"error": "File is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    tok.used_at = timezone.now()
+    tok.use_count += 1
+    if tok.use_count >= tok.max_uses:
+        tok.status = "USED"
+    tok.save(update_fields=["used_at", "use_count", "status"])
+    try:
+        response = FileResponse(doc.file.open("rb"), as_attachment=False,
+                                filename=doc.file_name or os.path.basename(doc.file.name))
+    except Exception:
+        return Response({"error": "Stored file is unavailable."}, status=status.HTTP_404_NOT_FOUND)
+    response["Content-Type"] = doc.mime_type or "application/octet-stream"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store, max-age=0"
+    response["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return response
 @permission_classes([IsAuthenticated])
 def contractor_worker_document_download(request, document_id):
     """Stream a worker's stored document to a contractor who has an ACCEPTED
     binding for that worker (used by the contractor worker compliance drawer)."""
     from bss_core.models import WorkerDocument
     doc = (WorkerDocument.objects.select_related("user")
-           .filter(pk=document_id, auto_generated=False).first())
+           .filter(pk=document_id).first())
     if doc is None:
         return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
     bound = WorkerContractorBinding.objects.filter(
