@@ -18,6 +18,7 @@ type DocumentRow = {
   fileName: string;
   downloadUrl: string;
   locked?: boolean;
+  source?: string;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -62,6 +63,7 @@ export default function DocumentsModule() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
   useEffect(() => { void load(); }, [load]);
 
   const chooseFile = (doc: DocumentRow) => {
@@ -144,7 +146,9 @@ export default function DocumentsModule() {
           {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="View Document"><Eye size={15} /></button>}
           {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Download"><Download size={15} /></a>}
           {locked ? (
-            <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2 py-1 rounded" title="Fetched from DigiLocker — upload and delete disabled">DigiLocker</span>
+            d.source === 'digilocker'
+              ? <span className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2 py-1 rounded" title="Fetched from DigiLocker — upload and delete disabled">DigiLocker</span>
+              : <span className="text-[10px] font-bold text-[#073B67] bg-[#073B67]/10 px-2 py-1 rounded" title="System-generated credential — upload and delete disabled">System</span>
           ) : (
             <>
               {d.owner !== 'System' && d.id && <button onClick={() => chooseFile(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Replace Document"><RefreshCcw size={15} /></button>}

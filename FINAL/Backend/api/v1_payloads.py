@@ -1110,6 +1110,14 @@ def _doc_owner_label(value):
 _DIGILOCKER_DOC_CODES = {"AADHAR", "PAN", "UAN", "EDU"}
 
 
+def _doc_source_label(code, auto_generated):
+    """Where a locked document actually came from: DigiLocker fetch vs a
+    system-generated credential (letters / gate passes)."""
+    if auto_generated:
+        return "digilocker" if code in _DIGILOCKER_DOC_CODES else "system"
+    return "upload"
+
+
 def _doc_name_key(name):
     """Normalised key for merging duplicate catalog rows (e.g. legacy 'WM0x'
     rows vs the canonical 'AADHAR'/'PAN' codes)."""
@@ -1149,6 +1157,7 @@ def _worker_documents_display(user):
                 "fileName": _d(d.file_name),
                 "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
                 "locked": bool(d.auto_generated),
+                "source": _doc_source_label(_d(m.code), bool(d.auto_generated)),
             })
         else:
             rows.append({
@@ -1163,6 +1172,7 @@ def _worker_documents_display(user):
                 "fileName": "",
                 "downloadUrl": "",
                 "locked": False,
+                "source": "",
             })
     for d in uploads.values():
         if d.id in seen:
@@ -1179,6 +1189,7 @@ def _worker_documents_display(user):
             "fileName": _d(d.file_name),
             "downloadUrl": f"/api/worker/documents/{d.id}/file" if d.file else "",
             "locked": bool(d.auto_generated),
+            "source": _doc_source_label(_d(d.document.code if d.document else ""), bool(d.auto_generated)),
         })
 
     # Collapse duplicate names, keeping the best row in its original position.
