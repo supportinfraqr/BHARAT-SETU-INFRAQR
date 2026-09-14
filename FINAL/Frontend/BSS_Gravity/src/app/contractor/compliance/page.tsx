@@ -103,6 +103,19 @@ export default function ContractorCompliancePage() {
     setNotice('Bulk compliance register exported (XLS).');
   };
 
+  const downloadMasterTemplate = () => {
+    const rows: string[][] = [
+      ['BSS ID', 'Name', 'Site', 'Location', 'Designation'],
+      ...contractor.workers.map(w => [w.bssId, w.name, w.site, contractor.sites.find(s => s.name === w.site)?.location ?? '', w.designation]),
+    ];
+    const csv = rows
+      .map(r => r.map(cell => { const v = String(cell ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; }).join(','))
+      .join('\r\n');
+    const file = new File([csv], 'master-template.csv', { type: 'text/csv' });
+    const url = URL.createObjectURL(file); const a = document.createElement('a');
+    a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const generateRegisters = async () => {
     if (!masterFile) { setError('Choose a Master File before generating registers.'); return; }
     setBusy(true); setError(''); setNotice('');
@@ -179,12 +192,12 @@ export default function ContractorCompliancePage() {
             <label className="text-xs font-semibold">Site<select value={regSite} onChange={e => setRegSite(e.target.value)} className="mt-1 w-full h-10 border rounded-lg px-2 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
-            <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileSpreadsheet size={16}/>{masterFile ? masterFile.name : 'Choose Master File'}<input type="file" accept=".xls,.xlsx,.csv" className="hidden" onChange={e => { setMasterFile(e.target.files?.[0] ?? null); setError(''); }}/></label>
+            <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileSpreadsheet size={16}/>{masterFile ? masterFile.name : 'Choose Master File (CSV/XLSX)'}<input type="file" accept=".xlsx,.csv" className="hidden" onChange={e => { setMasterFile(e.target.files?.[0] ?? null); setError(''); }}/></label>
             <label className="text-xs font-semibold text-gray-600 flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2.5 cursor-pointer"><FileText size={16}/>{signatureFile ? signatureFile.name : 'Choose Signature Upload (optional)'}<input type="file" accept=".png,.jpg,.jpeg,.pdf" className="hidden" onChange={e => setSignatureFile(e.target.files?.[0] ?? null)}/></label>
           </div>
           {error && tab === 'master' && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => { const rows = [['BSS ID', 'Name', 'Site', 'Location', 'Designation'], ...contractor.workers.map(w => [w.bssId, w.name, w.site, contractor.sites.find(s => s.name === w.site)?.location ?? '', w.designation])]; const escape = (v: unknown) => String(v ?? ''); const html = `<html><head><meta charset="UTF-8"></head><body><table>${rows.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</table></body></html>`; const file = new File([html], 'master-template.xls', { type: 'application/vnd.ms-excel' }); const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
+            <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
             <button onClick={generateRegisters} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
           </div>
           <p className="text-[11px] text-gray-400">Registers are generated in bulk from the uploaded master data, keyed by State and Site/Location, and listed in the generated batches below.</p>
