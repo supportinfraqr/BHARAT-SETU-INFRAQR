@@ -159,7 +159,7 @@ export default function ContractorDashboardPage() {
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
               <h2 className="text-sm font-semibold text-gray-950">{t('ui.sites')} · Site-wise Workers</h2>
-              <Link href="/contractor/sites" className="text-xs font-medium text-[#0066CC] hover:underline">{t('ui.viewAll')}</Link>
+              <Link href="/contractor/qr/sites" className="text-xs font-medium text-[#0066CC] hover:underline">{t('ui.viewAll')}</Link>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
