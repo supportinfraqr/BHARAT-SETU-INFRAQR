@@ -22,25 +22,28 @@ def _ocr_url():
     return OCR_URL or "http://13.202.27.216:8080/ocr"
 
 
-def extract_text(file_bytes: bytes, filename: str) -> str:
+def extract_text(file_bytes: bytes, filename: str, timeout: int = 60) -> str:
     """POST a document image to the OCR service and return the recognized text."""
     url = _ocr_url()
     try:
         resp = requests.post(
-            url, files={"file": (filename, file_bytes)}, timeout=60,
+            url, files={"file": (filename, file_bytes)}, timeout=timeout,
         )
     except requests.RequestException as exc:
         raise OcrError(f"OCR service unreachable: {exc}") from exc
     if resp.status_code != 200:
         raise OcrError(f"OCR service returned HTTP {resp.status_code}")
-    # The legacy OCR service returns JSON wrapping the text; fall back to raw
-    # text so this stays resilient to both shapes.
+    # The legacy OCR service returns JSON wrapping the text; an explicit failure
+    # (success=false / error) means nothing could be read, so return "" rather
+    # than the raw error envelope.
     import json as _json
     text = resp.text
     try:
         data = _json.loads(text)
         if isinstance(data, dict):
-            text = data.get("text") or data.get("data") or text
+            if data.get("success") is False or data.get("error"):
+                return ""
+            text = data.get("text") or data.get("data") or ""
     except ValueError:
         pass
     return text if isinstance(text, str) else str(text)

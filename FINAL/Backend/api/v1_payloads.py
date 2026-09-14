@@ -2464,22 +2464,27 @@ def _contractor_compliance_batches(user):
     return [_contractor_compliance_batch_row(b) for b in qs]
 
 
+def _contractor_audit_report_row(r):
+    items = [
+        {"act": _d(i.act), "form": _d(i.form_number), "nature": _d(i.nature),
+         "score": _num(i.achieved_score), "maxScore": _num(i.max_score),
+         "status": _d(i.status),
+         "auditorRemarks": _d(i.remarks), "vendorRemarks": ""}
+        for i in r.items.all()
+    ]
+    return {
+        "id": str(r.id), "uniqueNo": _d(r.unique_no), "site": _d(r.site_name),
+        "employer": _d(r.client_name), "period": _d(r.period),
+        "financialYear": _d(r.financial_year), "state": _d(r.state),
+        "reportDate": _dts(r.report_date),
+        "score": _num(r.score), "scorePercent": _num(r.score_pct),
+        "actWise": items,
+    }
+
+
 def _contractor_audit_reports(user):
-    rows = []
-    for r in user.compliance_reports.all()[:20] if hasattr(user, "compliance_reports") else []:
-        items = [
-            {"act": _d(i.act), "form": _d(i.form_number), "nature": _d(i.nature),
-             "score": _num(i.achieved_score), "status": _d(i.status),
-             "auditorRemarks": _d(i.remarks), "vendorRemarks": ""}
-            for i in r.items.all()
-        ]
-        rows.append({
-            "id": r.id, "uniqueNo": _d(r.unique_no), "site": "",
-            "employer": "", "period": _d(r.period), "reportDate": _dts(r.report_date),
-            "score": _num(r.score), "scorePercent": _num(r.score_pct),
-            "actWise": items,
-        })
-    return rows
+    reports = user.compliance_reports.all()[:20] if hasattr(user, "compliance_reports") else []
+    return [_contractor_audit_report_row(r) for r in reports]
 
 
 def _contractor_payroll_config(user):

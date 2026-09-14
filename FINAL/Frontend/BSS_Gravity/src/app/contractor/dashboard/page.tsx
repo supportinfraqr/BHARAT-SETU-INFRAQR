@@ -32,7 +32,7 @@ export default function ContractorDashboardPage() {
   const totalHires = contractor.jobHistory.reduce((s, j) => s + j.hires, 0);
 
   const kpis = [
-    { label: t('ui.totalWorkers'), value: workers.length.toLocaleString(), icon: Users, tone: 'blue' },
+    { label: t('ui.totalWorkers'), value: workers.length.toLocaleString('en-IN'), icon: Users, tone: 'blue' },
     { label: 'Active Sites / Total', value: `${sites.filter(s => s.workers > 0).length || sites.length}/${sites.length}`, icon: Building2, tone: 'orange' },
     { label: 'Active Licenses', value: activeLicenses.toString(), icon: Landmark, tone: 'green' },
     { label: t('ui.complianceScore'), value: `${complianceRate}%`, icon: ShieldCheck, tone: 'indigo' },
@@ -255,7 +255,7 @@ export default function ContractorDashboardPage() {
                     <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><FileText size={16} /></div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{submission.type} · {submission.period}</p>
-                      <p className="text-xs text-gray-500">{submission.site} · {submission.uniqueNo ? `Unique No. ${submission.uniqueNo}` : ''} · {new Date(submission.submittedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-500">{submission.site} · {submission.uniqueNo ? `Unique No. ${submission.uniqueNo}` : ''} · {new Date(submission.submittedAt).toLocaleDateString('en-IN')}</p>
                     </div>
                   </div>
                   <span className="text-xs font-medium bg-green-50 text-green-700 px-2 py-1 rounded">{submission.status}</span>

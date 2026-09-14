@@ -25,6 +25,8 @@ const documentMaster = [
   { name:'Register of Fines', type:'Register', frequency:'Monthly', mandatory:false, format:'PDF' },
 ];
 
+type UploadRow = { file: File; id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[] };
+
 export default function ComplianceSubmissionPage() {
   const { contractor, replaceContractor, employerScope, scoped } = useContractor();
   const [tab, setTab] = useState<Tab>('submissions');
@@ -43,7 +45,7 @@ export default function ComplianceSubmissionPage() {
   const [month, setMonth] = useState(MONTHS[6]);
   const [site, setSite] = useState('');
   const [location, setLocation] = useState('');
-  const [uploads, setUploads] = useState<Record<string, { file: File; accuracy: number; status: 'Validated' | 'Errors found' }>>({});
+  const [uploads, setUploads] = useState<Record<string, UploadRow>>({});
 
   const documents = scoped(contractor.submissions.documents as DocumentRow[], row => row.employer);
   const availableSites = useMemo(() => contractor.sites.filter(s => !selectedEmployer || s.employer === selectedEmployer), [contractor.sites, selectedEmployer]);
@@ -78,30 +80,50 @@ export default function ComplianceSubmissionPage() {
     finally { setBusy(false); }
   }
 
-  function chooseDocDocument(name: string, next?: File) {
+  async function chooseDocDocument(name: string, next?: File) {
     if (!next) return;
-    const ok = ['application/pdf', 'image/jpeg', 'image/png'].includes(next.type) && next.size <= 10 * 1024 * 1024;
-    const accuracy = ok ? (next.name.includes('error') || next.name.includes('bad') ? 64 : 100) : 0;
-    setUploads(current => ({ ...current, [name]: ok ? { file: next, accuracy, status: accuracy === 100 ? 'Validated' : 'Errors found' } : { file: next, accuracy: 0, status: 'Errors found' } }));
+    setError('');
+    const acceptable = ['application/pdf', 'image/jpeg', 'image/png'].includes(next.type) && next.size <= 10 * 1024 * 1024;
+    if (!acceptable) {
+      setUploads(current => ({ ...current, [name]: { file: next, accuracy: 0, status: 'Errors found', findings: ['Choose a PDF, JPEG or PNG document up to 10 MB.'] } }));
+      return;
+    }
+    setUploads(current => ({ ...current, [name]: { file: next, accuracy: 0, status: 'Validating' } }));
+    const form = new FormData();
+    form.set('file', next); form.set('type', name);
+    form.set('site', site); form.set('employer', client);
+    form.set('period', `${month} ${fy.replace('FY ', '')}`);
+    try {
+      const response = await fetch('/api/portal/uploads', { method: 'POST', body: form });
+      const result = await response.json().catch(() => ({})) as { data?: { id: number; accuracy: number | null; validated: boolean; findings: string[] }; error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be validated.');
+      const data = result.data;
+      setUploads(current => ({ ...current, [name]: { file: next, id: data.id, accuracy: data.accuracy ?? 0, status: data.validated ? 'Validated' : 'Errors found', findings: data.findings } }));
+    } catch (reason) {
+      setUploads(current => ({ ...current, [name]: { file: next, accuracy: 0, status: 'Errors found', findings: [reason instanceof Error ? reason.message : 'Document could not be validated.'] } }));
+    }
   }
 
-  const mandatoryDone = documentMaster.filter(d => d.mandatory).every(d => uploads[d.name] && uploads[d.name].status === 'Validated');
+  const mandatoryDone = documentMaster.filter(d => d.mandatory).every(d => uploads[d.name] && uploads[d.name].status === 'Validated' && uploads[d.name].id);
 
-  function finalSubmit() {
+  async function finalSubmit() {
     if (!mandatoryDone) { setError('All mandatory documents must be uploaded and validated (100% accuracy) before final submission.'); return; }
+    if (!client || !site) { setError('Select a client and site before final submission.'); return; }
     setBusy(true); setError(''); setNotice('');
-    const period = `${month.slice(0, 3)} ${new Date().getFullYear()}`;
-    setTimeout(() => {
-      const uniqueNo = `UN${String(28000 + Math.floor(Math.random() * 90)).slice(0, 6)}`;
-      const record: DocumentRow = {
-        id: `DOC-${Date.now()}`, uniqueNo, type: 'Compliance Package', employer: client, site, state, financialYear: fy, month, period, status: 'Pending review',
-        submittedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), daysLeft: 5, mandatory: true, frequency: 'Monthly', accuracy: 100,
-      };
-      replaceContractor({ ...contractor, submissions: { ...contractor.submissions, documents: [record, ...contractor.submissions.documents] } });
-      setBusy(false); setCreateOpen(false);
-      setNotice(`Compliance submitted under Unique No. ${uniqueNo}. The Compliance Audit Report is auto-generated for the authorised reviewer.`);
-      setUploads({}); setClient(''); setSite(''); setLocation('');
-    }, 1400);
+    const uploadIds = documentMaster.map(d => uploads[d.name]?.id).filter((id): id is number => typeof id === 'number');
+    try {
+      const response = await fetch('/api/portal/compliances', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'submit', employer: client, site, period: `${month} ${fy.replace('FY ', '')}`, financialYear: fy, state, uploadIds }),
+      });
+      const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['auditReports'][number]; error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'Compliance could not be submitted.');
+      replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
+      setCreateOpen(false); setUploads({}); setClient(''); setSite(''); setLocation('');
+      setNotice(`Compliance submitted. Audit report ${result.data.uniqueNo} generated — score ${result.data.scorePercent}%.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Compliance could not be submitted.');
+    } finally { setBusy(false); }
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
@@ -162,7 +184,7 @@ export default function ComplianceSubmissionPage() {
               const up = uploads[doc.name];
               return <div key={doc.name} className="rounded-xl border border-gray-100 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.name}</strong><span className="block text-[10px] text-gray-400 mt-0.5">{doc.type} · {doc.frequency} · {doc.format} {doc.mandatory && <span className="text-red-600 font-bold"> · Mandatory</span>}</span></span>
-                {up ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${up.status === 'Validated' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{up.status === 'Validated' ? '100% Accuracy' : `${up.accuracy}% · Errors found`}</span> : <span className="text-[10px] text-gray-300 flex-shrink-0">Not uploaded</span>}
+                {up ? <span title={up.findings?.join(' ')} className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${up.status === 'Validated' ? 'bg-green-50 text-green-700' : up.status === 'Validating' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{up.status === 'Validated' ? '100% Accuracy' : up.status === 'Validating' ? 'Validating…' : `${up.accuracy}% · Errors found`}</span> : <span className="text-[10px] text-gray-300 flex-shrink-0">Not uploaded</span>}
                 <label className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 flex-shrink-0"><Upload size={12}/>Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => chooseDocDocument(doc.name, e.target.files?.[0])}/></label>
                 {up && <button onClick={() => setUploads(current => { const next = { ...current }; delete next[doc.name]; return next; })} className="text-[10px] text-red-600 flex-shrink-0">Remove</button>}
               </div>;

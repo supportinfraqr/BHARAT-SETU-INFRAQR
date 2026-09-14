@@ -58,7 +58,7 @@ from bss_core.models import (
     WorkerSocialSecurity,
     WorkerWelfareSafety,
 )
-from . import aadhaar_client, bss_ids, ocr_client, v1_payloads as payloads
+from . import aadhaar_client, bss_ids, compliance, ocr_client, v1_payloads as payloads
 
 
 def _bss_worker_id(user_id):
@@ -2989,6 +2989,18 @@ def _handle_compliances(user, body, method):
         )
         return payloads._contractor_compliance_batch_row(batch)
 
+    if kind in ("submit", "finalsubmit", "final-submit"):
+        upload_ids = body.get("uploadIds") if isinstance(body.get("uploadIds"), list) else []
+        submissions = SubmissionEvidence.objects.filter(user=user, id__in=upload_ids)
+        report = compliance.build_audit_report(
+            user,
+            employer=str(body.get("employer") or ""), site=str(body.get("site") or ""),
+            period=str(body.get("period") or ""),
+            financial_year=str(body.get("financialYear") or ""),
+            state=str(body.get("state") or ""), submissions=list(submissions),
+        )
+        return payloads._contractor_audit_report_row(report)
+
     rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
     created = []
     for row in rows_in:
@@ -4643,8 +4655,22 @@ def _submissions(request):
     user = request.user
 
     checksum = ""
+    accuracy = None
+    findings = []
     if file_obj:
         checksum = payloads.sha256_checksum(file_obj)
+        ocr_text = None
+        try:
+            file_obj.seek(0)
+            ocr_text = ocr_client.extract_text(file_obj.read(), file_obj.name, timeout=25)
+        except Exception:  # OCR service down/slow — fall back to integrity checks
+            ocr_text = None
+        finally:
+            try:
+                file_obj.seek(0)
+            except (AttributeError, OSError):
+                pass
+        accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
 
     submission = SubmissionEvidence(
         user=user,
@@ -4657,6 +4683,8 @@ def _submissions(request):
         file_size=file_obj.size if file_obj else 0,
         mime_type=file_obj.content_type if file_obj else "",
         checksum_sha256=checksum,
+        ocr_accuracy=accuracy,
+        validation_findings=findings,
     )
     if file_obj:
         safe_name = os.path.basename(file_obj.name or "evidence")
@@ -4669,6 +4697,9 @@ def _submissions(request):
             "site": site, "period": period, "status": "PENDING",
             "submittedAt": payloads._dts(timezone.now()),
             "fileName": submission.original_name, "checksum": checksum,
+            "accuracy": accuracy,
+            "validated": bool(accuracy is not None and accuracy >= 100),
+            "findings": findings,
         }
     }, status=status.HTTP_201_CREATED)
 

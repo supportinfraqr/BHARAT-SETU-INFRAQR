@@ -111,6 +111,8 @@ class ComplianceReport(models.Model):
     financial_year = models.CharField(max_length=9, blank=True)
     period = models.CharField(max_length=40, blank=True)
     state = models.CharField(max_length=60, blank=True)
+    site_name = models.CharField(max_length=200, blank=True)
+    client_name = models.CharField(max_length=200, blank=True)
     unique_no = models.CharField(max_length=60, blank=True)
     score = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     score_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)

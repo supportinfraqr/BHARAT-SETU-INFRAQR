@@ -116,7 +116,7 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (resource === 'compliances' && method === 'POST') {
     const kind = String(body.kind ?? '').toLowerCase();
     // Register-batch generation carries only period/site metadata.
-    if (!['generatebatch', 'generate-batch', 'clra', 'register'].includes(kind)) {
+    if (!['generatebatch', 'generate-batch', 'clra', 'register', 'submit', 'finalsubmit', 'final-submit'].includes(kind)) {
       const rows = Array.isArray(body.bulk) ? body.bulk : [body];
       if (!rows.length || rows.length > 500) fail('Provide between 1 and 500 compliance records.');
       rows.forEach(row => {

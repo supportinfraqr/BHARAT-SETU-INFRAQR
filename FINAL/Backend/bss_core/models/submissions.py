@@ -25,6 +25,8 @@ class SubmissionEvidence(models.Model):
     file_size = models.BigIntegerField(default=0)
     mime_type = models.CharField(max_length=120, blank=True)
     checksum_sha256 = models.CharField(max_length=64, blank=True)
+    ocr_accuracy = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    validation_findings = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
