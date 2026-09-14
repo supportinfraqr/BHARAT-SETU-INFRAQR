@@ -216,7 +216,7 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   }
   if (role === 'Employer' && resource === 'submissions' && method === 'PATCH') {
     requiredString(body, 'id', 120);
-    if (!['Verified', 'Returned'].includes(String(body.status))) fail('Select a valid submission decision.');
+    if (!['Verified', 'Rejected', 'Returned'].includes(String(body.status))) fail('Select a valid submission decision.');
   }
   if (role === 'Worker' && resource === 'restricted-holiday' && method === 'POST') {
     if (!isoDate.test(requiredString(body, 'holidayDate', 10))) fail('Choose a valid restricted holiday date.');

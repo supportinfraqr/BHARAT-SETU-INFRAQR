@@ -12,7 +12,7 @@ export default function EmployerComplianceSubmissionPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  async function review(row: EmployerSubmission, status: 'Verified' | 'Returned') {
+  async function review(row: EmployerSubmission, status: 'Verified' | 'Rejected') {
     setBusy(true);
     setError('');
     setNotice('');
@@ -27,11 +27,11 @@ export default function EmployerComplianceSubmissionPage() {
   const columns: DataColumn<EmployerSubmission>[] = [
     { id:'contractor', header:'Contractor', value:row => row.contractor, render:row => <div><strong className="text-gray-900">{row.contractor}</strong><p className="font-mono text-[10px] text-gray-400">{row.contractorId}</p></div> },
     { id:'site', header:'Site', value:row => row.site },
-    { id:'type', header:'Compliance type', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong><a href={`/api/portal/uploads/${row.id}`} target="_blank" rel="noreferrer" className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</a></div> },
+    { id:'type', header:'Compliance type', value:row => row.type, render:row => <div><strong className="text-gray-900">{row.type}</strong><a href={`/api/employer/submissions/${row.id}/file`} target="_blank" rel="noreferrer" className="block text-[11px] text-blue-600 hover:underline mt-0.5">View evidence</a></div> },
     { id:'period', header:'Period', value:row => row.period },
     { id:'submitted', header:'Submitted', value:row => row.submittedAt.slice(0, 10) },
     { id:'status', header:'Status', value:row => row.status, render:row => <Status value={row.status}/> },
-    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:row => row.status === 'Pending review' ? <div className="flex gap-2"><button disabled={busy} onClick={() => review(row, 'Verified')} className="text-green-700 font-semibold hover:underline">Verify</button><button disabled={busy} onClick={() => review(row, 'Returned')} className="text-orange-700 font-semibold hover:underline">Return</button></div> : <span className="text-gray-400">No action</span> },
+    { id:'actions', header:'Action', filterable:false, value:row => row.status, render:row => row.status === 'Pending review' ? <div className="flex gap-2"><button disabled={busy} onClick={() => review(row, 'Verified')} className="text-green-700 font-semibold hover:underline">Verify</button><button disabled={busy} onClick={() => review(row, 'Rejected')} className="text-red-700 font-semibold hover:underline">Reject</button></div> : <span className="text-gray-400">No action</span> },
   ];
 
   const pending = employer.submissions.filter(item => item.status === 'Pending review');

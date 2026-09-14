@@ -19,6 +19,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import transaction
+from django.db.models import Q
 from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status
@@ -168,10 +169,13 @@ _PROFILE_LABEL_MAP = {
         "Activity": "activity",
         "NIC Code": "nic_code",
         "PAN": "pan_no",
+        "PAN Document": "pan_no",
         "GSTIN": "gstin",
+        "GST Certificate": "gstin",
         "Udyam Registration Number": "udyam_no",
         "Labour Department Registration Number": "labour_dept_reg_no",
         "Contract Labour Licence Number": "clra_licence_no",
+        "Contract Labour Licence": "clra_licence_no",
         "BOCW / Other Labour Registration": "bocw_reg_no",
         "Licence Valid From": "licence_valid_from",
         "Licence Valid To": "licence_valid_to",
@@ -1802,6 +1806,8 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_grievance(user, body)
     if resource == "grievances" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_grievance_worker(user, body)
+    if resource == "submissions" and role_path == "employer" and method in ("PATCH",):
+        return _handle_submission_review(user, body)
     if resource == "gratuity" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_gratuity_apply(user, body)
     if resource == "bank-verify" and role_path == "worker" and method in ("POST", "PATCH"):
@@ -4864,27 +4870,63 @@ def _submissions(request):
                 pass
         accuracy, findings = compliance.validate_evidence(file_obj, ftype, ocr_text=ocr_text)
 
-    submission = SubmissionEvidence(
-        user=user,
-        role="worker" if user.role == "worker" else "contractor",
-        doc_type=ftype,
-        site=site,
-        period=period,
-        employer=employer,
-        state=state[:60],
-        financial_year=financial_year[:12],
-        month=month[:20],
-        location=location[:120],
-        document_type=document_type[:40],
-        frequency=frequency[:40],
-        is_mandatory=is_mandatory,
-        original_name=file_obj.name if file_obj else "",
-        file_size=file_obj.size if file_obj else 0,
-        mime_type=file_obj.content_type if file_obj else "",
-        checksum_sha256=checksum,
-        ocr_accuracy=accuracy,
-        validation_findings=findings,
-    )
+    submission_id = (request.data.get("submissionId") or "").strip()
+    if submission_id:
+        # Re-upload: the contractor submits BRAND-NEW evidence after a rejection.
+        # The rejected row keeps its status for history; this creates a fresh
+        # pending submission. Only the owner may do this, and only on a
+        # rejected/returned submission.
+        original = SubmissionEvidence.objects.filter(pk=submission_id).first()
+        if original is None:
+            return Response({"error": "submission not found"}, status=status.HTTP_404_NOT_FOUND)
+        if original.user_id != user.id:
+            return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
+        if str(original.status).upper() not in ("RETURNED", "REJECTED"):
+            return Response({"error": "Only rejected submissions can be re-uploaded."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        submission = SubmissionEvidence(
+            user=user,
+            role="worker" if user.role == "worker" else "contractor",
+            doc_type=ftype or original.doc_type,
+            site=site or original.site,
+            period=period or original.period,
+            employer=employer or original.employer,
+            state=(state or original.state)[:60],
+            financial_year=(financial_year or original.financial_year)[:12],
+            month=(month or original.month)[:20],
+            location=(location or original.location)[:120],
+            document_type=(document_type or original.document_type)[:40],
+            frequency=(frequency or original.frequency)[:40],
+            is_mandatory=is_mandatory or original.is_mandatory,
+            original_name=file_obj.name if file_obj else "",
+            file_size=file_obj.size if file_obj else 0,
+            mime_type=file_obj.content_type if file_obj else "",
+            checksum_sha256=checksum,
+            ocr_accuracy=accuracy,
+            validation_findings=findings,
+        )
+    else:
+        submission = SubmissionEvidence(
+            user=user,
+            role="worker" if user.role == "worker" else "contractor",
+            doc_type=ftype,
+            site=site,
+            period=period,
+            employer=employer,
+            state=state[:60],
+            financial_year=financial_year[:12],
+            month=month[:20],
+            location=location[:120],
+            document_type=document_type[:40],
+            frequency=frequency[:40],
+            is_mandatory=is_mandatory,
+            original_name=file_obj.name if file_obj else "",
+            file_size=file_obj.size if file_obj else 0,
+            mime_type=file_obj.content_type if file_obj else "",
+            checksum_sha256=checksum,
+            ocr_accuracy=accuracy,
+            validation_findings=findings,
+        )
     if file_obj:
         safe_name = os.path.basename(file_obj.name or "evidence")
         submission.file.save(safe_name, file_obj, save=False)
@@ -4922,7 +4964,10 @@ def submission_file_download(request, role_path, submission_id):
         allowed = True
     elif user.role == "employer":
         allowed = SubmissionEvidence.objects.filter(
-            pk=submission.id, user__worker_bindings__site__employer=user).exists()
+            Q(user__worker_bindings__site__employer=user)
+            | Q(user__contractor_bindings__site__employer=user),
+            pk=submission.id,
+        ).exists()
     if not allowed:
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -4933,6 +4978,36 @@ def submission_file_download(request, role_path, submission_id):
         as_attachment=True,
         filename=submission.original_name or f"evidence-{submission.id}",
     )
+
+
+def _handle_submission_review(user, body):
+    """Employer marks a connected contractor/worker evidence submission
+    Verified or Rejected."""
+    if user.role != "employer":
+        raise PortalMutationError("Only employers can review submissions.", 403)
+    submission = SubmissionEvidence.objects.filter(pk=str(body.get("id") or "").strip()).first()
+    if submission is None:
+        raise PortalMutationError("Submission not found.", 404)
+    connected = (
+        SubmissionEvidence.objects
+        .filter(
+            Q(user__worker_bindings__site__employer=user)
+            | Q(user__contractor_bindings__site__employer=user),
+            pk=submission.id,
+        )
+        .exists()
+    )
+    if not connected:
+        raise PortalMutationError("not authorized", 403)
+    decision = str(body.get("status") or "").strip().upper()
+    if decision == "VERIFIED":
+        submission.status = "VERIFIED"
+    elif decision in ("REJECTED", "RETURNED"):
+        submission.status = "RETURNED"
+    else:
+        raise PortalMutationError("Select a valid submission decision.", 422)
+    submission.save(update_fields=["status", "updated_at"])
+    return submission.id
 
 
 @api_view(["POST"])

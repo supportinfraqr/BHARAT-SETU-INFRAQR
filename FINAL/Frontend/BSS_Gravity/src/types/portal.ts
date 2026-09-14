@@ -393,7 +393,7 @@ export type EmployerSubmission = {
   type: string;
   period: string;
   submittedAt: string;
-  status: 'Pending review' | 'Verified' | 'Returned';
+  status: 'Pending review' | 'Verified' | 'Rejected';
 };
 
 export type EmployerUser = {

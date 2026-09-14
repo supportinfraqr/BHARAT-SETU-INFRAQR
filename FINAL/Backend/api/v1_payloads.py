@@ -2232,7 +2232,7 @@ def _contractor_employers(user):
 
 def _contractor_submissions(user):
     rows = []
-    status_map = {"PENDING": "Pending review", "VERIFIED": "Verified", "RETURNED": "Returned"}
+    status_map = {"PENDING": "Pending review", "VERIFIED": "Verified", "RETURNED": "Rejected", "REJECTED": "Rejected"}
     for ev in SubmissionEvidence.objects.filter(user=user)[:20]:
         days_left = None
         if ev.due_date:
@@ -2962,18 +2962,14 @@ def _contractor_profile_sections(user):
             _f("State / UT", getattr(cp, "state", "") if cp else "", "Contractor"),
             _f("Operating States", getattr(cp, "operating_states", "") if cp else "", "Contractor"),
         ],
-        "associations": [
-            _f("Principal Employer Name", getattr(cp, "employer_name", "") if cp else "", "Contractor"),
-            _f("Site / Establishment Name", "", "Contractor"),
-        ],
         "documents": [
-            _f("PAN Document", "", "Contractor"),
-            _f("GST Certificate", "", "Contractor"),
-            _f("Contract Labour Licence", "", "Contractor"),
+            _f("PAN Document", getattr(cp, "pan_no", "") if cp else "", "Contractor"),
+            _f("GST Certificate", getattr(cp, "gstin", "") if cp else "", "Contractor"),
+            _f("Contract Labour Licence", getattr(cp, "clra_licence_no", "") if cp else "", "Contractor"),
         ],
         "declarations": [
             _f("Consent for Data Processing", "", "Contractor"),
-            _f("Consent Date", getattr(cp, "consent_date", "") if cp else "", "System"),
+            _f("Consent Date", getattr(cp, "consent_date", "") if cp else "", "System", field_type="date"),
             _f("Registration Source", getattr(cp, "registration_source", "") if cp else "", "System"),
             _f("Registered By", getattr(cp, "registered_by", "") if cp else "", "System"),
             _f("Contractor Risk Rating", getattr(cp, "risk_rating", "") if cp else "", "System"),
@@ -3505,23 +3501,34 @@ def _employer_submissions(user):
             continue
         cp = getattr(ev.user, "contractor_profile", None) if ev.user.role == "contractor" else None
         rows.append({
-            "id": ev.id,
+            "id": str(ev.id),
             "contractor": _d(cp.contractor_name if cp else ""),
-            "contractorId": ev.user_id if ev.user.role == "contractor" else None,
+            "contractorId": _bss_contractor_code(ev.user_id) if ev.user.role == "contractor" else "",
             "site": _d(ev.site), "type": _d(ev.doc_type),
             "period": _d(ev.period),
             "submittedAt": _dts(ev.created_at),
-            "status": _d(ev.status),
+            "status": _submission_review_label(ev.status),
         })
     for c in user.compliance_docs.all()[:20] if hasattr(user, "compliance_docs") else []:
         rows.append({
-            "id": c.id, "contractor": "", "contractorId": None,
+            "id": str(c.id), "contractor": "", "contractorId": "",
             "site": c.site.site_name if c.site else "",
             "type": _d(c.master.act if c.master else ""),
             "period": _d(c.period), "submittedAt": _dts(c.updated_at),
-            "status": _d(c.status),
+            "status": _submission_review_label(c.status),
         })
     return rows
+
+
+def _submission_review_label(status):
+    """Map stored SubmissionEvidence status to the employer review labels the
+    frontend acts on (Pending review / Verified / Rejected)."""
+    st = str(status or "").strip().upper()
+    if st == "VERIFIED":
+        return "Verified"
+    if st in ("RETURNED", "REJECTED"):
+        return "Rejected"
+    return "Pending review"
 
 
 def _employer_compliance_reports(user):

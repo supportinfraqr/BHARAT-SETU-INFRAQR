@@ -47,6 +47,8 @@ export default function ComplianceSubmissionPage() {
   const [location, setLocation] = useState('');
   const [uploads, setUploads] = useState<Record<string, UploadRow>>({});
   const [viewErrors, setViewErrors] = useState<{ name: string; findings: string[] } | null>(null);
+  const [resubmit, setResubmit] = useState<DocumentRow | null>(null);
+  const [resubmitFile, setResubmitFile] = useState<File | null>(null);
 
   const documentMaster = (contractor.submissionDocuments?.length ? contractor.submissionDocuments : FALLBACK_DOCUMENTS);
   const documents = scoped(contractor.submissions.documents as DocumentRow[], row => row.employer);
@@ -63,6 +65,49 @@ export default function ComplianceSubmissionPage() {
     if (next.size > 10 * 1024 * 1024) { setFile(null); return setError('Document must be 10 MB or smaller.'); }
     if (!['application/pdf', 'image/jpeg', 'image/png'].includes(next.type)) { setFile(null); return setError('Choose a PDF, JPEG or PNG document.'); }
     setFile(next);
+  }
+
+  function chooseResubmitFile(next?: File) {
+    setError('');
+    if (!next) return setResubmitFile(null);
+    if (next.size > 10 * 1024 * 1024) { setResubmitFile(null); return setError('Document must be 10 MB or smaller.'); }
+    if (!['application/pdf', 'image/jpeg', 'image/png'].includes(next.type)) { setResubmitFile(null); return setError('Choose a PDF, JPEG or PNG document.'); }
+    setResubmitFile(next);
+  }
+
+  async function resubmitUpload() {
+    if (!resubmit || !resubmitFile) return setError('Choose a document to re-upload.');
+    setBusy(true); setError(''); setNotice('');
+    const form = new FormData();
+    form.set('submissionId', resubmit.id);
+    form.set('file', resubmitFile);
+    form.set('type', resubmit.type);
+    form.set('site', resubmit.site ?? '');
+    form.set('employer', resubmit.employer ?? '');
+    form.set('state', resubmit.state ?? '');
+    form.set('financialYear', resubmit.financialYear ?? '');
+    form.set('month', resubmit.month ?? '');
+    form.set('location', resubmit.location ?? '');
+    form.set('documentType', resubmit.documentType ?? '');
+    form.set('frequency', resubmit.frequency ?? '');
+    form.set('mandatory', resubmit.mandatory ? 'true' : 'false');
+    form.set('period', resubmit.period ?? '');
+    try {
+      const response = await fetch('/api/portal/uploads', { method: 'POST', body: form });
+      const result = await response.json().catch(() => ({})) as { data?: (DocumentRow & { validated?: boolean }); error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'Document could not be re-uploaded.');
+      const fresh: DocumentRow = { ...result.data, status: 'Pending review', source: 'evidence' };
+      replaceContractor({
+        ...contractor,
+        submissions: {
+          ...contractor.submissions,
+          documents: [fresh, ...contractor.submissions.documents],
+        },
+      });
+      setNotice(`Evidence for ${resubmit.type} submitted as a new pending submission. The rejected copy stays for audit.`);
+      setResubmit(null); setResubmitFile(null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Document could not be re-uploaded.'); }
+    finally { setBusy(false); }
   }
 
   async function upload(event: React.FormEvent<HTMLFormElement>) {
@@ -134,7 +179,7 @@ export default function ComplianceSubmissionPage() {
   }
 
   const documentColumns: DataColumn<DocumentRow>[] = [
-    { id:'type', header: 'Document', value: row => row.type, render: row => <div><strong className="text-gray-900">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.source === 'evidence' && row.id && <a href={`/api/portal/uploads/${row.id}`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}{row.findings && row.findings.length > 0 && <button type="button" onClick={() => setViewErrors({ name: row.type, findings: row.findings ?? [] })} className="block text-[10px] text-blue-700 font-semibold hover:underline mt-0.5">View errors ({row.findings.length})</button>}</div> },
+    { id:'type', header: 'Document', value: row => row.type, render: row => <div><strong className="text-gray-900">{row.type}</strong>{row.fileName && <p className="text-[10px] text-gray-400 mt-0.5">{row.fileName}</p>}{row.source === 'evidence' && row.id && <a href={`/api/contractor/submissions/${row.id}/file`} target="_blank" rel="noreferrer" className="block text-[10px] text-blue-600 hover:underline mt-0.5">View evidence</a>}{row.findings && row.findings.length > 0 && <button type="button" onClick={() => setViewErrors({ name: row.type, findings: row.findings ?? [] })} className="block text-[10px] text-blue-700 font-semibold hover:underline mt-0.5">View errors ({row.findings.length})</button>}</div> },
     { id:'uniqueNo', header: 'Unique No.', value: row => row.uniqueNo ?? '—', render: row => row.uniqueNo ? <span className="font-mono text-blue-700 font-semibold">{row.uniqueNo}</span> : <span className="text-gray-300">—</span> },
     { id:'employer', header: 'Client / Employer', value: row => row.employer },
     { id:'state', header: 'State', value: row => row.state ?? '—', render: row => row.state || '—' },
@@ -147,6 +192,7 @@ export default function ComplianceSubmissionPage() {
     { id:'updated', header: 'Updated', value: row => row.updatedAt ?? row.submittedAt, render: row => (row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('en-IN') : '—') },
     { id:'daysLeft', header: 'Days Left', value: row => row.daysLeft ?? '—', render: row => row.daysLeft != null ? <span className={row.daysLeft <= 3 ? 'text-red-600 font-bold' : 'text-gray-700'}>{row.daysLeft}</span> : '—' },
     { id:'status', header: 'Status', value: row => row.status, render: row => <span className={row.status === 'Verified' ? 'text-green-700' : row.status === 'Returned' ? 'text-red-700' : 'text-orange-700'}>{row.status}</span> },
+    { id:'action', header: 'Action', filterable:false, value: row => row.status, render: row => row.source === 'evidence' && row.status === 'Rejected' ? <button type="button" onClick={() => { setError(''); setNotice(''); setResubmitFile(null); setResubmit(row); }} className="text-blue-700 font-semibold text-xs hover:underline flex items-center gap-1"><Upload size={12}/>Upload again</button> : <span className="text-gray-300">—</span> },
   ];
 
   return <div className="space-y-6 pb-12">
@@ -243,6 +289,24 @@ export default function ComplianceSubmissionPage() {
       <section role="dialog" aria-modal="true" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
         <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 className="font-semibold text-gray-950">Validation findings</h2><p className="text-xs text-gray-500 mt-1">{viewErrors.name}</p></div><button type="button" onClick={() => setViewErrors(null)} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
         <ul className="p-5 space-y-2 text-sm text-gray-700">{viewErrors.findings.map((f, i) => <li key={i} className="flex gap-2"><span className="text-orange-500">•</span>{f}</li>)}</ul>
+      </section>
+    </div>}
+
+    {resubmit && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4" onMouseDown={event => { if (event.target === event.currentTarget && !busy) setResubmit(null); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="resubmit-title" className="w-full max-w-xl bg-white rounded-2xl shadow-xl">
+        <header className="p-5 border-b border-gray-100 flex justify-between items-start gap-3"><div><h2 id="resubmit-title" className="font-semibold text-gray-950">Re-upload evidence</h2><p className="text-xs text-gray-500 mt-1">Replace the rejected evidence — the submission returns to <strong>Pending review</strong>.</p></div><button type="button" onClick={() => setResubmit(null)} disabled={busy} className="w-11 h-11 -mr-2 -mt-2 grid place-items-center rounded-lg hover:bg-gray-50" aria-label="Close"><X/></button></header>
+        <div className="p-5 grid sm:grid-cols-2 gap-3 text-xs">
+          <div><p className="text-gray-400">Document</p><p className="font-semibold text-gray-900 mt-0.5">{resubmit.type}</p></div>
+          <div><p className="text-gray-400">Site</p><p className="font-semibold text-gray-900 mt-0.5">{resubmit.site || '—'}</p></div>
+          <div><p className="text-gray-400">Employer</p><p className="font-semibold text-gray-900 mt-0.5">{resubmit.employer || '—'}</p></div>
+          <div><p className="text-gray-400">Period</p><p className="font-semibold text-gray-900 mt-0.5">{resubmit.period || '—'}</p></div>
+          {resubmit.findings && resubmit.findings.length > 0 && <div className="sm:col-span-2 bg-red-50 border border-red-100 rounded-xl p-3"><p className="text-red-700 font-semibold">Reviewer / validation notes</p><ul className="mt-1 space-y-1 text-red-700/80">{resubmit.findings.map((f, i) => <li key={i} className="flex gap-2"><span>•</span>{f}</li>)}</ul></div>}
+        </div>
+        <div className="p-5 pt-0">
+          <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); chooseResubmitFile(event.dataTransfer.files[0]); }} className="min-h-36 border-2 border-dashed border-gray-300 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/40"><FileUp size={28} className="text-blue-700"/><strong className="text-sm text-gray-800 mt-2">{resubmitFile ? resubmitFile.name : 'Choose or drop replacement evidence here'}</strong><span className="text-xs text-gray-500 mt-1">{resubmitFile ? `${(resubmitFile.size / 1024 / 1024).toFixed(2)} MB · ready to upload` : 'PDF, JPEG or PNG · maximum 10 MB'}</span><input type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" className="sr-only" onChange={event => chooseResubmitFile(event.target.files?.[0])}/></label>
+          {error && <p role="alert" className="mt-3 bss-alert bss-alert-error">{error}</p>}
+          <div className="mt-4 flex flex-col-reverse sm:flex-row justify-end gap-2"><button type="button" onClick={() => setResubmit(null)} disabled={busy} className="bss-secondary-action">Cancel</button><button onClick={resubmitUpload} disabled={busy || !resubmitFile} className="bss-primary-action"><Upload size={15}/>{busy ? 'Re-uploading…' : 'Re-upload & resubmit'}</button></div>
+        </div>
       </section>
     </div>}
   </div>;
