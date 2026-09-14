@@ -114,14 +114,18 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     });
   }
   if (resource === 'compliances' && method === 'POST') {
-    const rows = Array.isArray(body.bulk) ? body.bulk : [body];
-    if (!rows.length || rows.length > 500) fail('Provide between 1 and 500 compliance records.');
-    rows.forEach(row => {
-      const r = row as Record<string, unknown>;
-      requiredString(r, 'item'); requiredString(r, 'site');
-      const issue = requiredString(r, 'issue', 10); const expiry = requiredString(r, 'expiry', 10);
-      if (!isoDate.test(issue) || !isoDate.test(expiry) || issue > expiry) fail('Enter a valid compliance date range.');
-    });
+    const kind = String(body.kind ?? '').toLowerCase();
+    // Register-batch generation carries only period/site metadata.
+    if (!['generatebatch', 'generate-batch', 'clra', 'register'].includes(kind)) {
+      const rows = Array.isArray(body.bulk) ? body.bulk : [body];
+      if (!rows.length || rows.length > 500) fail('Provide between 1 and 500 compliance records.');
+      rows.forEach(row => {
+        const r = row as Record<string, unknown>;
+        requiredString(r, 'item'); requiredString(r, 'site');
+        const issue = requiredString(r, 'issue', 10); const expiry = requiredString(r, 'expiry', 10);
+        if (!isoDate.test(issue) || !isoDate.test(expiry) || issue > expiry) fail('Enter a valid compliance date range.');
+      });
+    }
   }
   if (resource === 'salaries' && method === 'POST') {
     const rows = Array.isArray(body.bulk) ? body.bulk : [body];

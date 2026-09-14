@@ -101,16 +101,17 @@ export default function ContractorCompliancePage() {
     setNotice('Bulk compliance register exported (XLS).');
   };
 
-  const generateRegisters = () => {
+  const generateRegisters = async () => {
     if (!masterFile) { setError('Choose a Master File before generating registers.'); return; }
     setBusy(true); setError(''); setNotice('');
-    setTimeout(() => {
-      const site = contractor.sites[0];
-      const batch = { id: `BATCH-${Date.now()}`, financialYear: fy, month, year: '2026', state, site: site?.name ?? '', siteCode: site?.code ?? '', employeeCount: contractor.workers.length, locationCount: 1, generatedOn: new Date().toISOString().slice(0, 10), generatedBy: '', status: 'Generated' as const };
-      replaceContractor({ ...contractor, complianceBatches: [batch, ...contractor.complianceBatches] });
-      setBusy(false);
+    try {
+      const result = await mutate<{ data: ContractorPortalData['complianceBatches'][number] }>('compliances', 'POST', {
+        kind: 'generateBatch', site: contractor.sites[0]?.name ?? '', financialYear: fy, month, year: '2026', state,
+      });
+      replaceContractor({ ...contractor, complianceBatches: [result.data, ...contractor.complianceBatches] });
       setNotice(`Generated CLRA registers for ${fy} · ${month} 2026 · ${state} from the uploaded master file (${masterFile.name}${signatureFile ? ' with digital signature' : ''}).`);
-    }, 1200);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Registers could not be generated.'); }
+    finally { setBusy(false); }
   };
 
   const columns: DataColumn<Row>[] = [

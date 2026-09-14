@@ -7,6 +7,9 @@ python manage.py migrate --noinput
 echo "== Ensuring document master catalog (mandatory seed) =="
 python manage.py seed_document_master || echo "WARNING: seed_document_master failed"
 
+echo "== Ensuring statutory compliance catalog (mandatory seed) =="
+python manage.py seed_compliance_master || echo "WARNING: seed_compliance_master failed"
+
 echo "== Collecting static =="
 # Incremental (no --clear): only copies changed files, so the container comes
 # back up fast and the site isn't briefly 502 during a deploy.

@@ -335,3 +335,32 @@ class MenuPermission(models.Model):
 
     def __str__(self):
         return f"{self.role} {self.menu_code} {self.allowed}"
+
+
+class ComplianceBatch(models.Model):
+    """A generated statutory-register batch (CLRA) for a contractor at a site for a
+    period, produced from an uploaded compliance master file."""
+
+    STATUS = [("GENERATED", "Generated"), ("PENDING", "Pending"), ("FAILED", "Failed")]
+
+    contractor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_batches")
+    site = models.ForeignKey("Site", on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="compliance_batches")
+    financial_year = models.CharField(max_length=9, blank=True)
+    month = models.CharField(max_length=20, blank=True)
+    year = models.CharField(max_length=4, blank=True)
+    state = models.CharField(max_length=60, blank=True)
+    employee_count = models.IntegerField(default=0)
+    location_count = models.IntegerField(default=0)
+    generated_on = models.DateField(null=True, blank=True)
+    generated_by = models.CharField(max_length=120, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS, default="GENERATED")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "compliance_batch"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.contractor_id} {self.month} {self.year}"

@@ -101,6 +101,7 @@ from .compliance import (
     ComplianceDocument,
     ComplianceReport,
     ComplianceReportItem,
+    ComplianceBatch,
     EmployerDocumentMapping,
     EmployerRegisterMapping,
     EmployerActMapping,

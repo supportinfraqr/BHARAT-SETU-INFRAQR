@@ -1779,6 +1779,8 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_rozgar_apply(user, body)
     if resource == "applications" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_rozgar_respond(user, body)
+    if resource == "compliances" and role_path == "contractor" and method in ("POST", "PATCH", "DELETE"):
+        return _handle_compliances(user, body, method)
     if resource == "restricted-holiday" and role_path == "worker" and method == "POST":
         return _handle_rh_request(user, body)
     if resource == "restricted-holiday" and role_path == "contractor" and method in ("POST", "PATCH"):
@@ -2957,6 +2959,60 @@ def _handle_rozgar_respond(user, body):
         req.responded_at = timezone.now()
         req.save(update_fields=["status", "responded_at", "updated_at"])
     return req.id
+
+
+def _handle_compliances(user, body, method):
+    """Contractor statutory compliance register: create/delete compliance
+    documents, or generate a CLRA register batch from the uploaded master file."""
+    from bss_core.models import ComplianceBatch, ComplianceDocument, ComplianceMaster
+
+    if method == "DELETE":
+        ComplianceDocument.objects.filter(pk=body.get("id"), employer=user).delete()
+        return body.get("id")
+
+    kind = str(body.get("kind") or "").strip().lower()
+    if kind in ("generatebatch", "generate-batch", "clra", "register"):
+        site = Site.objects.filter(site_name__iexact=str(body.get("site") or "").strip()).first()
+        if site is None:
+            site = Site.objects.filter(id__in=_contractor_site_ids(user)).order_by("id").first()
+        batch = ComplianceBatch.objects.create(
+            contractor=user, site=site,
+            financial_year=str(body.get("financialYear") or "")[:9],
+            month=str(body.get("month") or "")[:20], year=str(body.get("year") or "")[:4],
+            state=str(body.get("state") or "")[:60],
+            employee_count=WorkerContractorBinding.objects.filter(
+                contractor=user, binding_status="ACCEPTED").count(),
+            location_count=1,
+            generated_on=timezone.localdate(),
+            generated_by=payloads._party_name(user),
+            status="GENERATED",
+        )
+        return payloads._contractor_compliance_batch_row(batch)
+
+    rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
+    created = []
+    for row in rows_in:
+        row = row if isinstance(row, dict) else {}
+        item = str(row.get("item") or "").strip()
+        if not item:
+            continue
+        master, _ = ComplianceMaster.objects.get_or_create(
+            act=item[:160], form_number=str(row.get("reference") or "")[:60])
+        site = Site.objects.filter(site_name__iexact=str(row.get("site") or "").strip()).first()
+        doc = ComplianceDocument(
+            employer=user, master=master, site=site,
+            unique_no=str(row.get("reference") or "")[:60],
+            form_number=str(row.get("reference") or "")[:40],
+            period=str(row.get("expiry") or "")[:40],
+            status={"Active": "SUBMITTED", "Expiring": "PENDING",
+                    "Expired": "EXPIRED"}.get(str(row.get("status") or ""), "PENDING"),
+        )
+        due = _parse_iso_date(row.get("expiry"))
+        if due:
+            doc.due_date = due
+        doc.save()
+        created.append(payloads._compliance_doc_row(doc))
+    return created[0] if len(created) == 1 else created
 
 
 # Editable scalar columns of the Site model (everything except the employer FK,
