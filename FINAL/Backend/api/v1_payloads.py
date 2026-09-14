@@ -2413,8 +2413,10 @@ def _contractor_applicability(user=None):
             contractor=user, binding_status="ACCEPTED"
         ).count()
 
-    has_clra = bool(cp and (cp.clra_licence_no or "").strip())
-    has_pf = bool(cp and (cp.registration_number or cp.lin or "").strip()) or worker_count >= 20
+    has_clra = bool(cp and (cp.clra_licence_no or "").strip()) or \
+        bool(cp and (cp.lin or "").strip().lower().startswith("mh/clra")) or \
+        worker_count >= 20
+    has_pf = bool(cp and (cp.registration_number or "").strip()) or worker_count >= 20
     has_esic = bool(cp and (cp.labour_dept_reg_no or cp.udyam_no or "").strip()) or worker_count >= 10
     has_bocw = bool(cp and (cp.bocw_reg_no or "").strip())
 
@@ -2441,8 +2443,8 @@ def _contractor_applicability(user=None):
         },
         {
             "act": "Contract Labour (CLRA) Act, 1970",
-            "applies": has_clra or worker_count >= 20,
-            "note": f"Licence No: {cp.clra_licence_no}" if has_clra else ("Threshold (20+ contract workers)" if worker_count >= 20 else "Exempt (<20 workers)")
+            "applies": has_clra,
+            "note": f"Licence No: {cp.clra_licence_no}" if cp and (cp.clra_licence_no or "").strip() else (f"LIN: {cp.lin}" if cp and (cp.lin or "").strip().lower().startswith("mh/clra") else ("Threshold (20+ contract workers)" if worker_count >= 20 else "Exempt (<20 workers)"))
         },
         {
             "act": "BOCW Act, 1996",

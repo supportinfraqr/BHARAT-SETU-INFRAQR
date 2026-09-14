@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Users, Building2, ShieldCheck, Clock, MapPin, FileText, Activity, AlertCircle, ArrowRight, CheckCircle2,
+  Users, Building2, ShieldCheck, Clock, MapPin, FileText, Activity, AlertCircle, ArrowRight, CheckCircle2, X,
   Upload, BadgeCheck, ScanLine, Handshake, Landmark, Banknote, FileClock, TriangleAlert, UserRoundCheck,
 } from 'lucide-react';
 
@@ -246,7 +246,7 @@ export default function ContractorDashboardPage() {
             <ul className="divide-y divide-gray-100">{contractor.applicability.map(a => (
               <li key={a.act} className="px-5 py-3 flex items-start justify-between gap-4">
                 <div><p className="text-sm font-medium text-gray-800">{a.act}</p><p className="text-xs text-gray-400 mt-0.5">{a.note}</p></div>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${a.applies ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{a.applies ? <CheckCircle2 size={11}/> : <span/>}Applies</span>
+                <span className={`inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${a.applies ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{a.applies ? <CheckCircle2 size={11}/> : <X size={11}/>}{a.applies ? 'Applies' : 'Not applicable'}</span>
               </li>
             ))}</ul>
           </section>
