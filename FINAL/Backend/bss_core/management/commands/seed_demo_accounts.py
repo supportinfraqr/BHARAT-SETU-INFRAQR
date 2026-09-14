@@ -605,6 +605,118 @@ class Command(BaseCommand):
                 f"network   {employer.username} <-> {contractor.username} @ {site.site_code} "
                 f"({len(worker_phones)} worker(s))")
 
+        # --- Site-level statutory profile: drive the per-site "Compliance &
+        # Statutory" tab (PF/ESIC/CLRA/BOCW/Factory/Shops applicability, state,
+        # scheduled employment, minimum-wage zone, frequency, client) so the
+        # contractor's site detail isn't a wall of em-dashes. ---
+        SITE_COMPLIANCE = {
+            "DEMO-SITE-001": {
+                "epfo_applicable": True, "esic_applicable": True,
+                "clra_applicable": True, "bocw_applicable": True,
+                "factory_compliance_applicable": False, "shops_establishment_applicable": False,
+                "interstate_migrant_compliance": True,
+                "applicable_state": "Maharashtra",
+                "scheduled_employment": "Building and Other Construction Work",
+                "minimum_wage_zone": "Zone I – Mumbai Metropolitan Region",
+                "compliance_frequency": "Monthly",
+                "compliance_client": "Adani Infra Pvt Ltd",
+                "statutory_applicability": "CLRA Act 1970 · EPF & MP Act 1952 · ESI Act 1948 · "
+                                           "BOCW Act 1996 · Minimum Wages Act 1948 · Payment of "
+                                           "Wages Act 1936 · Interstate Migrant Workmen Act 1979",
+            },
+            "DEMO-SITE-002": {
+                "epfo_applicable": True, "esic_applicable": True,
+                "clra_applicable": True, "bocw_applicable": True,
+                "factory_compliance_applicable": False, "shops_establishment_applicable": False,
+                "interstate_migrant_compliance": True,
+                "applicable_state": "Maharashtra",
+                "scheduled_employment": "Building and Other Construction Work",
+                "minimum_wage_zone": "Zone II – Pune Region",
+                "compliance_frequency": "Monthly",
+                "compliance_client": "NHAI Panvel Bridges Ltd",
+            },
+            "DEMO-SITE-003": {
+                "epfo_applicable": True, "esic_applicable": True,
+                "clra_applicable": True, "bocw_applicable": False,
+                "factory_compliance_applicable": True, "shops_establishment_applicable": False,
+                "interstate_migrant_compliance": False,
+                "applicable_state": "Maharashtra",
+                "scheduled_employment": "Industrial Manufacturing Activity under Factories Act",
+                "minimum_wage_zone": "Zone I – Pune",
+                "compliance_frequency": "Monthly",
+                "compliance_client": "Bhosari Engineering Works Pvt Ltd",
+            },
+            "DEMO-SITE-004": {
+                "epfo_applicable": False, "esic_applicable": False,
+                "clra_applicable": False, "bocw_applicable": False,
+                "factory_compliance_applicable": False, "shops_establishment_applicable": True,
+                "interstate_migrant_compliance": False,
+                "applicable_state": "Maharashtra",
+                "scheduled_employment": "Information Technology / IT-enabled Services",
+                "minimum_wage_zone": "Zone I – Pune",
+                "compliance_frequency": "Quarterly",
+                "compliance_client": "Hinjewadi Tech Park Ltd",
+            },
+        }
+        for code, fields in SITE_COMPLIANCE.items():
+            site = demo_sites.get(code)
+            if site is None:
+                continue
+            for key, value in fields.items():
+                setattr(site, key, value)
+            site.save(update_fields=list(fields.keys()))
+
+        # --- ComplianceReport audits so each site's compliance % shows non-empty
+        # via the priority-1 path (latest audit score for the site_name). ---
+        from bss_core.models import ComplianceReport as _ComplianceReport
+        from decimal import Decimal as _Decimal
+        site_compliance_extra = SITE_COMPLIANCE["DEMO-SITE-001"]
+
+        def _seed_audit(contractor, site, score, unique_no):
+            state = (site.state or "").strip()
+            client = (site.compliance_client or "").strip() or (site.site_name or "").strip()
+            _ComplianceReport.objects.update_or_create(
+                employer=contractor, site_name=site.site_name, period="FY2026-27",
+                defaults={
+                    "financial_year": "2026-27",
+                    "state": state,
+                    "client_name": client,
+                    "unique_no": unique_no,
+                    "score_pct": _Decimal(f"{score}.00"),
+                    "report_date": _btz.now().date(),
+                })
+
+        AUDIT_SCORES = {
+            "DEMO-SITE-001": ("contractor_4444444444", "92", "UN705001"),
+            "DEMO-SITE-002": ("contractor_5555555555", "68", "UN705002"),
+        }
+        for code, (con_username, score, unique_no) in AUDIT_SCORES.items():
+            site = demo_sites.get(code)
+            con_user = _user(con_username)
+            if site and con_user:
+                _seed_audit(con_user, site, score, unique_no)
+
+        # Any other site already allotted to a demo contractor (e.g. one created
+        # by hand in the running DB) also gets a statutory profile + audit score
+        # so the compliance % never renders empty for the demo contractor.
+        demo_ids = [u.pk for u in map(_user, ("contractor_4444444444", "contractor_5555555555")) if u]
+        handled_codes = set(SITE_COMPLIANCE)
+        auditorial = 0
+        for a in (ContractorSiteAllotment.objects
+                  .filter(status="APPROVED", binding__binding_status="ACCEPTED",
+                          binding__contractor_id__in=demo_ids)
+                  .select_related("site", "binding__contractor")):
+            site = a.site
+            if site.site_code in handled_codes:
+                continue
+            for key, value in site_compliance_extra.items():
+                if key == "applicable_state" and (site.state or "").strip():
+                    value = site.state
+                setattr(site, key, value)
+            site.save(update_fields=list(site_compliance_extra.keys()))
+            auditorial += 1
+            _seed_audit(a.binding.contractor, site, 62, f"UN7050{60 + auditorial:02d}")
+
         # Attach the demo job postings to the primary demo site so a worker
         # applying on Rozgar raises a site-specific binding request.
         primary_site = demo_sites.get("DEMO-SITE-001")
