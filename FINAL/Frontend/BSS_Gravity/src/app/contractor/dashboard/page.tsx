@@ -196,33 +196,6 @@ export default function ContractorDashboardPage() {
             </div>
           </section>
 
-          {/* Compliance History */}
-          <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h2 className="text-sm font-semibold text-gray-950">Compliance History · PF / ESIC</h2>
-              <Link href="/contractor/submissions" className="text-xs font-medium text-[#0066CC] hover:underline">{t('ui.viewAll')}</Link>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100">
-                  <tr><th className="px-5 py-3">Period</th><th className="px-5 py-3">Site</th><th className="px-5 py-3">PF</th><th className="px-5 py-3">ESIC</th><th className="px-5 py-3">Amount</th><th className="px-5 py-3">Status</th></tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {contractor.complianceHistory.slice(0, 4).map(item => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-semibold text-gray-900">{item.period}</td>
-                      <td className="px-5 py-3 text-gray-600">{item.site}</td>
-                      <td className="px-5 py-3"><Pill value={item.pf} /></td>
-                      <td className="px-5 py-3"><Pill value={item.esic} /></td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{item.amount != null ? inr(item.amount) : '—'}</td>
-                      <td className="px-5 py-3"><StatusBadge status={item.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
           {/* Workforce Growth Trend */}
           <section className="bg-white border border-gray-200 rounded-2xl p-5">
             <div className="flex justify-between items-center">
@@ -405,15 +378,6 @@ export default function ContractorDashboardPage() {
   );
 }
 
-function inr(value: number) { return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 }).format(value); }
-function Pill({ value }: { value: string }) {
-  const tone = value === 'Filed' ? 'text-green-700 bg-green-50' : value === 'Pending' ? 'text-orange-700 bg-orange-50' : 'text-red-700 bg-red-50';
-  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tone}`}>{value}</span>;
-}
-function StatusBadge({ status }: { status: string }) {
-  const tone = status === 'Compliant' ? 'bg-green-50 text-green-700' : status === 'Pending' ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700';
-  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tone}`}>{status}</span>;
-}
 function ActionItem({ href, icon:Icon, tone, title, text }: { href:string; icon:typeof AlertCircle; tone:string; title:string; text:string }) {
   return <Link href={href} className="px-5 py-4 flex items-center gap-3 hover:bg-gray-50 group min-h-16">
     <span className={`w-9 h-9 rounded-lg grid place-items-center flex-shrink-0 ${tone}`}><Icon size={17}/></span>
