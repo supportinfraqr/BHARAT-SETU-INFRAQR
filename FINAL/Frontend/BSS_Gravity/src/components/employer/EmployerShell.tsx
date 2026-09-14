@@ -26,7 +26,6 @@ const complianceGroup = { key:'nav.compliance', icon:ClipboardCheck, items:[
   ['nav.contractorCompliance','/employer/compliance'],
   ['nav.labourCompliance','/employer/labour-compliance'],
   ['nav.complianceSubmission','/employer/compliance-submission'],
-  ['nav.complianceReport','/employer/compliance-report'],
 ] };
 const qrGroup = { key:'nav.qrSystem', icon:Network, items:[
   ['nav.myWorkers','/employer/workers'],
@@ -53,7 +52,7 @@ export default function EmployerShell({ children }: { children:React.ReactNode }
   const headerRef = useRef<HTMLElement>(null);
   const { employer } = useEmployer();
   const { t } = useLanguage();
-  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, { key:'nav.reports', href:'/employer/reports', icon:BarChart2 }, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
+  const groups = [ { key:'nav.dashboard', href:'/employer/dashboard', icon:LayoutDashboard }, workforceGroup, sitesGroup, { key:'nav.payroll', href:'/employer/payroll', icon:Banknote }, complianceGroup, qrGroup, ...(employer.canAccessAdmin ? [adminGroup] : []) ];
   const mobileItems = groups.reduce<Array<readonly [string,string]>>((items, group) => items.concat('href' in group ? [[group.key, group.href]] : group.items as unknown as readonly [string,string][]), []);
 
   // Close every popover on navigation (adjust state during render — the
