@@ -666,42 +666,20 @@ class Command(BaseCommand):
                 setattr(site, key, value)
             site.save(update_fields=list(fields.keys()))
 
-        # --- ComplianceReport audits so each site's compliance % shows non-empty
-        # via the priority-1 path (latest audit score for the site_name). ---
+        # --- ComplianceReport audits: clean up the hardcoded seed audits so the
+        # per-site % is computed from evidence (verified share), not fake scores. ---
         from bss_core.models import ComplianceReport as _ComplianceReport
-        from decimal import Decimal as _Decimal
+        _ComplianceReport.objects.filter(
+            employer_id__in=[u.pk for u in map(_user, ("contractor_4444444444", "contractor_5555555555")) if u],
+            unique_no__startswith="UN705").delete()
+
         site_compliance_extra = SITE_COMPLIANCE["DEMO-SITE-001"]
 
-        def _seed_audit(contractor, site, score, unique_no):
-            state = (site.state or "").strip()
-            client = (site.compliance_client or "").strip() or (site.site_name or "").strip()
-            _ComplianceReport.objects.update_or_create(
-                employer=contractor, site_name=site.site_name, period="FY2026-27",
-                defaults={
-                    "financial_year": "2026-27",
-                    "state": state,
-                    "client_name": client,
-                    "unique_no": unique_no,
-                    "score_pct": _Decimal(f"{score}.00"),
-                    "report_date": _btz.now().date(),
-                })
-
-        AUDIT_SCORES = {
-            "DEMO-SITE-001": ("contractor_4444444444", "92", "UN705001"),
-            "DEMO-SITE-002": ("contractor_5555555555", "68", "UN705002"),
-        }
-        for code, (con_username, score, unique_no) in AUDIT_SCORES.items():
-            site = demo_sites.get(code)
-            con_user = _user(con_username)
-            if site and con_user:
-                _seed_audit(con_user, site, score, unique_no)
-
         # Any other site already allotted to a demo contractor (e.g. one created
-        # by hand in the running DB) also gets a statutory profile + audit score
-        # so the compliance % never renders empty for the demo contractor.
+        # by hand in the running DB) still gets the statutory profile so its
+        # Compliance & Statutory tab isn't empty.
         demo_ids = [u.pk for u in map(_user, ("contractor_4444444444", "contractor_5555555555")) if u]
         handled_codes = set(SITE_COMPLIANCE)
-        auditorial = 0
         for a in (ContractorSiteAllotment.objects
                   .filter(status="APPROVED", binding__binding_status="ACCEPTED",
                           binding__contractor_id__in=demo_ids)
@@ -714,8 +692,40 @@ class Command(BaseCommand):
                     value = site.state
                 setattr(site, key, value)
             site.save(update_fields=list(site_compliance_extra.keys()))
-            auditorial += 1
-            _seed_audit(a.binding.contractor, site, 62, f"UN7050{60 + auditorial:02d}")
+
+        # --- Compliance evidence: drives each site's average and the PF/ESIC
+        # history card from real submission rows. Per-site compliance % =
+        # verified share (100 × VERIFIED / total) — genuine, not seeded numbers.
+        # Seeded rows are tagged SEED-<SITE-CODE> so re-running replaces only
+        # our own rows and never touches uploads the user made from the portal. ---
+        from bss_core.models import SubmissionEvidence as _Evidence
+        from decimal import Decimal as _Decimal
+
+        def _seed_evidence(contractor, site, employer_name, docs, month="October"):
+            tag = f"SEED-{(site.site_code or 'X').upper()}-"
+            _Evidence.objects.filter(user=contractor, unique_no__startswith=tag).delete()
+            for i, (doc_type, document_type, status) in enumerate(docs, start=1):
+                _Evidence.objects.create(
+                    user=contractor, role="contractor", doc_type=doc_type,
+                    document_type=document_type, site=site.site_name,
+                    period=f"{month} 2026-27", month=month, financial_year="2026-27",
+                    state=(site.state or "").strip(), employer=employer_name,
+                    is_mandatory=True, unique_no=f"{tag}{i:02d}",
+                    ocr_accuracy=_Decimal("100.00") if status == "VERIFIED" else _Decimal("96.00"),
+                    status=status)
+
+        # One PF + one ESIC challan + a register filed (verified) and one line
+        # still in-flight — so the site lands at 3 of 4 = 75%.
+        METRO_DOCS = [
+            ("EPF Challan", "EPF", "VERIFIED"),
+            ("ESIC Challan", "ESIC", "VERIFIED"),
+            ("CLRA Register - Form XIII", "CLRA", "VERIFIED"),
+            ("Payment of Wages Register", "POW", "PENDING"),
+        ]
+        metro_site = demo_sites.get("DEMO-SITE-001")
+        con444 = _user("contractor_4444444444")
+        if metro_site and con444:
+            _seed_evidence(con444, metro_site, "Adani Infra Pvt Ltd", METRO_DOCS)
 
         # Attach the demo job postings to the primary demo site so a worker
         # applying on Rozgar raises a site-specific binding request.
