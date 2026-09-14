@@ -1957,7 +1957,7 @@ def _compliance_doc_row(c):
         "worker": _party_name(c.worker) if c.worker else None,
         "issue": _dts(c.issue_date) if c.issue_date else (_dts(c.created_at.date()) if c.created_at else ""),
         "expiry": _dts(c.due_date) if c.due_date else "",
-        "verification": _d(c.verification) or ("Verified" if verified else "Pending"),
+        "verification": _d(c.verification) or "Pending",
         "status": "Active" if verified else ("Expired" if st == "EXPIRED" else "Expiring"),
     }
 
