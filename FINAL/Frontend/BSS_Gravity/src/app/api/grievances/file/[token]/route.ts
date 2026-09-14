@@ -1,22 +1,17 @@
 import { apiError } from '@/server/api';
 import { getRuntimeConfig } from '@/server/config';
 import { upstreamStream } from '@/server/http';
-import { requireApiSession } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
 
-type RouteContext = { params: Promise<{ id: string }> };
+type Context = { params: Promise<{ token: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+// No session: the single-use token IS the credential (5-min expiry, one read).
+export async function GET(_request: Request, context: Context) {
   try {
-    const session = await requireApiSession('Worker');
-    const { id } = await context.params;
+    const { token } = await context.params;
     const config = getRuntimeConfig();
-    const upstream = await upstreamStream(
-      config.apiBaseUrl,
-      `/v1/worker/grievances/${encodeURIComponent(id)}/audio`,
-      session,
-    );
+    const upstream = await upstreamStream(config.apiBaseUrl, `/v1/grievances/file/${encodeURIComponent(token)}`, null);
     const headers = new Headers();
     for (const name of ['Content-Type', 'Content-Length', 'Content-Disposition']) {
       const value = upstream.headers.get(name);
@@ -26,6 +21,6 @@ export async function GET(_request: Request, context: RouteContext) {
     headers.set('Cache-Control', 'private, no-store, max-age=0');
     return new Response(upstream.body, { status: 200, headers });
   } catch (error) {
-    return apiError(error, 'Recording could not be retrieved.');
+    return apiError(error, 'The file could not be retrieved.');
   }
 }

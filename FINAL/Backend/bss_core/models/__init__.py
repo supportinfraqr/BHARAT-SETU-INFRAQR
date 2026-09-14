@@ -55,6 +55,7 @@ from .operations import (
     WorkerGatePass,
     WorkerGrievance,
     GrievanceResponse,
+    GrievanceFileToken,
     DocumentAccessToken,
     LeaveType,
     LeaveRequest,

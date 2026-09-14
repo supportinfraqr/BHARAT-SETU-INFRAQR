@@ -200,12 +200,18 @@ class WorkerGrievance(models.Model):
     STATUS = [("RECORDED", "Recorded"), ("SUBMITTED", "Submitted"),
               ("VIEWED_ON_DASHBOARD", "Viewed on Dashboard"), ("OPEN", "Open"),
               ("IN_PROGRESS", "In Progress"), ("RESOLVED", "Resolved"),
-              ("REOPENED", "Reopened")]
+              ("REOPENED", "Reopened"), ("CLOSED", "Closed")]
     CATEGORY = [("WAGES", "Wages"), ("SAFETY", "Safety"), ("HARASSMENT", "Harassment"),
                 ("ACCOMMODATION", "Accommodation"), ("BENEFITS", "Benefits"),
                 ("OTHER", "Other")]
 
     worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="grievances")
+    # Snapshot of the parties at submission time so contractor/employer keep an
+    # audit view of the ticket even after the binding ends.
+    contractor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="contractor_grievances")
+    employer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="employer_grievances")
     ticket_no = models.CharField(max_length=40, unique=True, blank=True)
     category = models.CharField(max_length=20, choices=CATEGORY, default="OTHER")
     language = models.CharField(max_length=40, blank=True)
@@ -214,12 +220,15 @@ class WorkerGrievance(models.Model):
     recording_duration_secs = models.IntegerField(null=True, blank=True)
     body = models.CharField(max_length=1000, blank=True)
     attachment_file = models.CharField(max_length=255, blank=True)
+    attachment = models.FileField(upload_to="worker_grievances/%Y/%m/", blank=True, null=True)
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name="assigned_grievances")
     status = models.CharField(max_length=30, choices=STATUS, default="RECORDED")
     submitted_at = models.DateTimeField(null=True, blank=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
     reopened_at = models.DateTimeField(null=True, blank=True)
+    resolution_confirmed = models.BooleanField(default=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -251,6 +260,7 @@ class GrievanceResponse(models.Model):
                               related_name="+")
     body = models.CharField(max_length=2000, blank=True)
     attachment_file = models.CharField(max_length=255, blank=True)
+    attachment = models.FileField(upload_to="grievance_responses/%Y/%m/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -259,6 +269,38 @@ class GrievanceResponse(models.Model):
 
     def __str__(self):
         return str(self.grievance_id)
+
+
+class GrievanceFileToken(models.Model):
+    """Single-use, short-lived token granting one read of a grievance file.
+
+    Files are never exposed as stable URLs: the client asks for a token (after a
+    role/visibility check) and exchanges it once at ``/v1/grievances/file/<token>``
+    within ``expires_at``. The raw token is stored only as a SHA-256 hash."""
+
+    KIND = [("audio", "Audio recording"), ("attachment", "Attachment")]
+
+    grievance = models.ForeignKey(WorkerGrievance, on_delete=models.CASCADE, related_name="file_tokens")
+    response = models.ForeignKey(GrievanceResponse, on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name="file_tokens")
+    kind = models.CharField(max_length=20, choices=KIND)
+    issued_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="issued_grievance_tokens")
+    token_hash = models.CharField(max_length=128, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "grievance_file_token"
+        indexes = [models.Index(fields=["grievance"], name="idx_gft_grievance")]
+
+    @property
+    def is_valid(self):
+        return self.used_at is None and self.expires_at > timezone.now()
+
+    def __str__(self):
+        return f"{self.grievance_id} {self.kind}"
 
 
 class DocumentAccessToken(models.Model):

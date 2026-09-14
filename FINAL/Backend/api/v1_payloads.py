@@ -1615,86 +1615,101 @@ def _contractor_leave_approvals(user):
 
 def _worker_grievances(user):
     gs = WorkerGrievance.objects.filter(worker=user).order_by("-created_at")
-    open_count = gs.exclude(status="RESOLVED").count() if gs else 0
+    open_count = gs.exclude(status__in=("RESOLVED", "CLOSED")).count() if gs else 0
     recent_item = {"id": "None", "status": "No open grievances", "date": "—"}
     if gs.exists():
         first = gs.first()
         recent_item = {
             "id": _d(first.ticket_no, f"GRV-{first.id}"),
-            "status": _d(first.status, "OPEN"),
+            "status": _GRIEVANCE_UI_STATUS.get(str(first.status).upper(), "Submitted"),
             "date": _dts(first.created_at.date() if hasattr(first.created_at, "date") else first.created_at),
         }
     return {"openCount": open_count, "recent": recent_item}
 
 
 _GRIEVANCE_UI_STATUS = {
-    "RECORDED": "Open", "SUBMITTED": "Open", "VIEWED_ON_DASHBOARD": "Open",
+    "RECORDED": "Submitted", "SUBMITTED": "Submitted", "VIEWED_ON_DASHBOARD": "Open",
     "OPEN": "Open", "IN_PROGRESS": "In Progress", "RESOLVED": "Resolved",
-    "REOPENED": "Reopened",
+    "REOPENED": "Reopened", "CLOSED": "Closed",
 }
-_GRIEVANCE_ACTOR = {"worker": "Worker", "contractor": "Contractor", "employer": "Employer"}
+_GRIEVANCE_ACTOR = {"worker": "Worker", "contractor": "Contractor", "employer": "Employer", "bss": "BSS"}
+_GRIEVANCE_CATEGORY = {"WAGES": "Wages", "SAFETY": "Safety", "HARASSMENT": "Harassment",
+                       "ACCOMMODATION": "Accommodation", "BENEFITS": "Benefits", "OTHER": "Other"}
 
 
-def _grievance_row(g, binding=None):
-    """Contractor/employer grievance register row (shared by both portals)."""
+def _grievance_context(g):
+    """Contractor / employer / site for a grievance — the snapshot first, else the
+    worker's binding (accepted, else most recent) so the audit view survives an
+    unbind and legacy rows still resolve."""
+    contractor, employer, site = g.contractor, g.employer, None
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=g.worker, binding_status="ACCEPTED")
+               .select_related("contractor", "site", "site__employer").first())
+    if binding is None:
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker=g.worker)
+                   .select_related("contractor", "site", "site__employer")
+                   .order_by("-created_at").first())
+    if binding is not None:
+        contractor = contractor or binding.contractor
+        employer = employer or (binding.site.employer if binding.site else None)
+        site = binding.site
+    return contractor, employer, site
+
+
+def _grievance_row(g):
+    """Canonical grievance row shared by the worker / contractor / employer portals."""
     wi = _get_identity(g.worker)
-    site = binding.site if binding else None
-    employer_name = contractor_name = ""
-    if binding:
-        cp = getattr(binding.contractor, "contractor_profile", None)
-        contractor_name = _d(cp.contractor_name if cp and cp.contractor_name else binding.contractor.username)
-        if site and site.employer:
-            ep = getattr(site.employer, "employer_profile", None)
-            employer_name = _d(ep.employer_name if ep and ep.employer_name else site.employer.username)
+    contractor, employer, site = _grievance_context(g)
     replies = [{
+        "id": str(r.id),
         "by": _GRIEVANCE_ACTOR.get((getattr(r.actor, "role", "") or r.actor_role or "").lower(), "Worker"),
         "text": _d(r.body),
         "at": _dts(r.created_at),
+        "attachment": bool(r.attachment),
+        "attachmentName": (r.attachment.name.split("/")[-1] if r.attachment else (_d(r.attachment_file) or None)),
     } for r in g.responses.order_by("created_at")]
     return {
         "id": str(g.id),
         "ref": _d(g.ticket_no),
-        "category": {"WAGES": "Wages", "SAFETY": "Safety", "HARASSMENT": "Harassment",
-                     "ACCOMMODATION": "Accommodation", "BENEFITS": "Benefits",
-                     "OTHER": "Other"}.get(str(g.category).upper(), "Other"),
-        "status": _GRIEVANCE_UI_STATUS.get(str(g.status).upper(), "Open"),
+        "category": _GRIEVANCE_CATEGORY.get(str(g.category).upper(), "Other"),
+        "status": _GRIEVANCE_UI_STATUS.get(str(g.status).upper(), "Submitted"),
         "worker": _d(wi.name if wi and wi.name else g.worker.username),
         "workerId": _d(wi.bss_worker_id if wi else ""),
         "site": site.site_name if site else "",
-        "employer": employer_name,
-        "contractor": contractor_name,
+        "employer": _org_name(employer) if employer else "",
+        "contractor": _org_name(contractor) if contractor else "",
         "raisedAt": _dts(g.created_at),
         "updatedAt": _dts(g.updated_at),
         "description": _d(g.body),
         "audioAvailable": bool(g.audio),
-        "attachment": _d(g.attachment_file) or None,
+        "duration": g.recording_duration_secs or 0,
+        "attachmentName": (g.attachment.name.split("/")[-1] if g.attachment else (_d(g.attachment_file) or None)),
         "replyHistory": replies,
-        "resolutionConfirmed": False,
+        "resolutionConfirmed": bool(g.resolution_confirmed),
+        "resolvedAt": _dts(g.resolved_at) if g.resolved_at else "",
+        "confirmedAt": _dts(g.confirmed_at) if g.confirmed_at else "",
     }
 
 
-def _grievances_for_bindings(bindings):
-    rows = []
-    for b in bindings:
-        for g in (WorkerGrievance.objects.filter(worker=b.worker)
-                  .select_related("worker").prefetch_related("responses", "responses__actor")[:30]):
-            rows.append(_grievance_row(g, b))
+def _contractor_grievances(user):
+    gs = (WorkerGrievance.objects
+          .filter(Q(contractor=user) | Q(worker__worker_bindings__contractor=user))
+          .distinct().select_related("worker")
+          .prefetch_related("responses", "responses__actor")[:60])
+    rows = [_grievance_row(g) for g in gs]
     rows.sort(key=lambda r: r["raisedAt"] or "", reverse=True)
     return rows
 
 
-def _contractor_grievances(user):
-    bindings = (WorkerContractorBinding.objects
-                .filter(contractor=user, binding_status="ACCEPTED")
-                .select_related("worker", "contractor", "site", "site__employer"))
-    return _grievances_for_bindings(bindings)
-
-
 def _employer_grievances(user):
-    bindings = (WorkerContractorBinding.objects
-                .filter(site__employer=user, binding_status="ACCEPTED")
-                .select_related("worker", "contractor", "site", "site__employer"))
-    return _grievances_for_bindings(bindings)
+    gs = (WorkerGrievance.objects
+          .filter(Q(employer=user) | Q(worker__worker_bindings__site__employer=user))
+          .distinct().select_related("worker")
+          .prefetch_related("responses", "responses__actor")[:60])
+    rows = [_grievance_row(g) for g in gs]
+    rows.sort(key=lambda r: r["raisedAt"] or "", reverse=True)
+    return rows
 
 
 def _worker_geography():

@@ -212,10 +212,13 @@ export type ContractorAuditReport = {
   id: string; uniqueNo: string; site: string; employer: string; period: string; reportDate: string; score: number; scorePercent: number; actWise: Array<{ act: string; form: string; nature: string; score: number; status: string; auditorRemarks: string; vendorRemarks: string }>;
 };
 
+export type GrievanceStatus = 'Submitted' | 'Open' | 'In Progress' | 'Resolved' | 'Reopened' | 'Closed';
+export type GrievanceReply = { id:string; by:'Worker'|'Contractor'|'Employer'|'BSS'; text:string; at:string; attachment:boolean; attachmentName:string|null };
 export type ContractorGrievance = {
-  id: string; ref: string; category: string; status: 'Open' | 'In Progress' | 'Resolved' | 'Reopened';
+  id: string; ref: string; category: string; status: GrievanceStatus;
   worker: string; workerId: string; site: string; employer: string; contractor: string; raisedAt: string; updatedAt: string; description: string;
-  audioAvailable: boolean; attachment: string | null; replyHistory: Array<{ by: 'Contractor' | 'Employer' | 'Worker'; text: string; at: string }>; resolutionConfirmed: boolean;
+  audioAvailable: boolean; duration: number; attachmentName: string | null; replyHistory: GrievanceReply[]; resolutionConfirmed: boolean;
+  resolvedAt: string; confirmedAt: string;
 };
 
 // ── Payroll (BSS_contractor_payroll.csv) ────────────────────────────────────

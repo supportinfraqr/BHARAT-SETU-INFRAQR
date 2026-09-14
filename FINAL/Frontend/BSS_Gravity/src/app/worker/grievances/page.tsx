@@ -9,13 +9,17 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { hasFoulLanguage } from '@/lib/profanity';
+import { grievanceFileBlobUrl, downloadGrievanceFile } from '@/lib/grievanceFiles';
 import { useWorker } from '@/contexts/WorkerContext';
 
 // Statuses mirror the BSS grievance lifecycle (schema: Submitted, Under Review,
 // In Progress, Resolved). UI never invents new statuses.
-type GrievanceStatus = 'Submitted' | 'Under Review' | 'In Progress' | 'Resolved';
+type GrievanceStatus = 'Submitted' | 'Open' | 'In Progress' | 'Resolved' | 'Reopened' | 'Closed';
+
+type Reply = { id: string; by: 'Worker' | 'Contractor' | 'Employer' | 'BSS'; text: string; at: string; attachment: boolean; attachmentName: string | null };
 
 type Ticket = {
+  id: string;
   ref: string;
   category: string;
   status: GrievanceStatus;
@@ -25,27 +29,33 @@ type Ticket = {
   raisedAt: string;
   updatedAt: string;
   description: string;
-  contractorReply: string | null;
-  audioUrl?: string;
-  duration?: number;
+  audioAvailable: boolean;
+  duration: number;
+  attachmentName: string | null;
+  replyHistory: Reply[];
+  resolutionConfirmed: boolean;
 };
 
 type BackendGrievance = {
-  id: number;
+  id: string;
   ref: string;
   category: string;
   status: GrievanceStatus;
-  body: string;
-  language: string;
-  attachment: string;
-  raisedBy: string;
-  assignedTo: string;
+  description: string;
+  worker: string;
+  workerId: string;
+  site: string;
+  employer: string;
+  contractor: string;
   raisedAt: string;
   updatedAt: string;
-  resolvedAt: string;
-  response: string;
-  audioUrl: string;
+  audioAvailable: boolean;
   duration: number;
+  attachmentName: string | null;
+  replyHistory: Reply[];
+  resolutionConfirmed: boolean;
+  resolvedAt: string;
+  confirmedAt: string;
 };
 
 function formatDateTime(value: string): string {
@@ -57,9 +67,10 @@ function formatDateTime(value: string): string {
 
 const TIMELINE_STEPS: Array<{ status: GrievanceStatus; label: string; note: string }> = [
   { status:'Submitted', label:'Submitted', note:'Grievance recorded and assigned a reference.' },
-  { status:'Under Review', label:'Under Review', note:'Being assessed by the resolution team.' },
+  { status:'Open', label:'Open', note:'Seen by the resolution team.' },
   { status:'In Progress', label:'Action / Response', note:'Resolution action is in progress.' },
-  { status:'Resolved', label:'Resolved / Closed', note:'Closed after resolution is confirmed.' },
+  { status:'Resolved', label:'Resolved', note:'Resolved — awaiting your confirmation.' },
+  { status:'Closed', label:'Closed', note:'You confirmed the resolution.' },
 ];
 
 type SpeechRecognitionLike = {
@@ -78,7 +89,7 @@ const LANGUAGE_BCP47: Record<string, string> = {
   Odia: 'or-IN', Urdu: 'ur-IN', Assamese: 'as-IN',
 };
 
-const STATUS_INDEX: Record<GrievanceStatus, number> = { Submitted:0, 'Under Review':1, 'In Progress':2, Resolved:3 };
+const STATUS_INDEX: Record<GrievanceStatus, number> = { Submitted:0, Open:1, 'In Progress':2, Resolved:3, Reopened:2, Closed:4 };
 
 export default function GrievancePage() {
   const { worker } = useWorker();
@@ -86,8 +97,7 @@ export default function GrievancePage() {
   const [language, setLanguage] = useState('Hindi');
   const [category, setCategory] = useState('Wages');
   const [description, setDescription] = useState('');
-  const [privateMode, setPrivateMode] = useState(true);
-  const [attachment, setAttachment] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'recorded' | 'playing'>('idle');
   const [timer, setTimer] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,20 +119,29 @@ export default function GrievancePage() {
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const replyFileRef = useRef<HTMLInputElement>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyFile, setReplyFile] = useState<File | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [playUrl, setPlayUrl] = useState('');
 
   const toTicket = useCallback((g: BackendGrievance): Ticket => ({
+    id: g.id,
     ref: g.ref,
     category: g.category,
     status: g.status,
-    raisedBy: g.raisedBy,
-    site: worker.employment?.site || '—',
-    assignedTo: g.assignedTo,
+    raisedBy: 'You (Self)',
+    site: g.site || worker.employment?.site || '—',
+    assignedTo: g.contractor ? `Contractor · ${g.contractor}` : 'Awaiting assignment',
     raisedAt: formatDateTime(g.raisedAt),
     updatedAt: formatDateTime(g.updatedAt),
-    description: g.body || 'Voice grievance recorded (see audio).',
-    contractorReply: g.response || null,
-    audioUrl: g.audioUrl || undefined,
+    description: g.description || 'Voice grievance recorded (see audio).',
+    audioAvailable: g.audioAvailable,
     duration: g.duration || 0,
+    attachmentName: g.attachmentName,
+    replyHistory: g.replyHistory ?? [],
+    resolutionConfirmed: g.resolutionConfirmed,
   }), [worker.employment?.site]);
 
   const load = useCallback(async () => {
@@ -140,6 +159,7 @@ export default function GrievancePage() {
     }
   }, [toTicket]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
   useEffect(() => { void load(); }, [load]);
 
   // Deep-link support: /worker/grievances#GRV-… opens the grievance in Track Status.
@@ -289,7 +309,7 @@ export default function GrievancePage() {
       form.append('category', category);
       form.append('body', description || liveTranscript);
       form.append('language', language);
-      form.append('attachment', attachment ?? '');
+      if (attachment) form.append('attachment', attachment, attachment.name);
       form.append('duration', String(timer));
       if (audioBlob) form.append('audio', audioBlob, 'recording.webm');
       const response = await fetch('/api/worker/grievances', { method: 'POST', body: form });
@@ -313,15 +333,57 @@ export default function GrievancePage() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Lifecycle actions on a ticket (reply / confirm / reopen) via the shared,
+  // attachment-capable endpoint.
+  const runAction = async (ticket: Ticket, action: 'reply' | 'confirm' | 'reopen', body?: string, file?: File | null) => {
+    setActionBusy(true); setActionError('');
+    try {
+      const form = new FormData();
+      form.append('action', action);
+      if (body) form.append('body', body);
+      if (file) form.append('attachment', file, file.name);
+      const response = await fetch(`/api/grievances/${ticket.id}/action`, { method: 'POST', body: form });
+      const json = await response.json() as { data?: BackendGrievance; error?: string };
+      if (!response.ok || !json.data) throw new Error(json.error || 'The grievance could not be updated.');
+      const updated = toTicket(json.data);
+      setTickets(current => current.map(t => t.id === updated.id ? updated : t));
+      setSelectedTicket(updated);
+      return true;
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'The grievance could not be updated.');
+      return false;
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const sendReply = async (ticket: Ticket) => {
+    if (!replyText.trim() && !replyFile) return;
+    const ok = await runAction(ticket, 'reply', replyText.trim(), replyFile);
+    if (ok) { setReplyText(''); setReplyFile(null); }
+  };
+
+  const playAudio = async (ticket: Ticket) => {
+    setActionError('');
+    try {
+      if (playUrl) { URL.revokeObjectURL(playUrl); setPlayUrl(''); }
+      const { url } = await grievanceFileBlobUrl(ticket.id, 'audio');
+      setPlayUrl(url);
+      window.setTimeout(() => { void audioElRef.current?.play(); }, 50);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'The recording could not be opened.');
+    }
+  };
+
   const statusBadge = (status: string) => {
-    const config: Record<string, string> = { 'Submitted':'bg-slate-100 text-slate-600', 'Under Review':'bg-blue-100 text-blue-700', 'In Progress':'bg-orange-100 text-[#F47A32]', 'Resolved':'bg-green-100 text-[#2F9E67]' };
+    const config: Record<string, string> = { 'Submitted':'bg-slate-100 text-slate-600', 'Open':'bg-blue-100 text-blue-700', 'In Progress':'bg-orange-100 text-[#F47A32]', 'Resolved':'bg-green-100 text-[#2F9E67]', 'Reopened':'bg-red-100 text-red-700', 'Closed':'bg-emerald-100 text-emerald-700' };
     return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${config[status] ?? 'bg-gray-100 text-gray-600'}`}>{status}</span>;
   };
 
   const counts = {
     submitted: tickets.filter(t => t.status === 'Submitted').length,
-    underReview: tickets.filter(t => t.status === 'Under Review').length,
-    inProgress: tickets.filter(t => t.status === 'In Progress').length,
+    open: tickets.filter(t => t.status === 'Open').length,
+    inProgress: tickets.filter(t => t.status === 'In Progress' || t.status === 'Reopened').length,
     resolved: tickets.filter(t => t.status === 'Resolved').length,
     total: tickets.length,
   };
@@ -385,7 +447,7 @@ export default function GrievancePage() {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label:'Submitted', value: counts.submitted, tone:'text-slate-600 bg-slate-50 border-slate-100' },
-          { label:'Under Review', value: counts.underReview, tone:'text-blue-700 bg-blue-50 border-blue-100' },
+          { label:'Open', value: counts.open, tone:'text-blue-700 bg-blue-50 border-blue-100' },
           { label:'In Progress', value: counts.inProgress, tone:'text-[#F47A32] bg-orange-50 border-orange-100' },
           { label:'Resolved', value: counts.resolved, tone:'text-[#2F9E67] bg-green-50 border-green-100' },
         ].map(stat => <div key={stat.label} className={`rounded-xl border p-4 ${stat.tone}`}><strong className="block text-2xl font-bold">{stat.value}</strong><span className="text-[11px] font-semibold uppercase tracking-wider opacity-80">{stat.label}</span></div>)}
@@ -547,20 +609,14 @@ export default function GrievancePage() {
                   <div className="flex items-center gap-2 min-w-0">
                     <Paperclip size={16} className="text-gray-400 flex-shrink-0"/>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex-shrink-0">Upload Letter / Letter Image</span>
-                    {attachment ? <span className="text-xs font-semibold text-[#073B67] truncate flex items-center gap-1"><FileAudio size={14}/>{attachment}<button onClick={() => setAttachment(null)} className="text-gray-400 hover:text-red-500"><X size={13}/></button></span> : <span className="text-xs text-gray-400">No file chosen</span>}
+                    {attachment ? <span className="text-xs font-semibold text-[#073B67] truncate flex items-center gap-1"><FileAudio size={14}/>{attachment.name}<button onClick={() => setAttachment(null)} className="text-gray-400 hover:text-red-500"><X size={13}/></button></span> : <span className="text-xs text-gray-400">No file chosen</span>}
                   </div>
-                  <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setAttachment(f.name); }}/>
+                  <input ref={fileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setAttachment(f); }}/>
                   <button onClick={() => fileRef.current?.click()} className="text-xs font-bold text-[#073B67] bg-white border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 flex-shrink-0">Choose file</button>
                 </div>
 
-                {/* Private toggle */}
-                <label className="flex items-start gap-3 bg-orange-50/70 border border-orange-100 rounded-xl p-3 cursor-pointer">
-                  <input type="checkbox" checked={privateMode} onChange={e => setPrivateMode(e.target.checked)} className="mt-0.5 accent-[#F47A32] w-4 h-4"/>
-                  <span className="text-xs text-gray-700 leading-relaxed"><strong className="flex items-center gap-1 text-[#F47A32]"><MessageSquareWarning size={13}/> Private submission</strong> Your BSS Worker ID is attached for resolution, but your identity is obscured from the contractor when this is enabled.</span>
-                </label>
-
                 {submitError && <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{submitError}</p>}
-                <button onClick={submitGrievance} disabled={isSubmitting || (!description.trim() && !liveTranscript.trim() && !audioBlob)} className="w-full bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white py-3 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2">
+                <button onClick={submitGrievance} disabled={isSubmitting || (!description.trim() && !liveTranscript.trim() && !audioBlob && !attachment)} className="w-full bg-[#073B67] hover:bg-[#062D4F] disabled:opacity-60 text-white py-3 rounded-xl font-bold text-sm transition-colors flex justify-center items-center gap-2">
                   {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                   {isSubmitting ? 'Submitting Grievance...' : 'Submit Grievance'}
                 </button>
@@ -651,19 +707,52 @@ export default function GrievancePage() {
                       <Timeline ticket={ticket} />
                     </div>
                     <div className="space-y-3">
-                      <div className="bg-white border border-gray-200 rounded-xl p-4">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Latest Response / Update</p>
-                        {ticket.contractorReply ? <p className="text-xs text-gray-700 leading-relaxed">{ticket.contractorReply}</p> : <p className="text-xs text-gray-400 italic">Awaiting response — the assigned authority has been notified.</p>}
-                      </div>
-                      {ticket.audioUrl && (
-                        <div className="bg-white border border-gray-200 rounded-xl p-4">
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><FileAudio size={12}/> Voice recording</p>
-                          <audio controls src={ticket.audioUrl} className="w-full" />
+                      {/* Original attachment (secure single-use link) */}
+                      {ticket.attachmentName && (
+                        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-3">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5"><Paperclip size={12}/>Your attachment</p>
+                          <button onClick={() => void downloadGrievanceFile(ticket.id, 'attachment')} className="text-xs font-bold text-[#073B67] hover:underline truncate">{ticket.attachmentName}</button>
                         </div>
                       )}
+                      {/* Voice recording — single request → blob (single-use token) */}
+                      {ticket.audioAvailable && (
+                        <div className="bg-white border border-gray-200 rounded-xl p-4">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5"><FileAudio size={12}/> Voice recording</p>
+                          {playUrl ? <audio controls autoPlay src={playUrl} className="w-full" /> : <button onClick={() => void playAudio(ticket)} className="text-xs font-bold text-[#073B67] hover:underline flex items-center gap-1"><Play size={13}/>Play recording</button>}
+                        </div>
+                      )}
+                      {/* Conversation + worker reply */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Conversation</p>
+                        <div className="space-y-2 max-h-72 overflow-y-auto">
+                          {ticket.replyHistory.length === 0 && <p className="text-xs text-gray-400 italic">No replies yet — the contractor and principal employer have been notified.</p>}
+                          {ticket.replyHistory.map(entry => (
+                            <div key={entry.id} className={`rounded-lg border p-2.5 text-xs ${entry.by === 'Worker' ? 'bg-gray-50 border-gray-100 ml-6' : 'bg-blue-50 border-blue-100 mr-6'}`}>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{entry.by} · {formatDateTime(entry.at)}</p>
+                              {entry.text && <p className="text-gray-800 leading-5 whitespace-pre-line">{entry.text}</p>}
+                              {entry.attachment && <button onClick={() => void downloadGrievanceFile(ticket.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
+                            </div>
+                          ))}
+                        </div>
+                        {ticket.status !== 'Closed' && (
+                          <div className="mt-3 space-y-2">
+                            <textarea rows={2} value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Reply to the contractor / employer…" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066CC] resize-none"/>
+                            <div className="flex items-center gap-2">
+                              <input ref={replyFileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setReplyFile(f); }}/>
+                              <button onClick={() => replyFileRef.current?.click()} className="text-[11px] font-bold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 flex items-center gap-1"><Paperclip size={12}/>{replyFile ? replyFile.name : 'Attach'}</button>
+                              {replyFile && <button onClick={() => setReplyFile(null)} aria-label="Remove attachment" className="text-gray-400 hover:text-red-500"><X size={13}/></button>}
+                              <button onClick={() => void sendReply(ticket)} disabled={actionBusy || (!replyText.trim() && !replyFile)} className="ml-auto text-xs font-bold text-white bg-[#073B67] rounded-lg px-3 py-1.5 hover:bg-[#062D4F] disabled:opacity-50 flex items-center gap-1"><Send size={12}/>Send reply</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Lifecycle actions */}
                       <div className="flex flex-wrap gap-2 items-center">
+                        {ticket.status === 'Resolved' && <button onClick={() => void runAction(ticket, 'confirm')} disabled={actionBusy} className="text-xs font-bold text-white bg-[#2F9E67] rounded-lg px-3 py-2 hover:brightness-95 disabled:opacity-50 flex items-center gap-1"><CheckCircle2 size={13}/>Confirm resolution</button>}
+                        {['Resolved', 'Closed'].includes(ticket.status) && <button onClick={() => void runAction(ticket, 'reopen')} disabled={actionBusy} className="text-xs font-bold text-red-600 border border-red-200 rounded-lg px-3 py-2 hover:bg-red-50 disabled:opacity-50 flex items-center gap-1"><RotateCcw size={13}/>Reopen</button>}
                         <span className="text-[11px] text-gray-400 ml-auto">Auto-generated reference · {ticket.ref}</span>
                       </div>
+                      {actionError && <p className="text-xs font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{actionError}</p>}
                     </div>
                   </div>
                 </div>

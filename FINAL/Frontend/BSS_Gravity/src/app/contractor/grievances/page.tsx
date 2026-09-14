@@ -1,58 +1,83 @@
 "use client";
 
-import { useState } from 'react';
-import { CheckCircle2, FileText, Headphones, MessageSquareText, Mic, Play, Send, UserRound, Volume2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { CheckCircle2, FileText, Headphones, MessageSquareText, Paperclip, Play, RotateCcw, Send, UserRound, Volume2, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import { maskFoulLanguage } from '@/lib/profanity';
+import { downloadGrievanceFile, grievanceFileBlobUrl } from '@/lib/grievanceFiles';
 import type { ContractorGrievance } from '@/types/portal';
 
 const statusTone: Record<ContractorGrievance['status'], string> = {
-  Open:'bg-blue-50 text-blue-700', 'In Progress':'bg-orange-50 text-orange-700', Resolved:'bg-green-50 text-green-700', Reopened:'bg-red-50 text-red-700',
+  Submitted:'bg-slate-50 text-slate-600', Open:'bg-blue-50 text-blue-700', 'In Progress':'bg-orange-50 text-orange-700', Resolved:'bg-green-50 text-green-700', Reopened:'bg-red-50 text-red-700', Closed:'bg-emerald-50 text-emerald-700',
 };
 
 export default function ContractorGrievancesPage() {
-  const { contractor, replaceContractor, mutate, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, employerScope, scoped } = useContractor();
   const [selectedId, setSelectedId] = useState(contractor.grievances[0]?.id ?? '');
   const [reply, setReply] = useState('');
+  const [replyFile, setReplyFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [playUrl, setPlayUrl] = useState('');
+  const replyFileRef = useRef<HTMLInputElement>(null);
 
   const grievances = scoped(contractor.grievances, g => g.employer);
   const selected = grievances.find(g => g.id === selectedId) ?? grievances[0];
 
   const counts = {
     total: grievances.length,
-    open: grievances.filter(g => g.status === 'Open').length,
-    progress: grievances.filter(g => g.status === 'In Progress').length,
+    open: grievances.filter(g => g.status === 'Open' || g.status === 'Submitted').length,
+    progress: grievances.filter(g => g.status === 'In Progress' || g.status === 'Reopened').length,
     resolved: grievances.filter(g => g.status === 'Resolved').length,
-    reopened: grievances.filter(g => g.status === 'Reopened').length,
+    closed: grievances.filter(g => g.status === 'Closed').length,
   };
 
-  async function applyAction(action: 'reply' | 'resolve' | 'reopen', body?: string) {
+  async function applyAction(action: 'reply' | 'resolve' | 'reopen', body?: string, file?: File | null) {
     if (!selected) return null;
     setBusy(true); setError(''); setNotice('');
     try {
-      const result = await mutate<{ data: ContractorGrievance }>('grievances', 'PATCH', { id: selected.id, action, ...(body ? { body } : {}) });
-      replaceContractor({ ...contractor, grievances: contractor.grievances.map(g => g.id === selected.id ? result.data : g) });
+      const form = new FormData();
+      form.append('action', action);
+      if (body) form.append('body', body);
+      if (file) form.append('attachment', file, file.name);
+      const response = await fetch(`/api/grievances/${selected.id}/action`, { method: 'POST', body: form });
+      const result = await response.json() as { data?: ContractorGrievance; error?: string };
+      if (!response.ok || !result.data) throw new Error(result.error || 'Grievance could not be updated.');
+      replaceContractor({ ...contractor, grievances: contractor.grievances.map(g => g.id === selected.id ? result.data! : g) });
       return result.data;
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Grievance could not be updated.'); return null; }
     finally { setBusy(false); }
   }
 
   async function sendReply() {
-    if (!selected || !reply.trim()) return;
-    const updated = await applyAction('reply', reply.trim());
+    if (!selected || (!reply.trim() && !replyFile)) return;
+    const updated = await applyAction('reply', reply.trim(), replyFile);
     if (updated) {
-      setReply('');
-      setNotice(`Reply recorded on ${selected.ref}. The worker can see the conversation in their portal.`);
+      setReply(''); setReplyFile(null);
+      setNotice(`Reply recorded on ${selected.ref}. The worker and principal employer can see the conversation.`);
     }
   }
 
   async function resolveGrievance() {
     const updated = await applyAction('resolve');
-    if (updated) setNotice(`${selected.ref} marked resolved — awaiting worker resolution confirmation.`);
+    if (updated) setNotice(`${selected.ref} marked resolved — awaiting the worker's confirmation.`);
+  }
+
+  async function reopenGrievance() {
+    const updated = await applyAction('reopen');
+    if (updated) setNotice(`${selected.ref} reopened — the review → reply → resolve cycle restarts.`);
+  }
+
+  async function playAudio() {
+    if (!selected) return;
+    setError('');
+    try {
+      if (playUrl) { URL.revokeObjectURL(playUrl); setPlayUrl(''); }
+      const { url } = await grievanceFileBlobUrl(selected.id, 'audio');
+      setPlayUrl(url);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The recording could not be opened.'); }
   }
 
   const columns: DataColumn<ContractorGrievance>[] = [
@@ -80,7 +105,7 @@ export default function ContractorGrievancesPage() {
       <Kpi label="Open" value={counts.open} tone="text-blue-700"/>
       <Kpi label="In progress" value={counts.progress} tone="text-orange-700"/>
       <Kpi label="Resolved" value={counts.resolved} tone="text-bss-green"/>
-      <Kpi label="Reopened" value={counts.reopened} tone="text-red-600"/>
+      <Kpi label="Closed" value={counts.closed} tone="text-emerald-700"/>
     </section>
 
     <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">You see grievances from <strong>{employerScope === 'all' ? 'all bound principal employers' : employerScope}</strong>. Worker visibility is limited to workers bound to your contractor profile. Contractor and principal employer share the same grievance conversation; replies are visible to the worker and both parties.</div>
@@ -98,9 +123,9 @@ export default function ContractorGrievancesPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {selected.status !== 'Resolved' && <button disabled={busy} onClick={resolveGrievance} className="h-9 px-3 rounded-lg bg-bss-green text-white text-xs font-bold flex items-center gap-1.5 hover:brightness-95 disabled:opacity-50"><CheckCircle2 size={14}/>Mark resolved</button>}
-          {selected.resolutionConfirmed && <span className="h-9 px-3 rounded-lg bg-green-50 border border-green-100 text-green-700 text-xs font-bold inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Worker confirmed resolution</span>}
-          {selected.status === 'Reopened' && <span className="h-9 px-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-xs font-bold inline-flex items-center gap-1.5">Reopened by worker — re-review required</span>}
+          {!['Resolved', 'Closed'].includes(selected.status) && <button disabled={busy} onClick={resolveGrievance} className="h-9 px-3 rounded-lg bg-bss-green text-white text-xs font-bold flex items-center gap-1.5 hover:brightness-95 disabled:opacity-50"><CheckCircle2 size={14}/>Mark resolved</button>}
+          {['Resolved', 'Closed'].includes(selected.status) && <button disabled={busy} onClick={reopenGrievance} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-50"><RotateCcw size={14}/>Reopen</button>}
+          {selected.resolutionConfirmed && <span className="h-9 px-3 rounded-lg bg-green-50 border border-green-100 text-green-700 text-xs font-bold inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Worker confirmed</span>}
         </div>
       </header>
 
@@ -112,9 +137,10 @@ export default function ContractorGrievancesPage() {
             <p className="text-sm text-gray-800 leading-6">{maskFoulLanguage(selected.description)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {maskFoulLanguage(selected.description) !== selected.description && <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1">Offensive words masked in this case</span>}
-              {selected.audioAvailable && <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-1"><Volume2 size={12}/>Audio grievance recorded <Play size={11}/></span>}
-              {selected.attachment && <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1"><FileText size={12}/>{selected.attachment}</span>}
+              {selected.audioAvailable && <button onClick={() => void playAudio()} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-1 hover:bg-blue-100"><Volume2 size={12}/>Play audio grievance <Play size={11}/></button>}
+              {selected.attachmentName && <button onClick={() => void downloadGrievanceFile(selected.id, 'attachment')} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1 hover:bg-gray-100"><FileText size={12}/>{selected.attachmentName}</button>}
             </div>
+            {playUrl && <audio controls autoPlay src={playUrl} className="mt-3 w-full" />}
           </div>
 
           {/* Conversation */}
@@ -122,17 +148,25 @@ export default function ContractorGrievancesPage() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Conversation · Contractor & Employer reply history</p>
             <div className="space-y-3">
               {selected.replyHistory.length === 0 && <p className="text-xs text-gray-400 rounded-xl border border-dashed border-gray-200 p-4 text-center">No replies yet. Respond to the worker to begin the review → reply → resolve cycle.</p>}
-              {selected.replyHistory.map((entry, i) => (
-                <div key={i} className={`max-w-[85%] rounded-xl border p-3 text-xs ${entry.by === 'Worker' ? 'bg-gray-50 border-gray-100 ml-auto' : entry.by === 'Employer' ? 'bg-indigo-50 border-indigo-100' : 'bg-blue-50 border-blue-100'}`}>
+              {selected.replyHistory.map(entry => (
+                <div key={entry.id} className={`max-w-[85%] rounded-xl border p-3 text-xs ${entry.by === 'Worker' ? 'bg-gray-50 border-gray-100 ml-auto' : entry.by === 'Employer' ? 'bg-indigo-50 border-indigo-100' : 'bg-blue-50 border-blue-100'}`}>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{entry.by} · {new Date(entry.at).toLocaleString('en-IN')}</p>
-                  <p className="text-gray-800 leading-5">{entry.by === 'Worker' ? maskFoulLanguage(entry.text) : entry.text}</p>
+                  {entry.text && <p className="text-gray-800 leading-5 whitespace-pre-line">{entry.by === 'Worker' ? maskFoulLanguage(entry.text) : entry.text}</p>}
+                  {entry.attachment && <button onClick={() => void downloadGrievanceFile(selected.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
                 </div>
               ))}
             </div>
-            {selected.status !== 'Resolved' && (
-              <div className="mt-4 flex gap-2">
-                <input value={reply} onChange={e => setReply(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void sendReply(); }} placeholder="Reply to the worker…" className="flex-1 h-11 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20"/>
-                <button onClick={sendReply} disabled={busy || !reply.trim()} className="h-11 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50"><Send size={15}/>Reply</button>
+            {selected.status !== 'Closed' && (
+              <div className="mt-4 space-y-2">
+                <div className="flex gap-2">
+                  <input value={reply} onChange={e => setReply(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void sendReply(); }} placeholder="Reply to the worker…" className="flex-1 h-11 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-bss-interactive-blue/20"/>
+                  <button onClick={sendReply} disabled={busy || (!reply.trim() && !replyFile)} className="h-11 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold flex items-center gap-2 hover:bg-[#062D4F] disabled:opacity-50"><Send size={15}/>Reply</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input ref={replyFileRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setReplyFile(f); }}/>
+                  <button onClick={() => replyFileRef.current?.click()} className="text-[11px] font-bold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 flex items-center gap-1"><Paperclip size={12}/>{replyFile ? replyFile.name : 'Attach a file'}</button>
+                  {replyFile && <button onClick={() => setReplyFile(null)} aria-label="Remove attachment" className="text-gray-400 hover:text-red-500"><X size={13}/></button>}
+                </div>
               </div>
             )}
           </div>
@@ -154,7 +188,7 @@ export default function ContractorGrievancesPage() {
             </dl>
           </div>
           <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 text-xs text-blue-900 leading-5 flex gap-2"><Headphones size={15} className="flex-shrink-0 mt-0.5"/>Shared visibility: the principal employer can also view and reply on this grievance. Once resolved, the worker confirms — if they reopen it, the cycle restarts for both parties.</div>
-          {selected.status === 'Resolved' && !selected.resolutionConfirmed && <div className="rounded-xl bg-orange-50 border border-orange-100 p-4 text-xs text-orange-800 flex gap-2"><Mic size={15} className="flex-shrink-0 mt-0.5"/>Marked resolved — waiting for the worker&apos;s final resolution confirmation in their portal.</div>}
+          {selected.status === 'Resolved' && !selected.resolutionConfirmed && <div className="rounded-xl bg-orange-50 border border-orange-100 p-4 text-xs text-orange-800">Marked resolved — waiting for the worker&apos;s final confirmation, or either party can reopen.</div>}
         </aside>
       </div>
     </section>}

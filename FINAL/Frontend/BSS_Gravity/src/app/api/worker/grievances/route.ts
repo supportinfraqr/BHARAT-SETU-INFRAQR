@@ -30,15 +30,17 @@ export async function POST(request: Request) {
       const form = await request.formData();
       const text = typeof form.get('body') === 'string' ? String(form.get('body')) : '';
       const audio = form.get('audio');
-      if (!text.trim() && !(audio instanceof File && audio.size)) {
-        return NextResponse.json({ error: 'Describe your concern or record audio.' }, { status: 400 });
+      const attach = form.get('attachment');
+      const hasAttachment = attach instanceof File && attach.size > 0;
+      if (!text.trim() && !(audio instanceof File && audio.size) && !hasAttachment) {
+        return NextResponse.json({ error: 'Describe your concern, record audio or attach a file.' }, { status: 400 });
       }
       out.append('body', text);
       out.append('category', String(form.get('category') ?? 'Other'));
       out.append('language', String(form.get('language') ?? ''));
-      out.append('attachment', String(form.get('attachment') ?? ''));
       out.append('duration', String(form.get('duration') ?? ''));
       if (audio instanceof File && audio.size) out.append('audio', audio, audio.name || 'recording.webm');
+      if (hasAttachment) out.append('attachment', attach as File, (attach as File).name || 'attachment');
     } else {
       const body = await readJsonObject(request);
       const text = typeof body.body === 'string' ? body.body : '';
