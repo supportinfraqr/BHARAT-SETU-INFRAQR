@@ -2962,12 +2962,23 @@ def _employer_contractors(user):
                       "CANCELLED": "Cancelled"}.get(str(binding.binding_status).upper(), "Pending")
         else:
             status = _d(cp.approval_status if cp else "PENDING")
+        # Per-site allotment status for this contractor↔employer binding, so the
+        # employer can see (and propose to) secondary contractors site-by-site.
+        allotment_rows = ContractorSiteAllotment.objects.filter(
+            binding__contractor=c, binding__employer=user,
+            binding__binding_status="ACCEPTED").select_related("site")
         rows.append({
             "id": c.id, "name": _d(cp.contractor_name if cp else "", c.username),
             "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(c.id)),
             "contact": _d(cp.contact_person if cp else ""),
             "email": _d(cp.email if cp else ""),
             "siteIds": site_ids, "workers": wcount,
+            "allotments": [{
+                "siteId": a.site_id,
+                "status": {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected",
+                           "RELEASED": "Released"}.get(str(a.status).upper(), _d(a.status)),
+                "source": _d(a.source),
+            } for a in allotment_rows],
             "compliance": 0, "onboardingDate": None,
             "status": status,
             "bindingId": binding.id if (binding and accepted_binding) else None,

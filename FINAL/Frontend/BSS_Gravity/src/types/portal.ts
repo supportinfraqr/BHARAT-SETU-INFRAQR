@@ -448,6 +448,7 @@ export type EmployerContractor = {
   contact: string;
   email: string;
   siteIds: string[];
+  allotments?: Array<{ siteId: number; status: string; source?: string }>;
   workers: number;
   compliance: number;
   onboardingDate: string;

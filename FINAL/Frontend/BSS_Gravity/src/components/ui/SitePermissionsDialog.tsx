@@ -23,7 +23,7 @@ export type SitePermissionRow = {
   canRejectRelease?: boolean;
 };
 
-export type SecondaryContractor = { id: number; name: string; bindingId: number };
+export type SecondaryContractor = { id: number; name: string; bindingId: number; allotments?: Array<{ siteId: number; status: string }> };
 
 const STATUS_STYLE: Record<SitePermissionStatus, string> = {
   Approved: "bg-green-50 text-green-700 ring-green-100",
@@ -189,6 +189,14 @@ export default function SitePermissionsDialog({
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 ${STATUS_STYLE[row.status]}`}>
                       {row.status === "None" ? "Not proposed" : row.status}
                     </span>
+                    {secondary.filter(c => selectedBindings.includes(c.bindingId)).map(c => {
+                      const st = ((c.allotments ?? []).find(a => a.siteId === row.siteId)?.status ?? "None") as SitePermissionStatus;
+                      return (
+                        <span key={c.bindingId} title={`${c.name}: ${st === "None" ? "not proposed" : st}`} className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 max-w-[140px] truncate ${STATUS_STYLE[st] ?? STATUS_STYLE.None}`}>
+                          {c.name}: {st === "None" ? "—" : st}
+                        </span>
+                      );
+                    })}
                     {row.canApprove && (
                       <button
                         type="button"
