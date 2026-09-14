@@ -42,11 +42,19 @@ export default function ContractorDashboardPage() {
   const maxWorkers = Math.max(1, ...growth.map(p => p.workers));
 
   const docSummary = useMemo(() => {
-    const names = ['Aadhaar', 'PAN', 'UAN', 'ESIC IP', 'Police Verification', 'Bank Verification'];
-    return names.map(name => {
-      const docs = contractor.workerDocuments.filter(d => d.document === name);
-      const verified = docs.filter(d => d.verified).length;
-      return { name, total: docs.length, verified, done: verified === docs.length };
+    const stats = new Map<string, { total: number; verified: number }>();
+    for (const d of contractor.workerDocuments) {
+      if (!d.document) continue;
+      const e = stats.get(d.document) ?? { total: 0, verified: 0 };
+      e.total += 1;
+      if (d.verified) e.verified += 1;
+      stats.set(d.document, e);
+    }
+    const statutory = ['Aadhaar', 'PAN', 'UAN', 'ESIC IP', 'Bank Verification'];
+    const other = [...stats.keys()].filter(n => !statutory.includes(n));
+    return [...statutory, ...other].map(name => {
+      const e = stats.get(name) ?? { total: 0, verified: 0 };
+      return { name, total: e.total, verified: e.verified, done: e.total > 0 && e.verified === e.total, missing: e.total === 0 };
     });
   }, [contractor.workerDocuments]);
 
@@ -258,7 +266,17 @@ export default function ContractorDashboardPage() {
                       <p className="text-xs text-gray-500">{submission.site} · {submission.uniqueNo ? `Unique No. ${submission.uniqueNo}` : ''} · {new Date(submission.submittedAt).toLocaleDateString('en-IN')}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-medium bg-green-50 text-green-700 px-2 py-1 rounded">{submission.status}</span>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                    ['Verified', 'Approved', 'Submitted'].includes(submission.status)
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : ['Pending', 'Pending review', 'Under Review'].includes(submission.status)
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : submission.status === 'Rejected'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                  }`}>
+                    {submission.status}
+                  </span>
                 </div>
               ))}
             </div>
@@ -307,11 +325,13 @@ export default function ContractorDashboardPage() {
             </div>
             <ul className="p-4 space-y-2.5">{docSummary.map(doc => (
               <li key={doc.name} className="flex items-center gap-3">
-                <span className={`w-7 h-7 rounded-lg grid place-items-center flex-shrink-0 ${doc.done ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-500'}`}>{doc.done ? <BadgeCheck size={14}/> : <Clock size={13}/>}</span>
+                <span className={`w-7 h-7 rounded-lg grid place-items-center flex-shrink-0 ${doc.done ? 'bg-green-50 text-green-700' : doc.missing ? 'bg-gray-50 text-gray-400' : 'bg-orange-50 text-orange-500'}`}>{doc.done ? <BadgeCheck size={14}/> : <Clock size={13}/>}</span>
                 <span className="flex-1 text-xs font-medium text-gray-700">{doc.name}</span>
-                <span className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0">{doc.total ? `${doc.verified}/${doc.total}` : '—'}</span>
+                {doc.total > 0
+                  ? <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${doc.done ? 'text-green-700 bg-green-50' : 'text-orange-700 bg-orange-50'}`}>{doc.verified}/{doc.total}</span>
+                  : <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">Not uploaded</span>}
               </li>
-            ))}<p className="pt-2 text-[11px] text-gray-400">Aadhaar · PAN · UAN · ESIC IP · Police · Bank — verification across bound workers</p></ul>
+            ))}<p className="pt-2 text-[11px] text-gray-400">Aadhaar · PAN · UAN · ESIC IP · Bank — verification across bound workers</p></ul>
           </section>
 
           {/* Worker Compliance Overview */}
