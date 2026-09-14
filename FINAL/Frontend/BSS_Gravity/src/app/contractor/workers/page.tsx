@@ -22,8 +22,8 @@ const columns: DataColumn<ContractorWorker>[] = [
   { id:'status', header:'Status', value:row => row.status, render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{row.status}</span> },
 ];
 
-type RowDraft = { bssId:string; site:string; employer:string };
-const emptyRow = (): RowDraft => ({ bssId:'', site:'', employer:'' });
+type RowDraft = { bssId:string; site:string };
+const emptyRow = (): RowDraft => ({ bssId:'', site:'' });
 
 export default function WorkerMasterPage() {
   const { contractor, mutate, scoped } = useContractor();
@@ -57,10 +57,10 @@ export default function WorkerMasterPage() {
 
   async function submitBulk(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
-    const valid = rows.filter(row => row.bssId && row.site && row.employer);
-    if (!valid.length) { setError('Add at least one row with a BSS ID, site and employer.'); setBusy(false); return; }
+    const valid = rows.filter(row => row.bssId && row.site);
+    if (!valid.length) { setError('Add at least one row with a BSS ID and site.'); setBusy(false); return; }
     try {
-      const payload = valid.map(row => ({ bssId: row.bssId.trim().toUpperCase(), site: row.site, employer: row.employer }));
+      const payload = valid.map(row => ({ bssId: row.bssId.trim().toUpperCase(), site: row.site }));
       await mutate<{ data: number[] }>('workers', 'POST', { bulk: payload });
       setNotice(`Binding requests sent for ${valid.length} worker${valid.length === 1 ? '' : 's'} — each worker must accept before their profile unlocks.`); setRows([]); setModal(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Bulk binding could not be completed.'); }
@@ -78,18 +78,18 @@ export default function WorkerMasterPage() {
       const text = String(reader.result ?? '');
       const lines = text.split(/\r?\n/).filter(line => line.trim()).slice(0, 500);
       const parsed = lines.map(line => {
-        const [bssId, site, employer] = parseCsv(line);
-        return { bssId: bssId?.trim() ?? '', site: site?.trim() ?? '', employer: employer?.trim() ?? '' };
+        const [bssId, site] = parseCsv(line);
+        return { bssId: bssId?.trim() ?? '', site: site?.trim() ?? '' };
       }).filter(r => r.bssId);
       setRows(current => [...current, ...parsed]); setError('');
-      if (!parsed.length) setError('No valid rows. Expected: BSS ID, Site, Employer.');
+      if (!parsed.length) setError('No valid rows. Expected: BSS ID, Site.');
     };
     reader.readAsText(file);
   }
 
   function downloadTemplate() {
     const escape = (v: unknown) => String(v ?? '');
-    const rows2 = [['BSS ID', 'Site', 'Employer']];
+    const rows2 = [['BSS ID', 'Site']];
     const html = `<html><head><meta charset="UTF-8"></head><body><table>${rows2.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
     const file = new File([html], 'worker-binding-template.xls', { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -99,7 +99,7 @@ export default function WorkerMasterPage() {
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Master</h1><p className="text-sm text-gray-500 mt-1">Bind and manage workers per site and principal employer — with manual entry, bulk creation and worker-level actions.</p></div>
+      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Master</h1><p className="text-sm text-gray-500 mt-1">Bind existing workers to a site by BSS ID. A site already belongs to one principal employer, so the employer is taken from the site.</p></div>
       <div className="flex gap-2">
         <button onClick={() => { setModal('bulk'); setRows([emptyRow()]); setError(''); }} className="h-10 px-4 border border-gray-200 rounded-lg text-sm font-semibold flex gap-2 items-center bg-white"><Upload size={16}/>Bulk bind</button>
         <button onClick={() => { setModal('single'); setError(''); }} className="h-10 px-4 rounded-lg bg-gray-950 text-white text-sm font-semibold flex items-center gap-2"><UserRound size={16}/>Bind worker</button>
@@ -128,7 +128,8 @@ export default function WorkerMasterPage() {
     {modal === 'single' && <div className="fixed inset-0 z-50 bg-black/50 p-4 grid place-items-center" role="presentation"><section role="dialog" aria-modal="true" aria-labelledby="add-worker-title" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
       <header className="p-5 border-b flex justify-between"><div><h2 id="add-worker-title" className="font-semibold">Bind an existing BSS worker</h2><p className="text-xs text-gray-500 mt-0.5">Enter the worker&apos;s BSS ID — the worker must accept before the profile unlocks. Workers register themselves; you cannot create one here.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <form onSubmit={submitSingle} className="p-5 grid sm:grid-cols-2 gap-4">
-        <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/><Select name="site" label="Site" values={contractor.sites.map(site => site.name)}/><Select name="employer" label="Employer" values={contractor.employers.map(item => item.name)}/>
+        <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/>
+        <label className="text-xs font-semibold text-gray-700">Site<select required name="site" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Bind worker'}</button></div>
       </form>
@@ -136,7 +137,7 @@ export default function WorkerMasterPage() {
 
     {/* Bulk bind modal */}
     {modal === 'bulk' && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-4xl bg-white rounded-2xl overflow-hidden">
-      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk bind workers</h2><p className="text-xs text-gray-500 mt-1">Download the template, import a CSV (BSS ID, Site, Employer) or add rows. Workers must already exist in BSS — you can only propose a binding by BSS ID.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
+      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Bulk bind workers</h2><p className="text-xs text-gray-500 mt-1">Download the template, import a CSV (BSS ID, Site) or add rows. Workers must already exist in BSS — you can only propose a binding by BSS ID.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <div className="p-5 space-y-4">
         <div className="flex flex-wrap gap-2">
           <button onClick={downloadTemplate} className="text-xs font-semibold text-gray-700 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2"><Download size={14}/>Download template</button>
@@ -145,11 +146,10 @@ export default function WorkerMasterPage() {
         </div>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
         <form onSubmit={submitBulk} className="space-y-3">
-          <div className="overflow-x-auto"><div className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['BSS ID','Site','Employer',''].map((label, i) => <span key={i}>{label}</span>)}</div>
-            {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(180px,1fr)_minmax(140px,1fr)_minmax(140px,1fr)_30px] gap-2 items-center mt-2">
+          <div className="overflow-x-auto"><div className="grid grid-cols-[minmax(200px,1fr)_minmax(220px,1fr)_30px] gap-2 text-[11px] uppercase text-gray-500 font-bold px-1">{['BSS ID','Site',''].map((label, i) => <span key={i}>{label}</span>)}</div>
+            {rows.map((row, index) => <div key={index} className="grid grid-cols-[minmax(200px,1fr)_minmax(220px,1fr)_30px] gap-2 items-center mt-2">
               <input value={row.bssId} onChange={e => updateRow(index, 'bssId', e.target.value)} placeholder="BSS-W7KQ2M9X4RT" className="h-9 border border-gray-200 rounded-lg px-2 text-xs font-mono"/>
-              <select value={row.site} onChange={e => { updateRow(index, 'site', e.target.value); const site = contractor.sites.find(s => s.name === e.target.value); if (site?.employer) updateRow(index, 'employer', site.employer); }} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="">Site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select>
-              <select value={row.employer} onChange={e => updateRow(index, 'employer', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="">Employer</option>{contractor.employers.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}</select>
+              <select value={row.site} onChange={e => updateRow(index, 'site', e.target.value)} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="">Site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select>
               <button type="button" onClick={() => removeRow(index)} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600" aria-label="Remove row"><Trash2 size={15}/></button>
             </div>)}
           </div>
@@ -282,5 +282,4 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDoc
 
 function parseCsv(line: string): string[] { const out: string[] = []; let cur = '', inQuotes = false; for (const char of line) { if (char === '"') { inQuotes = !inQuotes; continue; } if (char === ',' && !inQuotes) { out.push(cur); cur = ''; continue; } cur += char; } out.push(cur); return out; }
 function Field({ name, label, pattern, placeholder }: { name:string; label:string; pattern?:string; placeholder?:string }) { return <label className="text-xs font-semibold text-gray-700">{label}<input required name={name} pattern={pattern} placeholder={placeholder} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm"/></label>; }
-function Select({ name, label, values }: { name:string; label:string; values:string[] }) { return <label className="text-xs font-semibold text-gray-700">{label}<select required name={name} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select</option>{values.map(value => <option key={value}>{value}</option>)}</select></label>; }
 function Info({ label, value }: { label:string; value:string }) { return <div className="rounded-lg border border-gray-100 p-2.5"><dt className="text-gray-400 text-[10px]">{label}</dt><dd className="font-semibold text-gray-800 mt-0.5">{value}</dd></div>; }
