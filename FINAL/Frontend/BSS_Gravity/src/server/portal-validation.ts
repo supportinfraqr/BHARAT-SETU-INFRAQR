@@ -225,4 +225,16 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     requiredString(body, 'id', 40);
     if (!['Approved', 'Rejected'].includes(String(body.status))) fail('Select a valid decision.');
   }
+  if ((role === 'Contractor' || role === 'Employer') && resource === 'licences') {
+    const kinds = ['EPFO','ESIC','SHOPS_EST','FACTORY','CLRA','BOCW','PT','LWF','APPRENTICE','OTHER'];
+    if (method === 'POST') {
+      if (!kinds.includes(requiredString(body, 'kind', 40).toUpperCase())) fail('Select a valid registration kind.');
+      if (typeof body.number !== 'undefined' && String(body.number).length > 80) fail('Registration number is too long.');
+      if (typeof body.authority !== 'undefined' && String(body.authority).length > 120) fail('Authority is too long.');
+    }
+    if (method === 'PATCH' || method === 'DELETE') requiredString(body, 'id', 60);
+    for (const key of ['issuedAt', 'expiryAt']) {
+      if (body[key] !== undefined && body[key] !== '' && !isoDate.test(String(body[key]))) fail(`Enter a valid ${key === 'issuedAt' ? 'issue' : 'expiry'} date.`);
+    }
+  }
 }

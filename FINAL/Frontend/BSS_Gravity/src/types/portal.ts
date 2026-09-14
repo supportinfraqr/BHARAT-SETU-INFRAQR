@@ -149,7 +149,7 @@ export type WorkerBenefitsData = {
 };
 
 export type ContractorLicence = {
-  id: string; name: string; authority: string; number: string; state: string; validFrom: string; validTo: string; status: 'Active' | 'Expiring' | 'Expired';
+  id: string; kind: string; name: string; authority: string; number: string; state: string; validFrom: string; validTo: string; status: 'Active' | 'Expiring' | 'Expired' | 'Pending';
 };
 
 export type ContractorWorkerDocument = {
@@ -570,6 +570,7 @@ export type EmployerPortalData = {
   govtScope: import('@/lib/labour-compliance').GovtScope;
   labourCompliance: EmployerLabourCompliance[];
   profileSections: Record<string, Array<{ label: string; value: string; sensitive?: boolean; note?: string }>>;
+  licenses: ContractorLicence[];
   payroll: {
     config: ContractorPayrollConfig;
     records: PayrollWorkerRecord[];

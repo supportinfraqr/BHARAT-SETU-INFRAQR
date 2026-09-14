@@ -332,6 +332,13 @@ def _worker_employment_section(user, identity):
 
 def _worker_compliance_section(user):
     ws = WorkerWelfareSafety.objects.filter(user=user).first()
+    gp = WorkerGatePass.objects.filter(worker=user).order_by("-created_at").first()
+    gp_status = ""
+    if gp:
+        gp_status = "Active" if gp.status in ("ACTIVE", "APPROVED") else ("Pending Approval" if gp.status == "PENDING" else _d(gp.status))
+    elif ws and ws.permanent_gatepass_status:
+        gp_status = _d(ws.permanent_gatepass_status)
+
     ppe = []
     given = ws.types_of_ppe_given if ws else ""
     ppe = [p.strip() for p in given.split(",") if p.strip()] if given else []
@@ -339,7 +346,7 @@ def _worker_compliance_section(user):
         "siteInduction": _d(ws.site_induction_status if ws else ""),
         "ppeIssued": ppe,
         "policeVerification": _d(ws.police_verification if ws else ""),
-        "permanentGatePass": _d(ws.permanent_gatepass_status if ws else ""),
+        "permanentGatePass": gp_status,
         "medicalFitnessDaysLeft": 0,
         "medicalExaminationStatus": _d(ws.medical_examination_status if ws else ""),
         "medicalFitnessStatus": _d(ws.medical_fitness_status if ws else ""),
@@ -2294,13 +2301,25 @@ def _contractor_salaries(user):
 
 
 def _contractor_licenses(user):
+    """Statutory registrations & licences of an entity. A licence counts as
+    Active when its verification is acknowledged and today is before expiry."""
+    from datetime import date as _date
     rows = []
     for st in user.statutory_registrations.all() if hasattr(user, "statutory_registrations") else []:
+        ver = str(st.verification_status or "").upper()
+        if ver in ("ACTIVE", "VERIFIED", "APPROVED", "VALIDATED"):
+            if st.expiry_at and st.expiry_at < _date.today():
+                status = "Expired"
+            else:
+                status = "Active"
+        else:
+            status = "Pending"
         rows.append({
-            "id": st.id, "name": _d(st.get_reg_kind_display() or st.reg_kind),
+            "id": str(st.id), "kind": _d(st.reg_kind),
+            "name": _d(st.get_reg_kind_display() or st.reg_kind),
             "authority": _d(st.authority), "number": _d(st.reg_number),
             "state": "", "validFrom": _dts(st.issued_at), "validTo": _dts(st.expiry_at),
-            "status": _d(st.verification_status),
+            "status": status,
         })
     return rows
 
@@ -3601,6 +3620,7 @@ def build_employer_portal(user):
         "govtScope": "central",
         "labourCompliance": _employer_labour_compliance(),
         "profileSections": _employer_profile_sections(user),
+        "licenses": _contractor_licenses(user),
         "payroll": _employer_payroll(user),
     }
 

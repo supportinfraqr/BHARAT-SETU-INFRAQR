@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Building2, ContactRound, Landmark, LayoutGrid, Lock, Network, Settings, ShieldCheck, Users } from 'lucide-react';
+import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import { useEmployer } from '@/contexts/EmployerContext';
+import type { ContractorLicence } from '@/types/portal';
 
 // All 16 BSS_Employer.csv sections (A–P) + BSS preferences.
 const tabs = [
@@ -12,6 +14,7 @@ const tabs = [
   ['address','D · Registered & Correspondence Address',Building2],
   ['verification','E · Verification & KYC',ShieldCheck],
   ['statutory','F · Labour, Statutory & Regulatory',ShieldCheck],
+  ['licences','Registrations & Licences',Landmark],
   ['workforce','G · Workforce Profile',Users],
   ['employment','H · Employment, Payroll & Wage Practices',Users],
   ['benefits','I · Social Security & Worker Benefits',ShieldCheck],
@@ -34,6 +37,7 @@ export default function EmployerProfilePage() {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [licences, setLicences] = useState<ContractorLicence[]>(employer.licenses);
   // K · Contractor Management / L · Sites & QR / M · Worker Relations fields are stored
   // with the safety & governance questionnaire in the profile dataset; expose them under
   // their dedicated tabs so the BSS Employer profile spec sections are visible.
@@ -62,6 +66,22 @@ export default function EmployerProfilePage() {
     finally { setBusy(false); }
   }
 
+  async function saveLicence(method: 'POST' | 'PATCH' | 'DELETE', body: { id?: string; [key: string]: unknown }): Promise<ContractorLicence | { id: string }> {
+    const res = await mutate<{ success: boolean; data: ContractorLicence; deleted?: boolean; id?: string }>('licences', method, body);
+    if (method === 'DELETE') {
+      const id = String(res.id ?? '');
+      setLicences(prev => prev.filter(r => r.id !== id));
+      return { id };
+    }
+    const row = res.data;
+    setLicences(prev => {
+      const index = prev.findIndex(r => r.id === row.id);
+      if (index >= 0) { const next = [...prev]; next[index] = row; return next; }
+      return [...prev, row];
+    });
+    return row;
+  }
+
   return <div className="space-y-6">
     <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
       <div className="flex gap-4">
@@ -84,7 +104,9 @@ export default function EmployerProfilePage() {
         {tabs.map(([id, label, Icon]) => <button key={id} onClick={() => { setTab(id); setEditing(false); setError(''); }} className={`w-full flex gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={16} className="shrink-0"/>{label}</button>)}
       </nav>
 
-      <section className="bg-white border border-gray-200 rounded-2xl p-6">
+      {tab === 'licences'
+        ? <StatutoryLicences rows={licences} onSave={saveLicence} />
+        : <section className="bg-white border border-gray-200 rounded-2xl p-6">
         <header className="flex flex-wrap justify-between gap-2 border-b border-gray-100 pb-4">
           <div><h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2><p className="text-[11px] text-gray-400 mt-0.5">{fields.length} field(s) · BSS_Employer.csv data dictionary</p></div>
           {fields.length > 0 && <button onClick={() => setEditing(value => !value)} className="text-sm text-blue-700 font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
@@ -104,7 +126,7 @@ export default function EmployerProfilePage() {
           {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
           {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}
         </form>
-      </section>
+        </section>}
     </div>
   </div>;
 }

@@ -1774,6 +1774,8 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_rozgar_apply(user, body)
     if resource == "applications" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_rozgar_respond(user, body)
+    if resource == "licences" and role_path in ("contractor", "employer") and method in ("POST", "PATCH", "DELETE"):
+        return _handle_licences(user, body, method, role_path)
     if resource == "compliances" and role_path == "contractor" and method in ("POST", "PATCH", "DELETE"):
         return _handle_compliances(user, body, method)
     if resource == "restricted-holiday" and role_path == "worker" and method == "POST":
@@ -1807,6 +1809,70 @@ def _persist_mutation(user, role_path, resource, method, body):
     if resource == "courses" and role_path == "worker" and method in ("POST", "PATCH"):
         return _handle_course_action(user, body)
     return int(uuid.uuid4().int % 10**10)
+
+
+def _handle_licences(user, body, method, role_path):
+    """CRUD for an entity's statutory registrations & licences (EPFO, ESIC,
+    CLRA, BOCW, Factory, Shops & Est., PT, LWF...). Rows are scoped to the
+    logged-in party so nobody can touch another entity's records."""
+    from bss_core.models import PartyStatutoryRegistration
+
+    def _serialise(st):
+        from datetime import date as _date
+        ver = str(st.verification_status or "").upper()
+        if ver in ("ACTIVE", "VERIFIED", "APPROVED", "VALIDATED"):
+            status = "Expired" if (st.expiry_at and st.expiry_at < _date.today()) else "Active"
+        else:
+            status = "Pending"
+        return {
+            "id": str(st.id),
+            "kind": st.reg_kind,
+            "name": st.get_reg_kind_display() or st.reg_kind,
+            "authority": st.authority or "",
+            "number": st.reg_number or "",
+            "validFrom": st.issued_at.strftime("%Y-%m-%d") if st.issued_at else "",
+            "validTo": st.expiry_at.strftime("%Y-%m-%d") if st.expiry_at else "",
+            "status": status,
+        }
+
+    kind = str(body.get("kind") or "").strip().upper()
+    known = [c[0] for c in PartyStatutoryRegistration.KIND]
+    if kind and kind not in known:
+        raise PortalMutationError("Select a valid registration kind.", 422)
+
+    if user.role not in ("contractor", "employer"):
+        raise PortalMutationError("Only contractors and employers manage licences.", 403)
+
+    if method == "DELETE":
+        lic = PartyStatutoryRegistration.objects.filter(
+            pk=body.get("id"), party_user=user).first()
+        if lic is None:
+            raise PortalMutationError("Licence not found.", 404)
+        lic.delete()
+        return str(lic.id)
+
+    if method == "PATCH":
+        lic = PartyStatutoryRegistration.objects.filter(
+            pk=body.get("id"), party_user=user).first()
+        if lic is None:
+            raise PortalMutationError("Licence not found.", 404)
+    else:
+        lic = PartyStatutoryRegistration(
+            party_type=user.role, party_user=user,
+            verification_status="ACTIVE", is_active=True)
+
+    if kind:
+        lic.reg_kind = kind
+    if body.get("number") is not None:
+        lic.reg_number = str(body.get("number")).strip()[:80]
+    if body.get("authority") is not None:
+        lic.authority = str(body.get("authority")).strip()[:120]
+    if body.get("issuedAt"):
+        lic.issued_at = _coerce_profile_date(body.get("issuedAt"))
+    if body.get("expiryAt"):
+        lic.expiry_at = _coerce_profile_date(body.get("expiryAt"))
+    lic.save()
+    return _serialise(lic)
 
 
 def _handle_bank_verify(user, body):

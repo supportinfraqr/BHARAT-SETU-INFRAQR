@@ -727,6 +727,41 @@ class Command(BaseCommand):
         if metro_site and con444:
             _seed_evidence(con444, metro_site, "Adani Infra Pvt Ltd", METRO_DOCS)
 
+        # --- Licences & registrations: drive the "Active Licences" KPI and the
+        # profile's Registrations & Licences tab from real statutory-registration
+        # rows (EPFO, ESIC, CLRA, BOCW) for the demo contractor and employer. ---
+        from bss_core.models import PartyStatutoryRegistration as _PartyStat
+        from datetime import date as _bdate
+
+        def _seed_reg(party, reg_kind, number, authority, valid_from=None, valid_to=None):
+            _PartyStat.objects.update_or_create(
+                party_type=party.role, party_user=party, reg_kind=reg_kind,
+                defaults={
+                    "reg_number": number, "authority": authority,
+                    "issued_at": (valid_from or _bdate.today()),
+                    "expiry_at": valid_to or (_bdate.today().replace(year=_bdate.today().year + 1)),
+                    "verification_status": "ACTIVE", "is_active": True,
+                })
+
+        emp777 = _user("employer_7777777777")
+        if con444:
+            _seed_reg(con444, "CLRA", "MH/CLRA/2026/000444",
+                      "Department of Labour, Maharashtra")
+            _seed_reg(con444, "EPFO", "MH/PF/125423/2026", "EPFO Regional Office, Mumbai")
+            _seed_reg(con444, "ESIC", "MH/ESIC/221456", "ESIC Regional Office, Mumbai")
+            cp444 = getattr(con444, "contractor_profile", None)
+            if cp444:
+                for attr, value in (
+                        ("clra_licence_no", "MH/CLRA/2026/000444"),
+                        ("labour_dept_reg_no", "MH/LAB/2026/887766"),
+                        ("bocw_reg_no", "MH/BOCW/2026/556677"),
+                        ("udyam_no", "UDYAM-MH-00-1234567")):
+                    setattr(cp444, attr, value)
+                cp444.save()
+        if emp777:
+            _seed_reg(emp777, "EPFO", "MH/PF/125423/PEM", "EPFO Regional Office, Mumbai")
+            _seed_reg(emp777, "ESIC", "MH/ESIC/221456/PEM", "ESIC Regional Office, Mumbai")
+
         # Attach the demo job postings to the primary demo site so a worker
         # applying on Rozgar raises a site-specific binding request.
         primary_site = demo_sites.get("DEMO-SITE-001")

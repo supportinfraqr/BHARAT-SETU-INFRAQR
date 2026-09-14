@@ -1,8 +1,107 @@
 "use client";
-import {useState} from 'react';
-import {Building2,CheckCircle2,CreditCard,FileSignature,FileText,Handshake,MapPin,Phone,ShieldCheck,Users} from 'lucide-react';
-import {useContractor} from '@/contexts/ContractorContext';
-const tabs=[['basic','Basic info',Building2],['registration','Registration',ShieldCheck],['directors','Directors',Users],['contact','Contact Persons',Phone],['financial','Financial',CreditCard],['service','Service profile',MapPin],['associations','PE & Site',Handshake],['documents','Documents',FileText],['declarations','Declarations',CheckCircle2],['undertaking','Undertaking',FileSignature]] as const;
-export default function ContractorProfilePage(){const {contractor,replaceContractor,mutate}=useContractor();const [tab,setTab]=useState('basic'),[editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');const fields=contractor.profileSections[tab]??[];
- async function save(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');const values=new FormData(e.currentTarget);const section=fields.map((field,index)=>({...field,value:String(values.get('field-'+index)??'').trim()}));try{await mutate('profile','PATCH',{section:tab,fields:section});replaceContractor({...contractor,profileSections:{...contractor.profileSections,[tab]:section}});setEditing(false)}catch(reason){setError(reason instanceof Error?reason.message:'Profile could not be saved.')}finally{setBusy(false)}}
- return <div className="space-y-6"><section className="bg-white border rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5"><div className="flex gap-4"><span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span><div><div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{contractor.identity.company}</h1>{contractor.identity.verified&&<ShieldCheck className="text-green-700" size={20}/>}</div><p className="font-mono text-xs text-gray-500 mt-1">{contractor.identity.bssId}</p><p className="text-sm text-gray-600 mt-2">{contractor.identity.contact} · {contractor.identity.email}</p></div></div><div className="text-sm"><p><span className="text-gray-500">Authorised signatory:</span> {contractor.identity.name}</p><p className="mt-1"><span className="text-gray-500">Rating:</span> {contractor.identity.rating.toFixed(1)}</p></div></section><div className="grid md:grid-cols-[240px_1fr] gap-6"><nav className="bg-white border rounded-2xl p-2 h-fit overflow-x-auto">{tabs.map(([id,label,Icon])=><button key={id} onClick={()=>{setTab(id);setEditing(false);setError('')}} className={'w-full flex gap-3 px-4 py-3 rounded-xl text-sm font-semibold '+(tab===id?'bg-gray-950 text-white':'text-gray-600 hover:bg-gray-50')}><Icon size={17}/>{label}</button>)}</nav><section className="bg-white border rounded-2xl p-6"><header className="flex justify-between border-b pb-4"><h2 className="font-semibold">{tabs.find(item=>item[0]===tab)?.[1]}</h2>{fields.length>0&&<button onClick={()=>setEditing(v=>!v)} className="text-sm text-blue-700 font-semibold">{editing?'Cancel':'Edit'}</button>}</header><form onSubmit={save} className="grid sm:grid-cols-2 gap-6 mt-6">{fields.map((field,index)=><label key={field.label} className="text-xs font-semibold text-gray-500 uppercase">{field.label}{editing&&!field.sensitive?<input required type={field.type==='date'?'date':'text'} name={'field-'+index} defaultValue={field.value} className="mt-1 block w-full h-10 border rounded-lg px-3 text-sm normal-case text-gray-900"/>:<span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value}</span>}</label>)}{!fields.length&&<p className="sm:col-span-2 text-sm text-gray-500 py-10 text-center">No records were returned for this section.</p>}{error&&<p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}{editing&&<div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy?'Saving…':'Save changes'}</button></div>}</form></section></div></div>}
+import { useState } from 'react';
+import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Handshake, Landmark, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
+import StatutoryLicences from '@/components/portal/StatutoryLicences';
+import { useContractor } from '@/contexts/ContractorContext';
+import type { ContractorLicence } from '@/types/portal';
+
+const tabs = [
+  ['basic', 'Basic info', Building2],
+  ['registration', 'Registration', ShieldCheck],
+  ['directors', 'Directors', Users],
+  ['contact', 'Contact Persons', Phone],
+  ['financial', 'Financial', CreditCard],
+  ['service', 'Service profile', MapPin],
+  ['associations', 'PE & Site', Handshake],
+  ['licences', 'Registrations & Licences', Landmark],
+  ['documents', 'Documents', FileText],
+  ['declarations', 'Declarations', CheckCircle2],
+  ['undertaking', 'Undertaking', FileSignature],
+] as const;
+
+export default function ContractorProfilePage() {
+  const { contractor, replaceContractor, mutate } = useContractor();
+  const [tab, setTab] = useState('basic');
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [licences, setLicences] = useState<ContractorLicence[]>(contractor.licenses);
+  const fields = contractor.profileSections[tab] ?? [];
+
+  async function save(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true); setError('');
+    const values = new FormData(e.currentTarget);
+    const section = fields.map((field, index) => ({ ...field, value: String(values.get(`field-${index}`) ?? '').trim() }));
+    try {
+      await mutate('profile', 'PATCH', { section: tab, fields: section });
+      replaceContractor({ ...contractor, profileSections: { ...contractor.profileSections, [tab]: section } });
+      setEditing(false);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Profile could not be saved.'); }
+    finally { setBusy(false); }
+  }
+
+  async function saveLicence(method: 'POST' | 'PATCH' | 'DELETE', body: { id?: string; [key: string]: unknown }): Promise<ContractorLicence | { id: string }> {
+    const res = await mutate<{ success: boolean; data: ContractorLicence; deleted?: boolean; id?: string }>('licences', method, body);
+    if (method === 'DELETE') {
+      const id = String(res.id ?? '');
+      setLicences(prev => prev.filter(r => r.id !== id));
+      return { id };
+    }
+    const row = res.data;
+    setLicences(prev => {
+      const index = prev.findIndex(r => r.id === row.id);
+      if (index >= 0) { const next = [...prev]; next[index] = row; return next; }
+      return [...prev, row];
+    });
+    return row;
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col sm:flex-row justify-between gap-5">
+        <div className="flex gap-4">
+          <span className="w-16 h-16 rounded-xl bg-blue-50 text-blue-700 grid place-items-center text-2xl font-bold">{contractor.identity.company.charAt(0)}</span>
+          <div>
+            <div className="flex gap-2 items-center"><h1 className="text-2xl font-bold">{contractor.identity.company}</h1>{contractor.identity.verified && <ShieldCheck className="text-green-700" size={20}/>}</div>
+            <p className="font-mono text-xs text-gray-500 mt-1">{contractor.identity.bssId}</p>
+            <p className="text-sm text-gray-600 mt-2">{contractor.identity.contact} · {contractor.identity.email}</p>
+          </div>
+        </div>
+        <div className="text-sm">
+          <p><span className="text-gray-500">Authorised signatory:</span> {contractor.identity.name}</p>
+          <p className="mt-1"><span className="text-gray-500">Rating:</span> {contractor.identity.rating.toFixed(1)}</p>
+        </div>
+      </section>
+
+      <div className="grid md:grid-cols-[240px_1fr] gap-6">
+        <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit overflow-x-auto">
+          {tabs.map(([id, label, Icon]) => <button key={id} onClick={() => { setTab(id); setEditing(false); setError(''); }} className={`w-full flex gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={17}/>{label}</button>)}
+        </nav>
+
+        {tab === 'licences' ? (
+          <StatutoryLicences rows={licences} onSave={saveLicence} />
+        ) : (
+          <section className="bg-white border border-gray-200 rounded-2xl p-6">
+            <header className="flex justify-between border-b border-gray-100 pb-4">
+              <h2 className="font-semibold">{tabs.find(item => item[0] === tab)?.[1]}</h2>
+              {fields.length > 0 && <button onClick={() => setEditing(v => !v)} className="text-sm text-blue-700 font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
+            </header>
+            <form onSubmit={save} className="grid sm:grid-cols-2 gap-6 mt-6">
+              {fields.map((field, index) =>
+                <label key={field.label} className="text-xs font-semibold text-gray-500 uppercase">
+                  {field.label}
+                  {editing && !field.sensitive
+                    ? <input required type={field.type === 'date' ? 'date' : 'text'} name={`field-${index}`} defaultValue={field.value} className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900"/>
+                    : <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value}</span>}
+                </label>)}
+              {!fields.length && <p className="sm:col-span-2 text-sm text-gray-500 py-10 text-center">No records were returned for this section.</p>}
+              {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
+              {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}
+            </form>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
