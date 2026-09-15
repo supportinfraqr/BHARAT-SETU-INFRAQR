@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { IScannerControls } from "@zxing/browser";
-import { Building2, Camera, CheckCircle2, Handshake, Home, KeyRound, Link2, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from "lucide-react";
+import { Building2, Camera, CheckCircle2, Handshake, Home, KeyRound, Link2, ScanLine, ShieldCheck, TriangleAlert, Upload, UserRound, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
 import ScanFrame from "@/components/qr/ScanFrame";
@@ -32,6 +32,7 @@ export default function ContractorScanPage() {
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
   const [offeredWage, setOfferedWage] = useState('');
   const [wageError, setWageError] = useState('');
+  const [sendError, setSendError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
@@ -159,6 +160,7 @@ export default function ContractorScanPage() {
       return;
     }
     setRequestSent(true);
+    setSendError('');
     try {
       const response = await fetch('/api/bindings/scan', {
         method: 'POST',
@@ -174,6 +176,7 @@ export default function ContractorScanPage() {
         : `Binding request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding, then proposes sites.`);
     } catch (e) {
       setRequestSent(false);
+      setSendError(e instanceof Error ? e.message : 'Binding request could not be created.');
       setMessage(e instanceof Error ? e.message : 'Binding request could not be created.');
     }
   };
@@ -282,6 +285,16 @@ export default function ContractorScanPage() {
                   {contractor.defaultSite && <p className="text-[11px] text-gray-400 mt-1">Default site: {contractor.defaultSite.name}</p>}
                 </div>
               )}
+              {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length === 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-start gap-2">
+                  <TriangleAlert size={15} className="mt-0.5 flex-shrink-0"/>
+                  <div>
+                    <p className="font-bold">No site available for this binding.</p>
+                    <p className="mt-0.5">Ask the principal employer to allot a site to you first — you can only bind a worker to a site allotted to you.</p>
+                    <Link href="/contractor/qr/requests" className="mt-1.5 inline-block font-bold underline">Open Binding Requests</Link>
+                  </div>
+                </div>
+              )}
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && (
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Offered monthly wage (₹)</label>
@@ -313,7 +326,12 @@ export default function ContractorScanPage() {
                   ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                   : requestSent
                     ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
-                    : <button onClick={() => { if (entity.kind === 'worker' && !(Number(offeredWage) > 0)) { setWageError('Enter the offered monthly wage (₹) before sending the binding request.'); return; } setWageError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                    : <div className="space-y-3">
+                        {sendError && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
+                        {entity.kind === 'worker' && contractor.sites.length === 0
+                          ? <button type="button" disabled className="w-full h-11 rounded-xl bg-gray-200 text-gray-500 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>No site allotted — cannot bind</button>
+                          : <button onClick={() => { if (entity.kind === 'worker' && !(Number(offeredWage) > 0)) { setWageError('Enter the offered monthly wage (₹) before sending the binding request.'); return; } setWageError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                      </div>}
             </div>
           ):result?(
             <div className="space-y-5">

@@ -12,7 +12,7 @@ import type { PortalView, WorkerLike } from '@/lib/documentEngine/workerDataServ
 export default function IssuedLettersPage() {
   const { worker, portal } = useWorker();
   const gatePasses = worker.gatePasses ?? [];
-  const letters = (portal.documents ?? []).filter(doc => /letter/i.test(doc.name));
+  const letters = (portal.documents ?? []).filter(doc => /letter/i.test(doc.name) && (doc.downloadUrl || doc.status === 'ISSUED'));
   const [preview, setPreview] = useState<{ html: string; title: string } | null>(null);
 
   const docView = useMemo(() => {

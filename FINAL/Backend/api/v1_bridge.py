@@ -2458,7 +2458,7 @@ def _release_contractor_workers(binding):
     WorkerContractorBinding.objects.filter(pk__in=[b.id for b in released]).update(
         binding_status="CANCELLED", unbound_at=timezone.now())
     for released_binding in released:
-        _issue_binding_letter(released_binding, "releasing")
+        _issue_binding_letter(released_binding, "experience")
 
 
 def _workers_at_risk(contractor, site_ids):
@@ -2580,7 +2580,7 @@ def _shift_workers_to_successor(old_contractor, successor, site_ids, employer=No
         _sync_employment_from_binding(new_binding)
         # The E-S-C-W pair changed: store the releasing letter for the old
         # engagement and the appointment letter for the new one, for the worker.
-        _issue_binding_letter(wb, "releasing")
+        _issue_binding_letter(wb, "experience")
         _issue_binding_letter(new_binding, "appointment")
         moved.append(wb.worker)
         _create_notification(
@@ -4284,7 +4284,7 @@ def binding_consent(request, binding_id):
         b.save()
         if b.binding_status == "CANCELLED":
             _unlink_employment_from_binding(b)
-            _issue_binding_letter(b, "releasing")
+            _issue_binding_letter(b, "experience")
             # Notify both sides that unbind is completed
             actor_name = payloads._notification_actor_name(user)
             _create_notification(

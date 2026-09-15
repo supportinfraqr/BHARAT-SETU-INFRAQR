@@ -20,9 +20,8 @@ from bss_core.models import (
     WorkerWages,
 )
 
-LETTER_CODES = {"appointment": "APPT", "experience": "EXPL", "releasing": "REL"}
-LETTER_NAMES = {"appointment": "Appointment Letter", "experience": "Experience Letter",
-                "releasing": "Releasing Letter"}
+LETTER_CODES = {"appointment": "APPT", "experience": "EXPL"}
+LETTER_NAMES = {"appointment": "Appointment Letter", "experience": "Experience Letter"}
 
 
 def _e(value) -> str:
@@ -131,7 +130,7 @@ def _shell(title: str, body: str) -> str:
 def render_letter(binding, letter_type: str) -> str:
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
-    ref_prefix = {"appointment": "APPT", "releasing": "REL"}.get(letter_type, "EXP")
+    ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")
     ref = f"BSS/{ref_prefix}/{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
     wage = _money(_offered_wage(binding))
@@ -172,30 +171,6 @@ def render_letter(binding, letter_type: str) -> str:
         follow all site safety rules, use the personal protective equipment provided, complete site induction, and
         report any unsafe condition to the site safety officer immediately.</p>
         <p>This appointment is valid while your binding with the contractor remains active on the BSS portal.</p>
-        <div class="sign">
-          <div><div class="line">{w['name']}</div>Worker</div>
-          <div><div class="line">{p['contractor']}</div>Contractor / Authorized Signatory</div>
-        </div>
-        """
-    elif letter_type == "releasing":
-        body = f"""
-        <h1>Releasing Letter</h1>
-        <div class="meta"><span>Ref No.: {ref}</span><span>Date: {issue}</span></div>
-        <p>Dear {w['name']},</p>
-        <p>This is to confirm that your engagement with <strong>{p['contractor']}</strong> at the project site
-        of <strong>{p['employer']}</strong> is released with effect from <strong>{issue}</strong>. You stand
-        released from your duties at <strong>{p['site']}</strong> on this date.</p>
-        <table class="kv">
-          <tr><td>Name</td><td>{w['name']}</td></tr>
-          <tr><td>BSS Worker ID</td><td>{w['bssId']}</td></tr>
-          <tr><td>Designation</td><td>{w['designation']}</td></tr>
-          <tr><td>Site</td><td>{p['site']}</td></tr>
-          <tr><td>Date of Joining</td><td>{w['doj']}</td></tr>
-          <tr><td>Date of Releasing</td><td>{issue}</td></tr>
-        </table>
-        <p>Please complete the handover of tools, materials and site property, and settle any outstanding
-        advances or dues as per the terms of your engagement. This letter does not by itself terminate any
-        statutory entitlement that may have accrued to you.</p>
         <div class="sign">
           <div><div class="line">{w['name']}</div>Worker</div>
           <div><div class="line">{p['contractor']}</div>Contractor / Authorized Signatory</div>
