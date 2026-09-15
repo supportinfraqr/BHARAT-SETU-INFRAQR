@@ -846,7 +846,7 @@ export default function ContractorCalendarPage() {
                       onChange={(e) => setPType(e.target.value)}
                       className={inputStyle}
                     >
-                      {(contractor.leaveTypeCatalog ?? ['Casual Leave', 'Sick Leave', 'Earned Leave']).map((t) => (
+                      {(contractor.leaveTypeCatalog?.length ? contractor.leaveTypeCatalog : ['Casual Leave', 'Medical Leave', 'Personal Leave']).map((t) => (
                         <option key={t} value={t}>
                           {t}
                         </option>
