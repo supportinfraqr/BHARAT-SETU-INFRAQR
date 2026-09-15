@@ -55,7 +55,7 @@ export default function EmployerQrBindingRequestsPage() {
       // Workers must not be orphaned — pick a successor contractor first.
       if ((row.workersAtRisk ?? 0) > 0) {
         setUnbindFor(row);
-        setUnbindSuccessor(row.secondaryBindingIds?.[0] ?? '');
+        setUnbindSuccessor(row.successorCandidates?.[0]?.contractorId ?? '');
         return;
       }
       await decideUnbind(row);
@@ -107,7 +107,7 @@ export default function EmployerQrBindingRequestsPage() {
     setAllotFor(prev => prev && prev.id === row.id ? { ...prev, ...next } : prev);
   }
 
-  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release', payload: { siteIds?: number[]; siteId?: number; bindingIds?: number[]; successorBindingId?: number }) {
+  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release' | 'release-site', payload: { siteIds?: number[]; siteId?: number; bindingIds?: number[]; successorContractorId?: number }) {
     if (!allotFor?.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
@@ -139,11 +139,11 @@ export default function EmployerQrBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
-  async function decideUnbind(row: EmployerApproval, successorBindingId?: number) {
+  async function decideUnbind(row: EmployerApproval, successorContractorId?: number) {
     if (!row.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(row.bindingId), action: 'unbind', ...(successorBindingId ? { successorBindingId } : {}) }) });
+      const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(row.bindingId), action: 'unbind', ...(successorContractorId ? { successorContractorId } : {}) }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Unbinding could not be requested.');
       const cancelled = String(result.data?.status ?? '').toLowerCase() === 'cancelled';
@@ -245,8 +245,9 @@ export default function EmployerQrBindingRequestsPage() {
           releaseRequested: !!a?.releaseRequested,
           canApproveRelease: status === 'Approved' && !!a?.releaseRequested,
           canRejectRelease: status === 'Approved' && !!a?.releaseRequested,
+          canEmployerRelease: status === 'Approved' && !a?.releaseRequested,
           workersAtRisk: a?.workersAtRisk ?? 0,
-          successorCandidates: (allotFor.successorCandidates ?? []).map(c => ({ bindingId: c.bindingId, name: c.name })),
+          successorCandidates: (allotFor.successorCandidates ?? []).map(c => ({ contractorId: c.contractorId, name: c.name })),
         };
       }) : []}
       busy={busy}
@@ -261,8 +262,9 @@ export default function EmployerQrBindingRequestsPage() {
       onReject={id => void bindingSiteAction('reject-site', { siteId: id })}
       onPropose={(id, extra) => void bindingSiteAction('allot', { siteIds: [id], bindingIds: [Number(allotFor?.bindingId), ...extra] })}
       onRelease={() => {}}
-      onApproveRelease={(id, successorBindingId) => void bindingSiteAction('approve-site-release', { siteId: id, successorBindingId })}
+      onApproveRelease={(id, successorContractorId) => void bindingSiteAction('approve-site-release', { siteId: id, successorContractorId })}
       onRejectRelease={id => void bindingSiteAction('reject-site-release', { siteId: id })}
+      onEmployerRelease={(id, successorContractorId) => void bindingSiteAction('release-site', { siteId: id, successorContractorId })}
     />
     <ConfirmDialog
       open={!!confirm}
@@ -305,10 +307,10 @@ export default function EmployerQrBindingRequestsPage() {
             <label className="block text-xs font-bold text-gray-700">Successor contractor
               <select value={unbindSuccessor} onChange={e => setUnbindSuccessor(e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
                 <option value="">Select a contractor…</option>
-                {(unbindFor.successorCandidates ?? []).map(c => <option key={c.bindingId} value={c.bindingId}>{c.name}</option>)}
+                {(unbindFor.successorCandidates ?? []).map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
               </select>
             </label>
-          ) : <p className="text-xs text-red-600">No other contractor is bound to your organisation — bind another contractor first, then unbind.</p>}
+          ) : <p className="text-xs text-red-600">No other contractor is available in the system — onboard another contractor first, then unbind.</p>}
         </div>
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
           <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>

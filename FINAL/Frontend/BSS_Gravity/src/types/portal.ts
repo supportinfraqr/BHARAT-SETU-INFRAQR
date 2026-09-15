@@ -501,7 +501,7 @@ export type EmployerApproval = {
   /** Workers that would be orphaned if this contractor's access ends. */
   workersAtRisk?: number;
   /** Other ACCEPTED contractors the employer can shift workers to. */
-  successorCandidates?: Array<{ bindingId: number; contractorId: number; name: string }>;
+  successorCandidates?: Array<{ bindingId: number | null; contractorId: number; name: string }>;
   consentEmployer?: boolean;
   consentContractor?: boolean;
   source?: string;

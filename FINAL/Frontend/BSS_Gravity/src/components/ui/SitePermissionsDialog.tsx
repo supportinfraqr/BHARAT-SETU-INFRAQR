@@ -21,10 +21,12 @@ export type SitePermissionRow = {
   canCancelRelease?: boolean;
   canApproveRelease?: boolean;
   canRejectRelease?: boolean;
+  /** Employer can release this site from the contractor directly (with successor). */
+  canEmployerRelease?: boolean;
   /** Workers at this site that would be orphaned if the site is released. */
   workersAtRisk?: number;
   /** Candidate successor contractors for this site's workers. */
-  successorCandidates?: Array<{ bindingId: number; name: string }>;
+  successorCandidates?: Array<{ contractorId: number; name: string }>;
 };
 
 export type SecondaryContractor = { id: number; name: string; bindingId: number; allotments?: Array<{ siteId: number; status: string }> };
@@ -67,6 +69,7 @@ export default function SitePermissionsDialog({
   onRelease,
   onApproveRelease,
   onRejectRelease,
+  onEmployerRelease,
   onSelectionChange,
 }: {
   open: boolean;
@@ -84,8 +87,9 @@ export default function SitePermissionsDialog({
   onReject: (siteId: number) => void;
   onPropose: (siteId: number, extraBindingIds: number[]) => void;
   onRelease: (siteId: number) => void;
-  onApproveRelease: (siteId: number, successorBindingId?: number) => void;
+  onApproveRelease: (siteId: number, successorContractorId?: number) => void;
   onRejectRelease: (siteId: number) => void;
+  onEmployerRelease?: (siteId: number, successorContractorId?: number) => void;
   onSelectionChange?: (bindingIds: number[]) => void;
 }) {
   const [secondaryOpen, setSecondaryOpen] = useState(false);
@@ -237,6 +241,29 @@ export default function SitePermissionsDialog({
                         Request unbind
                       </button>
                     )}
+                    {row.canEmployerRelease && (
+                      <>
+                        {(row.workersAtRisk ?? 0) > 0 && (
+                          <select
+                            value={releaseSuccessor[row.siteId] ?? ''}
+                            onChange={e => setReleaseSuccessor(cur => ({ ...cur, [row.siteId]: e.target.value ? Number(e.target.value) : undefined }))}
+                            aria-label="Successor contractor for this site's workers"
+                            className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
+                          >
+                            <option value="">Successor…</option>
+                            {(row.successorCandidates ?? []).map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
+                          </select>
+                        )}
+                        <button
+                          type="button"
+                          disabled={busy || ((row.workersAtRisk ?? 0) > 0 && !releaseSuccessor[row.siteId])}
+                          onClick={() => onEmployerRelease?.(row.siteId, releaseSuccessor[row.siteId])}
+                          className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors disabled:opacity-60"
+                        >
+                          Release site
+                        </button>
+                      </>
+                    )}
                     {row.canApproveRelease && (
                       <>
                         {(row.workersAtRisk ?? 0) > 0 && (
@@ -247,7 +274,7 @@ export default function SitePermissionsDialog({
                             className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
                           >
                             <option value="">Successor…</option>
-                            {(row.successorCandidates ?? []).map(c => <option key={c.bindingId} value={c.bindingId}>{c.name}</option>)}
+                            {(row.successorCandidates ?? []).map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
                           </select>
                         )}
                         <button

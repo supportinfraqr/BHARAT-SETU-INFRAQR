@@ -3462,6 +3462,27 @@ def _employer_workers(user):
     return rows
 
 
+def _successor_candidates(employer, leaving):
+    """Contractors the employer can pick as a successor when `leaving` ends:
+    their other ACCEPTED contractors first, then every other contractor in the
+    system (the employer may engage a new one directly). Rows carry a
+    ``contractorId`` always and a ``bindingId`` only when a CE binding exists."""
+    rows = []
+    seen = set()
+    for cb in (ContractorEmployerBinding.objects
+               .filter(employer=employer, binding_status="ACCEPTED")
+               .exclude(pk=leaving.pk).select_related("contractor")):
+        seen.add(cb.contractor_id)
+        rows.append({"bindingId": cb.id, "contractorId": cb.contractor_id,
+                     "name": _org_name(cb.contractor)})
+    for cp in (ContractorProfile.objects.select_related("user")
+               .exclude(user_id__in=seen)
+               .exclude(user_id=leaving.contractor_id)):
+        rows.append({"bindingId": None, "contractorId": cp.user_id,
+                     "name": _d(cp.contractor_name) or _org_name(cp.user)})
+    return rows
+
+
 def _employer_approvals(user):
     """Pending binding approvals for this employer. Every request is site-scoped
     (E·C·S·W) — the site shown is the one the contractor/worker is approved against."""
@@ -3554,12 +3575,7 @@ def _employer_approvals(user):
             "workersAtRisk": WorkerContractorBinding.objects.filter(
                 contractor=e.contractor, site__employer=user
             ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).count(),
-            "successorCandidates": [{
-                "bindingId": cb.id,
-                "contractorId": cb.contractor_id,
-                "name": _org_name(cb.contractor),
-            } for cb in ContractorEmployerBinding.objects.filter(
-                employer=user, binding_status="ACCEPTED").exclude(pk=e.pk).select_related("contractor")],
+            "successorCandidates": _successor_candidates(user, e),
             "unbindRequested": bool(e.unbind_requested_at),
             "unbindConsentEmployer": bool(e.unbind_consent_employer),
             "unbindConsentContractor": bool(e.unbind_consent_contractor),

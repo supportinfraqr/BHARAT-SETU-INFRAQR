@@ -10,8 +10,9 @@ import type { OwnerScope } from '@/lib/documentEngine/types';
 import type { PortalView, WorkerLike } from '@/lib/documentEngine/workerDataService';
 
 export default function IssuedLettersPage() {
-  const { worker } = useWorker();
+  const { worker, portal } = useWorker();
   const gatePasses = worker.gatePasses ?? [];
+  const letters = (portal.documents ?? []).filter(doc => /letter/i.test(doc.name));
   const [preview, setPreview] = useState<{ html: string; title: string } | null>(null);
 
   const docView = useMemo(() => {
@@ -59,7 +60,15 @@ export default function IssuedLettersPage() {
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5">
         <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2"><FileText size={16} className="text-[#073B67]"/>Letters</h2>
-        <p className="text-sm text-gray-500 mt-3">Appointment and experience letters issued to you will appear here automatically.</p>
+        {letters.length ? <div className="mt-4 grid sm:grid-cols-2 gap-3">
+          {letters.map((letter, index) => (
+            <div key={`${letter.name}-${letter.date ?? index}`} className="rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center justify-between gap-2"><strong className="text-sm text-gray-900">{letter.name}</strong><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700">{letter.status || 'Issued'}</span></div>
+              <p className="text-[11px] text-gray-500 mt-0.5">Issued {letter.date ? new Date(letter.date).toLocaleDateString('en-IN') : '—'}</p>
+              {letter.downloadUrl && <a href={letter.downloadUrl} target="_blank" rel="noopener noreferrer" className="mt-3 h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1"><Eye size={12}/>View letter</a>}
+            </div>
+          ))}
+        </div> : <p className="text-sm text-gray-500 mt-3">Appointment and releasing letters issued to you will appear here automatically.</p>}
       </section>
 
       {preview && <GatePassViewer html={preview.html} title={preview.title} onClose={() => setPreview(null)} />}

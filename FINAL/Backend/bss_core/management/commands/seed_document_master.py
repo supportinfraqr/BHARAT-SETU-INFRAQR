@@ -30,6 +30,7 @@ DOCUMENTS = [
     ("PGP", "Permanent Gate Pass", True, "system", 12),
     ("APPT", "Appointment Letter", False, "system", 13),
     ("EXPL", "Experience Letter", False, "system", 14),
+    ("REL", "Releasing Letter", False, "system", 15),
 ]
 
 
