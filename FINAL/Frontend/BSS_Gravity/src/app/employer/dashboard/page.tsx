@@ -31,12 +31,10 @@ export default function EmployerDashboardPage() {
     { id:'payroll', count:payrollReview, label:'payroll record(s) need review — conflicting Employer / Contractor sources', href:'/employer/payroll?tab=exceptions', severity: payrollReview ? 'red' : 'green' },
     { id:'gatepass', count:pendingGate.length, label:'gate pass requests require approval', href:'/employer/gate-pass?status=Pending', severity: pendingGate.length ? 'orange' : 'green' },
     { id:'approvals', count:pending.length, label:'contractor or worker binding requests pending', href:'/employer/qr/requests', severity: pending.length ? 'orange' : 'green' },
-    { id:'submissions', count:pendingSubmissions.length, label:'contractor submissions need review', href:'/employer/compliance-submission', severity: pendingSubmissions.length ? 'blue' : 'green' },
+    { id:'submissions', count:pendingSubmissions.length, label:'submission(s) from your contractors require review', href:'/employer/compliance-submission', severity: pendingSubmissions.length ? 'blue' : 'green' },
     { id:'documents', count:employer.workerDocuments.filter(d => ['Expiring','Missing','Pending'].includes(d.status)).length, label:'workers have expiring or missing documents', href:'/employer/admin/documents', severity: employer.workerDocuments.filter(d => ['Expiring','Missing','Pending'].includes(d.status)).length ? 'red' : 'green' },
     { id:'sites', count:attentionSites.length, label:'sites have overdue compliance', href:'/employer/site-overview', severity: attentionSites.length ? 'red' : 'green' },
   ].filter(action => action.count > 0);
-
-  const expiring = employer.workerDocuments.filter(d => ['Expiring','Missing','Pending'].includes(d.status));
 
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -100,12 +98,6 @@ export default function EmployerDashboardPage() {
           <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><Clock3 size={16} className="text-orange-500"/>{t('ui.approvalQueue')}</h2></header>
           <div className="divide-y divide-gray-100">{pending.slice(0, 4).map(item => <Link href="/employer/qr/requests" key={item.id} className="block p-4 hover:bg-gray-50"><div className="flex justify-between gap-2"><p className="text-sm font-semibold text-gray-900">{item.name}</p><span className="text-[9px] font-bold uppercase text-blue-700 bg-blue-50 rounded px-1.5 py-0.5 h-fit">{item.entityType}</span></div><p className="text-xs text-gray-500 mt-1">{item.site}</p><p className="text-[11px] text-gray-400 mt-1">{item.checks.length} checks awaiting review</p></Link>)}</div>
           <Link href="/employer/qr/requests" className="h-11 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center">Review {pending.length} pending requests</Link>
-        </section>
-
-        <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <header className="px-5 py-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950 flex items-center gap-2"><FileWarning size={16} className="text-red-500"/>{t('ui.expiryAlerts')}</h2></header>
-          <div className="p-4 space-y-3">{expiring.map(item => <Link key={item.id} href="/employer/admin/documents" className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50"><div><p className="text-xs font-semibold text-gray-800">{item.worker}</p><p className="text-[10px] text-gray-400 mt-0.5">{item.document}</p></div><span className={`text-[10px] font-bold ${item.status === 'Missing' ? 'text-red-700' : 'text-orange-700'} bg-gray-50 rounded px-1.5 py-0.5`}>{item.status}</span></Link>)}</div>
-          <Link href="/employer/admin/documents" className="h-11 bg-gray-50 text-xs font-semibold text-[#073B67] flex items-center justify-center">View all worker documents</Link>
         </section>
 
         <section className="bg-white border border-gray-200 rounded-2xl p-5">

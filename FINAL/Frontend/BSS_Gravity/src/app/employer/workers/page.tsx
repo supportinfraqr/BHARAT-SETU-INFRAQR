@@ -14,7 +14,6 @@ const columns: DataColumn<EmployerWorker>[] = [
   { id:'contractor', header:'Contractor', value:row => row.contractor, render:row => <div><span className="font-medium text-gray-800">{row.contractor}</span><p className="text-[10px] font-mono text-gray-400">{row.contractorId}</p></div> },
   { id:'site', header:'Site', value:row => row.site },
   { id:'designation', header:'Designation', value:row => row.designation },
-  { id:'attendance', header:'Attendance', value:row => row.attendance, render:row => <span className={row.attendance >= 90 ? 'text-green-700' : 'text-orange-700'}>{row.attendance}%</span> },
   { id:'compliance', header:'Compliance', value:row => row.compliance, render:row => <span className={row.compliance === 'Compliant' ? 'text-green-700' : row.compliance === 'Expiring' ? 'text-orange-700' : 'text-red-700'}>{row.compliance}</span> },
   { id:'verified', header:'Verification', value:row => row.verified ? 'Verified' : 'Pending', render:row => <span className={row.verified ? 'text-green-700' : 'text-orange-700'}>{row.verified ? 'Verified' : 'Pending'}</span> },
   { id:'status', header:'Status', value:row => row.status },

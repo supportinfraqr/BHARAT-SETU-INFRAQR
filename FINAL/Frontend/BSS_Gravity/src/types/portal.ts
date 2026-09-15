@@ -473,7 +473,6 @@ export type EmployerWorker = {
   site: string;
   designation: string;
   doj: string;
-  attendance: number;
   compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Active' | 'Inactive';
   verified: boolean;

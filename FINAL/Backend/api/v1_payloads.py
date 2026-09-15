@@ -3158,11 +3158,18 @@ def _employer_stats(user):
     workers = WorkerContractorBinding.objects.filter(
         site__employer=user, binding_status="ACCEPTED",
         contractor_id__in=accepted_contractors).count()
+    comp_docs = ComplianceDocument.objects.filter(
+        employer_id__in=accepted_contractors, site__employer=user)
+    comp_total = comp_docs.count()
+    compliance_score = 0
+    if comp_total:
+        comp_ok = comp_docs.filter(status__in=["SUBMITTED", "COMPLETED"]).count()
+        compliance_score = int(round(comp_ok * 100.0 / comp_total))
     return {
         "totalContractors": contractors,
         "totalWorkers": workers,
         "activeSites": sites.count(),
-        "complianceScore": 0,
+        "complianceScore": compliance_score,
         "pendingApprovals": user.approvals_handled.filter(status="PENDING").count() if hasattr(user, "approvals_handled") else 0,
     }
 
@@ -3183,6 +3190,13 @@ def _employer_sites(user):
         worker_ids = set(site_bindings.values_list("contractor_id", flat=True))
         cids = sorted(allotted_ids | worker_ids)
         wcount = site_bindings.count()
+        comp_site = ComplianceDocument.objects.filter(
+            site=s, employer_id__in=accepted_contractors)
+        comp_site_total = comp_site.count()
+        site_compliance = 0
+        if comp_site_total:
+            comp_site_ok = comp_site.filter(status__in=["SUBMITTED", "COMPLETED"]).count()
+            site_compliance = int(round(comp_site_ok * 100.0 / comp_site_total))
         rows.append({
             "id": str(s.id), "code": _d(s.site_code), "name": _d(s.site_name),
             "location": _d(s.location) or _d(s.city),
@@ -3192,7 +3206,7 @@ def _employer_sites(user):
             "status": _d(s.site_status) or ("Active" if s.attendance_enabled else "Planned"),
             "contractorIds": list(cids), "workers": wcount,
             "pastContractors": _site_past_contractors(s, user, set(cids)),
-            "compliance": 0,
+            "compliance": site_compliance,
             "qrToken": _d(s.site_qr_token),
             "bssId": _d(s.bss_site_id),
             "data": _site_scalar_data(s),
@@ -3308,6 +3322,20 @@ def _employer_contractors(user):
         allotment_rows = ContractorSiteAllotment.objects.filter(
             binding__contractor=c, binding__employer=user,
             binding__binding_status="ACCEPTED").select_related("site")
+        connected_at = None
+        if binding:
+            connected_at = binding.accepted_at or binding.created_at
+        if connected_at is None:
+            worker_binding = WorkerContractorBinding.objects.filter(
+                contractor=c, site__employer=user, binding_status="ACCEPTED",
+            ).order_by("accepted_at", "created_at").first()
+            connected_at = (worker_binding.accepted_at or worker_binding.created_at) if worker_binding else None
+        comp_docs = ComplianceDocument.objects.filter(employer=c, site__employer=user)
+        comp_total = comp_docs.count()
+        compliance_score = 0
+        if comp_total:
+            comp_ok = comp_docs.filter(status__in=["SUBMITTED", "COMPLETED"]).count()
+            compliance_score = int(round(comp_ok * 100.0 / comp_total))
         rows.append({
             "id": c.id, "name": _d(cp.contractor_name if cp else "", c.username),
             "bssId": _d(cp.contractor_code if cp else "", _bss_contractor_code(c.id)),
@@ -3320,12 +3348,33 @@ def _employer_contractors(user):
                            "RELEASED": "Released"}.get(str(a.status).upper(), _d(a.status)),
                 "source": _d(a.source),
             } for a in allotment_rows],
-            "compliance": 0, "onboardingDate": None,
+            "compliance": compliance_score,
+            "onboardingDate": _dts(connected_at.date()) if connected_at else None,
             "status": status,
             "bindingId": binding.id if (binding and accepted_binding) else None,
             "verified": bool(cp and cp.is_verified_badge) or accepted_binding,
         })
     return rows
+
+
+def _worker_compliance_label(worker):
+    """Worker compliance from the real state of their on-file documents:
+    rejected/expired → Non-compliant, expiring soon or unverified → Expiring,
+    no documents at all → Non-compliant, otherwise Compliant."""
+    today = timezone.localdate()
+    docs = WorkerDocument.objects.filter(user=worker)
+    for d in docs:
+        if d.status == "REJECTED":
+            return "Non-compliant"
+        if d.expiry_date and d.expiry_date < today:
+            return "Non-compliant"
+        if d.status in ("EXPIRED", "MISSING", "UNDER_VERIFICATION"):
+            return "Expiring"
+        if d.expiry_date and 0 <= (d.expiry_date - today).days <= 30:
+            return "Expiring"
+    if not docs.exists():
+        return "Non-compliant"
+    return "Compliant"
 
 
 def _employer_workers(user):
@@ -3344,7 +3393,7 @@ def _employer_workers(user):
             "siteId": str(b.site_id), "site": b.site.site_name if b.site else "",
             "designation": _d(b.designation),
             "doj": _dts(b.accepted_at.date()) if b.accepted_at else None,
-            "attendance": "PRESENT", "compliance": 0,
+            "compliance": _worker_compliance_label(b.worker),
             "status": _d(b.binding_status), "verified": bool(wi and wi.aadhaar),
         })
     return rows
