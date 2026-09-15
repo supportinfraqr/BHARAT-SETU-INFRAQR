@@ -101,6 +101,7 @@
     <h2><span class="n">i</span>Contents</h2>
     <div class="toc">
       <a href="#checkpoint">0 · Checkpoint Status (15 Sep 2026)</a>
+      <a href="#workflow">0.1 · End-to-End Binding &amp; Gate Pass Lifecycle Flowchart</a>
       <a href="#overview">1 · Overview</a>
       <a href="#accounts">2 · Demo Accounts</a>
       <a href="#apis">3 · API Reference</a>
@@ -224,6 +225,200 @@
         </tr>
       </tbody>
     </table>
+  </section>
+
+  <!-- ================= WORKFLOW FLOWCHART ================= -->
+  <section class="card" id="workflow">
+    <h2><span class="n">0.1</span>End-to-End System Binding &amp; Document Generation Flowchart</h2>
+    <p class="sub">Complete step-by-step lifecycle flow illustrating Employer creation, Site setup, Contractor pairing, Site allotment, Worker binding, and automated Letter &amp; Gate Pass issuance.</p>
+
+    <style>
+      .flow-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .flow-step {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify: space-between;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+      .flow-step:hover {
+        border-color: var(--blue);
+        transform: translateY(-2px);
+      }
+      .flow-step-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      .flow-num {
+        background: linear-gradient(135deg, var(--blue), var(--navy-2));
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        flex-shrink: 0;
+      }
+      .flow-role-badge {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-left: auto;
+      }
+      .role-emp { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+      .role-con { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+      .role-wrk { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+      .role-sys { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+
+      .flow-step h4 {
+        margin: 0 0 6px 0;
+        font-size: 15px;
+        color: #fff;
+      }
+      .flow-step p {
+        font-size: 13px;
+        color: #94a3b8;
+        margin: 0;
+        line-height: 1.5;
+      }
+      .flow-arrow-down {
+        text-align: center;
+        color: var(--blue);
+        font-size: 18px;
+        margin: 4px 0;
+      }
+      .flow-action-box {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: rgba(0, 0, 0, 0.25);
+        border-left: 3px solid var(--blue);
+        border-radius: 4px;
+        font-size: 12px;
+        color: #cbd5e1;
+      }
+      .flow-action-box strong {
+        color: #fff;
+      }
+    </style>
+
+    <div class="flow-grid">
+      <!-- Step 1 -->
+      <div class="flow-step">
+        <div class="flow-step-header">
+          <div class="flow-num">1</div>
+          <span class="flow-role-badge role-emp">Employer</span>
+        </div>
+        <h4>Create Employer Account &amp; Site Setup</h4>
+        <p>Principal Employer registers organization profile (BSS-E) and creates a new construction/operational Site Master.</p>
+        <div class="flow-action-box">
+          <strong>Output:</strong> Unique Site QR Code generated &amp; Site details stored in BSS backend.
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="flow-step">
+        <div class="flow-step-header">
+          <div class="flow-num">2</div>
+          <span class="flow-role-badge role-con">Contractor</span>
+        </div>
+        <h4>Create Contractor Account</h4>
+        <p>Contractor creates company account (BSS-C) and completes company profile registration on the BSS portal.</p>
+        <div class="flow-action-box">
+          <strong>Output:</strong> Contractor Profile activated with master QR and Contractor ID.
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="flow-step">
+        <div class="flow-step-header">
+          <div class="flow-num">3</div>
+          <span class="flow-role-badge role-con">Contractor</span>
+          <span class="flow-role-badge role-emp" style="margin-left:4px">Employer</span>
+        </div>
+        <h4>Link Contractor &amp; Employer (QR Scan &amp; Accept)</h4>
+        <p>Contractor scans Employer's QR code to send engagement request. Employer receives notification and accepts engagement.</p>
+        <div class="flow-action-box">
+          <strong>Output:</strong> Contractor ↔ Employer linkage active in database.
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="flow-step">
+        <div class="flow-step-header">
+          <div class="flow-num">4</div>
+          <span class="flow-role-badge role-emp">Employer</span>
+          <span class="flow-role-badge role-con" style="margin-left:4px">Contractor</span>
+        </div>
+        <h4>Site Allotment &amp; Acceptance</h4>
+        <p>Employer allots the specific Site to the linked Contractor. Contractor receives allotment and accepts site terms.</p>
+        <div class="flow-action-box">
+          <strong>Output:</strong> Contractor authorized to deploy manpower on the specified Site.
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="flow-step">
+        <div class="flow-step-header">
+          <div class="flow-num">5</div>
+          <span class="flow-role-badge role-wrk">Worker</span>
+        </div>
+        <h4>Create Worker Account &amp; eKYC</h4>
+        <p>Worker completes self-registration on BSS Worker app/web, linking Aadhaar and basic profile details.</p>
+        <div class="flow-action-box">
+          <strong>Output:</strong> Dynamic Worker BSS ID Card &amp; Personal QR Code generated.
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="flow-step">
+        <div class="flow-step-header">
+          <div class="flow-num">6</div>
+          <span class="flow-role-badge role-con">Contractor</span>
+          <span class="flow-role-badge role-wrk" style="margin-left:4px">Worker</span>
+        </div>
+        <h4>Worker QR Scan &amp; Binding Approval</h4>
+        <p>Contractor scans Worker's QR code to initiate binding. Worker confirms/approves request via OTP or app prompt.</p>
+        <div class="flow-action-box">
+          <strong>Output:</strong> Binding process completed successfully &amp; linkage locked in system.
+        </div>
+      </div>
+
+      <!-- Step 7 -->
+      <div class="flow-step" style="grid-column: 1 / -1; background: rgba(59, 130, 246, 0.08); border-color: var(--blue);">
+        <div class="flow-step-header">
+          <div class="flow-num" style="background: var(--green);">7</div>
+          <span class="flow-role-badge role-sys">System Output</span>
+        </div>
+        <h4>Letter &amp; Gate Pass Generation Complete</h4>
+        <p>With all linkages validated, the system automatically fills BSS data tokens to generate accurate Binding/Unbinding Letters and Gate Passes.</p>
+        <div style="display:flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
+          <div style="flex:1; min-width: 220px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid var(--green);">
+            <strong style="color:var(--green)">📄 Binding &amp; Unbinding Letters:</strong> Automatically generated and signed with worker, contractor, and employer details.
+          </div>
+          <div style="flex:1; min-width: 220px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid var(--amber);">
+            <strong style="color:var(--amber)">🎫 Gate Passes (Employer Issued):</strong> Temporary and Permanent Gate Passes generated exclusively by Employer with site validity limits.
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= OVERVIEW ================= -->
