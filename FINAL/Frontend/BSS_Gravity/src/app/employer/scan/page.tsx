@@ -21,6 +21,21 @@ type ScannedEntity = {
   status: string;
 };
 
+type IdentityLookup = { name?: string; company?: string; bssId?: string; identity?: { name?: string; bssId?: string } };
+
+/** Registry lookup so a scanned credential resolves even when the party is not
+ *  yet connected to this employer (worker/contractor BSS IDs both supported). */
+async function lookupIdentity(bssId: string): Promise<IdentityLookup | null> {
+  try {
+    const res = await fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null) as { data?: IdentityLookup } | null;
+    return json?.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function EmployerScanPage() {
   const { employer } = useEmployer();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -61,7 +76,7 @@ export default function EmployerScanPage() {
 
   useEffect(() => () => controls.current?.stop(), []);
 
-  const verify = (text: string) => {
+  const verify = async (text: string) => {
     try {
       const p = JSON.parse(text) as Payload;
       if (!['BSS_WORKER', 'BSS_CONTRACTOR', 'BSS_EMPLOYER'].includes(p.type) || p.v !== 1 || p.issuer !== 'Bharat Shram Setu') throw new Error('Unsupported QR credential');
@@ -71,16 +86,22 @@ export default function EmployerScanPage() {
       const isContractor = p.type === 'BSS_CONTRACTOR' || p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC');
       const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W');
       if (isContractor) {
-        // Contractor QR → identify contractor, display relationship
+        // Contractor QR → identify contractor, display relationship. The
+        // contractor need not be engaged already — look them up in the registry.
         const known = employer.contractors.find(c => c.bssId === p.bssId);
         const existing = employer.approvals.find(a => a.bssId === p.bssId && ['Pending', 'Accepted', 'Approved'].includes(a.status));
+        let registryName = '';
         if (!known && !existing) {
-          setEntity(null);
-          setScanned(null);
-          setState('error');
-          setMessage(`No contractor record found with BSS ID "${p.bssId}". Please check the BSS ID and try again.`);
-          controls.current?.stop();
-          return;
+          const payload = await lookupIdentity(p.bssId);
+          if (!payload) {
+            setEntity(null);
+            setScanned(null);
+            setState('error');
+            setMessage(`No contractor record found with BSS ID "${p.bssId}". Please check the BSS ID and try again.`);
+            controls.current?.stop();
+            return;
+          }
+          registryName = payload.company || payload.name || '';
         }
         const bound = Boolean(known);
         // A request sent earlier in this session (portal data is not refreshed live).
@@ -89,7 +110,7 @@ export default function EmployerScanPage() {
         setEntity({
           kind: 'contractor',
           bssId: p.bssId,
-          name: known?.name ?? existing?.name ?? 'Contractor ' + p.bssId.slice(-4),
+          name: known?.name ?? existing?.name ?? (registryName || 'Contractor ' + p.bssId.slice(-4)),
           site: known ? (known.siteIds.length + ' site(s) assigned') : (existing?.site ?? 'No site assignment'),
           contractor: known?.name ?? 'Contractor',
           detail: known ? `${known.workers} workers · compliance ${known.compliance}%` : 'No active binding',
@@ -100,29 +121,35 @@ export default function EmployerScanPage() {
         setMessage(existing ? `Binding request already ${existing.status.toLowerCase()} with this contractor.` : bound ? 'Contractor identified — binding details displayed below' : 'Contractor QR identified — this contractor is not connected to your organisation');
       } else if (isWorker) {
         setAlreadyRequested(null);
-        // Worker QR → identify worker, display current binding (never auto-bind)
+        // Worker QR → identify worker, display current binding (never auto-bind).
+        // The worker need not be in your list — look them up in the registry.
         const known = employer.workers.find(w => w.bssId === p.bssId);
+        let registryName = '';
         if (!known) {
-          setEntity(null);
-          setScanned(null);
-          setState('error');
-          setMessage(`No worker record found with BSS ID "${p.bssId}". Please check the BSS ID and try again.`);
-          controls.current?.stop();
-          return;
+          const payload = await lookupIdentity(p.bssId);
+          if (!payload?.identity) {
+            setEntity(null);
+            setScanned(null);
+            setState('error');
+            setMessage(`No worker record found with BSS ID "${p.bssId}". Please check the BSS ID and try again.`);
+            controls.current?.stop();
+            return;
+          }
+          registryName = payload.identity.name ?? '';
         }
         const bound = Boolean(known);
         setEntity({
           kind: 'worker',
           bssId: p.bssId,
-          name: known.name,
-          site: known.site ?? 'Unassigned site',
-          contractor: known.contractor ?? 'Unmapped',
-          detail: known.designation ?? 'Not disclosed',
+          name: known?.name ?? (registryName || 'Worker ' + p.bssId.slice(-4)),
+          site: known?.site ?? 'Unassigned site',
+          contractor: known?.contractor ?? 'Unmapped',
+          detail: known?.designation ?? 'Not disclosed',
           bound,
-          status: bound ? (known.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
+          status: bound ? (known?.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
         });
         setState('identified');
-        setMessage('Worker identified — current binding displayed below');
+        setMessage(bound ? 'Worker identified — current binding displayed below' : 'Worker credential verified — not engaged with your organisation');
       } else {
         // Another employer's QR → basic details only (employers don't bind each other).
         setEntity({

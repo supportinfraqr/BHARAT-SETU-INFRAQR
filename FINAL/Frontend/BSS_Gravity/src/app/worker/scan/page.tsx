@@ -48,12 +48,13 @@ export default function QRScannerWorkflow() {
 
   useEffect(() => () => controls.current?.stop(), []);
 
-  const verify = (text: string) => {
+  const verify = async (text: string) => {
     try {
       const p = JSON.parse(text) as Payload;
       if (!["BSS_WORKER","BSS_CONTRACTOR","BSS_EMPLOYER"].includes(p.type) || p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
       const isContractor = p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC");
       const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E");
+      playScanBeep(true);
       if (isContractor) {
         // Contractor QR → binding request. The worker never picks a site: the
         // request always targets the contractor's default (or first) site.
@@ -62,15 +63,29 @@ export default function QRScannerWorkflow() {
         setState("binding");
         setMessage("Contractor identified — checking their default site…");
         void checkContractorSite(p.bssId);
+        // Resolve the contractor's registered name (the QR payload carries none).
+        void fetch(`/api/identity/verify/${encodeURIComponent(p.bssId)}`, { cache: 'no-store' })
+          .then(r => (r.ok ? r.json() : null))
+          .then((j: { data?: { company?: string; name?: string } } | null) => {
+            const name = j?.data?.company || j?.data?.name;
+            if (name) setContractor(current => current && current.bssId === p.bssId ? { ...current, name } : current);
+          })
+          .catch(() => {});
       } else if (isEmployer) {
         // Principal Employer QR → informational only for workers
         setState("error"); setMessage(`Principal Employer credential (${p.bssId}). No binding action is available for workers here.`);
-      } else {
-        if (p.bssId !== worker.identity.bssId) throw new Error("Worker record was not found on this device");
+      } else if (p.bssId === worker.identity.bssId) {
         setResult(sanitizeWorkerProfile(worker, viewerRole));
         setState("verified"); setMessage("Credential verified successfully");
+      } else {
+        // Another worker's credential — verify it against the registry instead of
+        // assuming it is "not found on this device".
+        const lookup = await fetch(`/api/identity/verify/${encodeURIComponent(p.bssId)}`, { cache: 'no-store' }).catch(() => null);
+        const payload = lookup && lookup.ok ? await lookup.json().catch(() => null) as { data?: ScanResult } | null : null;
+        if (!payload?.data?.identity) throw new Error(`No worker record found with BSS ID "${p.bssId}".`);
+        setResult(payload.data);
+        setState("verified"); setMessage("Credential verified successfully");
       }
-      playScanBeep(true);
       controls.current?.stop();
     } catch (e) {
       playScanBeep(false);
