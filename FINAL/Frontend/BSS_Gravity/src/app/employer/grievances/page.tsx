@@ -5,7 +5,7 @@ import { CheckCircle2, FileText, Headphones, MessageSquareText, Paperclip, Play,
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { maskFoulLanguage } from '@/lib/profanity';
-import { downloadGrievanceFile, grievanceFileBlobUrl } from '@/lib/grievanceFiles';
+import { downloadGrievanceFile, grievanceFileBlobUrl, openGrievanceFileInNewTab } from '@/lib/grievanceFiles';
 import type { ContractorGrievance } from '@/types/portal';
 
 const statusTone: Record<ContractorGrievance['status'], string> = {
@@ -20,7 +20,7 @@ const statusTone: Record<ContractorGrievance['status'], string> = {
 export default function EmployerGrievancesPage() {
   const { employer, replaceEmployer } = useEmployer();
   const grievances = employer.grievances ?? [];
-  const [selectedId, setSelectedId] = useState(grievances[0]?.id ?? '');
+  const [selectedId, setSelectedId] = useState('');
   const [reply, setReply] = useState('');
   const [replyFile, setReplyFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,7 +29,7 @@ export default function EmployerGrievancesPage() {
   const [playUrl, setPlayUrl] = useState('');
   const replyFileRef = useRef<HTMLInputElement>(null);
 
-  const selected = grievances.find(item => item.id === selectedId) ?? grievances[0];
+  const selected = selectedId ? grievances.find(item => item.id === selectedId) : null;
   const counts = {
     total: grievances.length,
     open: grievances.filter(item => item.status === 'Open' || item.status === 'Submitted').length,
@@ -61,10 +61,12 @@ export default function EmployerGrievancesPage() {
     if (updated) { setReply(''); setReplyFile(null); setNotice(`Reply recorded on ${selected.ref}. The worker and the connected contractor can see it.`); }
   }
   async function resolveGrievance() {
+    if (!selected) return;
     const updated = await applyAction('resolve');
     if (updated) setNotice(`${selected.ref} marked resolved — awaiting the worker's confirmation.`);
   }
   async function reopenGrievance() {
+    if (!selected) return;
     const updated = await applyAction('reopen');
     if (updated) setNotice(`${selected.ref} reopened — review → reply → resolve cycle restarts for the contractor.`);
   }
@@ -79,14 +81,14 @@ export default function EmployerGrievancesPage() {
   }
 
   const columns: DataColumn<ContractorGrievance>[] = [
-    { id:'ref', header:'Reference', value:item => item.ref, render:item => <span className="font-mono text-blue-700">{item.ref}</span> },
+    { id:'ref', header:'Reference', value:item => item.ref, render:item => <button onClick={() => setSelectedId(item.id)} className="font-mono text-blue-700 hover:underline text-left">{item.ref}</button> },
     { id:'worker', header:'Worker', value:item => item.worker, render:item => <div><strong className="text-gray-900">{item.worker}</strong><p className="font-mono text-[10px] text-gray-400">{item.workerId}</p></div> },
     { id:'contractor', header:'Contractor', value:item => item.contractor },
     { id:'site', header:'Site', value:item => item.site },
     { id:'category', header:'Category', value:item => item.category },
     { id:'status', header:'Status', value:item => item.status, render:item => <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusTone[item.status]}`}>{item.status}</span> },
     { id:'raised', header:'Raised', value:item => item.raisedAt.slice(0, 10) },
-    { id:'actions', header:'Action', filterable:false, value:item => item.ref, render:item => <button onClick={() => setSelectedId(item.id)} className="text-blue-700 font-semibold text-xs">Open</button> },
+    { id:'actions', header:'Details', filterable:false, value:item => item.ref, render:item => <button onClick={() => setSelectedId(item.id)} className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold text-xs border border-blue-100">View details</button> },
   ];
 
   return <div className="space-y-6 pb-12">
@@ -125,6 +127,7 @@ export default function EmployerGrievancesPage() {
         <div className="flex gap-2">
           {!['Resolved', 'Closed'].includes(selected.status) && <button disabled={busy} onClick={resolveGrievance} className="h-9 px-3 rounded-lg bg-bss-green text-white text-xs font-bold flex items-center gap-1.5 hover:brightness-95 disabled:opacity-50"><CheckCircle2 size={14}/>Mark resolved</button>}
           {['Resolved', 'Closed'].includes(selected.status) && <button disabled={busy} onClick={reopenGrievance} className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-bold flex items-center gap-1.5 hover:bg-red-50 disabled:opacity-50"><RotateCcw size={14}/>Reopen</button>}
+          {selected.resolutionConfirmed && <span className="h-9 px-3 rounded-lg bg-green-50 border border-green-100 text-green-700 text-xs font-bold inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Worker confirmed</span>}
         </div>
       </header>
 
@@ -135,7 +138,7 @@ export default function EmployerGrievancesPage() {
             <p className="text-sm text-gray-800 leading-6">{maskFoulLanguage(selected.description)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {selected.audioAvailable && <button onClick={() => void playAudio()} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-1 hover:bg-blue-100"><Volume2 size={12}/>Play audio grievance <Play size={11}/></button>}
-              {selected.attachmentName && <button onClick={() => void downloadGrievanceFile(selected.id, 'attachment')} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1 hover:bg-gray-100"><FileText size={12}/>{selected.attachmentName}</button>}
+              {selected.attachmentName && <button onClick={() => void openGrievanceFileInNewTab(selected.id, 'attachment')} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-700 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-1 hover:bg-gray-100"><FileText size={12}/>{selected.attachmentName}</button>}
             </div>
             {playUrl && <audio controls autoPlay src={playUrl} className="mt-3 w-full" />}
           </div>
@@ -148,7 +151,7 @@ export default function EmployerGrievancesPage() {
                 <div key={entry.id} className={`max-w-[85%] rounded-xl border p-3 text-xs ${entry.by === 'Worker' ? 'bg-gray-50 border-gray-100' : entry.by === 'Employer' ? 'bg-indigo-50 border-indigo-100 ml-auto' : 'bg-blue-50 border-blue-100'}`}>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{entry.by} · {new Date(entry.at).toLocaleString('en-IN')}</p>
                   {entry.text && <p className="text-gray-800 leading-5 whitespace-pre-line">{entry.by === 'Worker' ? maskFoulLanguage(entry.text) : entry.text}</p>}
-                  {entry.attachment && <button onClick={() => void downloadGrievanceFile(selected.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
+                  {entry.attachment && <button onClick={() => void openGrievanceFileInNewTab(selected.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
                 </div>
               ))}
             </div>

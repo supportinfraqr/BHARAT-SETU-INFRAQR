@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { hasFoulLanguage } from '@/lib/profanity';
-import { grievanceFileBlobUrl, downloadGrievanceFile } from '@/lib/grievanceFiles';
+import { grievanceFileBlobUrl, downloadGrievanceFile, openGrievanceFileInNewTab } from '@/lib/grievanceFiles';
 import { useWorker } from '@/contexts/WorkerContext';
 
 // Statuses mirror the BSS grievance lifecycle (schema: Submitted, Under Review,
@@ -730,7 +730,7 @@ export default function GrievancePage() {
                             <div key={entry.id} className={`rounded-lg border p-2.5 text-xs ${entry.by === 'Worker' ? 'bg-gray-50 border-gray-100 ml-6' : 'bg-blue-50 border-blue-100 mr-6'}`}>
                               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">{entry.by} · {formatDateTime(entry.at)}</p>
                               {entry.text && <p className="text-gray-800 leading-5 whitespace-pre-line">{entry.text}</p>}
-                              {entry.attachment && <button onClick={() => void downloadGrievanceFile(ticket.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
+                              {entry.attachment && <button onClick={() => void openGrievanceFileInNewTab(ticket.id, 'attachment', entry.id)} className="mt-1 text-[11px] font-bold text-[#073B67] hover:underline flex items-center gap-1"><Paperclip size={11}/>{entry.attachmentName || 'Attachment'}</button>}
                             </div>
                           ))}
                         </div>

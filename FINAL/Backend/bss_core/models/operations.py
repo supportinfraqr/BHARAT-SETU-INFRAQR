@@ -621,3 +621,24 @@ class DocumentTemplateStore(models.Model):
 
     def __str__(self):
         return f"{self.owner_type}:{self.owner_id}"
+
+
+class WorkerGatePassBlock(models.Model):
+    """Principal employer's switch to stop gate-pass generation for a worker
+    (both temporary and permanent). When blocked the pass is not generated."""
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gate_pass_blocks")
+    employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gate_pass_blocks_issued")
+    blocked = models.BooleanField(default=True)
+    blocked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "worker_gate_pass_block"
+        constraints = [
+            models.UniqueConstraint(fields=["worker", "employer"], name="uq_gate_pass_block"),
+        ]
+
+    def __str__(self):
+        return f"{self.worker_id} blocked={self.blocked}"

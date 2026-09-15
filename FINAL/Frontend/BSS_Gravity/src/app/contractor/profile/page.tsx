@@ -12,7 +12,6 @@ const tabs = [
   ['contact', 'Contact Persons', Phone],
   ['financial', 'Financial', CreditCard],
   ['service', 'Service profile', MapPin],
-  ['associations', 'PE & Site', Handshake],
   ['licences', 'Registrations & Licences', Landmark],
   ['documents', 'Documents', FileText],
   ['declarations', 'Declarations', CheckCircle2],
@@ -75,8 +74,17 @@ export default function ContractorProfilePage() {
       </section>
 
       <div className="grid md:grid-cols-[240px_1fr] gap-6">
-        <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit overflow-x-auto">
-          {tabs.map(([id, label, Icon]) => <button key={id} onClick={() => { setTab(id); setEditing(false); setError(''); }} className={`w-full flex gap-3 px-4 py-3 rounded-xl text-sm font-semibold ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={17}/>{label}</button>)}
+        <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit overflow-x-auto space-y-0.5">
+          {tabs.map(([id, label, Icon]) => (
+            <button
+              key={id}
+              onClick={() => { setTab(id); setEditing(false); setError(''); }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-left transition-colors ${tab === id ? 'bg-gray-950 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Icon size={16} className="shrink-0" />
+              <span className="leading-snug">{label}</span>
+            </button>
+          ))}
         </nav>
 
         {tab === 'licences' ? (
@@ -88,13 +96,78 @@ export default function ContractorProfilePage() {
               {fields.length > 0 && <button onClick={() => setEditing(v => !v)} className="text-sm text-blue-700 font-semibold">{editing ? 'Cancel' : 'Edit'}</button>}
             </header>
             <form onSubmit={save} className="grid sm:grid-cols-2 gap-6 mt-6">
-              {fields.map((field, index) =>
-                <label key={field.label} className="text-xs font-semibold text-gray-500 uppercase">
-                  {field.label}
-                  {editing && !field.sensitive
-                    ? <input required type={field.type === 'date' ? 'date' : 'text'} name={`field-${index}`} defaultValue={field.value} className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900"/>
-                    : <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value}</span>}
-                </label>)}
+              {fields.map((field, index) => {
+                const labelLower = field.label.toLowerCase();
+                const isDocField = tab === 'documents' || labelLower.includes('document') || labelLower.includes('certificate') || labelLower.includes('licence');
+                const isDateField = field.type === 'date' || labelLower.includes('date');
+                
+                // Define dropdown options based on Excel spec
+                let dropdownOptions: string[] | null = null;
+                if (labelLower.includes('payroll method')) {
+                  dropdownOptions = ['BSS Payroll / Direct Transfer', 'External Payroll System', 'Bank Transfer', 'Manual Cash / Voucher'];
+                } else if (labelLower.includes('attendance method')) {
+                  dropdownOptions = ['BSS QR Code / Mobile', 'Biometric Device', 'RFID / Smart Card', 'Manual Muster Roll'];
+                } else if (labelLower.includes('onboarding method')) {
+                  dropdownOptions = ['BSS Mobile Self-Onboarding', 'Contractor Bulk Import', 'Kiosk / Gate Assisted'];
+                } else if (labelLower.includes('consent for data processing')) {
+                  dropdownOptions = ['Yes', 'No'];
+                } else if (labelLower.includes('contractor type')) {
+                  dropdownOptions = ['Proprietorship', 'Partnership', 'Private Limited', 'Public Limited', 'LLP', 'Individual'];
+                } else if (labelLower.includes('entity constitution')) {
+                  dropdownOptions = ['Proprietorship', 'Partnership Firm', 'Private Limited Company', 'Public Limited Company', 'Limited Liability Partnership (LLP)'];
+                } else if (labelLower.includes('annual turnover band')) {
+                  dropdownOptions = ['Below ₹50 Lakhs', '₹50 Lakhs - ₹2 Crores', '₹2 Crores - ₹10 Crores', 'Above ₹10 Crores'];
+                } else if (labelLower.includes('contractor risk rating')) {
+                  dropdownOptions = ['Low Risk', 'Medium Risk', 'High Risk'];
+                } else if (labelLower.includes('registration source')) {
+                  dropdownOptions = ['Self Portal', 'BSS Assisted', 'Employer Invited', 'Bulk Import'];
+                }
+
+                return (
+                  <label key={field.label} className="text-xs font-semibold text-gray-500 uppercase">
+                    {field.label}
+                    {editing && !field.sensitive ? (
+                      isDocField ? (
+                        <div className="mt-1 space-y-2">
+                          <input
+                            type="text"
+                            name={`field-${index}`}
+                            defaultValue={field.value}
+                            placeholder="Enter document number / reference"
+                            className="block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                          />
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                            className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                          />
+                        </div>
+                      ) : dropdownOptions ? (
+                        <select
+                          name={`field-${index}`}
+                          defaultValue={field.value || dropdownOptions[0]}
+                          className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                        >
+                          {!field.value && <option value="">Select option</option>}
+                          {dropdownOptions.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          required={!isDateField}
+                          type={isDateField ? 'date' : 'text'}
+                          name={`field-${index}`}
+                          defaultValue={field.value}
+                          className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                        />
+                      )
+                    ) : (
+                      <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value || '—'}</span>
+                    )}
+                  </label>
+                );
+              })}
               {!fields.length && <p className="sm:col-span-2 text-sm text-gray-500 py-10 text-center">No records were returned for this section.</p>}
               {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
               {editing && <div className="sm:col-span-2 flex justify-end"><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Save changes'}</button></div>}

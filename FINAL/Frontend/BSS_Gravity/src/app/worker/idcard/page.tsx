@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Download, Share2, ChevronLeft, Home, RadioTower, ShieldCheck, Briefcase, CheckCircle2, PackageCheck, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import WorkerQr from '@/components/qr/WorkerQr';
 import CredentialQrPanel from '@/components/idcard/CredentialQrPanel';
+import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
+import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
+import type { OwnerScope } from '@/lib/documentEngine/types';
+import type { PortalView, WorkerLike } from '@/lib/documentEngine/workerDataService';
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -15,6 +19,7 @@ export default function IdentityCardPage() {
   const [exportNotice, setExportNotice] = useState('');
   const { worker } = useWorker();
   const { t } = useLanguage();
+  const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
@@ -173,6 +178,29 @@ export default function IdentityCardPage() {
   };
   const currentDate = formatCardDate(worker.employment.idCardIssueDate) || fallbackIssue.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const validTill = formatCardDate(worker.employment.idCardValidityTill) || fallbackValidity.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const gatePasses = worker.gatePasses ?? [];
+  const issuedPass = gatePasses[0];
+  const docView = useMemo(() => {
+    const employment = worker.employment;
+    const owner: OwnerScope = { ownerType: 'employer', ownerId: employment.employerDetails?.code ?? '', ownerName: employment.employer, bssId: employment.employerDetails?.code ?? '' };
+    const workerLike: WorkerLike = { name: worker.identity.name, bssId: worker.identity.bssId, site: employment.site, designation: employment.designation, employer: employment.employer, contractor: employment.contractor, doj: employment.doj, gender: worker.identity.gender, photoUrl: worker.identity.photoUrl, status: employment.status };
+    const view: PortalView = {
+      owner,
+      workers: [workerLike],
+      sites: [{ name: employment.site, code: employment.siteDetails?.code, address: employment.siteDetails?.location }],
+      contractors: [{ name: employment.contractor, bssId: employment.contractorDetails?.code ?? '', address: employment.contractorDetails?.address }],
+      employers: [{ name: employment.employer, bssId: employment.employerDetails?.code ?? '', address: employment.employerDetails?.address }],
+    };
+    return { owner, view, workerLike };
+  }, [worker]);
+
+  async function seeGatePass() {
+    if (!issuedPass) return;
+    const type = issuedPass.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass';
+    const html = await buildGatePassHtml(docView.owner, docView.view, docView.workerLike, type, { validFrom: issuedPass.validFrom, validTo: issuedPass.validTo, number: issuedPass.number });
+    setPassPreview({ html, title: `${docView.workerLike.name} · ${issuedPass.type} Gate Pass` });
+  }
 
   // Generate SVG wave background
   const waveBackground = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='0.05' d='M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3Cpath fill='%23ffffff' fill-opacity='0.03' d='M0,96L60,117.3C120,139,240,181,360,186.7C480,192,600,160,720,138.7C840,117,960,107,1080,117.3C1200,128,1320,160,1380,176L1440,192L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z'%3E%3C/path%3E%3C/svg%3E")`;
@@ -374,6 +402,15 @@ export default function IdentityCardPage() {
         </div>
       </div>
 
+      {/* See Gate Pass — under the ID card */}
+      <button
+        onClick={() => { void seeGatePass(); }}
+        disabled={!issuedPass}
+        className="w-full h-12 rounded-[12px] bg-[#0F5132] hover:bg-[#0b3d26] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+      >
+        <ShieldCheck size={18} /> {issuedPass ? `See Gate Pass (${issuedPass.type})` : 'No gate pass issued'}
+      </button>
+
       {/* Large QR — easier to scan than the small QR printed on the card */}
       <CredentialQrPanel
         bssId={worker.identity.bssId}
@@ -394,6 +431,8 @@ export default function IdentityCardPage() {
       <p className="text-center text-xs text-gray-500">ISO/IEC 7810 ID-1 · 85.60 × 53.98 mm · front and back · 4× raster capture</p>
       {exportError && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{exportError}</p>}
       {exportNotice && <p role="status" className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg p-3">{exportNotice}</p>}
+
+      {passPreview && <GatePassViewer html={passPreview.html} title={passPreview.title} onClose={() => setPassPreview(null)} />}
 
       <style jsx global>{`
         .perspective-1000 { -webkit-perspective: 1000px; perspective: 1000px; }

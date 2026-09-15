@@ -142,7 +142,11 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (resource === 'gate-passes') {
     if (method === 'PATCH') {
       const editsDates = body.validFrom !== undefined || body.validTo !== undefined;
-      if (editsDates) {
+      const togglesBlock = body.blocked !== undefined;
+      if (togglesBlock) {
+        requiredString(body, 'workerId', 20);
+        if (typeof body.blocked !== 'boolean') fail('Blocked must be true or false.');
+      } else if (editsDates) {
         requiredString(body, 'id', 120);
         for (const key of ['validFrom', 'validTo']) {
           const value = body[key];

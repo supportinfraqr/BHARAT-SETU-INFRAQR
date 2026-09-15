@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, Lock, Plus, Save, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import type { OwnerScope, TemplateConfig, TemplateSection, SignatureRole, DocumentType, TemplateVersionRecord } from '@/lib/documentEngine/types';
-import { DOCUMENT_TYPES, isGatePassType } from '@/lib/documentEngine/types';
+import { DOCUMENT_TYPES, isGatePassType, isAppearanceOnlyType } from '@/lib/documentEngine/types';
 import { templateService, makeDefaultTemplate } from '@/lib/documentEngine/services';
 import { renderDocumentHtml } from '@/lib/documentEngine/render';
 import { FieldTokenPicker } from './FieldTokenPicker';
@@ -34,7 +34,14 @@ export default function TemplateEditor({
   onRefresh?: () => void;
 }) {
   const [template, setTemplate] = useState<TemplateConfig>(() => {
-    const base = record?.template ?? makeDefaultTemplate(owner, documentType, 'Me');
+    const fallback = makeDefaultTemplate(owner, documentType, 'Me');
+    // Gate-pass layout/wording is fixed in code — start from the current default
+    // sections and keep only the saved appearance (styles).
+    if (isAppearanceOnlyType(documentType)) {
+      const stored = record?.template;
+      return { ...fallback, name: stored?.name ?? fallback.name, styles: { ...fallback.styles, ...(stored?.styles ?? {}) } };
+    }
+    const base = record?.template ?? fallback;
     return { ...base, ownerType: owner.ownerType, ownerId: owner.ownerId, ownerName: owner.ownerName };
   });
   // The version currently being edited — starts at the opened record and follows
@@ -46,8 +53,9 @@ export default function TemplateEditor({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const caretRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
-  // Gate passes are generated dynamically from BSS data — only appearance is editable.
-  const gatePass = isGatePassType(documentType);
+  // Appearance-only types (letters, gate passes) have a fixed layout — only the
+  // colour / text colour / text style can be changed.
+  const appearanceOnly = isAppearanceOnlyType(documentType);
 
   const orderedSections = useMemo(() => [...template.sections].sort((a, b) => a.order - b.order), [template.sections]);
   const selected = orderedSections.find(section => section.id === selectedId) ?? null;
@@ -186,7 +194,7 @@ export default function TemplateEditor({
         <header className="px-4 sm:px-5 py-3 border-b border-gray-200 bg-white flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1 flex items-center gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">{gatePass
+              <div className="flex items-center gap-2 flex-wrap">{appearanceOnly
                 ? <span className="text-base font-semibold px-2 py-1">{template.name}</span>
                 : <input value={template.name} onChange={event => setTemplate(current => ({ ...current, name: event.target.value }))} className="text-base font-semibold w-64 max-w-full border border-transparent hover:border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400"/>}
                 <TemplateStatusBadge status={template.status}/><span className="text-[11px] font-mono text-gray-400">{template.version}</span><span className="text-[11px] text-gray-500 hidden sm:inline">· {DOCUMENT_TYPES.find(item => item.id === documentType)?.short}</span></div>
@@ -204,8 +212,8 @@ export default function TemplateEditor({
 
         {/* 3-pane body */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-          {/* LEFT — sections (hidden for gate passes: layout & wording are fixed) */}
-          {!gatePass && <aside className="w-full lg:w-60 border-b lg:border-b-0 lg:border-r border-gray-200 bg-white p-3 overflow-y-auto shrink-0">
+          {/* LEFT — sections (hidden for fixed-layout types: layout & wording are fixed) */}
+          {!appearanceOnly && <aside className="w-full lg:w-60 border-b lg:border-b-0 lg:border-r border-gray-200 bg-white p-3 overflow-y-auto shrink-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1"><Sparkles size={11}/>Document Sections</p>
             <ul className="space-y-1">
               {orderedSections.map(section => (
@@ -236,14 +244,14 @@ export default function TemplateEditor({
 
           {/* RIGHT — section properties / data fields */}
           <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-200 bg-white p-4 overflow-y-auto shrink-0">
-            {gatePass ? (
+            {appearanceOnly ? (
               <div className="space-y-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Gate pass appearance</p>
-                <label className="block text-xs font-semibold text-gray-600">Pass colour<select value={template.styles.theme} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, theme: event.target.value as typeof current.styles.theme } }))} className={inputCls + ' text-xs'}><option value="bss-navy">BSS Navy</option><option value="bss-midnight">Midnight Blue</option><option value="bss-green">Government Green</option><option value="bss-plain">Plain</option></select></label>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">{isGatePassType(documentType) ? 'Gate pass appearance' : 'Document appearance'}</p>
+                <label className="block text-xs font-semibold text-gray-600">Pass colour<select value={template.styles.theme} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, theme: event.target.value as typeof current.styles.theme } }))} className={inputCls + ' text-xs'}><option value="bss-navy">BSS Navy</option><option value="bss-midnight">Midnight Blue</option><option value="bss-green">Green</option><option value="bss-red">Red</option><option value="bss-plain">Plain</option></select></label>
                 <label className="block text-xs font-semibold text-gray-600">Text colour<input type="color" value={template.styles.headingColor} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, headingColor: event.target.value } }))} className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/></label>
                 <label className="block text-xs font-semibold text-gray-600">Text style<select value={template.styles.fontFamily} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontFamily: event.target.value } }))} className={inputCls + ' text-xs'}><option value="'Arial', sans-serif">Arial</option><option value="'Segoe UI', sans-serif">Segoe UI</option><option value="Georgia, serif">Georgia (serif)</option><option value="'Times New Roman', serif">Times New Roman</option><option value="'Courier New', monospace">Courier (mono)</option></select></label>
                 <label className="block text-xs font-semibold text-gray-600">Text size ({template.styles.fontSize}px)<input type="range" min={9} max={15} value={template.styles.fontSize} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontSize: Number(event.target.value) } }))} className="w-full mt-1"/></label>
-                <p className="text-[11px] leading-5 text-gray-400">Gate passes are generated automatically from worker, site and validity data. Layout, wording, fields and signatories are fixed — only the appearance above can be changed.</p>
+                <p className="text-[11px] leading-5 text-gray-400">Layout, wording, fields and signatories are fixed in code — only the appearance above can be changed.</p>
               </div>
             ) : (
               <>
@@ -282,7 +290,7 @@ export default function TemplateEditor({
             ) : (
               <div className="space-y-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Template properties</p>
-                <label className="block text-xs font-semibold text-gray-600">Branding theme<select value={template.styles.theme} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, theme: event.target.value as typeof current.styles.theme } }))} className={inputCls + ' text-xs'}><option value="bss-navy">BSS Navy</option><option value="bss-midnight">Midnight Blue</option><option value="bss-green">Government Green</option><option value="bss-plain">Plain</option></select></label>
+                <label className="block text-xs font-semibold text-gray-600">Branding theme<select value={template.styles.theme} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, theme: event.target.value as typeof current.styles.theme } }))} className={inputCls + ' text-xs'}><option value="bss-navy">BSS Navy</option><option value="bss-midnight">Midnight Blue</option><option value="bss-green">Green</option><option value="bss-red">Red</option><option value="bss-plain">Plain</option></select></label>
                 <label className="block text-xs font-semibold text-gray-600">Base font size ({template.styles.fontSize}px)<input type="range" min={10} max={15} value={template.styles.fontSize} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontSize: Number(event.target.value) } }))} className="w-full mt-1"/></label>
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show logo</span><input type="checkbox" checked={template.styles.showLogo} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showLogo: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>
                 <label className="flex items-center justify-between text-xs font-semibold text-gray-600"><span>Show brand header</span><input type="checkbox" checked={template.styles.showBrandHeader} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, showBrandHeader: event.target.checked } }))} className="accent-[#073B67] w-4 h-4"/></label>

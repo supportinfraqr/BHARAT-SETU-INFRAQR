@@ -2,14 +2,15 @@
 
 import { useEffect } from 'react';
 import { useWorker } from '@/contexts/WorkerContext';
+import { ACCESSIBILITY_STORAGE_KEY, ACCESSIBILITY_BOOTSTRAP } from '@/lib/accessibility';
+
+export { ACCESSIBILITY_STORAGE_KEY, ACCESSIBILITY_BOOTSTRAP };
 
 export type AccessibilityPrefs = {
   largeText?: boolean;
   highContrast?: boolean;
   reduceMotion?: boolean;
 };
-
-export const ACCESSIBILITY_STORAGE_KEY = 'bss-a11y-prefs';
 
 const CLASS_MAP: Array<[keyof AccessibilityPrefs, string]> = [
   ['largeText', 'bss-large-text'],
@@ -47,7 +48,3 @@ export default function AccessibilityEffects() {
 
   return null;
 }
-
-// Inline snippet for the layout: applies the last-known choices before the
-// portal paints, so a reload doesn't flash the default size/contrast/motion.
-export const ACCESSIBILITY_BOOTSTRAP = `try{var p=JSON.parse(localStorage.getItem('${ACCESSIBILITY_STORAGE_KEY}')||'{}');var m={largeText:'bss-large-text',highContrast:'bss-high-contrast',reduceMotion:'bss-reduce-motion'};for(var k in m){document.documentElement.classList.toggle(m[k],!!p[k]);}}catch(e){}`;

@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, Trash2, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useWorker } from '@/contexts/WorkerContext';
+import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
+import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
+import type { OwnerScope } from '@/lib/documentEngine/types';
+import type { PortalView, WorkerLike } from '@/lib/documentEngine/workerDataService';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
 
 type DocumentRow = {
@@ -41,6 +46,9 @@ function formatDate(value: string | null): string | null {
 export default function DocumentsModule() {
   const { t } = useLanguage();
   const router = useRouter();
+  const { worker } = useWorker();
+  const gatePasses = worker.gatePasses ?? [];
+  const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -56,7 +64,8 @@ export default function DocumentsModule() {
       const response = await fetch('/api/worker/documents', { cache: 'no-store' });
       const json = await response.json() as { data?: DocumentRow[]; error?: string };
       if (!response.ok) throw new Error(json.error || 'Documents could not be loaded.');
-      setDocuments(json.data ?? []);
+      // Auto-issued documents (letters, gate passes) live under "My Issued Letters".
+      setDocuments((json.data ?? []).filter(doc => doc.owner !== 'System'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Documents could not be loaded.');
     } finally {
@@ -66,6 +75,25 @@ export default function DocumentsModule() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
   useEffect(() => { void load(); }, [load]);
+
+  const docView = useMemo(() => {
+    const employment = worker.employment;
+    const owner: OwnerScope = { ownerType: 'employer', ownerId: employment.employerDetails?.code ?? '', ownerName: employment.employer, bssId: employment.employerDetails?.code ?? '' };
+    const workerLike: WorkerLike = { name: worker.identity.name, bssId: worker.identity.bssId, site: employment.site, designation: employment.designation, employer: employment.employer, contractor: employment.contractor, doj: employment.doj, gender: worker.identity.gender, photoUrl: worker.identity.photoUrl, status: employment.status };
+    const view: PortalView = {
+      owner,
+      workers: [workerLike],
+      sites: [{ name: employment.site, code: employment.siteDetails?.code, address: employment.siteDetails?.location }],
+      contractors: [{ name: employment.contractor, bssId: employment.contractorDetails?.code ?? '', address: employment.contractorDetails?.address }],
+      employers: [{ name: employment.employer, bssId: employment.employerDetails?.code ?? '', address: employment.employerDetails?.address }],
+    };
+    return { owner, view, workerLike };
+  }, [worker]);
+
+  async function viewPass(pass: { type: string; number: string; validFrom: string; validTo: string; blocked?: boolean }) {
+    const html = await buildGatePassHtml(docView.owner, docView.view, docView.workerLike, pass.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: pass.validFrom, validTo: pass.validTo, number: pass.number });
+    setPassPreview({ html, title: `${docView.workerLike.name} · ${pass.type} Gate Pass` });
+  }
 
   const chooseFile = (doc: DocumentRow) => {
     setUploadTarget({ code: doc.code, name: doc.name });
@@ -121,6 +149,18 @@ export default function DocumentsModule() {
 
   const label = (status: string) => STATUS_LABELS[status] ?? status;
 
+  // Auto-generated gate-pass rows in the register link to the rendered pass.
+  // Only the applicable type is issued (Permanent if eligible, else Temporary);
+  // the other type is shown as Disabled.
+  const isGatePassRow = (d: DocumentRow) => d.owner === 'System' && /gate pass/i.test(d.name);
+  const gatePassRowType = (d: DocumentRow): 'Permanent' | 'Temporary' => /permanent/i.test(d.name) ? 'Permanent' : 'Temporary';
+  const issuedGatePassType = gatePasses[0]?.type as 'Permanent' | 'Temporary' | undefined;
+  const gatePassFor = (d: DocumentRow) => {
+    if (!isGatePassRow(d) || gatePassRowType(d) !== issuedGatePassType) return null;
+    return gatePasses.find(pass => pass.type === gatePassRowType(d)) ?? null;
+  };
+  const gatePassDisabled = (d: DocumentRow) => Boolean(isGatePassRow(d) && issuedGatePassType && gatePassRowType(d) !== issuedGatePassType);
+
   const getStatusConfig = (status: string) => {
     switch (label(status)) {
       case 'Verified': return { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle2 size={14} /> };
@@ -138,11 +178,14 @@ export default function DocumentsModule() {
     { id: 'name', header: 'Document name', value: d => d.name, render: d => <span className="font-semibold text-gray-800">{d.name}{d.mandatory && <span className="text-red-500 ml-1">*</span>}</span> },
     { id: 'type', header: 'Mandatory / Optional', value: d => d.mandatory ? 'Mandatory' : 'Optional', render: d => <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${d.mandatory ? 'bg-orange-50 text-[#F47A32]' : 'bg-gray-100 text-gray-500'}`}>{d.mandatory ? 'Mandatory' : 'Optional'}</span> },
     { id: 'owner', header: 'Document Owner', value: d => d.owner, render: d => d.owner === 'System' ? <span className="text-[10px] font-bold bg-[#073B67]/10 text-[#073B67] px-2 py-0.5 rounded">Auto-Generated</span> : d.owner },
-    { id: 'status', header: 'Document Status', value: d => label(d.status), render: d => { const config = getStatusConfig(d.status); return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span>; } },
-    { id: 'date', header: 'Date', value: d => formatDate(d.date) ?? '-' },
-    { id: 'expiry', header: 'Expiry Date', value: d => formatDate(d.expiry) ?? '-', render: d => d.expiry ? <span className={`text-xs font-semibold ${label(d.status) === 'Expired' ? 'text-orange-600' : 'text-gray-700'}`}>{formatDate(d.expiry)}</span> : <span className="text-gray-300">—</span> },
+    { id: 'status', header: 'Document Status', value: d => gatePassFor(d)?.status ?? (gatePassDisabled(d) ? 'Disabled' : label(d.status)), render: d => { const gp = gatePassFor(d); if (gp) { const tone = gp.status === 'Approved' ? 'bg-green-100 text-green-700' : gp.status === 'Blocked' ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-700'; return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${tone}`}><CheckCircle2 size={14}/>{gp.status}</span>; } if (gatePassDisabled(d)) return <span className="text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 bg-gray-100 text-gray-400">Disabled</span>; const config = getStatusConfig(d.status); return <span className={`text-[10px] font-bold px-2 py-1 rounded inline-flex items-center gap-1.5 ${config.bg} ${config.text}`}>{config.icon}{label(d.status)}</span>; } },
+    { id: 'date', header: 'Date', value: d => gatePassFor(d)?.validFrom ?? formatDate(d.date) ?? '-' },
+    { id: 'expiry', header: 'Expiry Date', value: d => gatePassFor(d)?.validTo ?? formatDate(d.expiry) ?? '-', render: d => { const gp = gatePassFor(d); const value = gp ? gp.validTo : formatDate(d.expiry); return value ? <span className="text-xs font-semibold text-gray-700">{value}</span> : <span className="text-gray-300">—</span>; } },
     {
       id: 'actions', header: 'Actions', filterable: false, value: d => label(d.status), render: d => {
+        const gp = gatePassFor(d);
+        if (gp) return <button onClick={() => { void viewPass(gp); }} disabled={gp.blocked} className="h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={13}/>View pass</button>;
+        if (gatePassDisabled(d)) return <span className="text-[11px] font-semibold text-gray-400">Not applicable</span>;
         const locked = Boolean(d.locked);
         return <div className="flex gap-1.5 items-center">
           {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="View Document"><Eye size={15} /></button>}
@@ -203,6 +246,8 @@ export default function DocumentsModule() {
           <EnterpriseDataTable title="Document records" rows={documents} columns={columns} rowKey={d => `${d.code}-${d.id ?? 'x'}`} filename="bss-worker-documents" defaultPageSize={15} />
         </div>
       )}
+
+      {passPreview && <GatePassViewer html={passPreview.html} title={passPreview.title} onClose={() => setPassPreview(null)} />}
     </div>
   );
 }

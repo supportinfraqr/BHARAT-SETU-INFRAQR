@@ -100,8 +100,17 @@ export default function EmployerProfilePage() {
     </section>
 
     <div className="grid md:grid-cols-[260px_1fr] gap-6">
-      <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit max-h-[70vh] overflow-y-auto">
-        {tabs.map(([id, label, Icon]) => <button key={id} onClick={() => { setTab(id); setEditing(false); setError(''); }} className={`w-full flex gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold ${tab === id ? 'bg-gray-950 text-white' : 'text-gray-600 hover:bg-gray-50'}`}><Icon size={16} className="shrink-0"/>{label}</button>)}
+      <nav className="bg-white border border-gray-200 rounded-2xl p-2 h-fit max-h-[75vh] overflow-y-auto space-y-0.5 scrollbar-thin scrollbar-thumb-gray-200">
+        {tabs.map(([id, label, Icon]) => (
+          <button
+            key={id}
+            onClick={() => { setTab(id); setEditing(false); setError(''); }}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors ${tab === id ? 'bg-gray-950 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+          >
+            <Icon size={16} className="shrink-0" />
+            <span className="leading-tight">{label}</span>
+          </button>
+        ))}
       </nav>
 
       {tab === 'licences'
@@ -114,11 +123,74 @@ export default function EmployerProfilePage() {
         <form onSubmit={save} className="grid sm:grid-cols-2 gap-x-6 gap-y-5 mt-6">
           {fields.map((field, index) => {
             const locked = isLocked(field);
+            const labelLower = field.label.toLowerCase();
+            const isDocField = field.label.includes('Certificate') || field.label.includes('Proof') || field.label.includes('Document') || field.label.includes('Licence') || field.label.includes('Licence');
+            const isDateField = field.type === 'date' || labelLower.includes('date');
+
+            let dropdownOptions: string[] | null = null;
+            if (labelLower.includes('ownership type')) {
+              dropdownOptions = ['Private Limited', 'Public Limited', 'Proprietorship', 'Partnership', 'LLP', 'Government Entity'];
+            } else if (labelLower.includes('class of company')) {
+              dropdownOptions = ['Company limited by Shares', 'Company limited by Guarantee', 'Unlimited Company'];
+            } else if (labelLower.includes('industry / sector')) {
+              dropdownOptions = ['Construction & Infrastructure', 'Manufacturing', 'Logistics & Supply Chain', 'Facility Management', 'IT & Services'];
+            } else if (labelLower.includes('workforce model')) {
+              dropdownOptions = ['Direct Hire', 'Contractor Deployed', 'Hybrid (Direct + Contractor)'];
+            } else if (labelLower.includes('payroll frequency')) {
+              dropdownOptions = ['Monthly', 'Fortnightly', 'Weekly', 'Daily'];
+            } else if (labelLower.includes('wage period')) {
+              dropdownOptions = ['1st to Last Day of Month', '26th to 25th of Month', '15th to 14th of Month'];
+            } else if (labelLower.includes('attendance method')) {
+              dropdownOptions = ['BSS QR Code / Mobile', 'Biometric Gate Access', 'RFID Smart Card', 'Manual Muster Roll'];
+            } else if (labelLower.includes('onboarding method') || labelLower.includes('worker onboarding method')) {
+              dropdownOptions = ['BSS Mobile Self-Onboarding', 'Contractor Assisted Import', 'Kiosk / Gate Assisted'];
+            } else if (labelLower.includes('coverage') || labelLower.includes('insurance') || labelLower.includes('facility') || labelLower.includes('plan') || labelLower.includes('process') || labelLower.includes('management') || labelLower.includes('training') || labelLower.includes('induction')) {
+              if (!labelLower.includes('date') && !labelLower.includes('officer') && !labelLower.includes('channel')) {
+                dropdownOptions = ['Enabled / Covered', 'Not Covered / Not Applicable', 'Optional / On-Demand'];
+              }
+            }
+
             return <label key={field.label} className="text-xs font-semibold text-gray-500">
               <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-gray-300"/>}{field.sensitive && <Lock size={11} className="text-amber-500"/>}</span>
-              {editing && !field.sensitive && !locked
-                ? <input type={field.type==='date'?'date':'text'} name={`field-${index}`} defaultValue={field.value} className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900"/>
-                : <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value || '—'}</span>}
+              {editing && !field.sensitive && !locked ? (
+                isDocField ? (
+                  <div className="mt-1 space-y-2">
+                    <input
+                      type="text"
+                      name={`field-${index}`}
+                      defaultValue={field.value}
+                      placeholder="Enter document / reference number"
+                      className="block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                    />
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                    />
+                  </div>
+                ) : dropdownOptions ? (
+                  <select
+                    name={`field-${index}`}
+                    defaultValue={field.value || dropdownOptions[0]}
+                    className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                  >
+                    {!field.value && <option value="">Select option</option>}
+                    {dropdownOptions.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    required={!isDateField}
+                    type={isDateField ? 'date' : 'text'}
+                    name={`field-${index}`}
+                    defaultValue={field.value}
+                    className="mt-1 block w-full h-10 border border-gray-200 rounded-lg px-3 text-sm normal-case text-gray-900 bg-white"
+                  />
+                )
+              ) : (
+                <span className="mt-1 block text-sm normal-case text-gray-900 font-medium">{field.value || '—'}</span>
+              )}
               {field.note && <span className="mt-1 block text-[10px] font-normal text-gray-400">{field.note}</span>}
             </label>;
           })}

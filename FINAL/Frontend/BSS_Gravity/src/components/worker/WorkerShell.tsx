@@ -19,7 +19,7 @@ const groups = [
   { key:'nav.rozgar', href:'/worker/rozgar', icon:Briefcase },
   { key:'nav.bindingRequests', href:'/worker/binding', icon:Handshake },
   { key:'nav.work', icon:CheckSquare, items:[['nav.attendance','/worker/Attendance'],['nav.leave','/worker/Leave'],['nav.skills','/worker/Skills'],['nav.holidays','/worker/Holidays']] },
-  { key:'nav.records', icon:FileText, items:[['nav.profile','/worker/Profile'],['nav.documents','/worker/Documents'],['nav.complianceWelfare','/worker/Compliance'],['nav.earnings','/worker/Earnings'],['nav.benefits','/worker/Benefits']] },
+  { key:'nav.records', icon:FileText, items:[['nav.profile','/worker/Profile'],['nav.documents','/worker/Documents'],['nav.issuedLetters','/worker/IssuedLetters'],['nav.complianceWelfare','/worker/Compliance'],['nav.earnings','/worker/Earnings'],['nav.benefits','/worker/Benefits']] },
   { key:'nav.qrIdentity', icon:ScanLine, items:[['nav.idCard','/worker/idcard'],['nav.orderCard','/worker/OrderCard']] },
   { key:'nav.grievances', href:'/worker/grievances', icon:MessageSquareText },
 ] as const;
@@ -81,7 +81,7 @@ export default function WorkerShell({ children }: { children:React.ReactNode }) 
                 <UserRound size={18} className="text-slate-600" />
               )}
             </button>
-            {profile&&<div role="menu" className="absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl shadow-gray-900/5 border border-gray-100 overflow-hidden z-50"><div className="px-4 py-3 border-b bg-gray-50/70"><p className="text-sm font-semibold">{worker.identity.name}</p><p className="text-[11px] text-gray-500">{worker.identity.bssId}</p></div><div className="p-1.5"><Link href="/worker/Settings" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link><SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-red-600 rounded-lg hover:bg-red-50"/></div></div>}
+            {profile&&<div role="menu" className="absolute top-full right-0 mt-2 w-52 bg-white rounded-xl shadow-xl shadow-gray-900/5 border border-gray-100 overflow-hidden z-50"><div className="px-4 py-3 border-b bg-gray-50/70"><p className="text-sm font-semibold">{worker.identity.name}</p><p className="text-[11px] text-gray-500">{worker.identity.bssId}</p></div><div className="p-1.5"><Link href="/worker/Profile" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><UserRound size={16}/>{t('nav.profile')}</Link><Link href="/worker/Settings" className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link><SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-red-600 rounded-lg hover:bg-red-50"/></div></div>}
           </div>
           <button type="button" className="cursor-pointer bss-mobile-trigger" aria-label={t('nav.menu')} aria-expanded={mobile} onClick={()=>setMobile(value=>!value)}>{mobile?<X/>:<Menu/>}</button>
         </div>

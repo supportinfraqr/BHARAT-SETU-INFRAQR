@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { FileDown, LayoutTemplate, Layers, ShieldCheck } from 'lucide-react';
+import { FileDown, Layers } from 'lucide-react';
 import ConsentPanel from '@/components/ConsentPanel';
 import { useContractor } from '@/contexts/ContractorContext';
-import DocumentTemplateManager from '@/components/documentEngine/TemplateManager';
 import BulkGenerateModal from '@/components/documentEngine/BulkGenerateModal';
 import { DocumentGeneratorModal } from '@/components/documentEngine/DocumentFlow';
 import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
@@ -14,7 +13,6 @@ export default function ContractorSettingsPage() {
   const { contractor } = useContractor();
   const { owner, view } = useContractorDocView();
   const workers = view.workers.length ? view.workers : [];
-  const [tab, setTab] = useState<'templates' | 'bulk' | 'consents'>('templates');
   const [generateType, setGenerateType] = useState<DocumentType | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
@@ -24,21 +22,16 @@ export default function ContractorSettingsPage() {
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Contractor settings</p>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">Document templates, organisation defaults and worker document operations · {contractor.identity.company}</p>
+          <p className="text-sm text-gray-500 mt-1">Organisation defaults and worker document operations · {contractor.identity.company}</p>
         </div>
       </header>
 
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-0">
-        <button onClick={() => setTab('templates')} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px inline-flex items-center gap-2 ${tab === 'templates' ? 'border-[#073B67] text-[#073B67]' : 'border-transparent text-gray-500'}`}><LayoutTemplate size={16}/>Document Templates</button>
-        <button onClick={() => setTab('consents')} className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px inline-flex items-center gap-2 ${tab === 'consents' ? 'border-[#073B67] text-[#073B67]' : 'border-transparent text-gray-500'}`}><ShieldCheck size={16}/>Consents</button>
-        <button onClick={() => setBulkOpen(true)} className="px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2 text-gray-500 hover:text-gray-800" title="Bulk generate appointment letters / multi-worker gate pass"><Layers size={16}/>Bulk generate</button>
-      </div>
-
       <div className="flex flex-wrap gap-2">
         <button className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold inline-flex items-center gap-2" onClick={() => setGenerateType('appointment-letter')}><FileDown size={15}/>Generate a document</button>
+        <button className="h-10 px-4 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-semibold inline-flex items-center gap-2" onClick={() => setBulkOpen(true)}><Layers size={15}/>Bulk generate</button>
       </div>
 
-      {tab === 'consents' ? <ConsentPanel role="contractor"/> : <DocumentTemplateManager owner={owner} onGenerate={type => setGenerateType(type)} />}
+      <ConsentPanel role="contractor"/>
 
       {generateType && <DocumentGeneratorModal owner={owner} view={view} workers={workers} type={generateType} onClose={() => setGenerateType(null)} />}
       {bulkOpen && <BulkGenerateModal owner={owner} view={view} workers={workers} onClose={() => setBulkOpen(false)} />}

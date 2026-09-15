@@ -1,8 +1,11 @@
 "use client";
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Eye, Plus, Search, ShieldCheck, X, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Eye, Search, ShieldCheck, X, XCircle } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
+import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
+import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
+import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
 import type { ContractorPortalData, GatePassEligibility } from '@/types/portal';
 type Pass = ContractorPortalData['gatePasses'][number];
 
@@ -10,60 +13,23 @@ const tempAllowed = (e?: GatePassEligibility) => !!e && e.medical === 'Done' && 
 const permAllowed = (e?: GatePassEligibility) => !!e && e.medical === 'Done' && e.healthSafety === 'Done' && e.compliance === 'Done';
 
 export default function ContractorGatePassPage() {
-  const { contractor, replaceContractor, mutate, scoped } = useContractor();
-  const [open, setOpen] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [busyId, setBusyId] = useState('');
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const { contractor, scoped } = useContractor();
+  const docCtx = useContractorDocView();
   const [siteFilter, setSiteFilter] = useState('all');
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [workerQuery, setWorkerQuery] = useState('');
+  const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const [eligibilityView, setEligibilityView] = useState<{ bssId: string; name: string; eligibility?: GatePassEligibility } | null>(null);
+
+  async function viewPass(row: Pass) {
+    const worker = docCtx.workers.find(item => item.bssId === row.workerId || item.name === row.workerName);
+    if (!worker) return;
+    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo, number: row.number });
+    setPassPreview({ html, title: `${row.workerName} · ${row.type} Gate Pass` });
+  }
 
   const gatePasses = useMemo(() => {
     const scopedRows = scoped(contractor.gatePasses, p => p.employer);
     return siteFilter === 'all' ? scopedRows : scopedRows.filter(p => p.site === siteFilter);
   }, [contractor.gatePasses, scoped, siteFilter]);
-
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setBusyId('new'); setError(''); setNotice('');
-    const form = Object.fromEntries(new FormData(e.currentTarget));
-    const worker = contractor.workers.find(item => item.bssId === form.workerId);
-    if (!worker) { setError('Select a worker assigned to this contractor.'); setBusyId(''); return; }
-    const type = form.type as string;
-    if (type === 'Permanent' && !permAllowed(worker.eligibility)) {
-      setError('Permanent Gate Pass requires Medical = Done, Health & Safety = Done and Compliance = Done. This worker is not eligible.'); setBusyId(''); return;
-    }
-    if (type === 'Temporary' && !tempAllowed(worker.eligibility)) {
-      setError('Temporary Gate Pass requires Medical = Done and Health & Safety = Done. This worker is not eligible.'); setBusyId(''); return;
-    }
-    try {
-      const result = await mutate<{ data: Pass | Pass[] }>('gate-passes', 'POST', { workerId: worker.bssId, type });
-      const created = Array.isArray(result.data) ? result.data : [result.data];
-      replaceContractor({ ...contractor, gatePasses: [...created, ...contractor.gatePasses] });
-      setOpen(false);
-      setNotice(`Gate pass request for ${worker.name} submitted to the principal employer for approval.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Gate pass could not be requested.'); }
-    finally { setBusyId(''); }
-  }
-
-  async function generateBulk(type: 'Temporary' | 'Permanent') {
-    const selected = contractor.workers.filter(w => checked.has(w.bssId));
-    if (!selected.length) { setError('Select at least one worker.'); return; }
-    setBusyId('bulk'); setError(''); setNotice('');
-    try {
-      const result = await mutate<{ data: Pass | Pass[] }>('gate-passes', 'POST', { bulk: selected.map(worker => ({ workerId: worker.bssId, type })) });
-      const created = Array.isArray(result.data) ? result.data : [result.data];
-      replaceContractor({ ...contractor, gatePasses: [...created, ...contractor.gatePasses] });
-      setBulkOpen(false); setChecked(new Set());
-      setNotice(`Generated ${created.length} ${type.toLowerCase()} gate pass request(s). The principal employer approves them before issue.`);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Bulk generation could not be completed.'); }
-    finally { setBusyId(''); }
-  }
-
-  const filteredWorkers = contractor.workers.filter(w => w.name.toLowerCase().includes(workerQuery.toLowerCase()) || w.bssId.toLowerCase().includes(workerQuery.toLowerCase()) || w.designation.toLowerCase().includes(workerQuery.toLowerCase()));
-  const toggle = (bssId: string) => setChecked(current => { const next = new Set(current); if (next.has(bssId)) next.delete(bssId); else next.add(bssId); return next; });
 
   const columns: DataColumn<Pass>[] = [
     { id:'worker', header:'Worker', value:r => r.workerName, render:r => <div><strong>{r.workerName}</strong><p className="font-mono text-[11px] text-gray-500">{r.workerId}</p>{(r.skill||r.contact)&&<p className="text-[10px] text-gray-400">{[r.skill,r.contact].filter(Boolean).join(' · ')}</p>}</div> },
@@ -71,11 +37,14 @@ export default function ContractorGatePassPage() {
     { id:'site', header:'Site', value:r => r.site },
     { id:'from', header:'Valid from', value:r => r.validFrom || '—' },
     { id:'to', header:'Valid to', value:r => r.validTo || '—' },
-    { id:'ownership', header:'Requested / Approved', filterable:false, value:r => `${r.requestedBy || ''} ${r.approvedBy || ''}`, render:r => <div><p className="text-[11px] text-gray-600">Req: {r.requestedBy || '—'}</p><p className="text-[11px] text-gray-500">Appr: {r.approvedBy || 'Pending employer'}</p></div> },
+    { id:'ownership', header:'Requested / Approved', filterable:false, value:r => `${r.requestedBy || ''} ${r.approvedBy || ''}`, render:r => <div><p className="text-[11px] text-gray-600">Req: {r.requestedBy || '—'}</p><p className="text-[11px] text-gray-500">Appr: {r.approvedBy || 'Principal Employer'}</p></div> },
     { id:'eligibility', header:'Eligibility', filterable:false, value:r => r.workerId, render:r => { const e = r.eligibility; return <div className="flex gap-1"><Dot label="M" ok={e?.medical === 'Done'} title="Medical"/><Dot label="H&S" ok={e?.healthSafety === 'Done'} title="Health & Safety"/><Dot label="C" ok={e?.compliance === 'Done'} title="Compliance"/></div>; } },
     { id:'status', header:'Status', value:r => r.status },
     { id:'actions', header:'Actions', filterable:false, value:r => r.status, render:r => (
-      <button onClick={() => setEligibilityView({ bssId: r.workerId, name: r.workerName, eligibility: r.eligibility })} className="text-gray-400 hover:text-blue-700" aria-label="View eligibility"><Eye size={15}/></button>
+      <div className="flex items-center gap-2">
+        <button onClick={() => { void viewPass(r); }} disabled={r.blocked} className="h-8 px-2.5 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={13}/>View pass</button>
+        <button onClick={() => setEligibilityView({ bssId: r.workerId, name: r.workerName, eligibility: r.eligibility })} className="text-gray-400 hover:text-blue-700" aria-label="View eligibility"><ShieldCheck size={15}/></button>
+      </div>
     ) },
   ];
 
@@ -83,11 +52,7 @@ export default function ContractorGatePassPage() {
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Gate Passes</h1><p className="text-sm text-gray-500 mt-1">Request time-bound site access for bound workers. Requests are pre-validated against Medical, Health &amp; Safety and Compliance criteria, then approved by the principal employer.</p></div>
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => { setBulkOpen(true); setChecked(new Set()); setError(''); }} className="h-10 px-4 border border-gray-200 rounded-lg text-sm font-semibold flex gap-2 items-center bg-white"><Plus size={16}/>Generate Bulk Gate Passes</button>
-        <button onClick={() => { setOpen(true); setError(''); }} className="h-10 px-4 bg-gray-950 text-white rounded-lg text-sm font-semibold flex gap-2 items-center"><Plus size={16}/>Request Pass</button>
-      </div>
+      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Gate Passes</h1><p className="text-sm text-gray-500 mt-1">View site access gate passes issued by the Principal Employer for bound workers. Eligibility criteria (Medical, Health &amp; Safety, and Compliance) are verified before issuance.</p></div>
     </header>
 
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -97,8 +62,7 @@ export default function ContractorGatePassPage() {
       <Metric label="Rejected" value={count('Rejected')} icon={XCircle} tone="text-red-700"/>
     </div>
 
-    {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
-    {error && !open && !bulkOpen && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+
 
     <div className="flex flex-wrap items-center gap-3">
       <label className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400"/><select value={siteFilter} onChange={e => setSiteFilter(e.target.value)} className="h-9 rounded-lg border border-gray-200 pl-9 pr-3 text-xs bg-white"><option value="all">All Sites</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}</select></label>
@@ -116,40 +80,8 @@ export default function ContractorGatePassPage() {
       </tbody></table></div>
     </details>
 
-    {open && <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" className="bg-white rounded-2xl w-full max-w-lg">
-      <header className="p-5 border-b flex justify-between"><h2 className="font-semibold">Request gate pass</h2><button onClick={() => setOpen(false)} aria-label="Close"><X/></button></header>
-      <form onSubmit={submit} className="p-5 grid sm:grid-cols-2 gap-4">
-        <label className="text-xs font-semibold">Worker<select required name="workerId" className="mt-1 w-full h-10 border rounded-lg bg-white px-2"><option value="">Select</option>{contractor.workers.map(w => <option key={w.id} value={w.bssId}>{w.name} · {w.bssId}</option>)}</select></label>
-        <label className="text-xs font-semibold">Pass type<select required name="type" className="mt-1 w-full h-10 border rounded-lg bg-white px-2"><option value="Temporary">Temporary</option><option value="Permanent">Permanent</option></select></label>
-        {error && <p role="alert" className="sm:col-span-2 bss-alert bss-alert-error flex items-center gap-2"><AlertTriangle size={14}/>{error}</p>}
-        <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} className="px-4 py-2">Cancel</button><button disabled={!!busyId} className="px-4 py-2 rounded-lg bg-blue-700 text-white font-semibold">{busyId === 'new' ? 'Validating & submitting…' : 'Submit for approval'}</button></div>
-      </form>
-    </section></div>}
-
-    {bulkOpen && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden">
-      <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">Generate bulk gate passes</h2><p className="text-xs text-gray-500 mt-1">Select workers with checkboxes · <strong>{checked.size} selected</strong> · eligibility is pre-validated per the criteria matrix.</p></div><button onClick={() => setBulkOpen(false)} aria-label="Close"><X/></button></header>
-      <div className="p-5 space-y-4">
-        <label className="relative block"><Search size={15} className="absolute left-3 top-3 text-gray-400"/><input value={workerQuery} onChange={e => setWorkerQuery(e.target.value)} placeholder="Search worker / BSS ID / designation" className="w-full h-10 pl-9 pr-3 border rounded-lg text-sm"/></label>
-        <div className="overflow-y-auto max-h-72 border border-gray-100 rounded-xl divide-y divide-gray-100">
-          {filteredWorkers.map(w => { const e = w.eligibility; const tempOk = tempAllowed(e); const permOk = permAllowed(e); return (
-            <label key={w.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
-              <input type="checkbox" checked={checked.has(w.bssId)} onChange={() => toggle(w.bssId)} className="w-4 h-4 accent-[#073B67]"/>
-              <span className="flex-1 min-w-0"><strong className="block text-sm text-gray-900">{w.name}</strong><span className="block text-[11px] text-gray-400 font-mono">{w.bssId} · {w.designation} · {w.site}</span></span>
-              <button type="button" onClick={() => setEligibilityView({ bssId: w.bssId, name: w.name, eligibility: e })} className="text-xs text-blue-700 font-semibold flex items-center gap-1"><Eye size={13}/>View eligibility</button>
-              <span className="text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0">{tempOk && permOk ? <span className="text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full">Temporary + Permanent</span> : tempOk ? <span className="text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">Temporary only</span> : <span className="text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">Not eligible</span>}</span>
-            </label>
-          ); })}
-          {!filteredWorkers.length && <p className="p-8 text-center text-sm text-gray-400">No matching workers.</p>}
-        </div>
-        {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
-        <div className="flex flex-wrap justify-end gap-2">
-          <button onClick={() => generateBulk('Temporary')} disabled={busyId === 'bulk' || !checked.size} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">{busyId === 'bulk' ? 'Generating…' : `Generate ${checked.size} Temporary`}</button>
-          <button onClick={() => generateBulk('Permanent')} disabled={busyId === 'bulk' || !checked.size} className="px-4 py-2 rounded-lg bg-gray-950 text-white text-sm font-semibold disabled:opacity-50">Generate {checked.size} Permanent</button>
-        </div>
-      </div>
-    </section></div>}
-
     {eligibilityView && <EligibilityDrawer name={eligibilityView.name} bssId={eligibilityView.bssId} eligibility={eligibilityView.eligibility} onClose={() => setEligibilityView(null)}/>}
+    {passPreview && <GatePassViewer html={passPreview.html} title={passPreview.title} onClose={() => setPassPreview(null)} />}
   </div>;
 }
 

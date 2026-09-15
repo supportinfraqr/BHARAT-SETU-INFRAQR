@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Download, Eye, FileDown, FileText, Lock, Printer, Search, ShieldCheck, UserRound, X } from 'lucide-react';
-import { DOCUMENT_TYPES, DocumentType, OwnerScope, GeneratedDocument, today, uid, formatDate, docTypeLabel, documentTypesFor } from '@/lib/documentEngine/types';
+import { DocumentType, OwnerScope, GeneratedDocument, today, uid, formatDate, docTypeLabel, documentTypesFor, isGatePassType } from '@/lib/documentEngine/types';
+import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
 import { templateService, documentService, renderNumbering } from '@/lib/documentEngine/services';
 import { resolveWorkerTokens, missingForTemplate, type PortalView, type WorkerLike } from '@/lib/documentEngine/workerDataService';
 import { renderDocumentHtml, openPrintHtml } from '@/lib/documentEngine/render';
@@ -52,13 +53,16 @@ export function DocumentGeneratorModal({ owner, view, workers, type: initialType
   const [issued, setIssued] = useState<GeneratedDocument | null>(null);
   const [multiWorker, setMultiWorker] = useState(false);
 
-  const template = type ? (templateService.activeFor(owner, type) ?? makeTempActive(owner, type)) : null;
-
-  function makeTempActive(owner: OwnerScope, docType: DocumentType) {
-    const record = templateService.saveTemplate(owner, docType, null, { name: `${docTypeLabel(docType)} Template`, status: 'Active' as const }, 'System', 'Auto-created active template');
-    templateService.activate(owner, record.record.templateId, record.record.id, 'System');
-    return record.record.template;
-  }
+  // Templates are employer-governed: when a contractor generates, resolve the
+  // template from the worker's principal employer, not the contractor.
+  const templateOwner = useMemo<OwnerScope>(() => {
+    if (owner.ownerType !== 'contractor') return owner;
+    const employerName = worker?.employer ?? workers[0]?.employer;
+    const emp = view.employers.find(item => (item.name ?? '') === employerName);
+    if (!emp || !emp.bssId) return owner;
+    return { ...owner, ownerType: 'employer', ownerId: emp.bssId, ownerName: emp.name, bssId: emp.bssId };
+  }, [owner, worker, workers, view.employers]);
+  const template = type ? templateService.renderTemplate(templateOwner, type) : null;
 
   const filteredWorkers = useMemo(() => workers.filter(item => {
     const term = search.trim().toLowerCase();
@@ -160,7 +164,7 @@ export function DocumentGeneratorModal({ owner, view, workers, type: initialType
     return (
       <DocModal title="Generate document" subtitle="Choose a document type — the Active template for that type is resolved automatically." onClose={onClose} wide>
         <div className="grid sm:grid-cols-2 gap-3">{documentTypesFor(owner.ownerType).map(item => {
-          const active = templateService.activeFor(owner, item.id);
+          const active = templateService.renderTemplate(templateOwner, item.id);
           return <button key={item.id} onClick={() => setType(item.id)} className="text-left p-4 rounded-2xl border border-gray-200 hover:border-[#073B67] bg-white"><div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl bg-blue-50 text-[#073B67] grid place-items-center"><FileText size={18}/></span><div><strong className="text-sm text-gray-900">{item.short}</strong><p className="text-[11px] text-gray-400 mt-0.5">{active ? `Template ${active.version} · ${active.name}` : 'No active template'}</p></div></div></button>;
         })}</div>
       </DocModal>
@@ -260,6 +264,7 @@ function SaveDraftIcon() { return <FileText size={14}/>; }
 export function WorkerDocumentsDrawer({ owner, view, worker, onClose }: { owner: OwnerScope; view: PortalView; worker: WorkerLike; onClose: () => void }) {
   const [generate, setGenerate] = useState<DocumentType | null>(null);
   const [preview, setPreview] = useState<GeneratedDocument | null>(null);
+  const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const history = useMemo(() => documentService.forWorker(worker.bssId), [worker.bssId]);
   const latestFor = (type: DocumentType) => history.find(item => item.documentType === type);
 
@@ -272,14 +277,20 @@ export function WorkerDocumentsDrawer({ owner, view, worker, onClose }: { owner:
         </header>
         <div className="p-5 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {documentTypesFor(owner.ownerType).map(item => { const latest = latestFor(item.id); return (
+            {documentTypesFor(owner.ownerType).map(item => { const latest = latestFor(item.id); const gatePass = isGatePassType(item.id); return (
               <div key={item.id} className="rounded-xl border border-gray-200 p-4">
-                <div className="flex items-center justify-between gap-2"><strong className="text-sm text-gray-900">{item.short}</strong><DocStatusBadge status={latest?.status ?? 'Not Generated'}/></div>
+                <div className="flex items-center justify-between gap-2"><strong className="text-sm text-gray-900">{item.short}</strong><DocStatusBadge status={latest?.status ?? (gatePass ? 'Auto' : 'Not Generated')}/></div>
                 {latest && <p className="text-[11px] text-gray-400 mt-1.5 font-mono">{latest.documentNumber} · {latest.templateVersion} · {formatDate(latest.finalizedAt ?? latest.generatedAt)}</p>}
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  <button className="h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => setGenerate(item.id)}><FileText size={12}/>Generate</button>
-                  {latest && ['Issued', 'Draft'].includes(latest.status) && <button className="h-8 px-3 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => setPreview(latest)}><Eye size={12}/>View</button>}
-                  {latest && ['Issued', 'Draft'].includes(latest.status) && <button className="h-8 px-3 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => latest.renderedHtml && openPrintHtml(latest.renderedHtml, latest.documentNumber)}><Printer size={12}/>Print</button>}
+                  {gatePass ? (
+                    <button className="h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => { void (async () => { const html = await buildGatePassHtml(owner, view, worker, item.id); setPassPreview({ html, title: `${worker.name} · ${item.short}` }); })(); }}><Eye size={12}/>View pass</button>
+                  ) : (
+                    <>
+                      <button className="h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => setGenerate(item.id)}><FileText size={12}/>Generate</button>
+                      {latest && ['Issued', 'Draft'].includes(latest.status) && <button className="h-8 px-3 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => setPreview(latest)}><Eye size={12}/>View</button>}
+                      {latest && ['Issued', 'Draft'].includes(latest.status) && <button className="h-8 px-3 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1" onClick={() => latest.renderedHtml && openPrintHtml(latest.renderedHtml, latest.documentNumber)}><Printer size={12}/>Print</button>}
+                    </>
+                  )}
                 </div>
               </div>
             ); })}
@@ -293,6 +304,7 @@ export function WorkerDocumentsDrawer({ owner, view, worker, onClose }: { owner:
       </section>
       {generate && <DocumentGeneratorModal owner={owner} view={view} workers={[worker]} type={generate} initialWorkerId={worker.bssId} onClose={() => setGenerate(null)}/>}
       {preview && <DocModal title={preview.documentNumber} subtitle={docTypeLabel(preview.documentType)} onClose={() => setPreview(null)} wide><iframe title="Document" srcDoc={preview.renderedHtml ?? ''} className="w-full h-[760px] border-0 bg-white"/></DocModal>}
+      {passPreview && <DocModal title={passPreview.title} subtitle="Gate pass — auto-generated from the worker ID card" onClose={() => setPassPreview(null)} wide><iframe title="Gate pass" srcDoc={passPreview.html} className="w-full h-[760px] border-0 bg-white"/></DocModal>}
     </div>
   );
 }

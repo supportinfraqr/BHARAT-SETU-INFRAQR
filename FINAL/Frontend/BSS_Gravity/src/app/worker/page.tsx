@@ -6,6 +6,7 @@ import { AlertCircle, ArrowRight, BadgeCheck, Bell, BriefcaseBusiness, Building2
 import { useWorker } from '@/contexts/WorkerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { CopyButton } from '@/components/ui/CopyButton';
 import { workerCompletion } from '@/lib/workerProfileCompletion';
 
 export default function WorkerOverview() {
@@ -34,11 +35,31 @@ export default function WorkerOverview() {
     { label:'Bank Verification', value:worker.banking.verificationStatus, tone:(worker.banking.verificationStatus==='Verified'?'done':'pending') as 'done'|'pending' },
   ];
   const complianceOverview = [
-    { label:'Appointment Letter Status', status:portal.documents.some(d=>d.name==='Appointment Letter')?'Issued':'Pending', tone:(portal.documents.some(d=>d.name==='Appointment Letter')?'done':'warn') as 'done'|'warn' },
-    { label:'Gate Pass Status', status:worker.compliance.permanentGatePass==='Pending Approval'?'Pending Approval':'Active', tone:(worker.compliance.permanentGatePass==='Pending Approval'?'warn':'done') as 'done'|'warn' },
-    { label:'Medical Status', status:worker.compliance.medicalFitnessStatus || 'Not reported', tone:(worker.compliance.medicalFitnessStatus==='Fit'?'done':'warn') as 'done'|'warn' },
-    { label:'Safety Kit Status', status:worker.compliance.ppeIssued.length>0?'Issued':'Pending', tone:(worker.compliance.ppeIssued.length>0?'done':'warn') as 'done'|'warn' },
-    { label:'Safety Training Status', status:worker.compliance.medicalExaminationStatus || 'Not reported', tone:'warn' as const },
+    {
+      label: 'Appointment Letter Status',
+      status: (portal.documents.some(d => d.name === 'Appointment Letter' && ['Verified', 'UPLOADED', 'Uploaded', 'Active'].includes(d.status)) || worker.employment.status === 'Active') ? 'Issued' : 'Pending',
+      tone: (portal.documents.some(d => d.name === 'Appointment Letter' && ['Verified', 'UPLOADED', 'Uploaded', 'Active'].includes(d.status)) || worker.employment.status === 'Active') ? ('done' as const) : ('warn' as const)
+    },
+    {
+      label: 'Gate Pass Status',
+      status: worker.compliance.permanentGatePass || 'No Gate Pass',
+      tone: (worker.compliance.permanentGatePass === 'Active' || worker.compliance.permanentGatePass === 'Issued') ? ('done' as const) : ('warn' as const)
+    },
+    {
+      label: 'Medical Status',
+      status: worker.compliance.medicalFitnessStatus || 'Not reported',
+      tone: worker.compliance.medicalFitnessStatus === 'Fit' ? ('done' as const) : ('warn' as const)
+    },
+    {
+      label: 'Safety Kit Status',
+      status: (worker.compliance.ppeIssued && worker.compliance.ppeIssued.length > 0) ? 'Issued' : 'Pending',
+      tone: (worker.compliance.ppeIssued && worker.compliance.ppeIssued.length > 0) ? ('done' as const) : ('warn' as const)
+    },
+    {
+      label: 'Safety Training Status',
+      status: worker.compliance.medicalExaminationStatus || 'Pending',
+      tone: (worker.compliance.medicalExaminationStatus === 'Done' || worker.compliance.medicalExaminationStatus === 'Completed') ? ('done' as const) : ('warn' as const)
+    },
   ];
   const quickActions = [
     {label:t('dash.view_card'),detail:'Print-ready worker credential',href:'/worker/idcard',icon:IdCard},
@@ -71,7 +92,7 @@ export default function WorkerOverview() {
     </header>
 
     <section className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-      {worker.identity.photoUrl ? <img src={worker.identity.photoUrl} alt={worker.identity.name} className="w-14 h-14 rounded-xl object-cover border border-gray-200"/> : <span className="w-14 h-14 rounded-xl border border-gray-200 bg-gray-100 grid place-items-center text-gray-400"><UserRound size={22}/></span>}<div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-gray-950">{worker.identity.name}</h2><span className={`inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 ${worker.identity.aadhaarVerified?'text-green-700 bg-green-50 border border-green-100':'text-orange-600 bg-orange-50 border border-orange-100'}`}><CheckCircle2 size={11}/>{worker.identity.aadhaarVerified?'VERIFIED':'NOT VERIFIED'}</span></div><p className="text-xs text-gray-500 font-mono mt-1">{worker.identity.bssId}</p></div>
+      {worker.identity.photoUrl ? <img src={worker.identity.photoUrl} alt={worker.identity.name} className="w-14 h-14 rounded-xl object-cover border border-gray-200"/> : <span className="w-14 h-14 rounded-xl border border-gray-200 bg-gray-100 grid place-items-center text-gray-400"><UserRound size={22}/></span>}<div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold text-gray-950">{worker.identity.name}</h2><span className={`inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-0.5 ${worker.identity.aadhaarVerified?'text-green-700 bg-green-50 border border-green-100':'text-orange-600 bg-orange-50 border border-orange-100'}`}><CheckCircle2 size={11}/>{worker.identity.aadhaarVerified?'VERIFIED':'NOT VERIFIED'}</span></div><div className="flex items-center gap-2 mt-1"><p className="text-xs text-gray-500 font-mono">{worker.identity.bssId}</p><CopyButton value={worker.identity.bssId}/></div></div>
       <dl className="grid grid-cols-2 sm:flex gap-x-8 gap-y-3 text-xs"><div><dt className="text-gray-400">Category</dt><dd className="font-semibold text-gray-800 mt-0.5">{worker.identity.category}</dd></div><div><dt className="text-gray-400">Primary skill</dt><dd className="font-semibold text-gray-800 mt-0.5">{worker.skills?.primary?.name}</dd></div><div><dt className="text-gray-400">Status</dt><dd className="font-semibold text-green-700 mt-0.5">{worker.employment.status}</dd></div></dl>
     </section>
 

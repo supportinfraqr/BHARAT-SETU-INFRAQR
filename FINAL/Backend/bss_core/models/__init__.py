@@ -66,6 +66,7 @@ from .operations import (
     SiteHoliday,
     RestrictedHolidayRequest,
     DocumentTemplateStore,
+    WorkerGatePassBlock,
 )
 from .learning import (
     Course,

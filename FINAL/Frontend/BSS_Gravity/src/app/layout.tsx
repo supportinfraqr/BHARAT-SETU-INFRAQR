@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ClientProviders } from "@/components/ClientProviders";
 import { cookies } from 'next/headers';
 import { getLocale, getStoredLanguage, LANGUAGE_COOKIE_NAME } from '@/i18n';
+import { ACCESSIBILITY_BOOTSTRAP } from '@/lib/accessibility';
 
 export const metadata: Metadata = {
   title: "Bharat Shram Setu | Enterprise Portal",
@@ -31,6 +33,7 @@ export default async function RootLayout({
   return (
     <html lang={initialLocale.code} dir={initialLocale.dir} translate="no" className="h-full antialiased" suppressHydrationWarning>
       <body suppressHydrationWarning className="min-h-full flex flex-col bg-[var(--color-bss-bg)] text-[var(--color-bss-text-primary)]">
+        <Script id="bss-accessibility-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: ACCESSIBILITY_BOOTSTRAP }} />
         <ClientProviders initialLanguage={initialLanguage}>
           {children}
         </ClientProviders>

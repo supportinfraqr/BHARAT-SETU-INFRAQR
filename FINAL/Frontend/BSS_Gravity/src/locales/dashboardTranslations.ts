@@ -5,6 +5,7 @@ export const dashboardTranslations: Record<string, Record<string, string>> = {
     "nav.compliance": "Compliance",
     "nav.skills": "Skills",
     "nav.documents": "Documents",
+    "nav.issuedLetters": "My Issued Letters",
     "nav.qr": "QR System",
     "nav.signout": "Sign Out",
     "dash.welcome": "Welcome back",

@@ -1,4 +1,4 @@
-import { TemplateConfig, TemplateSection, TemplateStatus, TemplateVersionRecord, GeneratedDocument, DocumentType, OwnerScope, SignatureRole, uid, nowIso, docTypeLabel, docTypeFormat, EMPTY_STYLES, documentTypesFor } from './types';
+import { TemplateConfig, TemplateSection, TemplateStatus, TemplateVersionRecord, GeneratedDocument, DocumentType, OwnerScope, SignatureRole, uid, nowIso, docTypeLabel, docTypeFormat, EMPTY_STYLES, documentTypesFor, isGatePassType, isAppearanceOnlyType } from './types';
 import { TOKEN_PATTERN } from './tokens';
 
 // ---------------------------------------------------------------- storage keys
@@ -95,25 +95,27 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
     return [
       wrap(0, { type: 'logo', title: 'Branding / Logo', content: '', editable: false, locked: true }),
       wrap(1, { type: 'heading', title: 'Card title', content: 'PERMANENT GATE PASS', align: 'center' }),
-      wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}   |   Generated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
+      wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}\nGenerated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
       wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
-      wrap(4, { type: 'paragraph', title: 'Identity fields', content: 'Name: {{worker.fullName}}   ID: {{worker.bssId}}   Designation: {{employment.designation}}  \nDOB: {{worker.dob}}   Blood Group: {{worker.bloodGroup}}   Emergency Contact: {{worker.emergencyContact}}', fields: ['worker.fullName', 'worker.bssId', 'employment.designation', 'worker.dob', 'worker.bloodGroup', 'worker.emergencyContact'] }),
-      wrap(5, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}   Contractor: {{contractor.legalName}}  \nSite: {{site.name}} ({{site.code}}), {{site.address}}  \nIssue Date: {{document.issueDate}}   Valid Up To: {{document.validTo}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.code', 'site.address', 'document.issueDate', 'document.validTo'] }),
-      wrap(6, { type: 'paragraph', title: 'Disclaimer & helpline', content: 'This pass is non-transferable and must be produced on demand. In an emergency call the site safety helpline. Any misuse will lead to withdrawal of site access.', fields: [] }),
-      wrap(7, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
+      wrap(4, { type: 'paragraph', title: 'Identity fields', content: 'Name: {{worker.fullName}}\nBSS Worker ID: {{worker.bssId}}\nDesignation: {{employment.designation}}\nDOB: {{worker.dob}}\nBlood Group: {{worker.bloodGroup}}\nEmergency Contact: {{worker.emergencyContact}}', fields: ['worker.fullName', 'worker.bssId', 'employment.designation', 'worker.dob', 'worker.bloodGroup', 'worker.emergencyContact'] }),
+      wrap(5, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}\nContractor: {{contractor.legalName}}\nSite: {{site.name}} ({{site.code}}), {{site.address}}\nIssue Date: {{document.issueDate}}\nValid Up To: {{document.validTo}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.code', 'site.address', 'document.issueDate', 'document.validTo'] }),
+      wrap(6, { type: 'paragraph', title: 'Verification QR', content: '{{document.qr}}', fields: ['document.qr'], editable: false, locked: true, align: 'center' }),
+      wrap(7, { type: 'paragraph', title: 'Disclaimer & helpline', content: 'This pass is non-transferable and must be produced on demand. In an emergency call the site safety helpline. Any misuse will lead to withdrawal of site access.', fields: [] }),
+      wrap(8, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
     ];
   }
-  // temporary-gate-pass
+  // temporary-gate-pass — a permit-letter structure (red theme, no QR)
   return [
     wrap(0, { type: 'logo', title: 'Branding / Logo', content: '', editable: false, locked: true }),
-    wrap(1, { type: 'heading', title: 'Heading', content: 'TEMPORARY GATE PASS', align: 'center' }),
-    wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}   |   Generated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
-    wrap(3, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}}, {{site.address}}', fields: ['site.name', 'site.address'] }),
-    wrap(4, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access — {{worker.fullName}} for {{employment.designation}} work at {{site.workArea}}', fields: ['worker.fullName', 'employment.designation', 'site.workArea'] }),
-    wrap(5, { type: 'paragraph', title: 'Body & dates', content: 'Sir,\nPlease allow {{worker.fullName}} ({{worker.bssId}}), engaged by {{contractor.legalName}} against order/PO {{document.referenceNumber}}, to enter {{site.name}} work area {{site.workArea}} for {{document.days}} day(s) w.e.f. {{document.validFrom}} to {{document.validTo}}.\nReason: {{document.reason}}', fields: ['worker.fullName', 'worker.bssId', 'contractor.legalName', 'document.referenceNumber', 'site.name', 'site.workArea', 'document.days', 'document.validFrom', 'document.validTo', 'document.reason'] }),
-    wrap(6, { type: 'table', title: 'Worker list', content: 'Workers covered by this pass:', fields: [], tableColumns: [{ key: 'worker.fullName', header: 'Name' }, { key: 'worker.bssId', header: 'BSS ID' }, { key: 'worker.dob', header: 'DOB / Age' }, { key: 'worker.permanentAddress', header: 'Address' }] }),
-    wrap(7, { type: 'paragraph', title: 'Declaration & place/date', content: 'Declaration: The details above are true and the workers will abide by site rules.  \nPlace: {{document.place}}    Date: {{document.issueDate}}', fields: ['document.place', 'document.issueDate'] }),
-    wrap(8, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
+    wrap(1, { type: 'heading', title: 'Card title', content: 'TEMPORARY GATE PASS', align: 'center' }),
+    wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}\nGenerated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
+    wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
+    wrap(4, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}} ({{site.code}})\n{{site.address}}', fields: ['site.name', 'site.code', 'site.address'] }),
+    wrap(5, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access for {{worker.fullName}} — {{employment.designation}}', fields: ['worker.fullName', 'employment.designation'] }),
+    wrap(6, { type: 'paragraph', title: 'Permit statement', content: 'Sir/Madam,\nPlease permit {{worker.fullName}} (BSS ID {{worker.bssId}}), engaged by {{contractor.legalName}} on behalf of {{employer.legalName}}, to enter {{site.name}} for {{document.days}} day(s), with effect from {{document.validFrom}} to {{document.validTo}}.', fields: ['worker.fullName', 'worker.bssId', 'contractor.legalName', 'employer.legalName', 'site.name', 'document.days', 'document.validFrom', 'document.validTo'] }),
+    wrap(7, { type: 'table', title: 'Worker details', content: 'Worker details:', fields: [], tableColumns: [{ key: 'worker.fullName', header: 'Name' }, { key: 'worker.bssId', header: 'BSS Worker ID' }, { key: 'employment.designation', header: 'Designation' }, { key: 'worker.dob', header: 'DOB' }, { key: 'worker.bloodGroup', header: 'Blood Group' }, { key: 'worker.emergencyContact', header: 'Emergency Contact' }] }),
+    wrap(8, { type: 'paragraph', title: 'Declaration', content: 'Declaration: The worker will abide by all site safety and security rules. This pass is valid only for the period stated above and is non-transferable.', fields: [] }),
+    wrap(9, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
   ];
 };
 
@@ -128,7 +130,7 @@ export const DEFAULT_SIGNATORIES: Record<DocumentType, SignatureRole[]> = {
   'appointment-letter': ['Worker', 'Contractor', 'Principal Employer'],
   'experience-letter': ['Contractor', 'Authorized Signatory'],
   'permanent-gate-pass': ['Contractor', 'Principal Employer', 'Site In-charge'],
-  'temporary-gate-pass': ['Contractor', 'HOD', 'HR Head', 'CSO'],
+  'temporary-gate-pass': ['Contractor', 'Principal Employer', 'Site In-charge'],
 };
 
 export function makeDefaultTemplate(owner: OwnerScope, type: DocumentType, createdBy = 'System'): TemplateConfig {
@@ -145,7 +147,10 @@ export function makeDefaultTemplate(owner: OwnerScope, type: DocumentType, creat
     description: `Default ${docTypeLabel(type).toLowerCase()} template for ${owner.ownerName}.`,
     pageFormat: docTypeFormat(type),
     sections: DEFAULT_SECTIONS(type),
-    styles: { ...EMPTY_STYLES },
+    styles: {
+      ...EMPTY_STYLES,
+      theme: type === 'permanent-gate-pass' ? 'bss-green' : type === 'temporary-gate-pass' ? 'bss-red' : EMPTY_STYLES.theme,
+    },
     variables: [],
     signatories: DEFAULT_SIGNATORIES[type],
     numberingPattern: DEFAULT_NUMBERING[type],
@@ -179,7 +184,24 @@ export const templateService = {
         ...records,
       ];
       hydratedOwners.add(key);
+      this.syncGatePassTemplates(owner);
     } catch { /* leave un-hydrated; a later call retries */ }
+  },
+
+  /** Edit the saved gate-pass templates in place so their sections/signatories
+   *  match the fixed layout in code. Nothing is deleted — versions, history and
+   *  the chosen appearance (styles) are kept; only the fixed blocks are updated. */
+  syncGatePassTemplates(owner: OwnerScope) {
+    let changed = false;
+    const next = TEMPLATE_CACHE.map(record => {
+      if (record.template.ownerType !== owner.ownerType || record.template.ownerId !== owner.ownerId) return record;
+      if (!isGatePassType(record.template.documentType)) return record;
+      const defaults = makeDefaultTemplate(owner, record.template.documentType, record.template.createdBy || 'System');
+      if (JSON.stringify(record.template.sections) === JSON.stringify(defaults.sections)) return record;
+      changed = true;
+      return { ...record, template: { ...record.template, sections: defaults.sections, signatories: defaults.signatories } };
+    });
+    if (changed) this.persist(next);
   },
 
   persist(records: TemplateRecord[]) {
@@ -236,6 +258,22 @@ export const templateService = {
   activeFor(owner: OwnerScope, type: DocumentType): TemplateConfig | null {
     const record = this.all().find(item => item.active && item.template.ownerType === owner.ownerType && item.template.ownerId === owner.ownerId && item.template.documentType === type);
     return record ? record.template : null;
+  },
+
+  /** Template used for rendering. Appearance-only types (appointment/experience
+   *  letters, gate passes) always use the current fixed layout from code and take
+   *  just the saved styles — so layout fixes apply without a re-seed. */
+  renderTemplate(owner: OwnerScope, type: DocumentType): TemplateConfig {
+    const stored = this.activeFor(owner, type);
+    const base = makeDefaultTemplate(owner, type, 'System');
+    if (!stored || !isAppearanceOnlyType(type)) return stored ?? base;
+    return {
+      ...base,
+      name: stored.name,
+      styles: { ...base.styles, ...stored.styles },
+      signatories: base.signatories,
+      numberingPattern: stored.numberingPattern,
+    };
   },
 
   versions(lineageId: string): TemplateRecord[] {

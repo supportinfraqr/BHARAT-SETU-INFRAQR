@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AlertTriangle, ArrowRight, Banknote, Building2, CheckCircle2, ClipboardCheck, Clock3, FileWarning, HardHat, MapPin, ShieldCheck, Users } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { CopyButton } from '@/components/ui/CopyButton';
 
 export default function EmployerDashboardPage() {
   const { employer } = useEmployer();
@@ -46,6 +47,7 @@ export default function EmployerDashboardPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <span className="text-sm font-mono text-gray-600">{employer.identity.bssId}</span>
+          <CopyButton value={employer.identity.bssId}/>
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5"><CheckCircle2 size={11}/> VERIFIED</span>
         </div>
       </div>

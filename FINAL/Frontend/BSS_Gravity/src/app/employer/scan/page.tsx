@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IScannerControls } from '@zxing/browser';
-import { Building2, Camera, Check, CheckCircle2, Home, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, XCircle } from 'lucide-react';
+import { Building2, Camera, Check, CheckCircle2, Home, KeyRound, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
 import ScanFrame from '@/components/qr/ScanFrame';
@@ -35,6 +35,29 @@ export default function EmployerScanPage() {
   const [sentContractors, setSentContractors] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [chosenSiteIds, setChosenSiteIds] = useState<number[]>([]);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualInput, setManualInput] = useState('');
+
+  const submitManualBssId = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = manualInput.trim().toUpperCase();
+    if (!raw) return;
+    const isBssFormat = /^(?:BSS-[WCES][A-Z0-9]+|BSS[WCES]?\d{6,14})$/.test(raw);
+    if (!isBssFormat) {
+      setState("error");
+      setMessage(`"${raw}" is not a valid BSS ID format. Expected format: BSS-C... (Contractor), BSS-W... (Worker), or BSS-E... (Employer).`);
+      setManualOpen(false);
+      setManualInput('');
+      return;
+    }
+    setManualOpen(false);
+    setManualInput('');
+    let type: 'BSS_WORKER' | 'BSS_CONTRACTOR' | 'BSS_EMPLOYER' = 'BSS_WORKER';
+    if (raw.startsWith('BSS-C') || raw.startsWith('BSSC')) type = 'BSS_CONTRACTOR';
+    else if (raw.startsWith('BSS-E') || raw.startsWith('BSSE')) type = 'BSS_EMPLOYER';
+    const payload: Payload = { v: 1, type, bssId: raw, issuer: 'Bharat Shram Setu' };
+    verify(JSON.stringify(payload));
+  };
 
   useEffect(() => () => controls.current?.stop(), []);
 
@@ -50,8 +73,16 @@ export default function EmployerScanPage() {
       if (isContractor) {
         // Contractor QR → identify contractor, display relationship
         const known = employer.contractors.find(c => c.bssId === p.bssId);
-        const bound = Boolean(known);
         const existing = employer.approvals.find(a => a.bssId === p.bssId && ['Pending', 'Accepted', 'Approved'].includes(a.status));
+        if (!known && !existing) {
+          setEntity(null);
+          setScanned(null);
+          setState('error');
+          setMessage(`No contractor record found with BSS ID "${p.bssId}". Please check the BSS ID and try again.`);
+          controls.current?.stop();
+          return;
+        }
+        const bound = Boolean(known);
         // A request sent earlier in this session (portal data is not refreshed live).
         const sentHere = sentContractors.includes(p.bssId);
         setAlreadyRequested(sentHere ? 'Pending' : (existing ? existing.status : null));
@@ -71,19 +102,27 @@ export default function EmployerScanPage() {
         setAlreadyRequested(null);
         // Worker QR → identify worker, display current binding (never auto-bind)
         const known = employer.workers.find(w => w.bssId === p.bssId);
+        if (!known) {
+          setEntity(null);
+          setScanned(null);
+          setState('error');
+          setMessage(`No worker record found with BSS ID "${p.bssId}". Please check the BSS ID and try again.`);
+          controls.current?.stop();
+          return;
+        }
         const bound = Boolean(known);
         setEntity({
           kind: 'worker',
           bssId: p.bssId,
-          name: known?.name ?? 'BSS Worker ' + p.bssId.slice(-4),
-          site: known?.site ?? 'Unassigned site',
-          contractor: known?.contractor ?? 'Unmapped',
-          detail: known?.designation ?? 'Not disclosed',
+          name: known.name,
+          site: known.site ?? 'Unassigned site',
+          contractor: known.contractor ?? 'Unmapped',
+          detail: known.designation ?? 'Not disclosed',
           bound,
-          status: bound ? (known!.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
+          status: bound ? (known.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
         });
         setState('identified');
-        setMessage(bound ? 'Worker identified — current binding displayed below' : 'Worker QR identified — this worker is not bound to any of your contractors');
+        setMessage('Worker identified — current binding displayed below');
       } else {
         // Another employer's QR → basic details only (employers don't bind each other).
         setEntity({
@@ -182,6 +221,7 @@ export default function EmployerScanPage() {
             <button onClick={state === 'idle' || state === 'error' || state === 'identified' || state === 'confirmed' ? startCamera : reset} className="bg-[#073B67] text-white py-2.5 rounded-lg font-bold text-sm"><Camera size={16} className="inline mr-2"/>{state === 'scanning' ? 'Reset' : 'Use camera'}</button>
             <button onClick={() => fileRef.current?.click()} className="border py-2.5 rounded-lg font-bold text-sm"><Upload size={16} className="inline mr-2"/>Upload image</button>
           </div>
+          <button type="button" onClick={() => setManualOpen(true)} className="w-full py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"><KeyRound size={14}/>Enter BSS ID manually</button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => scanFile(e.target.files?.[0])}/>
           <p className="text-xs text-gray-500">Camera permission is requested only while scanning. Scans are processed locally — no scan-to-auto-bind.</p>
         </div>
@@ -263,6 +303,37 @@ export default function EmployerScanPage() {
             <button type="button" onClick={() => void confirmBinding()} className="h-11 px-6 rounded-xl bg-[#073B67] text-white text-sm font-bold hover:bg-[#062D4F]">Send binding request</button>
           </div>
         </div>
+      </div>
+    )}
+
+    {manualOpen && (
+      <div className="fixed inset-0 z-50 bg-black/50 p-4 grid place-items-center" role="presentation">
+        <section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+          <header className="p-5 border-b flex justify-between items-center">
+            <div>
+              <h2 className="font-semibold text-[#062D4F]">Enter BSS ID Manually</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Enter a Contractor BSS ID (BSS-C...) or Worker BSS ID (BSS-W...)</p>
+            </div>
+            <button onClick={() => setManualOpen(false)} className="text-gray-400 hover:text-gray-600" aria-label="Close"><X size={18}/></button>
+          </header>
+          <form onSubmit={submitManualBssId} className="p-5 space-y-4">
+            <label className="block text-xs font-semibold text-gray-700">
+              BSS ID
+              <input
+                required
+                autoFocus
+                value={manualInput}
+                onChange={e => setManualInput(e.target.value)}
+                placeholder="e.g. BSS-C12345678 or BSS-W7KQ2M9X4RT"
+                className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 text-sm font-mono uppercase bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setManualOpen(false)} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-[#073B67] text-white text-xs font-bold rounded-lg hover:bg-[#062D4F]">Identify Entity</button>
+            </div>
+          </form>
+        </section>
       </div>
     )}
   </div>;

@@ -31,7 +31,13 @@ export default function ContractorAdvancesPage() {
   const chip = (status: string) => status === 'Adjusted' ? 'bg-green-50 text-green-700' : status === 'Rejected' ? 'bg-red-50 text-red-600' : status === 'Requested' ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700';
 
   return (
-    <div className="p-4 lg:p-6 space-y-5">
+    <div className="relative p-4 lg:p-6 space-y-5">
+      <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-20 overflow-hidden">
+        <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
+          {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
+        </div>
+      </div>
+
       <header>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Payroll</p>
         <h1 className="text-2xl font-bold mt-1">Salary Advances</h1>

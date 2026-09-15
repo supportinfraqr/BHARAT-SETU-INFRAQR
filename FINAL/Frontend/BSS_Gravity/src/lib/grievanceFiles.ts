@@ -25,6 +25,19 @@ export async function grievanceFileBlobUrl(grievanceId: string, kind: GrievanceF
   return { url, revoke: () => URL.revokeObjectURL(url) };
 }
 
+/** Single GET read → Blob URL → window.open in a new tab. */
+export async function openGrievanceFileInNewTab(grievanceId: string, kind: GrievanceFileKind, responseId?: string): Promise<void> {
+  const { url } = await grievanceFileBlobUrl(grievanceId, kind, responseId);
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!win) {
+    // If popups blocked, fallback to trigger download
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.click();
+  }
+}
+
 /** Single GET download (consumes the token). */
 export async function downloadGrievanceFile(grievanceId: string, kind: GrievanceFileKind, responseId?: string): Promise<void> {
   const tokenUrl = await issueTokenUrl(grievanceId, kind, responseId);

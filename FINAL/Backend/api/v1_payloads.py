@@ -695,22 +695,49 @@ def _latest_gate_pass(user, gp_type):
 
 
 def _worker_gate_passes(user):
-    """The worker's own gate passes (requested by the contractor, approved by
-    the principal employer)."""
+    """The worker's own gate passes. Explicit requests keep their status; a
+    worker with a completed (accepted) binding also gets an auto pass derived
+    from their BSS ID card, so the pass is available on the worker side."""
     rows = []
+    seen = set()
     for g in WorkerGatePass.objects.filter(worker=user).order_by("-created_at"):
+        label = _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type))
+        blocked = _is_gate_pass_blocked(g.worker, g.site.employer if g.site else None)
         rows.append({
             "id": g.id,
-            "type": _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type)),
+            "type": label,
             "number": _d(g.gate_pass_no),
             "site": g.site.site_name if g.site else "",
             "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
-            "status": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+            "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+            "blocked": blocked,
             "requestedAt": _dts(g.created_at),
             "requestedBy": _party_name(g.issued_by),
             "approvedBy": _party_name(g.approved_by),
             "approvedAt": _dts(g.approved_at),
         })
+        seen.add(label)
+    for b in (WorkerContractorBinding.objects
+              .filter(worker=user, binding_status="ACCEPTED")
+              .select_related("site", "site__employer")):
+        gp_type = _auto_gate_pass_type(user)
+        label = _GP_TYPE_LABEL.get(gp_type, gp_type)
+        if label in seen:
+            continue
+        issue_date, valid_till = _auto_gate_pass_dates(user, gp_type)
+        blocked = _is_gate_pass_blocked(user, b.site.employer if b.site else None)
+        rows.append({
+            "id": f"auto-{b.id}",
+            "type": label,
+            "number": _auto_gate_pass_no(user, gp_type),
+            "site": b.site.site_name if b.site else "",
+            "validFrom": _dts(issue_date), "validTo": _dts(valid_till),
+            "status": "Blocked" if blocked else "Approved",
+            "blocked": blocked,
+            "requestedAt": _dts(b.created_at),
+            "requestedBy": "", "approvedBy": "", "approvedAt": "",
+        })
+        seen.add(label)
     return rows
 
 
@@ -2108,6 +2135,7 @@ def _contractor_gate_pass_row(g):
     if site and site.employer:
         ep = getattr(site.employer, "employer_profile", None)
         employer_name = _d(ep.employer_name if ep else site.employer.username)
+    blocked = _is_gate_pass_blocked(g.worker, site.employer if site else None)
     return {
         "id": g.id, **meta,
         "number": _d(g.gate_pass_no),
@@ -2120,7 +2148,8 @@ def _contractor_gate_pass_row(g):
         "requestedBy": _party_name(g.issued_by),
         "approvedBy": _party_name(g.approved_by),
         "approvedAt": _dts(g.approved_at),
-        "status": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        "blocked": blocked,
         "eligibility": _gate_pass_eligibility(g.worker),
     }
 
@@ -2141,12 +2170,10 @@ def _contractor_gate_passes(user):
         label = _GP_TYPE_LABEL.get(gp_type, gp_type)
         if (meta["workerId"], label) in seen:
             continue
-        employment = WorkerEmployment.objects.filter(user=b.worker).first()
-        issue_date = (employment.id_card_issue_date if employment else None) or timezone.localdate()
-        valid_till = (employment.id_card_validity_till if employment else None) or \
-            issue_date + datetime.timedelta(days=365 if gp_type == "PGP" else 30)
+        issue_date, valid_till = _auto_gate_pass_dates(b.worker, gp_type)
         site = b.site
         ep = getattr(site.employer, "employer_profile", None) if (site and site.employer) else None
+        blocked = _is_gate_pass_blocked(b.worker, b.site.employer if b.site else None)
         rows.append({
             "id": f"auto-{b.id}",
             "auto": True,
@@ -2158,7 +2185,8 @@ def _contractor_gate_passes(user):
             "validFrom": _dts(issue_date), "validTo": _dts(valid_till),
             "requestedAt": _dts(b.created_at),
             "requestedBy": "", "approvedBy": "", "approvedAt": "",
-            "status": "Approved",
+            "status": "Blocked" if blocked else "Approved",
+            "blocked": blocked,
             "eligibility": _gate_pass_eligibility(b.worker),
         })
     return rows[:200]
@@ -3550,14 +3578,44 @@ def _auto_gate_pass_type(worker):
     return "TGP"
 
 
+def _is_gate_pass_blocked(worker, employer):
+    """True when the principal employer has blocked gate-pass generation for a worker."""
+    if not employer:
+        return False
+    from bss_core.models import WorkerGatePassBlock
+    return WorkerGatePassBlock.objects.filter(worker=worker, employer=employer, blocked=True).exists()
+
+
+def _auto_gate_pass_dates(worker, gp_type):
+    """Auto pass validity: temporary passes run 7 days from today; permanent
+    passes mirror the worker's BSS ID card (Issue Date / Valid Till)."""
+    today = timezone.localdate()
+    if gp_type == "TGP":
+        return today, today + datetime.timedelta(days=7)
+    employment = WorkerEmployment.objects.filter(user=worker).first()
+    issue = (employment.id_card_issue_date if employment else None) or today
+    till = (employment.id_card_validity_till if employment else None) or (issue + datetime.timedelta(days=365))
+    return issue, till
+
+
 def _auto_gate_pass_no(worker, gp_type):
     """Stable BSS-P + 10 alphanumeric (permanent) / BSS-T + 10 alphanumeric
     (temporary) id derived from the worker's BSS id, so the same worker/type
-    always renders the same pass number."""
+    always renders the same pass number. Uses FNV-1a so the frontend can derive
+    the identical number without a server round-trip."""
     identity = _get_identity(worker)
     seed = (identity.bss_worker_id if identity and identity.bss_worker_id else worker.username) or str(worker.pk)
-    digest = hashlib.sha1(f"{seed}:{gp_type}".encode()).hexdigest().upper()
-    return f"BSS-{'P' if gp_type == 'PGP' else 'T'}{digest[:10]}"
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    prefix = "BSS-P" if gp_type == "PGP" else "BSS-T"
+    material = f"{seed}:{gp_type}"
+    h = 2166136261
+    out = []
+    for rnd in range(10):
+        for ch in material:
+            h ^= (ord(ch) + rnd) & 0xFFFFFFFF
+            h = (h * 16777619) & 0xFFFFFFFF
+        out.append(alphabet[h % len(alphabet)])
+    return prefix + "".join(out)
 
 
 def _employer_gate_pass_row(g):
@@ -3569,6 +3627,7 @@ def _employer_gate_pass_row(g):
     if binding:
         cp = getattr(binding.contractor, "contractor_profile", None)
         contractor_name = _d(cp.contractor_name if cp else binding.contractor.username)
+    blocked = _is_gate_pass_blocked(g.worker, site.employer if site else None)
     return {
         "id": g.id, **meta,
         "number": _d(g.gate_pass_no),
@@ -3581,7 +3640,8 @@ def _employer_gate_pass_row(g):
         "approvedBy": _party_name(g.approved_by),
         "approvedAt": _dts(g.approved_at),
         "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
-        "status": _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
+        "blocked": blocked,
         "eligibility": _gate_pass_eligibility(g.worker),
     }
 
@@ -3604,15 +3664,10 @@ def _employer_gate_passes(user):
         if (meta["workerId"], label) in seen:
             continue
         start = b.accepted_at or b.created_at
-        days = 365 if gp_type == "PGP" else 30
-        # Validity mirrors the worker's BSS ID card (Issue Date / Valid Till).
-        employment = WorkerEmployment.objects.filter(user=b.worker).first()
-        issue_date = employment.id_card_issue_date if employment else None
-        valid_till = employment.id_card_validity_till if employment else None
-        if not issue_date:
-            issue_date = timezone.localdate()
-        if not valid_till:
-            valid_till = issue_date + datetime.timedelta(days=days)
+        days = 365 if gp_type == "PGP" else 7
+        # Validity: permanent mirrors the BSS ID card; temporary runs 7 days.
+        issue_date, valid_till = _auto_gate_pass_dates(b.worker, gp_type)
+        blocked = _is_gate_pass_blocked(b.worker, user)
         cp = getattr(b.contractor, "contractor_profile", None)
         rows.append({
             "id": f"auto-{b.id}",
@@ -3629,7 +3684,8 @@ def _employer_gate_passes(user):
             "approvedAt": "",
             "validFrom": _dts(issue_date),
             "validTo": _dts(valid_till),
-            "status": "Approved",
+            "status": "Blocked" if blocked else "Approved",
+            "blocked": blocked,
             "eligibility": _gate_pass_eligibility(b.worker),
         })
     return rows[:200]

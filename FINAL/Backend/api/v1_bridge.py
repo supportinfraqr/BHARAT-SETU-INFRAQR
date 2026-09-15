@@ -3258,6 +3258,20 @@ def _parse_date(value):
     return None
 
 
+def _employer_set_gate_pass_block(user, body):
+    """Block or unblock gate-pass generation for a worker (both pass types)."""
+    from bss_core.models import WorkerGatePassBlock, WorkerIdentity
+    bss_id = str(body.get("workerId") or body.get("bssId") or "").strip().upper()
+    identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first() if bss_id else None
+    if identity is None:
+        raise PortalMutationError("Worker not found for that BSS ID.", 404)
+    blocked = bool(body.get("blocked"))
+    WorkerGatePassBlock.objects.update_or_create(
+        worker=identity.user, employer=user,
+        defaults={"blocked": blocked, "blocked_by": user})
+    return {"workerId": bss_id, "blocked": blocked}
+
+
 def _employer_set_gate_pass_dates(user, body):
     """Set the validity window (validFrom / validTo) of an employer's gate pass.
 
@@ -3316,7 +3330,9 @@ def _handle_gate_pass(user, body):
     from bss_core.models import WorkerGatePass, WorkerIdentity, WorkerContractorBinding
 
     if user.role == "employer":
-        # Employer may edit the validity window of a pass (auto or requested).
+        # Employer may block/unblock generation, or edit a pass validity window.
+        if "blocked" in body:
+            return _employer_set_gate_pass_block(user, body)
         if "validFrom" in body or "validTo" in body:
             return _employer_set_gate_pass_dates(user, body)
         ids = body.get("ids") or ([body.get("id")] if body.get("id") else [])
@@ -3327,7 +3343,7 @@ def _handle_gate_pass(user, body):
             if decision in ("approved", "approve"):
                 gp.status = "ACTIVE"
                 gp.start_date = today
-                gp.end_date = today + timedelta(days=365 if gp.gate_pass_type == "PGP" else 30)
+                gp.end_date = today + timedelta(days=365 if gp.gate_pass_type == "PGP" else 7)
                 gp.approved_by = user
                 gp.approved_at = timezone.now()
             elif decision in ("rejected", "reject"):

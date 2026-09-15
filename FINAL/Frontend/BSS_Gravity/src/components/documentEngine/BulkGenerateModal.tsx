@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { CheckCircle2, FileDown, Search, ShieldCheck, XCircle } from 'lucide-react';
-import { DOCUMENT_TYPES, DocumentType, OwnerScope, GeneratedDocument, uid, documentTypesFor } from '@/lib/documentEngine/types';
+import { DocumentType, OwnerScope, GeneratedDocument, uid, documentTypesFor } from '@/lib/documentEngine/types';
 import { templateService, documentService, renderNumbering } from '@/lib/documentEngine/services';
 import { resolveWorkerTokens, type PortalView, type WorkerLike } from '@/lib/documentEngine/workerDataService';
 import { renderDocumentHtml, openPrintHtml } from '@/lib/documentEngine/render';
@@ -29,7 +29,14 @@ export default function BulkGenerateModal({ owner, view, workers, onClose }: { o
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
 
-  const template = templateService.activeFor(owner, type);
+  // Templates are employer-governed: contractors resolve the employer's template.
+  const templateOwner = useMemo<OwnerScope>(() => {
+    if (owner.ownerType !== 'contractor') return owner;
+    const emp = view.employers.find(item => (item.name ?? '') === workers[0]?.employer);
+    if (!emp || !emp.bssId) return owner;
+    return { ...owner, ownerType: 'employer', ownerId: emp.bssId, ownerName: emp.name, bssId: emp.bssId };
+  }, [owner, workers, view.employers]);
+  const template = templateService.renderTemplate(templateOwner, type);
   const templateName = template ? `${template.name} ${template.version}` : 'No active template';
 
   const filtered = useMemo(() => {

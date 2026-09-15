@@ -14,6 +14,11 @@ export const docTypeFormat = (id: DocumentType) => DOCUMENT_TYPES.find(item => i
 export const documentTypesFor = (ownerType: 'employer' | 'contractor') => DOCUMENT_TYPES.filter(item => !item.roles || item.roles.includes(ownerType));
 export const isGatePassType = (id: DocumentType) => id === 'permanent-gate-pass' || id === 'temporary-gate-pass';
 
+// These types have a fixed layout/wording in code — the editor only changes the
+// appearance (colour / text colour / text style).
+export const APPEARANCE_ONLY_TYPES: DocumentType[] = ['appointment-letter', 'experience-letter', 'permanent-gate-pass', 'temporary-gate-pass'];
+export const isAppearanceOnlyType = (id: DocumentType) => APPEARANCE_ONLY_TYPES.includes(id);
+
 export type TemplateStatus = 'Draft' | 'Needs Review' | 'Active' | 'Inactive';
 
 export type OwnerScope = { ownerType: 'contractor' | 'employer'; ownerId: string; ownerName: string; bssId: string };
@@ -46,7 +51,7 @@ export type TemplateStyles = {
   showBrandHeader: boolean;
   brandHeaderText: string;
   footerText: string;
-  theme: 'bss-navy' | 'bss-midnight' | 'bss-green' | 'bss-plain';
+  theme: 'bss-navy' | 'bss-midnight' | 'bss-green' | 'bss-red' | 'bss-plain';
 };
 
 export type TemplateConfig = {

@@ -9,6 +9,7 @@ import {
 
 import { useContractor } from '@/contexts/ContractorContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { CopyButton } from '@/components/ui/CopyButton';
 
 export default function ContractorDashboardPage() {
   const { contractor, employerScope, scoped } = useContractor();
@@ -100,7 +101,7 @@ export default function ContractorDashboardPage() {
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Contractor Information</p>
               <h2 className="font-semibold text-gray-950 mt-0.5">{contractor.identity.company}</h2>
-              <p className="text-xs text-gray-500 font-mono mt-1">{contractor.identity.bssId}</p>
+              <div className="flex items-center gap-2 mt-1"><p className="text-xs text-gray-500 font-mono">{contractor.identity.bssId}</p><CopyButton value={contractor.identity.bssId}/></div>
               <p className="text-[11px] text-gray-400 mt-1">{contractor.identity.entity} · Incorp. {contractor.identity.incorpDate}</p>
             </div>
           </div>

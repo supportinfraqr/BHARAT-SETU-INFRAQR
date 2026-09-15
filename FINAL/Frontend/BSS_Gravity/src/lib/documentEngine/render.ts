@@ -6,6 +6,7 @@ const THEME_COLORS: Record<string, { primary: string; accent: string; light: str
   'bss-navy': { primary: '#0A192F', accent: '#F47A32', light: '#F0F4FA' },
   'bss-midnight': { primary: '#073B67', accent: '#2F9E67', light: '#EAF2FA' },
   'bss-green': { primary: '#0F5132', accent: '#F47A32', light: '#EAF6EF' },
+  'bss-red': { primary: '#B91C1C', accent: '#DC2626', light: '#FEF2F2' },
   'bss-plain': { primary: '#111827', accent: '#2563EB', light: '#F3F4F6' },
 };
 
@@ -23,12 +24,16 @@ function smartContent(content: string, tokens: Record<string, string>): string {
     const key = match[1];
     const value = tokens[key];
     if (value === '[[PHOTO]]') out += '[[PHOTO]]';
+    else if (typeof value === 'string' && value.startsWith('data:image/')) out += `<img class="doc-qr" src="${value}" alt="QR"/>`;
     else if (value !== undefined && value !== '' && value !== '—') out += esc(value);
-    else out += `<span class="doc-token-empty">\{\{${esc(key)}\}\}</span>`;
+    else out += '<span class="doc-value-na">NA</span>';
     last = index + match[0].length;
   }
   out += content.slice(last);
-  return out.replace(/\n/g, '<br/>');
+  // Field labels ("Name:", "DOB:", "Issue Date:") are always bold.
+  return out
+    .replace(/\n/g, '<br/>')
+    .replace(/(^|<br\/>| {2,})([A-Z][A-Za-z0-9 &/.'’-]{0,28}):/g, '$1<strong>$2:</strong>');
 }
 
 function renderPhotoBlock() {
@@ -48,7 +53,7 @@ function sectionHtml(section: TemplateSection, tokens: Record<string, string>, w
     const bodyRows = rows.map(row => {
       const cells = columns.map(col => {
         const raw = row[col.key];
-        return `<td>${raw !== undefined && raw !== '' ? esc(raw) : `<span class="doc-token-empty">\{\{${esc(col.key)}\}\}</span>`}</td>`;
+        return `<td>${raw !== undefined && raw !== '' ? esc(raw) : '<span class="doc-value-na">NA</span>'}</td>`;
       });
       return `<tr>${cells.join('')}</tr>`;
     });
@@ -65,37 +70,50 @@ function cssFor(template: TemplateConfig): string {
   const colors = THEME_COLORS[template.styles.theme] ?? THEME_COLORS['bss-navy'];
   const fontSize = template.styles.fontSize || 12;
   const isGateCard = template.pageFormat === 'PGP';
-  // Gate passes expose a single "text colour" control; everything else stays fixed.
+  // Gate passes expose a single "text colour" control for the body; headings
+  // always take the pass colour (green for permanent, red for temporary) and
+  // stay bold regardless of that choice.
   const gatePass = isGatePassType(template.documentType);
   const textColor = gatePass ? (template.styles.headingColor || '#111827') : '#111827';
-  const headingColor = gatePass ? textColor : colors.primary;
+  // The pass title is strictly green (permanent) / red (temporary), regardless
+  // of the saved template theme.
+  const gatePassHeading = template.documentType === 'permanent-gate-pass' ? '#15803D'
+    : template.documentType === 'temporary-gate-pass' ? '#B91C1C'
+    : null;
+  const headingColor = gatePassHeading ?? colors.primary;
   return `
   @page { size: ${isGateCard ? '85.6mm 53.98mm landscape' : 'A4 portrait'}; margin: ${isGateCard ? '0' : '12mm 14mm'}; }
   * { box-sizing: border-box; }
   body { margin:0; background:#fff; font-family: ${template.styles.fontFamily}; color:${textColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .doc-page { width:794px; margin:0 auto; padding: ${isGateCard ? '0' : '8px 4px 16px'}; position:relative; }
-  .doc-logo-row { display:flex; align-items:center; gap:12px; border-bottom:3px solid ${colors.primary}; padding:0 0 10px; margin-bottom:10px; }
+  .doc-logo-row { display:flex; align-items:center; gap:12px; border-bottom:3px solid #073B67; padding:0 0 10px; margin-bottom:10px; }
   .doc-logo { height:36px; width:auto; }
-  .doc-brand strong { display:block; color:${colors.primary}; font-size:17px; letter-spacing:.3px; }
+  .doc-brand strong { display:block; color:#073B67; font-size:17px; letter-spacing:.3px; font-weight:800; }
   .doc-brand span { font-size:9px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
-  .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${colors.accent}; padding-bottom:7px; text-transform:uppercase; font-weight:800; }
+  .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${gatePass ? headingColor : colors.accent}; padding-bottom:7px; text-transform:uppercase; font-weight:800; }
   .doc-subheading { color:${headingColor}; font-size:${fontSize + 1}px; margin:14px 0 5px; border-bottom:1px solid #d1d5db; padding-bottom:4px; font-weight:700; }
   .doc-body { font-size:${fontSize}px; line-height:1.6; text-align:justify; }
   .doc-body p { margin:0 0 8px; }
   .doc-photo-row { text-align:left; margin:6px 0; }
   .doc-photo { width:96px; height:116px; object-fit:cover; border:2px solid #d7dde5; border-radius:6px; }
+  .doc-qr { width:84px; height:84px; display:block; margin:8px auto; }
   .doc-divider { border:0; border-top:1px dashed #cbd5e1; margin:12px 0; }
   .doc-table-wrap { margin:10px 0; }
   .doc-table { width:100%; border-collapse:collapse; font-size:${fontSize - 1}px; }
   .doc-table th, .doc-table td { border:1px solid #9aa4b2; padding:5px 8px; text-align:left; vertical-align:top; }
-  .doc-table th { background:${colors.light}; color:${colors.primary}; }
+  .doc-table th { background:${colors.light}; color:${colors.primary}; font-weight:700; }
+  .doc-value-na { color:#9ca3af; }
   .doc-token-empty { background:#fff3e0; color:#b45309; border:1px dashed #f59e0b; border-radius:4px; padding:0 4px; font-size:${fontSize - 2}px; font-family: monospace; }
   .doc-muted { font-size:${fontSize - 3}px; color:#6b7280; margin-top:4px; }
   .doc-signature-grid { display:flex; gap:44px; justify-content:space-between; margin:40px 10px 4px; }
   .doc-signature-grid > div { width:210px; text-align:center; }
   .doc-signature-line { border-top:1px solid #4b5563; margin-top:32px; padding-top:5px; font-size:${fontSize - 1}px; color:#111827; font-weight:600; min-height:18px; }
   .doc-signature-grid p { font-size:${fontSize - 3}px; color:#6b7280; margin:5px 0 0; text-transform:uppercase; letter-spacing:.6px; }
+  .doc-signatory-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-transform:none; letter-spacing:.4px; color:#4b5563; }
   .doc-footer { font-size:9px; color:#6b7280; text-align:center; margin-top:16px; border-top:1px solid #e5e7eb; padding-top:6px; }
+  ${template.documentType === 'temporary-gate-pass' ? `
+  .doc-watermark { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:${fontSize * 9}px; font-weight:800; color:rgba(220,38,38,0.14); transform:rotate(-30deg); letter-spacing:12px; pointer-events:none; z-index:0; user-select:none; }
+  .doc-page > *:not(.doc-watermark) { position:relative; z-index:1; }` : ''}
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 `;
 }
@@ -104,7 +122,9 @@ function cssFor(template: TemplateConfig): string {
 export function renderDocumentHtml(target: RenderTarget): string {
   const { template, tokens, workerRows } = target;
   const sections = [...template.sections].sort((a, b) => a.order - b.order);
-  const visible = sections.filter(section => section.visible);
+  const visible = sections.filter(section => section.visible)
+    // Drop a QR block when there is no QR (e.g. temporary passes).
+    .filter(section => !(section.content.includes('{{document.qr}}') && !tokens['document.qr']));
   const signatureSection = visible.find(section => section.type === 'signature');
 
   const roleValue = (role: string): string => {
@@ -123,12 +143,32 @@ export function renderDocumentHtml(target: RenderTarget): string {
     const value = tokens[key];
     return value !== undefined && value !== '' && value !== '—' ? value : '';
   };
+  const roleBssId = (role: string): string => {
+    const map: Record<string, string> = {
+      Worker: 'worker.bssId',
+      Contractor: 'contractor.bssId',
+      'Principal Employer': 'employer.bssId',
+      'Site In-charge': 'employer.bssId',
+    };
+    const key = map[role] ?? '';
+    return key ? (tokens[key] ?? '') : '';
+  };
+  // Gate passes always use the same signatories (contractor, principal employer,
+  // site in-charge) — no HOD/HR/CSO — regardless of any stored template.
+  const gatePassSignatories = isGatePassType(template.documentType)
+    ? ['Contractor', 'Principal Employer', 'Site In-charge']
+    : template.signatories;
   const signHtml = signatureSection
-    ? `<div class="doc-signature-grid">${template.signatories.map(role => `<div><div class="doc-signature-line">${esc(roleValue(role))}</div><p>${esc(role)}</p></div>`).join('')}</div>`
+    ? `<div class="doc-signature-grid">${gatePassSignatories.map(role => `<div><div class="doc-signature-line">${esc(roleValue(role))}</div><p>${esc(role)}</p>${roleBssId(role) ? `<p class="doc-signatory-id">${esc(roleBssId(role))}</p>` : ''}</div>`).join('')}</div>`
     : '';
 
+  const brandName = template.styles.brandHeaderText || 'Bharat Shram Setu';
+  // Wordmark keeps the Indian tricolour treatment used across the portal.
+  const brandWordmark = brandName.trim().toLowerCase() === 'bharat shram setu'
+    ? '<span style="color:#022B5E">Bharat</span><span style="color:#E45D24"> Shram</span><span style="color:#14843C"> Setu</span>'
+    : esc(brandName);
   const headingMeta = template.styles.showBrandHeader
-    ? `<div class="doc-logo-row">${template.styles.showLogo ? '<img src="/bss-original-logo.png" alt="logo" class="doc-logo"/>' : ''}<div class="doc-brand"><strong>${esc(template.styles.brandHeaderText || 'Bharat Shram Setu')}</strong><span>One Worker · One Identity · One Future</span></div></div>`
+    ? `<div class="doc-logo-row">${template.styles.showLogo ? '<img src="/bss-original-logo.png" alt="logo" class="doc-logo"/>' : ''}<div class="doc-brand"><strong>${brandWordmark}</strong><span>One Worker · One Identity · One Future</span></div></div>`
     : '';
 
   const body = visible
@@ -136,7 +176,9 @@ export function renderDocumentHtml(target: RenderTarget): string {
     .map(section => sectionHtml(section, tokens, workerRows))
     .join('');
 
-  return `<!doctype html><html><head><meta charset="utf-8"/><title>${esc(template.name)}</title><style>${cssFor(template)}</style></head><body><div class="doc-page">${headingMeta}${body}${signHtml}<div class="doc-footer">${esc(template.styles.footerText)}</div></div></body></html>`;
+  const watermark = template.documentType === 'temporary-gate-pass' ? '<div class="doc-watermark">TEMP</div>' : '';
+
+  return `<!doctype html><html><head><meta charset="utf-8"/><title>${esc(template.name)}</title><style>${cssFor(template)}</style></head><body><div class="doc-page">${watermark}${headingMeta}${body}${signHtml}<div class="doc-footer">${esc(template.styles.footerText)}</div></div></body></html>`;
 }
 
 /** Open a clean printable window (browser print dialog → printer or "Save as PDF"). */
