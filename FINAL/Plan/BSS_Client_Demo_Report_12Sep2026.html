@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bharat Shram Setu — Client Demo Report · 12 Sep 2026</title>
+<title>Bharat Shram Setu — Client Checkpoint & Status Report · 15 Sep 2026</title>
 <style>
   :root{
     --navy:#073B67; --navy-2:#062D4F; --orange:#F47A32; --ink:#0f172a;
@@ -75,9 +75,9 @@
 
   <header class="hero">
     <div class="kicker">Bharat Shram Setu · BSS Gravity Platform</div>
-    <h1>Client Demo — Implementation &amp; API Report</h1>
-    <p>Worker · Contractor · Employer portals — staged build ready for client walkthrough.</p>
-    <p><strong>Demo date:</strong> 12 September 2026 &nbsp;·&nbsp; <strong>Environment:</strong> AWS Staging (ap-south-1)</p>
+    <h1>Client Checkpoint &amp; Status Report — 15 Sep 2026</h1>
+    <p>Worker · Contractor · Employer portals — comprehensive status of What's Done, What's Remaining, and What's in Testing Stage across all 3 roles.</p>
+    <p><strong>Report date:</strong> 15 September 2026 &nbsp;·&nbsp; <strong>Environment:</strong> AWS Staging (ap-south-1)</p>
     <div class="url">🔗 https://bharat-shram-setu-staging.bharatshramsetu.com</div>
     <div class="meta">
       <span>Next.js 16 frontend</span>
@@ -100,6 +100,7 @@
   <section class="card">
     <h2><span class="n">i</span>Contents</h2>
     <div class="toc">
+      <a href="#checkpoint">0 · Checkpoint Status (15 Sep 2026)</a>
       <a href="#overview">1 · Overview</a>
       <a href="#accounts">2 · Demo Accounts</a>
       <a href="#apis">3 · API Reference</a>
@@ -112,6 +113,117 @@
       <a href="#pending">7 · Pending / Known Limits</a>
       <a href="#legend">8 · Status Legend</a>
     </div>
+  </section>
+
+  <!-- ================= CHECKPOINT ================= -->
+  <section class="card" id="checkpoint">
+    <h2><span class="n">0</span>System-Wide Role Checkpoint (15 Sep 2026)</h2>
+    <p class="sub">Comprehensive breakdown of features completed, remaining, and currently under active testing stage across Worker, Contractor, and Employer roles.</p>
+
+    <div class="note orange">
+      <strong>Core Architectural Note:</strong> As binding &amp; unbinding letter generation is the heart of the system, testing is currently ongoing and you may encounter a few edge cases during active test flows.
+    </div>
+
+    <h3>Role-by-Role Feature Status Breakdown</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Done (Production Ready)</th>
+          <th>Testing Stage (Active QA)</th>
+          <th>Remaining (In Development)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Worker Role</strong></td>
+          <td>
+            <ul class="tight">
+              <li>Self-registration &amp; eKYC Aadhaar linkage</li>
+              <li>Login (OTP / MPIN / Password)</li>
+              <li>Worker Profile &amp; BSS ID Card / QR</li>
+              <li>Attendance &amp; Leave history display</li>
+              <li>Rozgar job search &amp; binding request submission</li>
+              <li>Grievances (text/audio submission &amp; tracking)</li>
+              <li>Skill Development (4 seeded courses &amp; quizzes)</li>
+            </ul>
+          </td>
+          <td>
+            <ul class="tight">
+              <li><strong>Binding &amp; Unbinding Letter Generation</strong> (Heart of system — testing ongoing, edge cases may occur)</li>
+              <li>Two-sided Binding / Unbinding consent acceptance</li>
+              <li>Dynamic Document token generation from profile</li>
+              <li>Live DigiLocker eKYC OAuth token fetch</li>
+            </ul>
+          </td>
+          <td>
+            <ul class="tight">
+              <li>Physical Card Order Flow (marked Under Development)</li>
+              <li>Penny-drop live bank verification fallback</li>
+              <li>Labour Compliance worker view auto-refresh</li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>2. Contractor Role</strong></td>
+          <td>
+            <ul class="tight">
+              <li>Contractor Onboarding &amp; Profile (BSS-C)</li>
+              <li>Worker Master Register &amp; CSV import</li>
+              <li>Contractor ↔ Employer site engagement requests</li>
+              <li>Worker Attendance QR scanning (check-in / check-out)</li>
+              <li>Leave approval &amp; balance sync</li>
+              <li>Salary Advance request approval &amp; disbursement</li>
+              <li>Worker Welfare &amp; Safety records</li>
+              <li>Unified Payroll Workspace &amp; manual / bulk entry</li>
+              <li>Grievance resolution &amp; threaded responses</li>
+            </ul>
+          </td>
+          <td>
+            <ul class="tight">
+              <li><strong>Binding &amp; Unbinding Letter Generation &amp; Issuance</strong> (Heart of system — testing ongoing, edge cases may occur)</li>
+              <li>Worker Binding OTP trigger &amp; verification</li>
+              <li>Document Template Engine (seeding, versioning, drafting)</li>
+              <li>Site Calendar &amp; holiday inheritance</li>
+            </ul>
+          </td>
+          <td>
+            <ul class="tight">
+              <li>Single &amp; Bulk Gate Pass Generation templates (moved exclusively to Employer)</li>
+              <li>Advanced Statutory analytics CSV / PDF export</li>
+            </ul>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>3. Employer Role</strong></td>
+          <td>
+            <ul class="tight">
+              <li>Employer Onboarding &amp; Profile (BSS-E)</li>
+              <li>Site Master Creation &amp; Site QR generation</li>
+              <li>Contractor Engagement approval &amp; Site allotment</li>
+              <li>Workforce visibility across all linked contractors</li>
+              <li>Exclusive Gate Pass Approval &amp; Validity window setting</li>
+              <li>Compliance submission review &amp; document preview</li>
+              <li>Employer Payroll Workspace &amp; workforce distribution</li>
+              <li>Redressal Community &amp; joint grievance resolution</li>
+            </ul>
+          </td>
+          <td>
+            <ul class="tight">
+              <li><strong>Employer Binding / Unbinding Letter counter-signing &amp; verification</strong> (Heart of system — testing ongoing, edge cases may occur)</li>
+              <li>Statutory Compliance batch submission verification</li>
+              <li>Document Engine template approval &amp; override</li>
+            </ul>
+          </td>
+          <td>
+            <ul class="tight">
+              <li>Labour Law Compliance Engine (marked Under Development with visual watermark overlay)</li>
+              <li>Automated Labour Audit auto-reporting</li>
+            </ul>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 
   <!-- ================= OVERVIEW ================= -->

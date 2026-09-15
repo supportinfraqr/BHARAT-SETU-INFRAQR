@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BssTaxonomies } from '@/data/taxonomies';
+import { INDIAN_BANKS } from '@/lib/banks';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import type { WorkerRecord } from '@/types/portal';
@@ -884,7 +885,11 @@ export default function WorkerProfilePage() {
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Name</label>
-                        <input name="banking.bankName" type="text" defaultValue={worker.banking.bankName} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]"/>
+                        <select name="banking.bankName" defaultValue={worker.banking.bankName || ''} className="w-full bg-white border border-black/10 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#1D1D1F] focus:outline-none focus:border-[#0066CC]">
+                          <option value="">Select bank…</option>
+                          {worker.banking.bankName && !INDIAN_BANKS.includes(worker.banking.bankName) && <option value={worker.banking.bankName}>{worker.banking.bankName}</option>}
+                          {INDIAN_BANKS.map(bank => <option key={bank} value={bank}>{bank}</option>)}
+                        </select>
                       </div>
                       <div className="sm:col-span-2">
                         <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Bank Account Holder Name</label>
