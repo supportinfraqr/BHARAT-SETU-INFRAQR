@@ -373,9 +373,11 @@ def _demo_otp_mobiles():
 
 
 def _issue_otp(mobile, purpose="LOGIN", ttl_minutes=5):
-    # Demo accounts: a fixed OTP (no real delivery) for LOGIN only. Enabled by
+    # Demo accounts: a fixed OTP (no real delivery) for whitelisted mobiles, for
+    # every in-app OTP purpose (login, binding, ...). Aadhaar OTP is issued by the
+    # UIDAI flow and never goes through here, so it is unaffected. Enabled by
     # setting BSS_DEMO_OTP_MOBILES to the whitelist (empty = disabled).
-    demo = purpose == "LOGIN" and str(mobile) in _demo_otp_mobiles()
+    demo = purpose != "AADHAAR" and str(mobile) in _demo_otp_mobiles()
     value = os.environ.get("BSS_DEMO_OTP", "123456") if demo else _generate_otp_value()
     otp = SmsOtp.objects.create(
         mobile=mobile,
