@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BSS System - End to End Binding & Document Flowchart</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --card-bg: #f8fafc;
+      --card-border: #e2e8f0;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --line: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+
+    .header h1 {
+      font-size: 30px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* FLOWCHART CONTAINER */
+    .flowchart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      position: relative;
+    }
+
+    /* STEP NODE CARD */
+    .flow-node {
+      background-color: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 14px;
+      padding: 22px 28px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      gap: 20px;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      transition: all 0.25 ease;
+    }
+
+    .flow-node:hover {
+      transform: translateY(-2px);
+      border-color: var(--blue);
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+    }
+
+    /* STEP NUMBER CIRCLE */
+    .step-num {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+    }
+
+    /* NODE BODY */
+    .node-content h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #0f172a;
+    }
+
+    .node-content p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .node-output {
+      margin-top: 10px;
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+
+    /* ROLE BADGES */
+    .role-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .badge-employer {
+      background: var(--blue-light);
+      color: var(--blue);
+      border: 1px solid #bfdbfe;
+    }
+
+    .badge-contractor {
+      background: var(--amber-light);
+      color: var(--amber);
+      border: 1px solid #fde68a;
+    }
+
+    .badge-worker {
+      background: var(--green-light);
+      color: var(--green);
+      border: 1px solid #a7f3d0;
+    }
+
+    .badge-output {
+      background: var(--purple-light);
+      color: var(--purple);
+      border: 1px solid #ddd6fe;
+    }
+
+    /* VISUAL SVG ARROW CONNECTOR */
+    .arrow-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 46px;
+      position: relative;
+    }
+
+    .arrow-connector svg {
+      width: 24px;
+      height: 38px;
+    }
+
+    .arrow-connector svg path {
+      stroke: var(--blue);
+      stroke-width: 3;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    .arrow-connector svg polygon {
+      fill: var(--blue);
+    }
+
+    /* FINAL RESULT NODE */
+    .node-final {
+      background-color: #f0fdf4;
+      border: 2px solid #86efac;
+      box-shadow: 0 4px 20px rgba(5, 150, 105, 0.12);
+    }
+
+    .node-final .step-num {
+      background: var(--green);
+      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+    }
+
+    .final-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .final-card {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      border-left: 5px solid var(--green);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+
+    .final-card.gp {
+      border-left-color: var(--amber);
+    }
+
+    .final-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+
+    .final-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+      .flow-node {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .step-num {
+        margin: 0 auto;
+      }
+      .final-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>BSS System Lifecycle Flowchart</h1>
+      <p>Step-by-Step Binding Sequence from Account Creation to Gate Pass &amp; Letter Issuance</p>
+    </div>
+
+    <div class="flowchart">
+      
+      <!-- STEP 1 -->
+      <div class="flow-node">
+        <div class="step-num">1</div>
+        <div class="node-content">
+          <h3>Create Employer Account &amp; Site Setup</h3>
+          <p>Principal Employer registers organization account (BSS-E) and creates a new construction or plant Site Master.</p>
+          <div class="node-output">📌 Output: Site Master created &amp; Site QR Code generated</div>
+        </div>
+        <div>
+          <span class="role-badge badge-employer">Employer</span>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="arrow-connector">
+        <svg viewBox="0 0 24 38">
+          <path d="M12 2 L12 28" />
+          <polygon points="6,24 12,36 18,24" />
+        </svg>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="flow-node">
+        <div class="step-num">2</div>
+        <div class="node-content">
+          <h3>Create Contractor Account</h3>
+          <p>Contractor registers company profile (BSS-C) on the portal to get a Contractor ID and master QR code.</p>
+          <div class="node-output">📌 Output: Contractor Profile activated</div>
+        </div>
+        <div>
+          <span class="role-badge badge-contractor">Contractor</span>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="arrow-connector">
+        <svg viewBox="0 0 24 38">
+          <path d="M12 2 L12 28" />
+          <polygon points="6,24 12,36 18,24" />
+        </svg>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="flow-node">
+        <div class="step-num">3</div>
+        <div class="node-content">
+          <h3>Link Contractor &amp; Employer (Contractor Scans Employer QR)</h3>
+          <p>Contractor scans Employer's QR code to send engagement request. Employer receives alert and accepts the request.</p>
+          <div class="node-output">📌 Output: Contractor ↔ Employer linkage active</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+          <span class="role-badge badge-contractor">Contractor</span>
+          <span class="role-badge badge-employer">Employer</span>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="arrow-connector">
+        <svg viewBox="0 0 24 38">
+          <path d="M12 2 L12 28" />
+          <polygon points="6,24 12,36 18,24" />
+        </svg>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="flow-node">
+        <div class="step-num">4</div>
+        <div class="node-content">
+          <h3>Employer Allots Site &amp; Contractor Accepts</h3>
+          <p>Employer allots the specific active site to the Contractor. Contractor accepts the site allotment terms.</p>
+          <div class="node-output">📌 Output: Site Allotment authorized for deployment</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+          <span class="role-badge badge-employer">Employer</span>
+          <span class="role-badge badge-contractor">Contractor</span>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="arrow-connector">
+        <svg viewBox="0 0 24 38">
+          <path d="M12 2 L12 28" />
+          <polygon points="6,24 12,36 18,24" />
+        </svg>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="flow-node">
+        <div class="step-num">5</div>
+        <div class="node-content">
+          <h3>Create Worker Account &amp; eKYC</h3>
+          <p>Worker registers on BSS Worker mobile app or web, completing profile setup and Aadhaar eKYC linkage.</p>
+          <div class="node-output">📌 Output: BSS Worker ID &amp; Dynamic Worker QR generated</div>
+        </div>
+        <div>
+          <span class="role-badge badge-worker">Worker</span>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="arrow-connector">
+        <svg viewBox="0 0 24 38">
+          <path d="M12 2 L12 28" />
+          <polygon points="6,24 12,36 18,24" />
+        </svg>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="flow-node">
+        <div class="step-num">6</div>
+        <div class="node-content">
+          <h3>Contractor Scans Worker QR &amp; Binding Approved</h3>
+          <p>Contractor scans Worker's QR code to initiate binding. Worker approves request via OTP/app prompt to complete link.</p>
+          <div class="node-output">📌 Output: Worker ↔ Contractor ↔ Employer 3-way binding completed</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+          <span class="role-badge badge-contractor">Contractor</span>
+          <span class="role-badge badge-worker">Worker</span>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div class="arrow-connector">
+        <svg viewBox="0 0 24 38">
+          <path d="M12 2 L12 28" stroke="#059669" />
+          <polygon points="6,24 12,36 18,24" fill="#059669" />
+        </svg>
+      </div>
+
+      <!-- STEP 7 - FINAL -->
+      <div class="flow-node node-final">
+        <div class="step-num">7</div>
+        <div class="node-content" style="grid-column: span 2;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3>System Output: Letters &amp; Gate Passes Generated</h3>
+            <span class="role-badge badge-output">System Output</span>
+          </div>
+          <p>With 3-way binding completed, the system populates BSS data tokens to issue official letters and gate passes.</p>
+          
+          <div class="final-grid">
+            <div class="final-card">
+              <h4>📄 Binding &amp; Unbinding Letters</h4>
+              <p>Generated with dynamic tokens (Worker name, Contractor details, Employer name, timestamps).</p>
+            </div>
+            <div class="final-card gp">
+              <h4>🎫 Gate Passes (Employer Issued)</h4>
+              <p>Temporary and Permanent Gate Passes generated exclusively by Employer with site validity limits.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

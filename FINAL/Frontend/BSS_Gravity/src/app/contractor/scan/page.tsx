@@ -82,16 +82,25 @@ export default function ContractorScanPage() {
       if (p.type === "BSS_EMPLOYER") {
         const known = contractor.employers.find(e => e.employerId === bssId);
         const existing = contractor.bindingRequests.find(b => b.type === 'Employer' && b.bssId === bssId && ['Pending', 'Accepted'].includes(b.status));
+        let registryName = '';
         if (!known && !existing) {
-          setEntity(null);
-          setScanned(null);
-          setState("error");
-          setMessage(`No principal employer record found with BSS ID "${bssId}". Please check the BSS ID and try again.`);
-          controls.current?.stop();
-          return;
+          // The employer does not have to be engaged already — a contractor may
+          // request a binding to any employer that exists in the BSS registry.
+          const lookup = await fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' }).catch(() => null);
+          const payload = lookup && lookup.ok ? await lookup.json().catch(() => null) : null;
+          if (!payload?.data) {
+            setEntity(null);
+            setScanned(null);
+            setState("error");
+            setMessage(`No principal employer record found with BSS ID "${bssId}". Please check the BSS ID and try again.`);
+            controls.current?.stop();
+            return;
+          }
+          registryName = payload.data.company || payload.data.name || '';
         }
+        const employerName = known?.name ?? existing?.entityName ?? registryName ?? '';
         setAlreadyPending(Boolean(existing) || sentHere);
-        setEntity({ kind: 'employer', bssId, name: known?.name ?? existing?.entityName ?? 'Principal Employer ' + bssId.slice(-4), employer: known?.name ?? existing?.entityName ?? 'Principal Employer', site: known?.sites?.[0] ?? existing?.site ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
+        setEntity({ kind: 'employer', bssId, name: employerName || ('Principal Employer ' + bssId.slice(-4)), employer: employerName || 'Principal Employer', site: known?.sites?.[0] ?? existing?.site ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
         setRequestSent(false);
         setState("binding");
         setMessage(existing ? `Binding request already ${existing.status.toLowerCase()} with this employer.` : "Employer QR identified — request binding; the employer approves the binding then allots sites.");
