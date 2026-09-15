@@ -12,9 +12,9 @@ export function createWorkerQrPayload(bssId: string) {
   return JSON.stringify({ v: 1, type, bssId, issuer: "Bharat Shram Setu" });
 }
 
-export default function WorkerQr({ bssId, className = "w-full h-full" }: { bssId: string; className?: string }) {
+export default function WorkerQr({ bssId, size = 512, className = "w-full h-full" }: { bssId: string; size?: number; className?: string }) {
   const [src, setSrc] = useState("");
-  useEffect(() => { QRCode.toDataURL(createWorkerQrPayload(bssId), { errorCorrectionLevel: "H", margin: 4, width: 512 }).then(setSrc); }, [bssId]);
+  useEffect(() => { QRCode.toDataURL(createWorkerQrPayload(bssId), { errorCorrectionLevel: "H", margin: 4, width: size }).then(setSrc); }, [bssId, size]);
   return src ? <img src={src} alt={`Scannable worker QR for ${bssId}`} className={className} /> : <div className={`${className} animate-pulse bg-gray-200`} aria-label="Generating QR code" />;
 }
 

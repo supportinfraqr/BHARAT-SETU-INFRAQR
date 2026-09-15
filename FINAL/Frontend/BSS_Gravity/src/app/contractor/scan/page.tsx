@@ -59,7 +59,7 @@ export default function ContractorScanPage() {
 
   useEffect(() => () => controls.current?.stop(), []);
 
-  const verify = (text: string) => {
+  const verify = async (text: string) => {
     try {
       const p = JSON.parse(text) as Payload;
       if (p.v !== 1 || p.issuer !== "Bharat Shram Setu") throw new Error("Unsupported QR credential");
@@ -101,19 +101,28 @@ export default function ContractorScanPage() {
         // Worker QR → identify worker, show relationship, request binding (never auto-bind)
         const known = contractor.workers.find(w => w.bssId === bssId);
         const pending = contractor.bindingRequests.find(b => b.bssId === bssId && b.status === 'Pending');
+        let registryName = '';
         if (!known && !pending) {
-          setEntity(null);
-          setScanned(null);
-          setState("error");
-          setMessage(`No worker record found with BSS ID "${bssId}". Please check the BSS ID and try again.`);
-          controls.current?.stop();
-          return;
+          // The worker does not have to be bound already — a contractor may bind
+          // any worker who exists in the BSS registry. Confirm the credential is
+          // real before offering the binding request.
+          const lookup = await fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' }).catch(() => null);
+          const payload = lookup && lookup.ok ? await lookup.json().catch(() => null) : null;
+          if (!payload?.data?.identity) {
+            setEntity(null);
+            setScanned(null);
+            setState("error");
+            setMessage(`No worker record found with BSS ID "${bssId}". Please check the BSS ID and try again.`);
+            controls.current?.stop();
+            return;
+          }
+          registryName = payload.data.identity.name ?? '';
         }
         const resolvedSite = known?.site ?? pending?.site ?? contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? 'Unassigned site';
         setSelectedSite(resolvedSite);
         setEntity({
           kind: 'worker', bssId,
-          name: known?.name ?? pending?.entityName ?? 'BSS Worker ' + bssId.slice(-4),
+          name: (known?.name ?? pending?.entityName ?? registryName) || ('BSS Worker ' + bssId.slice(-4)),
           employer: known?.employer ?? contractor.principalEmployer.name,
           site: resolvedSite,
           designation: known?.designation ?? pending?.designation ?? 'Not disclosed',
