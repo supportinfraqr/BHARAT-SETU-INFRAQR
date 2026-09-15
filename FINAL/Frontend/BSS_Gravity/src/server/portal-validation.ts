@@ -141,15 +141,26 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   }
   if (resource === 'gate-passes') {
     if (method === 'PATCH') {
-      if (role === 'Employer') {
-        if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100
-          || body.ids.some(id => (typeof id !== 'string' && typeof id !== 'number') || !String(id).trim())) {
-          fail('Select one or more valid gate passes.');
+      const editsDates = body.validFrom !== undefined || body.validTo !== undefined;
+      if (editsDates) {
+        requiredString(body, 'id', 120);
+        for (const key of ['validFrom', 'validTo']) {
+          const value = body[key];
+          if (value !== undefined && value !== null && value !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+            fail('Dates must be in YYYY-MM-DD format.');
+          }
         }
       } else {
-        requiredString(body, 'id', 120);
+        if (role === 'Employer') {
+          if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100
+            || body.ids.some(id => (typeof id !== 'string' && typeof id !== 'number') || !String(id).trim())) {
+            fail('Select one or more valid gate passes.');
+          }
+        } else {
+          requiredString(body, 'id', 120);
+        }
+        if (!['Approved', 'Rejected'].includes(String(body.status))) fail('The requested gate-pass status is not allowed.');
       }
-      if (!['Approved', 'Rejected'].includes(String(body.status))) fail('The requested gate-pass status is not allowed.');
     } else if (method === 'POST') {
       const check = (row: Record<string, unknown>) => {
         if (!bssId.test(String(row.workerId ?? ''))) fail('Enter a valid worker BSS ID.');

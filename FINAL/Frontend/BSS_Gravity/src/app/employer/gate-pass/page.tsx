@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CheckCircle2, Clock3, Eye, ShieldCheck, X, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, Clock3, Eye, Pencil, ShieldCheck, X, XCircle } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerGatePass } from '@/types/portal';
 import { useEmployerDocView } from '@/components/documentEngine/portalAdapters';
@@ -23,6 +23,9 @@ export default function EmployerGatePassPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [editRow, setEditRow] = useState<EmployerGatePass | null>(null);
+  const [editFrom, setEditFrom] = useState('');
+  const [editTo, setEditTo] = useState('');
 
   useEffect(() => { void templateService.hydrate(docCtx.owner); }, [docCtx.owner]);
 
@@ -45,7 +48,29 @@ export default function EmployerGatePassPage() {
     await templateService.hydrate(docCtx.owner);
     const worker = docCtx.workers.find(item => item.bssId === row.workerId || item.name === row.workerName);
     if (!worker) { setError(`No worker record found for ${row.workerName}.`); return; }
-    openGatePass(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo });
+    openGatePass(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo, number: row.number });
+  }
+
+  // Employer-only: edit the validity window. Defaults to the worker's BSS ID
+  // card (Issue Date / Valid Till) when the pass has no dates configured.
+  function openEdit(row: EmployerGatePass) {
+    setError('');
+    setEditRow(row);
+    setEditFrom((row.validFrom || '').slice(0, 10));
+    setEditTo((row.validTo || '').slice(0, 10));
+  }
+
+  async function saveDates() {
+    if (!editRow) return;
+    setBusy(true);
+    setError('');
+    try {
+      const updated = await mutate<Partial<EmployerGatePass>>('gate-passes', 'PATCH', { id: editRow.id, validFrom: editFrom, validTo: editTo });
+      replaceEmployer({ ...employer, gatePasses: employer.gatePasses.map(item => item.id === editRow.id ? { ...item, ...updated } : item) });
+      setNotice(`Validity updated for ${editRow.workerName}.`);
+      setEditRow(null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The dates could not be saved.'); }
+    finally { setBusy(false); }
   }
 
   async function decide(status: 'Approved' | 'Rejected') {
@@ -85,7 +110,7 @@ export default function EmployerGatePassPage() {
       <header className="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3"><div><h2 className="text-sm font-semibold text-gray-900">Gate pass requests</h2><p className="text-[11px] text-gray-400 mt-0.5">{rows.length} records in this view</p></div><label className="flex items-center gap-2 text-xs font-semibold text-gray-700">Site<select value={site} onChange={e => { setSite(e.target.value); setSelected([]); }} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white"><option value="all">All sites</option>{employer.sites.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></header>
       <div className="overflow-x-auto"><table className="w-full min-w-[960px] text-left text-xs">
         <thead className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500"><tr><th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all visible requests" checked={allVisibleSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300"/></th><th className="px-4 py-3">Worker</th><th className="px-4 py-3">Contractor</th><th className="px-4 py-3">Site</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Requested</th><th className="px-4 py-3">Validity</th><th className="px-4 py-3">Eligibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Gate pass</th></tr></thead>
-        <tbody className="divide-y divide-gray-100">{rows.map(row => { const elig = row.eligibility; return <tr key={row.id} className={selected.includes(row.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}><td className="px-4 py-3"><input type="checkbox" aria-label={`Select ${row.workerName}`} checked={selected.includes(row.id)} disabled={row.status !== 'Pending'} onChange={() => toggle(row.id)} className="w-4 h-4 rounded border-gray-300 disabled:opacity-30"/></td><td className="px-4 py-3"><div className="flex items-center gap-1.5"><strong className="text-gray-900">{row.workerName}</strong>{row.auto && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700" title="Auto-generated from the worker ID card">AUTO</span>}</div><p className="font-mono text-[10px] text-gray-400 mt-0.5">{row.workerId}</p>{row.contact&&<p className="text-[10px] text-gray-400">{row.contact}</p>}</td><td className="px-4 py-3 text-gray-600">{row.contractor}</td><td className="px-4 py-3 text-gray-600">{row.site}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.type === 'Permanent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{row.type}</span></td><td className="px-4 py-3 text-gray-500">{row.requestedAt.slice(0, 10)}</td><td className="px-4 py-3 text-gray-500">{row.validFrom||'—'} → {row.validTo||'—'}</td><td className="px-4 py-3"><div className="flex gap-1 items-center"><Dot label="M" ok={elig?.medical === 'Done'} title="Medical examination on record"/><Dot label="H&S" ok={elig?.healthSafety === 'Done'} title="Health &amp; Safety (site induction / safety kit / training)"/><Dot label="C" ok={elig?.compliance === 'Done'} title="Compliance status of the worker"/></div></td><td className="px-4 py-3"><Status value={row.status}/></td><td className="px-4 py-3"><button onClick={() => { void viewPass(row); }} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Eye size={12}/>View pass</button></td></tr>; })}{!rows.length && <tr><td colSpan={9} className="py-12 text-center text-gray-400">No gate pass requests in this view.</td></tr>}</tbody>
+        <tbody className="divide-y divide-gray-100">{rows.map(row => { const elig = row.eligibility; return <tr key={row.id} className={selected.includes(row.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}><td className="px-4 py-3"><input type="checkbox" aria-label={`Select ${row.workerName}`} checked={selected.includes(row.id)} disabled={row.status !== 'Pending'} onChange={() => toggle(row.id)} className="w-4 h-4 rounded border-gray-300 disabled:opacity-30"/></td><td className="px-4 py-3"><div className="flex items-center gap-1.5"><strong className="text-gray-900">{row.workerName}</strong>{row.auto && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700" title="Auto-generated from the worker ID card">AUTO</span>}</div><p className="font-mono text-[10px] text-gray-400 mt-0.5">{row.workerId}</p>{row.contact&&<p className="text-[10px] text-gray-400">{row.contact}</p>}</td><td className="px-4 py-3 text-gray-600">{row.contractor}</td><td className="px-4 py-3 text-gray-600">{row.site}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.type === 'Permanent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{row.type}</span></td><td className="px-4 py-3 text-gray-500">{row.requestedAt.slice(0, 10)}</td><td className="px-4 py-3 text-gray-500">{row.validFrom||'—'} → {row.validTo||'—'}</td><td className="px-4 py-3"><div className="flex gap-1 items-center"><Dot label="M" ok={elig?.medical === 'Done'} title="Medical examination on record"/><Dot label="H&S" ok={elig?.healthSafety === 'Done'} title="Health &amp; Safety (site induction / safety kit / training)"/><Dot label="C" ok={elig?.compliance === 'Done'} title="Compliance status of the worker"/></div></td><td className="px-4 py-3"><Status value={row.status}/></td><td className="px-4 py-3"><div className="flex gap-1.5"><button onClick={() => { void viewPass(row); }} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Eye size={12}/>View pass</button><button onClick={() => openEdit(row)} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Pencil size={12}/>Edit</button></div></td></tr>; })}{!rows.length && <tr><td colSpan={9} className="py-12 text-center text-gray-400">No gate pass requests in this view.</td></tr>}</tbody>
       </table></div>
     </section>
 
@@ -95,6 +120,18 @@ export default function EmployerGatePassPage() {
       <header className="p-5 border-b border-gray-100 flex justify-between"><h2 className="font-semibold">{confirm.status === 'Approved' ? 'Approve gate pass' : 'Reject gate pass'}</h2><button onClick={() => setConfirm(null)} aria-label="Close"><X/></button></header>
       <div className="p-5"><p className="text-sm text-gray-700">{confirmText(confirm.status)}</p><p className={`text-[11px] mt-2 ${eligibleSummary(employer.gatePasses.filter(item => selected.includes(item.id) && isEligible(item)).length, selected.length).startsWith('0 of') ? 'text-amber-700' : 'text-green-700'}`}><ShieldCheck size={12} className="inline mr-1 -mt-0.5"/>{eligibleSummary(employer.gatePasses.filter(item => selected.includes(item.id) && isEligible(item)).length, selected.length)}.</p><p className="text-[11px] text-gray-400 mt-2">This decision is recorded against each selected request and synchronized through the Employer API.</p>{error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}</div>
       <footer className="p-5 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setConfirm(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={() => decide(confirm.status)} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-semibold disabled:opacity-50">{busy ? 'Updating…' : confirm.status === 'Approved' ? 'Approve selected' : 'Reject selected'}</button></footer>
+    </section></div>}
+
+    {editRow && <div className="fixed inset-0 z-[80] bg-black/50 p-4 grid place-items-center"><section role="dialog" aria-modal="true" className="w-full max-w-md bg-white rounded-2xl overflow-hidden">
+      <header className="p-5 border-b border-gray-100 flex justify-between"><h2 className="font-semibold">Edit gate pass validity</h2><button onClick={() => setEditRow(null)} aria-label="Close"><X/></button></header>
+      <div className="p-5 space-y-4">
+        <p className="text-xs text-gray-500">{editRow.workerName} · {editRow.type} pass · {editRow.site}</p>
+        <label className="block text-xs font-semibold text-gray-600">Issue / valid from<input type="date" value={editFrom} onChange={e => setEditFrom(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3"/></label>
+        <label className="block text-xs font-semibold text-gray-600">Valid up to<input type="date" value={editTo} onChange={e => setEditTo(e.target.value)} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3"/></label>
+        <p className="text-[11px] text-gray-400">Defaults come from the worker&apos;s BSS ID card (Issue Date / Valid Till). Saved dates apply to the rendered gate pass.</p>
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      </div>
+      <footer className="p-5 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setEditRow(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={() => { void saveDates(); }} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-semibold disabled:opacity-50">{busy ? 'Saving…' : 'Save dates'}</button></footer>
     </section></div>}
   </div>;
 }

@@ -78,7 +78,7 @@ function cssFor(template: TemplateConfig): string {
   .doc-logo { height:36px; width:auto; }
   .doc-brand strong { display:block; color:${colors.primary}; font-size:17px; letter-spacing:.3px; }
   .doc-brand span { font-size:9px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
-  .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${colors.accent}; padding-bottom:7px; text-transform:uppercase; }
+  .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${colors.accent}; padding-bottom:7px; text-transform:uppercase; font-weight:800; }
   .doc-subheading { color:${headingColor}; font-size:${fontSize + 1}px; margin:14px 0 5px; border-bottom:1px solid #d1d5db; padding-bottom:4px; font-weight:700; }
   .doc-body { font-size:${fontSize}px; line-height:1.6; text-align:justify; }
   .doc-body p { margin:0 0 8px; }

@@ -65,6 +65,7 @@ export const TOKEN_DEFS: TokenDef[] = [
   { key: 'document.workDescription', label: 'Work Description', category: 'Document' },
   { key: 'document.reason', label: 'Reason / Purpose', category: 'Document' },
   { key: 'document.days', label: 'Number of Days', category: 'Document' },
+  { key: 'document.generatedAt', label: 'Generated At', category: 'Document' },
   // Signatory
   { key: 'signatory.contractor', label: 'Contractor Signatory Name', category: 'Signatory', locked: true },
   { key: 'signatory.employer', label: 'Principal Employer Signatory', category: 'Signatory', locked: true },

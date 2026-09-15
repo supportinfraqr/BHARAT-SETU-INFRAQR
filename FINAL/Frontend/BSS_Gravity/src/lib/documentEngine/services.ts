@@ -95,23 +95,25 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
     return [
       wrap(0, { type: 'logo', title: 'Branding / Logo', content: '', editable: false, locked: true }),
       wrap(1, { type: 'heading', title: 'Card title', content: 'PERMANENT GATE PASS', align: 'center' }),
-      wrap(2, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
-      wrap(3, { type: 'paragraph', title: 'Identity fields', content: 'Name: {{worker.fullName}}   ID: {{worker.bssId}}   Designation: {{employment.designation}}  \nDOB: {{worker.dob}}   Blood Group: {{worker.bloodGroup}}   Emergency Contact: {{worker.emergencyContact}}', fields: ['worker.fullName', 'worker.bssId', 'employment.designation', 'worker.dob', 'worker.bloodGroup', 'worker.emergencyContact'] }),
-      wrap(4, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}   Contractor: {{contractor.legalName}}  \nSite: {{site.name}} ({{site.code}}), {{site.address}}  \nValid Up To: {{document.validTo}}   Pass No.: {{document.number}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.code', 'site.address', 'document.validTo', 'document.number'] }),
-      wrap(5, { type: 'paragraph', title: 'Disclaimer & helpline', content: 'This pass is non-transferable and must be produced on demand. In an emergency call the site safety helpline. Any misuse will lead to withdrawal of site access.', fields: [] }),
-      wrap(6, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
+      wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}   |   Generated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
+      wrap(3, { type: 'photo', title: 'Worker photo', content: '{{worker.photo}}', fields: ['worker.photo'], editable: false, locked: true }),
+      wrap(4, { type: 'paragraph', title: 'Identity fields', content: 'Name: {{worker.fullName}}   ID: {{worker.bssId}}   Designation: {{employment.designation}}  \nDOB: {{worker.dob}}   Blood Group: {{worker.bloodGroup}}   Emergency Contact: {{worker.emergencyContact}}', fields: ['worker.fullName', 'worker.bssId', 'employment.designation', 'worker.dob', 'worker.bloodGroup', 'worker.emergencyContact'] }),
+      wrap(5, { type: 'paragraph', title: 'Org & validity', content: 'Employer: {{employer.legalName}}   Contractor: {{contractor.legalName}}  \nSite: {{site.name}} ({{site.code}}), {{site.address}}  \nIssue Date: {{document.issueDate}}   Valid Up To: {{document.validTo}}', fields: ['employer.legalName', 'contractor.legalName', 'site.name', 'site.code', 'site.address', 'document.issueDate', 'document.validTo'] }),
+      wrap(6, { type: 'paragraph', title: 'Disclaimer & helpline', content: 'This pass is non-transferable and must be produced on demand. In an emergency call the site safety helpline. Any misuse will lead to withdrawal of site access.', fields: [] }),
+      wrap(7, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
     ];
   }
   // temporary-gate-pass
   return [
     wrap(0, { type: 'logo', title: 'Branding / Logo', content: '', editable: false, locked: true }),
     wrap(1, { type: 'heading', title: 'Heading', content: 'TEMPORARY GATE PASS', align: 'center' }),
-    wrap(2, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}}, {{site.address}}', fields: ['site.name', 'site.address'] }),
-    wrap(3, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access — {{worker.fullName}} for {{employment.designation}} work at {{site.workArea}}', fields: ['worker.fullName', 'employment.designation', 'site.workArea'] }),
-    wrap(4, { type: 'paragraph', title: 'Body & dates', content: 'Sir,\nPlease allow {{worker.fullName}} ({{worker.bssId}}), engaged by {{contractor.legalName}} against order/PO {{document.referenceNumber}}, to enter {{site.name}} work area {{site.workArea}} for {{document.days}} day(s) w.e.f. {{document.validFrom}} to {{document.validTo}}.\nReason: {{document.reason}}', fields: ['worker.fullName', 'worker.bssId', 'contractor.legalName', 'document.referenceNumber', 'site.name', 'site.workArea', 'document.days', 'document.validFrom', 'document.validTo', 'document.reason'] }),
-    wrap(5, { type: 'table', title: 'Worker list', content: 'Workers covered by this pass:', fields: [], tableColumns: [{ key: 'worker.fullName', header: 'Name' }, { key: 'worker.bssId', header: 'BSS ID' }, { key: 'worker.dob', header: 'DOB / Age' }, { key: 'worker.permanentAddress', header: 'Address' }] }),
-    wrap(6, { type: 'paragraph', title: 'Declaration & place/date', content: 'Declaration: The details above are true and the workers will abide by site rules.  \nPass No.: {{document.number}}    Place: {{document.place}}    Date: {{document.issueDate}}', fields: ['document.number', 'document.place', 'document.issueDate'] }),
-    wrap(7, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
+    wrap(2, { type: 'paragraph', title: 'Pass reference', content: 'Pass No.: {{document.number}}   |   Generated: {{document.generatedAt}}', fields: ['document.number', 'document.generatedAt'], align: 'center', spacing: 'tight' }),
+    wrap(3, { type: 'paragraph', title: 'Addressee', content: 'To,\nThe Chief Security Officer,\n{{site.name}}, {{site.address}}', fields: ['site.name', 'site.address'] }),
+    wrap(4, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access — {{worker.fullName}} for {{employment.designation}} work at {{site.workArea}}', fields: ['worker.fullName', 'employment.designation', 'site.workArea'] }),
+    wrap(5, { type: 'paragraph', title: 'Body & dates', content: 'Sir,\nPlease allow {{worker.fullName}} ({{worker.bssId}}), engaged by {{contractor.legalName}} against order/PO {{document.referenceNumber}}, to enter {{site.name}} work area {{site.workArea}} for {{document.days}} day(s) w.e.f. {{document.validFrom}} to {{document.validTo}}.\nReason: {{document.reason}}', fields: ['worker.fullName', 'worker.bssId', 'contractor.legalName', 'document.referenceNumber', 'site.name', 'site.workArea', 'document.days', 'document.validFrom', 'document.validTo', 'document.reason'] }),
+    wrap(6, { type: 'table', title: 'Worker list', content: 'Workers covered by this pass:', fields: [], tableColumns: [{ key: 'worker.fullName', header: 'Name' }, { key: 'worker.bssId', header: 'BSS ID' }, { key: 'worker.dob', header: 'DOB / Age' }, { key: 'worker.permanentAddress', header: 'Address' }] }),
+    wrap(7, { type: 'paragraph', title: 'Declaration & place/date', content: 'Declaration: The details above are true and the workers will abide by site rules.  \nPlace: {{document.place}}    Date: {{document.issueDate}}', fields: ['document.place', 'document.issueDate'] }),
+    wrap(8, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
   ];
 };
 

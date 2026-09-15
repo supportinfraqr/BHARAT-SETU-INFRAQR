@@ -3258,6 +3258,53 @@ def _parse_date(value):
     return None
 
 
+def _employer_set_gate_pass_dates(user, body):
+    """Set the validity window (validFrom / validTo) of an employer's gate pass.
+
+    Auto-generated passes (id "auto-<bindingId>") are materialised into a real
+    WorkerGatePass row on first edit so the dates persist; explicit passes are
+    updated in place. Missing dates fall back to the worker's BSS ID card."""
+    from bss_core.models import WorkerGatePass, WorkerContractorBinding
+
+    def parse(value):
+        text = str(value or "").strip()
+        if not text:
+            return None
+        try:
+            return datetime.strptime(text[:10], "%Y-%m-%d").date()
+        except ValueError:
+            raise PortalMutationError("Dates must be in YYYY-MM-DD format.", 400)
+
+    start = parse(body.get("validFrom"))
+    end = parse(body.get("validTo"))
+    row_id = str(body.get("id") or "").strip()
+    if row_id.startswith("auto-"):
+        binding = (WorkerContractorBinding.objects
+                   .filter(pk=int(row_id[5:]), site__employer=user)
+                   .select_related("worker", "site").first())
+        if binding is None:
+            raise PortalMutationError("Gate pass not found.", 404)
+        gp_type = payloads._auto_gate_pass_type(binding.worker)
+        gp = WorkerGatePass.objects.filter(
+            worker=binding.worker, gate_pass_type=gp_type,
+            status__in=("PENDING", "ACTIVE")).first()
+        if gp is None:
+            gp = WorkerGatePass.objects.create(
+                worker=binding.worker, site=binding.site, gate_pass_type=gp_type,
+                gate_pass_no=f"{gp_type}-{uuid.uuid4().hex[:8].upper()}",
+                status="ACTIVE", issued_by=user, source="MANUAL")
+    else:
+        gp = WorkerGatePass.objects.filter(pk=int(row_id or 0), site__employer=user).first()
+        if gp is None:
+            raise PortalMutationError("Gate pass not found.", 404)
+    if start:
+        gp.start_date = start
+    if end:
+        gp.end_date = end
+    gp.save()
+    return payloads._employer_gate_pass_row(gp)
+
+
 def _handle_gate_pass(user, body):
     """Gate pass workflow.
 
@@ -3269,6 +3316,9 @@ def _handle_gate_pass(user, body):
     from bss_core.models import WorkerGatePass, WorkerIdentity, WorkerContractorBinding
 
     if user.role == "employer":
+        # Employer may edit the validity window of a pass (auto or requested).
+        if "validFrom" in body or "validTo" in body:
+            return _employer_set_gate_pass_dates(user, body)
         ids = body.get("ids") or ([body.get("id")] if body.get("id") else [])
         decision = str(body.get("status") or "").strip().lower()
         today = timezone.localdate()

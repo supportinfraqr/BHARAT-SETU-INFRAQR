@@ -2110,6 +2110,7 @@ def _contractor_gate_pass_row(g):
         employer_name = _d(ep.employer_name if ep else site.employer.username)
     return {
         "id": g.id, **meta,
+        "number": _d(g.gate_pass_no),
         "employer": employer_name,
         "type": _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type)),
         "site": site.site_name if site else "",
@@ -2125,8 +2126,42 @@ def _contractor_gate_pass_row(g):
 
 
 def _contractor_gate_passes(user):
-    gps = WorkerGatePass.objects.filter(issued_by=user).select_related("worker", "site")[:100]
-    return [_contractor_gate_pass_row(g) for g in gps]
+    """Explicit requests keep their status; every other bound worker also shows
+    an auto-generated pass (from their BSS ID card) so the contractor sees site
+    access for all of their workers, not just the ones they requested."""
+    rows = [_contractor_gate_pass_row(g) for g in WorkerGatePass.objects.filter(
+        issued_by=user).select_related("worker", "site").order_by("-created_at")[:100]]
+    seen = {(row["workerId"], row["type"]) for row in rows}
+    bindings = (WorkerContractorBinding.objects
+                .filter(contractor=user, binding_status="ACCEPTED")
+                .select_related("worker", "site", "site__employer"))
+    for b in bindings:
+        meta = _gate_pass_worker_meta(b.worker)
+        gp_type = _auto_gate_pass_type(b.worker)
+        label = _GP_TYPE_LABEL.get(gp_type, gp_type)
+        if (meta["workerId"], label) in seen:
+            continue
+        employment = WorkerEmployment.objects.filter(user=b.worker).first()
+        issue_date = (employment.id_card_issue_date if employment else None) or timezone.localdate()
+        valid_till = (employment.id_card_validity_till if employment else None) or \
+            issue_date + datetime.timedelta(days=365 if gp_type == "PGP" else 30)
+        site = b.site
+        ep = getattr(site.employer, "employer_profile", None) if (site and site.employer) else None
+        rows.append({
+            "id": f"auto-{b.id}",
+            "auto": True,
+            "number": _auto_gate_pass_no(b.worker, gp_type),
+            **meta,
+            "employer": _d(ep.employer_name if ep else (site.employer.username if site and site.employer else "")),
+            "type": label,
+            "site": site.site_name if site else "",
+            "validFrom": _dts(issue_date), "validTo": _dts(valid_till),
+            "requestedAt": _dts(b.created_at),
+            "requestedBy": "", "approvedBy": "", "approvedAt": "",
+            "status": "Approved",
+            "eligibility": _gate_pass_eligibility(b.worker),
+        })
+    return rows[:200]
 
 
 def _contractor_applications(user):
@@ -3515,6 +3550,16 @@ def _auto_gate_pass_type(worker):
     return "TGP"
 
 
+def _auto_gate_pass_no(worker, gp_type):
+    """Stable BSS-P + 10 alphanumeric (permanent) / BSS-T + 10 alphanumeric
+    (temporary) id derived from the worker's BSS id, so the same worker/type
+    always renders the same pass number."""
+    identity = _get_identity(worker)
+    seed = (identity.bss_worker_id if identity and identity.bss_worker_id else worker.username) or str(worker.pk)
+    digest = hashlib.sha1(f"{seed}:{gp_type}".encode()).hexdigest().upper()
+    return f"BSS-{'P' if gp_type == 'PGP' else 'T'}{digest[:10]}"
+
+
 def _employer_gate_pass_row(g):
     meta = _gate_pass_worker_meta(g.worker)
     site = g.site
@@ -3526,6 +3571,7 @@ def _employer_gate_pass_row(g):
         contractor_name = _d(cp.contractor_name if cp else binding.contractor.username)
     return {
         "id": g.id, **meta,
+        "number": _d(g.gate_pass_no),
         "contractor": contractor_name,
         "site": site.site_name if site else "",
         "siteId": g.site_id,
@@ -3557,12 +3603,21 @@ def _employer_gate_passes(user):
         label = _GP_TYPE_LABEL.get(gp_type, gp_type)
         if (meta["workerId"], label) in seen:
             continue
-        start = timezone.localdate()
+        start = b.accepted_at or b.created_at
         days = 365 if gp_type == "PGP" else 30
+        # Validity mirrors the worker's BSS ID card (Issue Date / Valid Till).
+        employment = WorkerEmployment.objects.filter(user=b.worker).first()
+        issue_date = employment.id_card_issue_date if employment else None
+        valid_till = employment.id_card_validity_till if employment else None
+        if not issue_date:
+            issue_date = timezone.localdate()
+        if not valid_till:
+            valid_till = issue_date + datetime.timedelta(days=days)
         cp = getattr(b.contractor, "contractor_profile", None)
         rows.append({
             "id": f"auto-{b.id}",
             "auto": True,
+            "number": _auto_gate_pass_no(b.worker, gp_type),
             **meta,
             "contractor": _d(cp.contractor_name if cp else b.contractor.username),
             "site": b.site.site_name if b.site else "",
@@ -3572,8 +3627,8 @@ def _employer_gate_passes(user):
             "requestedBy": "",
             "approvedBy": "",
             "approvedAt": "",
-            "validFrom": _dts(start),
-            "validTo": _dts(start + datetime.timedelta(days=days)) if start else "",
+            "validFrom": _dts(issue_date),
+            "validTo": _dts(valid_till),
             "status": "Approved",
             "eligibility": _gate_pass_eligibility(b.worker),
         })

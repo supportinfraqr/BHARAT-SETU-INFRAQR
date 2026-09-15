@@ -383,6 +383,7 @@ export type EmployerGatePass = {
   approvedBy?: string;
   approvedAt?: string;
   auto?: boolean;
+  number?: string;
   eligibility?: GatePassEligibility;
 };
 
