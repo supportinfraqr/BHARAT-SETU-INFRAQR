@@ -1,4 +1,4 @@
-import { TemplateConfig, TemplateSection } from './types';
+import { TemplateConfig, TemplateSection, isGatePassType } from './types';
 import { TOKEN_PATTERN } from './tokens';
 
 // Theme colours consistent with the BSS portal.
@@ -65,17 +65,21 @@ function cssFor(template: TemplateConfig): string {
   const colors = THEME_COLORS[template.styles.theme] ?? THEME_COLORS['bss-navy'];
   const fontSize = template.styles.fontSize || 12;
   const isGateCard = template.pageFormat === 'PGP';
+  // Gate passes expose a single "text colour" control; everything else stays fixed.
+  const gatePass = isGatePassType(template.documentType);
+  const textColor = gatePass ? (template.styles.headingColor || '#111827') : '#111827';
+  const headingColor = gatePass ? textColor : colors.primary;
   return `
   @page { size: ${isGateCard ? '85.6mm 53.98mm landscape' : 'A4 portrait'}; margin: ${isGateCard ? '0' : '12mm 14mm'}; }
   * { box-sizing: border-box; }
-  body { margin:0; background:#fff; font-family: ${template.styles.fontFamily}; color:#111827; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin:0; background:#fff; font-family: ${template.styles.fontFamily}; color:${textColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .doc-page { width:794px; margin:0 auto; padding: ${isGateCard ? '0' : '8px 4px 16px'}; position:relative; }
   .doc-logo-row { display:flex; align-items:center; gap:12px; border-bottom:3px solid ${colors.primary}; padding:0 0 10px; margin-bottom:10px; }
   .doc-logo { height:36px; width:auto; }
   .doc-brand strong { display:block; color:${colors.primary}; font-size:17px; letter-spacing:.3px; }
   .doc-brand span { font-size:9px; color:#6b7280; letter-spacing:1.6px; text-transform:uppercase; }
-  .doc-heading { text-align:center; color:${colors.primary}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${colors.accent}; padding-bottom:7px; text-transform:uppercase; }
-  .doc-subheading { color:${colors.primary}; font-size:${fontSize + 1}px; margin:14px 0 5px; border-bottom:1px solid #d1d5db; padding-bottom:4px; font-weight:700; }
+  .doc-heading { text-align:center; color:${headingColor}; font-size:${fontSize + 5}px; margin:12px 0 8px; letter-spacing:1.4px; border-bottom:2px double ${colors.accent}; padding-bottom:7px; text-transform:uppercase; }
+  .doc-subheading { color:${headingColor}; font-size:${fontSize + 1}px; margin:14px 0 5px; border-bottom:1px solid #d1d5db; padding-bottom:4px; font-weight:700; }
   .doc-body { font-size:${fontSize}px; line-height:1.6; text-align:justify; }
   .doc-body p { margin:0 0 8px; }
   .doc-photo-row { text-align:left; margin:6px 0; }

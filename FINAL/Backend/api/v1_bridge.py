@@ -5168,3 +5168,36 @@ def admin_payroll(request):
     if request.user.role not in ("bss_admin", "bss_staff", "government", "admin"):
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
     return Response(payloads.build_admin_payroll(request.user), status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def document_templates(request):
+    """Durable storage for the document-engine template records of one owner.
+
+    GET  ?ownerType=&ownerId=   -> {"data": {"records": [...]}}
+    POST {ownerType, ownerId, records: [...]} -> replaces that owner's records.
+    """
+    from bss_core.models import DocumentTemplateStore
+    if request.method == "GET":
+        owner_type = (request.query_params.get("ownerType") or "").strip().lower()
+        owner_id = (request.query_params.get("ownerId") or "").strip()
+        if not owner_type or not owner_id:
+            return Response({"error": "ownerType and ownerId are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        row = DocumentTemplateStore.objects.filter(
+            owner_type=owner_type, owner_id=owner_id).first()
+        return Response({"data": {"records": row.records if row else []}},
+                        status=status.HTTP_200_OK)
+
+    body = request.data or {}
+    owner_type = str(body.get("ownerType") or "").strip().lower()
+    owner_id = str(body.get("ownerId") or "").strip()
+    records = body.get("records")
+    if not owner_type or not owner_id or not isinstance(records, list):
+        return Response({"error": "ownerType, ownerId and records[] are required."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    row, _ = DocumentTemplateStore.objects.update_or_create(
+        owner_type=owner_type, owner_id=owner_id, defaults={"records": records})
+    return Response({"data": {"records": row.records}}, status=status.HTTP_200_OK)

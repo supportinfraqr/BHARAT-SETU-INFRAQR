@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { CheckCircle2, FileDown, Search, ShieldCheck, XCircle } from 'lucide-react';
-import { DOCUMENT_TYPES, DocumentType, OwnerScope, GeneratedDocument, uid } from '@/lib/documentEngine/types';
+import { DOCUMENT_TYPES, DocumentType, OwnerScope, GeneratedDocument, uid, documentTypesFor } from '@/lib/documentEngine/types';
 import { templateService, documentService, renderNumbering } from '@/lib/documentEngine/services';
 import { resolveWorkerTokens, type PortalView, type WorkerLike } from '@/lib/documentEngine/workerDataService';
 import { renderDocumentHtml, openPrintHtml } from '@/lib/documentEngine/render';
@@ -110,7 +110,7 @@ export default function BulkGenerateModal({ owner, view, workers, onClose }: { o
   return (
     <DocModal title="Bulk document generation" subtitle="One template → many workers. Resolve → validate → generate → finalize." onClose={onClose} wide>
       <div className="space-y-5">
-        <div className="grid sm:grid-cols-4 gap-2">{DOCUMENT_TYPES.map(item => <button key={item.id} onClick={() => { setType(item.id); setRows(null); setSelectedIds([]); }} className={`p-3 rounded-xl border text-left text-xs font-semibold ${type === item.id ? 'border-[#073B67] bg-blue-50 text-[#073B67]' : 'border-gray-200 text-gray-600'}`}>{item.short}{item.id === 'temporary-gate-pass' && <span className="block text-[10px] font-normal text-gray-400 mt-0.5">one pass · many workers</span>}</button>)}</div>
+        <div className="grid sm:grid-cols-4 gap-2">{documentTypesFor(owner.ownerType).map(item => <button key={item.id} onClick={() => { setType(item.id); setRows(null); setSelectedIds([]); }} className={`p-3 rounded-xl border text-left text-xs font-semibold ${type === item.id ? 'border-[#073B67] bg-blue-50 text-[#073B67]' : 'border-gray-200 text-gray-600'}`}>{item.short}{item.id === 'temporary-gate-pass' && <span className="block text-[10px] font-normal text-gray-400 mt-0.5">one pass · many workers</span>}</button>)}</div>
 
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 text-xs text-blue-900">Using template: <strong>{templateName}</strong> · {owner.ownerName}</div>
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Download, Eye, FileDown, FileText, Lock, Printer, Search, ShieldCheck, UserRound, X } from 'lucide-react';
-import { DOCUMENT_TYPES, DocumentType, OwnerScope, GeneratedDocument, today, uid, formatDate, docTypeLabel } from '@/lib/documentEngine/types';
+import { DOCUMENT_TYPES, DocumentType, OwnerScope, GeneratedDocument, today, uid, formatDate, docTypeLabel, documentTypesFor } from '@/lib/documentEngine/types';
 import { templateService, documentService, renderNumbering } from '@/lib/documentEngine/services';
 import { resolveWorkerTokens, missingForTemplate, type PortalView, type WorkerLike } from '@/lib/documentEngine/workerDataService';
 import { renderDocumentHtml, openPrintHtml } from '@/lib/documentEngine/render';
@@ -159,7 +159,7 @@ export function DocumentGeneratorModal({ owner, view, workers, type: initialType
   if (!type) {
     return (
       <DocModal title="Generate document" subtitle="Choose a document type — the Active template for that type is resolved automatically." onClose={onClose} wide>
-        <div className="grid sm:grid-cols-2 gap-3">{DOCUMENT_TYPES.map(item => {
+        <div className="grid sm:grid-cols-2 gap-3">{documentTypesFor(owner.ownerType).map(item => {
           const active = templateService.activeFor(owner, item.id);
           return <button key={item.id} onClick={() => setType(item.id)} className="text-left p-4 rounded-2xl border border-gray-200 hover:border-[#073B67] bg-white"><div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl bg-blue-50 text-[#073B67] grid place-items-center"><FileText size={18}/></span><div><strong className="text-sm text-gray-900">{item.short}</strong><p className="text-[11px] text-gray-400 mt-0.5">{active ? `Template ${active.version} · ${active.name}` : 'No active template'}</p></div></div></button>;
         })}</div>
@@ -272,7 +272,7 @@ export function WorkerDocumentsDrawer({ owner, view, worker, onClose }: { owner:
         </header>
         <div className="p-5 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {DOCUMENT_TYPES.map(item => { const latest = latestFor(item.id); return (
+            {documentTypesFor(owner.ownerType).map(item => { const latest = latestFor(item.id); return (
               <div key={item.id} className="rounded-xl border border-gray-200 p-4">
                 <div className="flex items-center justify-between gap-2"><strong className="text-sm text-gray-900">{item.short}</strong><DocStatusBadge status={latest?.status ?? 'Not Generated'}/></div>
                 {latest && <p className="text-[11px] text-gray-400 mt-1.5 font-mono">{latest.documentNumber} · {latest.templateVersion} · {formatDate(latest.finalizedAt ?? latest.generatedAt)}</p>}

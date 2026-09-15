@@ -3,14 +3,16 @@
 
 export type DocumentType = 'appointment-letter' | 'experience-letter' | 'permanent-gate-pass' | 'temporary-gate-pass';
 
-export const DOCUMENT_TYPES: Array<{ id: DocumentType; label: string; short: string; format: 'A4' | 'PGP' | 'A4-LANDSCAPE' }> = [
+export const DOCUMENT_TYPES: Array<{ id: DocumentType; label: string; short: string; format: 'A4' | 'PGP' | 'A4-LANDSCAPE'; roles?: Array<'employer' | 'contractor'> }> = [
   { id: 'appointment-letter', label: 'Appointment Letter', short: 'Appointment Letter', format: 'A4' },
   { id: 'experience-letter', label: 'Experience Letter', short: 'Experience Letter', format: 'A4' },
-  { id: 'permanent-gate-pass', label: 'Permanent Gate Pass', short: 'Permanent Gate Pass', format: 'PGP' },
-  { id: 'temporary-gate-pass', label: 'Temporary Gate Pass', short: 'Temporary Gate Pass', format: 'A4' },
+  { id: 'permanent-gate-pass', label: 'Permanent Gate Pass', short: 'Permanent Gate Pass', format: 'PGP', roles: ['employer'] },
+  { id: 'temporary-gate-pass', label: 'Temporary Gate Pass', short: 'Temporary Gate Pass', format: 'A4', roles: ['employer'] },
 ];
 export const docTypeLabel = (id: DocumentType) => DOCUMENT_TYPES.find(item => item.id === id)?.short ?? id;
 export const docTypeFormat = (id: DocumentType) => DOCUMENT_TYPES.find(item => item.id === id)?.format ?? 'A4';
+export const documentTypesFor = (ownerType: 'employer' | 'contractor') => DOCUMENT_TYPES.filter(item => !item.roles || item.roles.includes(ownerType));
+export const isGatePassType = (id: DocumentType) => id === 'permanent-gate-pass' || id === 'temporary-gate-pass';
 
 export type TemplateStatus = 'Draft' | 'Needs Review' | 'Active' | 'Inactive';
 

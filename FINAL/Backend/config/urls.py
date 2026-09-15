@@ -77,6 +77,7 @@ _v1_patterns = _v1(
     ("worker/claim-mobile", v1_bridge.worker_claim_mobile, "v1_worker_claim_mobile"),
     ("contractor/submissions", v1_bridge.contractor_submissions, "v1_contractor_submissions"),
     ("contractor/compliance-batches", v1_bridge.contractor_compliance_batches, "v1_contractor_compliance_batches"),
+    ("document-templates", v1_bridge.document_templates, "v1_document_templates"),
     ("contractor/compliance-batches/<int:batch_id>/file", v1_bridge.compliance_batch_download, "v1_contractor_compliance_batch_file", {"role_path": "contractor"}),
     ("employer/compliance-batches/<int:batch_id>/file", v1_bridge.compliance_batch_download, "v1_employer_compliance_batch_file", {"role_path": "employer"}),
     ("admin/payroll", v1_bridge.admin_payroll, "v1_admin_payroll"),

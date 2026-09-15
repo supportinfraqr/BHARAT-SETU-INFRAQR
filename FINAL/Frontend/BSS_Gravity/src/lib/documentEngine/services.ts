@@ -1,4 +1,4 @@
-import { TemplateConfig, TemplateSection, TemplateStatus, TemplateVersionRecord, GeneratedDocument, DocumentType, OwnerScope, SignatureRole, uid, nowIso, docTypeLabel, docTypeFormat, EMPTY_STYLES } from './types';
+import { TemplateConfig, TemplateSection, TemplateStatus, TemplateVersionRecord, GeneratedDocument, DocumentType, OwnerScope, SignatureRole, uid, nowIso, docTypeLabel, docTypeFormat, EMPTY_STYLES, documentTypesFor } from './types';
 import { TOKEN_PATTERN } from './tokens';
 
 // ---------------------------------------------------------------- storage keys
@@ -17,6 +17,27 @@ function readJson<T>(key: string, fallback: T): T {
 function writeJson(key: string, value: unknown) {
   if (typeof window === 'undefined') return;
   try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full/blocked */ }
+}
+
+// ---------------------------------------------------------------- template cache
+// Templates persist server-side via /api/document-templates (Django Postgres) so
+// they survive across devices and can render on the worker/contractor side. The
+// service keeps a synchronous in-memory cache hydrated from the server.
+let TEMPLATE_CACHE: TemplateRecord[] = [];
+const hydratedOwners = new Set<string>();
+const ownerKey = (ownerType: string, ownerId: string) => `${ownerType}|${ownerId}`;
+
+function groupByOwner(records: TemplateRecord[]): Array<{ ownerType: string; ownerId: string; list: TemplateRecord[] }> {
+  const groups = new Map<string, { ownerType: string; ownerId: string; list: TemplateRecord[] }>();
+  for (const record of records) {
+    const ownerType = record.template.ownerType;
+    const ownerId = record.template.ownerId;
+    const key = ownerKey(ownerType, ownerId);
+    const group = groups.get(key) ?? { ownerType, ownerId, list: [] };
+    group.list.push(record);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
 }
 
 // ---------------------------------------------------------------- template seed
@@ -89,7 +110,7 @@ const DEFAULT_SECTIONS = (type: DocumentType): TemplateSection[] => {
     wrap(3, { type: 'paragraph', title: 'Subject', content: 'Subject: Temporary site access — {{worker.fullName}} for {{employment.designation}} work at {{site.workArea}}', fields: ['worker.fullName', 'employment.designation', 'site.workArea'] }),
     wrap(4, { type: 'paragraph', title: 'Body & dates', content: 'Sir,\nPlease allow {{worker.fullName}} ({{worker.bssId}}), engaged by {{contractor.legalName}} against order/PO {{document.referenceNumber}}, to enter {{site.name}} work area {{site.workArea}} for {{document.days}} day(s) w.e.f. {{document.validFrom}} to {{document.validTo}}.\nReason: {{document.reason}}', fields: ['worker.fullName', 'worker.bssId', 'contractor.legalName', 'document.referenceNumber', 'site.name', 'site.workArea', 'document.days', 'document.validFrom', 'document.validTo', 'document.reason'] }),
     wrap(5, { type: 'table', title: 'Worker list', content: 'Workers covered by this pass:', fields: [], tableColumns: [{ key: 'worker.fullName', header: 'Name' }, { key: 'worker.bssId', header: 'BSS ID' }, { key: 'worker.dob', header: 'DOB / Age' }, { key: 'worker.permanentAddress', header: 'Address' }] }),
-    wrap(6, { type: 'paragraph', title: 'Declaration & place/date', content: 'Declaration: The details above are true and the workers will abide by site rules.  \nPlace: {{document.place}}    Date: {{document.issueDate}}', fields: ['document.place', 'document.issueDate'] }),
+    wrap(6, { type: 'paragraph', title: 'Declaration & place/date', content: 'Declaration: The details above are true and the workers will abide by site rules.  \nPass No.: {{document.number}}    Place: {{document.place}}    Date: {{document.issueDate}}', fields: ['document.number', 'document.place', 'document.issueDate'] }),
     wrap(7, { type: 'signature', title: 'Signatures', content: 'Signatures:', fields: [], editable: false }),
   ];
 };
@@ -138,16 +159,43 @@ export const templateService = {
   key: TEMPLATE_KEY,
 
   all(): TemplateRecord[] {
-    return readJson<TemplateRecord[]>(TEMPLATE_KEY, []);
+    return TEMPLATE_CACHE;
+  },
+
+  /** Load this owner's templates from the server into the cache (once per session). */
+  async hydrate(owner: OwnerScope): Promise<void> {
+    if (typeof window === 'undefined') return;
+    const key = ownerKey(owner.ownerType, owner.ownerId);
+    if (hydratedOwners.has(key)) return;
+    try {
+      const response = await fetch(`/api/document-templates?ownerType=${encodeURIComponent(owner.ownerType)}&ownerId=${encodeURIComponent(owner.ownerId)}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const payload = await response.json().catch(() => null);
+      const records: TemplateRecord[] = Array.isArray(payload?.data?.records) ? payload.data.records : [];
+      TEMPLATE_CACHE = [
+        ...TEMPLATE_CACHE.filter(record => ownerKey(record.template.ownerType, record.template.ownerId) !== key),
+        ...records,
+      ];
+      hydratedOwners.add(key);
+    } catch { /* leave un-hydrated; a later call retries */ }
   },
 
   persist(records: TemplateRecord[]) {
-    writeJson(TEMPLATE_KEY, records);
+    TEMPLATE_CACHE = records;
+    if (typeof window === 'undefined') return;
+    // Fire-and-forget per owner; the cache is already updated so the UI is instant.
+    for (const { ownerType, ownerId, list } of groupByOwner(records)) {
+      void fetch('/api/document-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerType, ownerId, records: list }),
+      }).catch(() => { /* offline — the next save retries with the full set */ });
+    }
   },
 
   seedFor(owner: OwnerScope, createdBy = 'Admin') {
     const existing = this.all();
-    const types: DocumentType[] = ['appointment-letter', 'experience-letter', 'permanent-gate-pass', 'temporary-gate-pass'];
+    const types: DocumentType[] = documentTypesFor(owner.ownerType).map(item => item.id);
     const missing = types.filter(type => !existing.some(record => record.template.ownerType === owner.ownerType && record.template.ownerId === owner.ownerId && record.template.documentType === type));
     if (!missing.length) return this.all();
     const seeds: TemplateRecord[] = missing.map(type => {
@@ -190,6 +238,15 @@ export const templateService = {
 
   versions(lineageId: string): TemplateRecord[] {
     return this.all().filter(record => record.templateId === lineageId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  /** The version the designer should open: newest saved Draft, else the Active version, else newest. */
+  editingVersion(lineageId: string): TemplateRecord | null {
+    const versions = this.versions(lineageId);
+    return versions.find(record => !record.active && record.template.status === 'Draft')
+      ?? versions.find(record => record.active)
+      ?? versions[0]
+      ?? null;
   },
 
   getById(recordId: string): TemplateRecord | null {
@@ -246,14 +303,20 @@ export const templateService = {
     return nextRecord;
   },
 
-  activate(owner: OwnerScope, lineageId: string, recordId: string, by: string) {
-    const all = this.all();
-    const next = all.map(record => {
-      if (record.template.ownerType === owner.ownerType && record.template.ownerId === owner.ownerId && record.template.documentType === this.getById(recordId)?.template.documentType) {
-        return { ...record, active: record.id === recordId };
+  activate(owner: OwnerScope, _lineageId: string, recordId: string, by: string) {
+    const target = this.getById(recordId);
+    if (!target) return;
+    const docType = target.template.documentType;
+    const next = this.all().map(record => {
+      const sameScope = record.template.ownerType === owner.ownerType && record.template.ownerId === owner.ownerId && record.template.documentType === docType;
+      if (!sameScope) return record;
+      if (record.id === recordId) {
+        return { ...record, active: true, template: { ...record.template, status: 'Active' as TemplateStatus, updatedAt: nowIso() }, createdBy: by, createdAt: nowIso() };
       }
-      return record;
-    }).map(record => record.id === recordId ? { ...record, active: true, template: { ...record.template, status: 'Active' as TemplateStatus, updatedAt: nowIso() }, createdBy: by, createdAt: nowIso() } : record);
+      // Only one version may be Active per document type — demote the rest.
+      const status: TemplateStatus = record.template.status === 'Active' ? 'Inactive' : record.template.status;
+      return { ...record, active: false, template: { ...record.template, status } };
+    });
     this.persist(next);
   },
 

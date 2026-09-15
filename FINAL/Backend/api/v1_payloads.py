@@ -3505,6 +3505,16 @@ def _employer_approvals(user):
     return rows
 
 
+def _auto_gate_pass_type(worker):
+    """Auto-issued pass type from the worker's own ID-card records: a fully
+    eligible worker (medical + health & safety + compliance) gets a Permanent
+    pass, otherwise a Temporary one."""
+    e = _gate_pass_eligibility(worker)
+    if e.get("medical") == "Done" and e.get("healthSafety") == "Done" and e.get("compliance") == "Done":
+        return "PGP"
+    return "TGP"
+
+
 def _employer_gate_pass_row(g):
     meta = _gate_pass_worker_meta(g.worker)
     site = g.site
@@ -3531,8 +3541,43 @@ def _employer_gate_pass_row(g):
 
 
 def _employer_gate_passes(user):
-    gps = WorkerGatePass.objects.filter(site__employer=user).select_related("worker", "site")[:100]
-    return [_employer_gate_pass_row(g) for g in gps]
+    """Every connected worker has a gate pass. Explicit contractor requests keep
+    their real status/validity; a connected worker without a request gets an
+    auto-generated pass derived from their BSS ID card, so site access is always
+    visible without waiting on a contractor request."""
+    rows = [_employer_gate_pass_row(g) for g in WorkerGatePass.objects.filter(
+        site__employer=user).select_related("worker", "site").order_by("-created_at")[:100]]
+    seen = {(row["workerId"], row["type"]) for row in rows}
+    bindings = (WorkerContractorBinding.objects
+                .filter(site__employer=user, binding_status="ACCEPTED")
+                .select_related("worker", "site", "contractor"))
+    for b in bindings:
+        meta = _gate_pass_worker_meta(b.worker)
+        gp_type = _auto_gate_pass_type(b.worker)
+        label = _GP_TYPE_LABEL.get(gp_type, gp_type)
+        if (meta["workerId"], label) in seen:
+            continue
+        start = timezone.localdate()
+        days = 365 if gp_type == "PGP" else 30
+        cp = getattr(b.contractor, "contractor_profile", None)
+        rows.append({
+            "id": f"auto-{b.id}",
+            "auto": True,
+            **meta,
+            "contractor": _d(cp.contractor_name if cp else b.contractor.username),
+            "site": b.site.site_name if b.site else "",
+            "siteId": b.site_id,
+            "type": label,
+            "requestedAt": _dts(b.created_at),
+            "requestedBy": "",
+            "approvedBy": "",
+            "approvedAt": "",
+            "validFrom": _dts(start),
+            "validTo": _dts(start + datetime.timedelta(days=days)) if start else "",
+            "status": "Approved",
+            "eligibility": _gate_pass_eligibility(b.worker),
+        })
+    return rows[:200]
 
 
 def _employer_submissions(user):

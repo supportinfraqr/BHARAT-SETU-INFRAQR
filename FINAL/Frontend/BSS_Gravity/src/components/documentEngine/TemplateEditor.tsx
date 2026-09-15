@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, Lock, Plus, Save, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import type { OwnerScope, TemplateConfig, TemplateSection, SignatureRole, DocumentType, TemplateVersionRecord } from '@/lib/documentEngine/types';
-import { DOCUMENT_TYPES } from '@/lib/documentEngine/types';
+import { DOCUMENT_TYPES, isGatePassType } from '@/lib/documentEngine/types';
 import { templateService, makeDefaultTemplate } from '@/lib/documentEngine/services';
 import { renderDocumentHtml } from '@/lib/documentEngine/render';
 import { FieldTokenPicker } from './FieldTokenPicker';
@@ -24,29 +24,37 @@ export default function TemplateEditor({
   documentType,
   onClose,
   onSaved,
+  onRefresh,
 }: {
   owner: OwnerScope;
   record: TemplateVersionRecord | null;
   documentType: DocumentType;
   onClose: () => void;
   onSaved: () => void;
+  onRefresh?: () => void;
 }) {
   const [template, setTemplate] = useState<TemplateConfig>(() => {
     const base = record?.template ?? makeDefaultTemplate(owner, documentType, 'Me');
     return { ...base, ownerType: owner.ownerType, ownerId: owner.ownerId, ownerName: owner.ownerName };
   });
+  // The version currently being edited — starts at the opened record and follows
+  // any Draft created by "Save Draft", so later saves update it in place.
+  const [currentId, setCurrentId] = useState<string | null>(record?.id ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(template.sections.find(section => section.editable)?.id ?? null);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const caretRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
+  // Gate passes are generated dynamically from BSS data — only appearance is editable.
+  const gatePass = isGatePassType(documentType);
+
   const orderedSections = useMemo(() => [...template.sections].sort((a, b) => a.order - b.order), [template.sections]);
   const selected = orderedSections.find(section => section.id === selectedId) ?? null;
 
   // debounced preview html
   const [previewHtml, setPreviewHtml] = useState('');
-  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.fontSize + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.footerText + template.styles.showLogo;
+  const jsonKey = JSON.stringify(template.sections) + template.styles.theme + template.styles.fontSize + template.styles.fontFamily + template.styles.headingColor + template.styles.showBrandHeader + template.styles.brandHeaderText + template.styles.footerText + template.styles.showLogo;
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setPreviewHtml(renderDocumentHtml({ template: { ...template }, tokens: {} }));
@@ -113,16 +121,23 @@ export default function TemplateEditor({
     }, 0);
   }
 
-  function save(persist: TemplateConfig): TemplateVersionRecord | null {
+  function persistVersion(persist: TemplateConfig, note: string): TemplateVersionRecord | null {
     setBusy(true);
     try {
       const by = 'Me';
-      if (record) {
-        const next = templateService.updateDraft(owner, record.id, persist, by);
-        setNotice(next ? `Saved as ${next.template.version} (Draft).` : 'Saved.');
+      const current = currentId ? templateService.getById(currentId) : null;
+      if (current && !current.active && current.template.status !== 'Active') {
+        // Editing an existing Draft — update in place (no new version, no skipped numbers).
+        const next = templateService.updateDraft(owner, current.id, persist, by);
+        if (next) { setCurrentId(next.id); setTemplate(next.template); setNotice(`Saved as ${next.template.version} (Draft).`); }
         return next ?? null;
       }
-      const created = templateService.saveTemplate(owner, documentType, null, persist, by, 'New template');
+      // New template, or editing the Active version — create a Draft vN+1.
+      const lineageId = current?.templateId ?? record?.templateId ?? null;
+      const templateId = current?.template.id ?? record?.template.id ?? persist.id;
+      const created = templateService.saveTemplate(owner, documentType, lineageId, { ...persist, id: templateId }, by, note);
+      setCurrentId(created.record.id);
+      setTemplate(created.record.template);
       setNotice(`Created ${created.record.template.version} (Draft).`);
       return created.record;
     } finally {
@@ -131,18 +146,30 @@ export default function TemplateEditor({
   }
 
   function saveDraft() {
-    const stored = save({ ...template, status: 'Draft' as const });
-    if (stored) onSaved();
+    const stored = persistVersion({ ...template, status: 'Draft' as const }, 'Saved draft');
+    // Keep the designer open and continue editing the same draft.
+    if (stored) onRefresh?.();
   }
 
   function finalize() {
     setBusy(true);
     try {
       const persist = { ...template, status: 'Active' as const };
-      const stored = record ? templateService.updateDraft(owner, record.id, persist, 'Me') : templateService.saveTemplate(owner, documentType, null, persist, 'Me', 'Template finalised').record;
+      const current = currentId ? templateService.getById(currentId) : null;
+      let stored: TemplateVersionRecord | null = null;
+      if (current && !current.active && current.template.status !== 'Active') {
+        // Promote the Draft currently open — do not fork another version.
+        stored = templateService.updateDraft(owner, current.id, persist, 'Me') ?? null;
+      } else {
+        const lineageId = current?.templateId ?? record?.templateId ?? null;
+        const templateId = current?.template.id ?? record?.template.id ?? persist.id;
+        stored = templateService.saveTemplate(owner, documentType, lineageId, { ...persist, id: templateId }, 'Me', 'Template finalised').record;
+      }
       if (!stored) return;
       templateService.setStatus(stored.id, 'Active', 'Me', 'Finalized');
       templateService.activate(owner, stored.templateId, stored.id, 'Me');
+      setCurrentId(stored.id);
+      setTemplate(stored.template);
       setNotice(`${template.name} finalized and set ACTIVE — issued documents keep their own version history.`);
       window.setTimeout(onSaved, 600);
     } finally {
@@ -150,7 +177,7 @@ export default function TemplateEditor({
     }
   }
 
-  const canActivate = record?.template.status !== 'Active';
+  const canActivate = record ? template.status !== 'Active' : true;
 
   return (
     <div className="fixed inset-0 z-[130] bg-[#0F172A]/60 flex flex-col p-0 sm:p-4" role="presentation">
@@ -159,7 +186,9 @@ export default function TemplateEditor({
         <header className="px-4 sm:px-5 py-3 border-b border-gray-200 bg-white flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1 flex items-center gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap"><input value={template.name} onChange={event => setTemplate(current => ({ ...current, name: event.target.value }))} className="text-base font-semibold w-64 max-w-full border border-transparent hover:border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400"/>
+              <div className="flex items-center gap-2 flex-wrap">{gatePass
+                ? <span className="text-base font-semibold px-2 py-1">{template.name}</span>
+                : <input value={template.name} onChange={event => setTemplate(current => ({ ...current, name: event.target.value }))} className="text-base font-semibold w-64 max-w-full border border-transparent hover:border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400"/>}
                 <TemplateStatusBadge status={template.status}/><span className="text-[11px] font-mono text-gray-400">{template.version}</span><span className="text-[11px] text-gray-500 hidden sm:inline">· {DOCUMENT_TYPES.find(item => item.id === documentType)?.short}</span></div>
               <p className="text-[11px] text-gray-400 mt-0.5 px-2">Template owner: {owner.ownerName} ({owner.ownerType})</p>
             </div>
@@ -175,8 +204,8 @@ export default function TemplateEditor({
 
         {/* 3-pane body */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-          {/* LEFT — sections */}
-          <aside className="w-full lg:w-60 border-b lg:border-b-0 lg:border-r border-gray-200 bg-white p-3 overflow-y-auto shrink-0">
+          {/* LEFT — sections (hidden for gate passes: layout & wording are fixed) */}
+          {!gatePass && <aside className="w-full lg:w-60 border-b lg:border-b-0 lg:border-r border-gray-200 bg-white p-3 overflow-y-auto shrink-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1"><Sparkles size={11}/>Document Sections</p>
             <ul className="space-y-1">
               {orderedSections.map(section => (
@@ -194,7 +223,7 @@ export default function TemplateEditor({
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Add section</p>
               <div className="flex flex-wrap gap-1">{SECTION_TYPES.map(type => <button key={type.id} onClick={() => addSection(type.id)} className="px-2 py-1 rounded-md bg-gray-100 hover:bg-blue-50 text-gray-600 text-[10px] font-semibold flex items-center gap-0.5"><Plus size={11}/>{type.label}</button>)}</div>
             </div>
-          </aside>
+          </aside>}
 
           {/* CENTER — live preview */}
           <main className="flex-1 min-h-[40vh] lg:min-h-0 overflow-auto bg-gray-200/60 p-3 sm:p-4 relative">
@@ -207,7 +236,18 @@ export default function TemplateEditor({
 
           {/* RIGHT — section properties / data fields */}
           <aside className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-gray-200 bg-white p-4 overflow-y-auto shrink-0">
-            {selected && selected.type !== 'logo' && selected.type !== 'photo' && selected.type !== 'divider' ? (
+            {gatePass ? (
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Gate pass appearance</p>
+                <label className="block text-xs font-semibold text-gray-600">Pass colour<select value={template.styles.theme} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, theme: event.target.value as typeof current.styles.theme } }))} className={inputCls + ' text-xs'}><option value="bss-navy">BSS Navy</option><option value="bss-midnight">Midnight Blue</option><option value="bss-green">Government Green</option><option value="bss-plain">Plain</option></select></label>
+                <label className="block text-xs font-semibold text-gray-600">Text colour<input type="color" value={template.styles.headingColor} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, headingColor: event.target.value } }))} className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white p-1"/></label>
+                <label className="block text-xs font-semibold text-gray-600">Text style<select value={template.styles.fontFamily} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontFamily: event.target.value } }))} className={inputCls + ' text-xs'}><option value="'Arial', sans-serif">Arial</option><option value="'Segoe UI', sans-serif">Segoe UI</option><option value="Georgia, serif">Georgia (serif)</option><option value="'Times New Roman', serif">Times New Roman</option><option value="'Courier New', monospace">Courier (mono)</option></select></label>
+                <label className="block text-xs font-semibold text-gray-600">Text size ({template.styles.fontSize}px)<input type="range" min={9} max={15} value={template.styles.fontSize} onChange={event => setTemplate(current => ({ ...current, styles: { ...current.styles, fontSize: Number(event.target.value) } }))} className="w-full mt-1"/></label>
+                <p className="text-[11px] leading-5 text-gray-400">Gate passes are generated automatically from worker, site and validity data. Layout, wording, fields and signatories are fixed — only the appearance above can be changed.</p>
+              </div>
+            ) : (
+              <>
+                {selected && selected.type !== 'logo' && selected.type !== 'photo' && selected.type !== 'divider' ? (
               <div className="space-y-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Section text — reusable wording</p>
@@ -257,6 +297,8 @@ export default function TemplateEditor({
               <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Signatories on this document</p>
               <div className="flex flex-wrap gap-1.5">{SIGNATURE_ROLES.map(role => { const on = template.signatories.includes(role); return <button key={role} onClick={() => setTemplate(current => ({ ...current, signatories: on ? current.signatories.filter(item => item !== role) : [...current.signatories, role] }))} className={`px-2 py-1 rounded-full border text-[10px] font-bold ${on ? 'bg-[#073B67] text-white border-[#073B67]' : 'bg-white text-gray-500 border-gray-200'}`}>{role}</button>; })}</div>
             </div>
+              </>
+            )}
           </aside>
         </div>
       </section>

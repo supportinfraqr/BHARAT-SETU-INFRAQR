@@ -65,6 +65,7 @@ from .operations import (
     SiteLeavePolicy,
     SiteHoliday,
     RestrictedHolidayRequest,
+    DocumentTemplateStore,
 )
 from .learning import (
     Course,

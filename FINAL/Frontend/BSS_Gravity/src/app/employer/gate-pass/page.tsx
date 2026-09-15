@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { Check, CheckCircle2, Clock3, ShieldCheck, X, XCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, CheckCircle2, Clock3, Eye, ShieldCheck, X, XCircle } from 'lucide-react';
 import { useEmployer } from '@/contexts/EmployerContext';
 import type { EmployerGatePass } from '@/types/portal';
 import { useEmployerDocView } from '@/components/documentEngine/portalAdapters';
-import { DocumentGeneratorModal } from '@/components/documentEngine/DocumentFlow';
-import type { DocumentType } from '@/lib/documentEngine/types';
-import type { WorkerLike } from '@/lib/documentEngine/workerDataService';
+import { templateService } from '@/lib/documentEngine/services';
+import { openGatePass } from '@/lib/documentEngine/gatePass';
 
 const isEligible = (row: EmployerGatePass) => {
   const e = row.eligibility;
@@ -18,13 +17,14 @@ const eligibleSummary = (eligible: number, total: number) => total === 0 ? 'no w
 export default function EmployerGatePassPage() {
   const { employer, replaceEmployer, mutate } = useEmployer();
   const docCtx = useEmployerDocView();
-  const [issue, setIssue] = useState<{ type: DocumentType; worker: WorkerLike } | null>(null);
   const [site, setSite] = useState('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<{ status: 'Approved' | 'Rejected' } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+
+  useEffect(() => { void templateService.hydrate(docCtx.owner); }, [docCtx.owner]);
 
   const rows = site === 'all' ? employer.gatePasses : employer.gatePasses.filter(item => item.siteId === site);
   const pending = rows.filter(item => item.status === 'Pending');
@@ -39,6 +39,14 @@ export default function EmployerGatePassPage() {
 
   function toggle(id: string) { setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]); }
   function toggleAll() { setSelected(current => allVisibleSelected ? current.filter(id => !pending.some(row => row.id === id)) : Array.from(new Set([...current, ...pending.map(row => row.id)]))); }
+
+  // Render the pass on demand from the active gate-pass template + this worker's current data.
+  async function viewPass(row: EmployerGatePass) {
+    await templateService.hydrate(docCtx.owner);
+    const worker = docCtx.workers.find(item => item.bssId === row.workerId || item.name === row.workerName);
+    if (!worker) { setError(`No worker record found for ${row.workerName}.`); return; }
+    openGatePass(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo });
+  }
 
   async function decide(status: 'Approved' | 'Rejected') {
     if (!selected.length) return;
@@ -76,8 +84,8 @@ export default function EmployerGatePassPage() {
     <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
       <header className="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3"><div><h2 className="text-sm font-semibold text-gray-900">Gate pass requests</h2><p className="text-[11px] text-gray-400 mt-0.5">{rows.length} records in this view</p></div><label className="flex items-center gap-2 text-xs font-semibold text-gray-700">Site<select value={site} onChange={e => { setSite(e.target.value); setSelected([]); }} className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white"><option value="all">All sites</option>{employer.sites.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></header>
       <div className="overflow-x-auto"><table className="w-full min-w-[960px] text-left text-xs">
-        <thead className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500"><tr><th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all visible requests" checked={allVisibleSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300"/></th><th className="px-4 py-3">Worker</th><th className="px-4 py-3">Contractor</th><th className="px-4 py-3">Site</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Requested</th><th className="px-4 py-3">Validity</th><th className="px-4 py-3">Eligibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Issue</th></tr></thead>
-        <tbody className="divide-y divide-gray-100">{rows.map(row => { const elig = row.eligibility; return <tr key={row.id} className={selected.includes(row.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}><td className="px-4 py-3"><input type="checkbox" aria-label={`Select ${row.workerName}`} checked={selected.includes(row.id)} disabled={row.status !== 'Pending'} onChange={() => toggle(row.id)} className="w-4 h-4 rounded border-gray-300 disabled:opacity-30"/></td><td className="px-4 py-3"><strong className="text-gray-900">{row.workerName}</strong><p className="font-mono text-[10px] text-gray-400 mt-0.5">{row.workerId}</p>{row.contact&&<p className="text-[10px] text-gray-400">{row.contact}</p>}</td><td className="px-4 py-3 text-gray-600">{row.contractor}</td><td className="px-4 py-3 text-gray-600">{row.site}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.type === 'Permanent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{row.type}</span></td><td className="px-4 py-3 text-gray-500">{row.requestedAt.slice(0, 10)}</td><td className="px-4 py-3 text-gray-500">{row.validFrom||'—'} → {row.validTo||'—'}</td><td className="px-4 py-3"><div className="flex gap-1 items-center"><Dot label="M" ok={elig?.medical === 'Done'} title="Medical examination on record"/><Dot label="H&S" ok={elig?.healthSafety === 'Done'} title="Health &amp; Safety (site induction / safety kit / training)"/><Dot label="C" ok={elig?.compliance === 'Done'} title="Compliance status of the worker"/></div></td><td className="px-4 py-3"><Status value={row.status}/></td></tr>; })}{!rows.length && <tr><td colSpan={9} className="py-12 text-center text-gray-400">No gate pass requests in this view.</td></tr>}</tbody>
+        <thead className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500"><tr><th className="px-4 py-3 w-10"><input type="checkbox" aria-label="Select all visible requests" checked={allVisibleSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300"/></th><th className="px-4 py-3">Worker</th><th className="px-4 py-3">Contractor</th><th className="px-4 py-3">Site</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Requested</th><th className="px-4 py-3">Validity</th><th className="px-4 py-3">Eligibility</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Gate pass</th></tr></thead>
+        <tbody className="divide-y divide-gray-100">{rows.map(row => { const elig = row.eligibility; return <tr key={row.id} className={selected.includes(row.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}><td className="px-4 py-3"><input type="checkbox" aria-label={`Select ${row.workerName}`} checked={selected.includes(row.id)} disabled={row.status !== 'Pending'} onChange={() => toggle(row.id)} className="w-4 h-4 rounded border-gray-300 disabled:opacity-30"/></td><td className="px-4 py-3"><div className="flex items-center gap-1.5"><strong className="text-gray-900">{row.workerName}</strong>{row.auto && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700" title="Auto-generated from the worker ID card">AUTO</span>}</div><p className="font-mono text-[10px] text-gray-400 mt-0.5">{row.workerId}</p>{row.contact&&<p className="text-[10px] text-gray-400">{row.contact}</p>}</td><td className="px-4 py-3 text-gray-600">{row.contractor}</td><td className="px-4 py-3 text-gray-600">{row.site}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.type === 'Permanent' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{row.type}</span></td><td className="px-4 py-3 text-gray-500">{row.requestedAt.slice(0, 10)}</td><td className="px-4 py-3 text-gray-500">{row.validFrom||'—'} → {row.validTo||'—'}</td><td className="px-4 py-3"><div className="flex gap-1 items-center"><Dot label="M" ok={elig?.medical === 'Done'} title="Medical examination on record"/><Dot label="H&S" ok={elig?.healthSafety === 'Done'} title="Health &amp; Safety (site induction / safety kit / training)"/><Dot label="C" ok={elig?.compliance === 'Done'} title="Compliance status of the worker"/></div></td><td className="px-4 py-3"><Status value={row.status}/></td><td className="px-4 py-3"><button onClick={() => { void viewPass(row); }} className="h-8 px-3 rounded-lg border border-gray-200 text-[11px] font-semibold inline-flex items-center gap-1 hover:bg-gray-50"><Eye size={12}/>View pass</button></td></tr>; })}{!rows.length && <tr><td colSpan={9} className="py-12 text-center text-gray-400">No gate pass requests in this view.</td></tr>}</tbody>
       </table></div>
     </section>
 
@@ -88,7 +96,6 @@ export default function EmployerGatePassPage() {
       <div className="p-5"><p className="text-sm text-gray-700">{confirmText(confirm.status)}</p><p className={`text-[11px] mt-2 ${eligibleSummary(employer.gatePasses.filter(item => selected.includes(item.id) && isEligible(item)).length, selected.length).startsWith('0 of') ? 'text-amber-700' : 'text-green-700'}`}><ShieldCheck size={12} className="inline mr-1 -mt-0.5"/>{eligibleSummary(employer.gatePasses.filter(item => selected.includes(item.id) && isEligible(item)).length, selected.length)}.</p><p className="text-[11px] text-gray-400 mt-2">This decision is recorded against each selected request and synchronized through the Employer API.</p>{error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}</div>
       <footer className="p-5 border-t border-gray-100 flex justify-end gap-2"><button type="button" onClick={() => setConfirm(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={() => decide(confirm.status)} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-semibold disabled:opacity-50">{busy ? 'Updating…' : confirm.status === 'Approved' ? 'Approve selected' : 'Reject selected'}</button></footer>
     </section></div>}
-  {issue && <DocumentGeneratorModal owner={docCtx.owner} view={docCtx.view} workers={[issue.worker]} type={issue.type} initialWorkerId={issue.worker.bssId} onClose={() => setIssue(null)}/>}
   </div>;
 }
 

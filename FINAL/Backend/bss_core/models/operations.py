@@ -597,3 +597,27 @@ class RestrictedHolidayRequest(models.Model):
 
     def __str__(self):
         return f"{self.worker_id} {self.holiday_date} ({self.status})"
+
+
+class DocumentTemplateStore(models.Model):
+    """Server-side store for the frontend document-engine template records.
+
+    Templates used to live only in the browser's localStorage, so they vanished
+    across devices and could not render on the worker/contractor side. Keeping
+    the JSON record array per owner here makes them durable and shareable."""
+
+    owner_type = models.CharField(max_length=20)   # employer | contractor
+    owner_id = models.CharField(max_length=80)     # owner BSS id
+    records = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "document_template_store"
+        constraints = [
+            models.UniqueConstraint(fields=["owner_type", "owner_id"],
+                                    name="uq_doc_template_owner"),
+        ]
+
+    def __str__(self):
+        return f"{self.owner_type}:{self.owner_id}"

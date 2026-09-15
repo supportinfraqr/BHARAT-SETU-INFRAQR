@@ -2,7 +2,7 @@
 
 import { useEffect, useReducer, useState } from 'react';
 import { Copy, FileText, History, Layers, Plus, RefreshCw, RotateCcw, ShieldCheck, Sparkles, TestTube2 } from 'lucide-react';
-import { DOCUMENT_TYPES, DocumentType, OwnerScope } from '@/lib/documentEngine/types';
+import { DOCUMENT_TYPES, DocumentType, OwnerScope, documentTypesFor } from '@/lib/documentEngine/types';
 import type { TemplateVersionRecord } from '@/lib/documentEngine/types';
 import { templateService } from '@/lib/documentEngine/services';
 import TemplateEditor from './TemplateEditor';
@@ -15,18 +15,25 @@ function iconFor(type: DocumentType) {
 }
 
 export default function DocumentTemplateManager({ owner, onGenerate }: { owner: OwnerScope; onGenerate: (type: DocumentType) => void }) {
-  const [refreshKey, forceRefresh] = useReducer((value: number) => value + 1, 0);
+  const [, forceRefresh] = useReducer((value: number) => value + 1, 0);
   const [editor, setEditor] = useState<{ type: DocumentType; record: TemplateVersionRecord | null } | null>(null);
   const [versionsFor, setVersionsFor] = useState<{ lineageId: string; name: string; type: DocumentType } | null>(null);
   const [notice, setNotice] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const seeded = templateService.seedFor(owner, 'Admin');
-    void seeded;
+    let active = true;
+    (async () => {
+      await templateService.hydrate(owner);
+      if (!active) return;
+      templateService.seedFor(owner, 'Admin');
+      setMounted(true);
+    })();
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [owner.ownerType, owner.ownerId]);
 
-  const lineages = templateService.lineages(owner);
+  const lineages = mounted ? templateService.lineages(owner) : [];
   const byType = (type: DocumentType) => lineages.filter(lineage => lineage.documentType === type);
 
   function duplicate(lineageId: string, name: string) {
@@ -61,7 +68,7 @@ export default function DocumentTemplateManager({ owner, onGenerate }: { owner: 
       </section>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {DOCUMENT_TYPES.map(meta => {
+        {documentTypesFor(owner.ownerType).map(meta => {
           const Icon = iconFor(meta.id);
           const items = byType(meta.id);
           const lineage = items[0];
@@ -89,7 +96,7 @@ export default function DocumentTemplateManager({ owner, onGenerate }: { owner: 
                 <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
                   {lineage ? (
                     <>
-                      <button className={btnPrimary + ' !h-9 !px-3 !text-xs'} onClick={() => setEditor({ type: meta.id, record: templateService.versions(lineage.lineageId).find(record => record.active) ?? templateService.versions(lineage.lineageId)[0] ?? null })}><Sparkles size={13}/>Edit template</button>
+                      <button className={btnPrimary + ' !h-9 !px-3 !text-xs'} onClick={() => setEditor({ type: meta.id, record: templateService.editingVersion(lineage.lineageId) })}><Sparkles size={13}/>Edit template</button>
                       <button className={btnSecondary + ' !h-9 !px-3 !text-xs'} onClick={() => setVersionsFor({ lineageId: lineage.lineageId, name: lineage.name, type: meta.id })}><History size={13}/>Versions & restore</button>
                       <button className={btnSecondary + ' !h-9 !px-3 !text-xs'} onClick={() => duplicate(lineage.lineageId, lineage.name)}><Copy size={13}/>Duplicate</button>
                       <button className={btnSecondary + ' !h-9 !px-3 !text-xs'} onClick={() => onGenerate(meta.id)}><TestTube2 size={13}/>Test with worker</button>
@@ -106,7 +113,7 @@ export default function DocumentTemplateManager({ owner, onGenerate }: { owner: 
 
       <p className="text-[11px] text-gray-400 flex items-center gap-1.5"><RefreshCw size={12}/>Tip: preview with a worker before you finalize. Issued documents store a rendered copy of the template version used at issue time.</p>
 
-      {editor && <TemplateEditor key={`${editor.type}-${editor.record?.id ?? 'new'}-${refreshKey}`} owner={owner} record={editor.record} documentType={editor.type} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); forceRefresh(); }}/>}
+      {editor && <TemplateEditor key={`${editor.type}-${editor.record?.id ?? 'new'}`} owner={owner} record={editor.record} documentType={editor.type} onClose={() => setEditor(null)} onRefresh={forceRefresh} onSaved={() => { setEditor(null); forceRefresh(); }}/>}
 
       {versionsFor && <VersionHistoryDrawer lineageId={versionsFor.lineageId} type={versionsFor.type} onClose={() => setVersionsFor(null)} onActivate={activateVersion} onRestore={restoreVersion} onOpenRecord={record => { setVersionsFor(null); setEditor({ type: versionsFor.type, record }); }}/>}
     </div>
