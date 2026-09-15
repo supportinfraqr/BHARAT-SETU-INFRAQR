@@ -62,6 +62,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }
 
+    // Offered wage captured when the contractor approves a worker-initiated
+    // binding (feeds the appointment letter issued on acceptance).
+    const offeredWage = Number(body.offeredWage);
+    if (Number.isFinite(offeredWage) && offeredWage > 0) consent.offeredWage = offeredWage;
+
     const result = await upstreamRequest(config.apiBaseUrl, `/v1/bindings/${bindingId}/consent`, session, {
       method: 'POST',
       body: JSON.stringify(consent),

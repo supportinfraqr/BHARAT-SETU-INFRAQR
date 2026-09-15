@@ -18,16 +18,19 @@ export default function ContractorBindingRequestsPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpMode, setOtpMode] = useState<'bind' | 'unbind'>('bind');
+  const [wageFor, setWageFor] = useState<ContractorBindingRequest | null>(null);
+  const [wageInput, setWageInput] = useState('');
+  const [wageError, setWageError] = useState('');
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' | 'worker-decline' } | null>(null);
   const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
   const [historyFor, setHistoryFor] = useState<ContractorBindingRequest | null>(null);
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
-  async function accept(row: ContractorBindingRequest) {
+  async function accept(row: ContractorBindingRequest, wage?: number) {
     setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept' }) });
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'accept', offeredWage: wage }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding could not be accepted.');
       const accepted = result.data?.status === 'Accepted';
@@ -35,6 +38,21 @@ export default function ContractorBindingRequestsPage() {
       setNotice(accepted ? `Bound to ${row.entityName}.` : `Accepted — awaiting the worker's consent.`);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
+  }
+
+  function openWagePrompt(row: ContractorBindingRequest) {
+    setWageFor(row);
+    setWageInput('');
+    setWageError('');
+  }
+
+  async function confirmWage() {
+    if (!wageFor) return;
+    const wage = Number(wageInput);
+    if (!(wage > 0)) { setWageError('Enter the offered monthly wage (₹).'); return; }
+    const row = wageFor;
+    setWageFor(null);
+    await accept(row, wage);
   }
 
   async function declineWorker(row: ContractorBindingRequest) {
@@ -176,7 +194,7 @@ export default function ContractorBindingRequestsPage() {
       }
       if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button>;
       if (r.status === 'Accepted' && r.unbindRequested) return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting worker</span><button disabled={busy} onClick={() => void sendWorkerOtp(r, 'unbind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button></div>;
-      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'accept' })} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-decline' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
+      if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => openWagePrompt(r)} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-decline' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
       if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r, 'bind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button>;
       if (r.status === 'Pending' && !r.consentWorker) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/60">Awaiting worker</span>;
       if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
@@ -219,6 +237,22 @@ export default function ContractorBindingRequestsPage() {
           <div className="mt-4 flex gap-2 justify-end">
             <button onClick={() => { setOtpFor(null); setOtpSent(false); setOtp(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
             {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : otpMode === 'unbind' ? 'Verify & Unbind' : 'Verify & Approve'}</button>}
+          </div>
+        </section>
+      </div>
+    )}
+    {wageFor && (
+      <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
+        <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
+          <h2 className="font-semibold text-gray-900">Approve binding — offered wage</h2>
+          <p className="text-xs text-gray-500 mt-1">{wageFor.entityName} · {wageFor.site}</p>
+          <p className="text-[11px] text-gray-400 mt-2">Record the monthly wage offered to this worker. It is stored on the binding and printed on the worker&apos;s appointment letter.</p>
+          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Offered monthly wage (₹)</label>
+          <input autoFocus inputMode="numeric" value={wageInput} onChange={e => { setWageInput(e.target.value.replace(/[^\d]/g, '')); setWageError(''); }} placeholder="e.g. 18000" className="mt-1 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none"/>
+          {wageError && <p className="text-[11px] text-red-600 font-semibold mt-2">{wageError}</p>}
+          <div className="mt-4 flex gap-2 justify-end">
+            <button onClick={() => setWageFor(null)} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
+            <button onClick={() => void confirmWage()} disabled={busy} className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-xs font-bold disabled:opacity-60">{busy ? 'Approving…' : 'Approve & Bind'}</button>
           </div>
         </section>
       </div>

@@ -30,6 +30,8 @@ export default function ContractorScanPage() {
   const [unbindRequested, setUnbindRequested] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
+  const [offeredWage, setOfferedWage] = useState('');
+  const [wageError, setWageError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [manualInput, setManualInput] = useState('');
@@ -140,12 +142,19 @@ export default function ContractorScanPage() {
 
   const sendBinding = async () => {
     if (!scanned || !entity) return;
+    const isWorkerBinding = entity.kind === 'worker';
+    const wageValue = Number(offeredWage);
+    if (isWorkerBinding && !(wageValue > 0)) {
+      setConfirmOpen(false);
+      setWageError('Enter the offered monthly wage (₹) before sending the binding request.');
+      return;
+    }
     setRequestSent(true);
     try {
       const response = await fetch('/api/bindings/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site }),
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, offeredWage: isWorkerBinding ? wageValue : undefined }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
@@ -264,6 +273,14 @@ export default function ContractorScanPage() {
                   {contractor.defaultSite && <p className="text-[11px] text-gray-400 mt-1">Default site: {contractor.defaultSite.name}</p>}
                 </div>
               )}
+              {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Offered monthly wage (₹)</label>
+                  <input inputMode="numeric" value={offeredWage} onChange={e => { setOfferedWage(e.target.value.replace(/[^\d]/g, '')); setWageError(''); }} placeholder="e.g. 18000" className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"/>
+                  <p className="text-[11px] text-gray-400 mt-1">Recorded on the binding and printed on the worker&apos;s appointment letter.</p>
+                  {wageError && <p className="text-[11px] text-red-600 font-semibold mt-1">{wageError}</p>}
+                </div>
+              )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
                 ? <div className="space-y-3">
                     <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — to move them to a different site, unbind this binding first, then bind again.</p>
@@ -287,7 +304,7 @@ export default function ContractorScanPage() {
                   ? <p className="p-3 bg-amber-50 border border-amber-100 text-amber-700 rounded-xl text-sm font-semibold flex items-center gap-2"><Handshake size={16}/>Binding request already sent — awaiting {entity.name}&apos;s approval. Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
                   : requestSent
                     ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Binding request sent! Track it in <Link href="/contractor/qr/requests" className="underline font-bold">Binding Requests</Link>.</p>
-                    : <button onClick={() => setConfirmOpen(true)} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                    : <button onClick={() => { if (entity.kind === 'worker' && !(Number(offeredWage) > 0)) { setWageError('Enter the offered monthly wage (₹) before sending the binding request.'); return; } setWageError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
             </div>
           ):result?(
             <div className="space-y-5">
@@ -314,6 +331,7 @@ export default function ContractorScanPage() {
         ...(entity.bssId ? [{ label: 'BSS ID', value: entity.bssId }] : []),
         { label: scanned?.type === 'BSS_SITE' ? 'Site code' : 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
         { label: 'Designation', value: entity.designation || '—' },
+        ...(entity.kind === 'worker' ? [{ label: 'Offered monthly wage', value: `₹${Number(offeredWage).toLocaleString('en-IN')}` }] : []),
       ] : []}
       confirmLabel="Send binding request"
       onCancel={() => setConfirmOpen(false)}

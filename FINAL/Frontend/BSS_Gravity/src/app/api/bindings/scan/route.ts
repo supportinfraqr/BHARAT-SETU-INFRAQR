@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unsupported QR.' }, { status: 400 });
     }
     const config = getRuntimeConfig();
+    const offeredWage = Number(body.offeredWage);
     const result = await upstreamRequest(config.apiBaseUrl, '/v1/bindings/scan', session, {
       method: 'POST',
       body: JSON.stringify({
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
         bssId: typeof body.bssId === 'string' ? body.bssId : '',
         siteToken: typeof body.siteToken === 'string' ? body.siteToken : '',
         site: typeof body.site === 'string' ? body.site : '',
+        offeredWage: Number.isFinite(offeredWage) && offeredWage > 0 ? offeredWage : undefined,
         siteIds: Array.isArray(body.siteIds) ? body.siteIds.filter(id => Number.isInteger(id)) : [],
         preview: body.preview === true,
       }),

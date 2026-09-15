@@ -17,6 +17,7 @@ from bss_core.models import (
     WorkerDocumentMaster,
     WorkerEmployment,
     WorkerIdentity,
+    WorkerWages,
 )
 
 LETTER_CODES = {"appointment": "APPT", "experience": "EXPL"}
@@ -34,6 +35,25 @@ def _fmt(value) -> str:
         return value.strftime("%d %b %Y")
     except AttributeError:
         return str(value)
+
+
+def _money(value) -> str:
+    if value in (None, ""):
+        return "—"
+    try:
+        return f"₹{float(value):,.0f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _offered_wage(binding):
+    """Monthly wage agreed at binding, falling back to the worker's latest
+    recorded wage so the letter is never blank when a wage exists."""
+    if binding.offered_wage is not None:
+        return binding.offered_wage
+    latest = (WorkerWages.objects.filter(worker=binding.worker)
+              .order_by("-period_end").first())
+    return latest.gross_wage if latest else None
 
 
 def _worker_facts(worker) -> dict:
@@ -112,6 +132,7 @@ def render_letter(binding, letter_type: str) -> str:
     p = _party_facts(binding)
     ref = f"BSS/{'APPT' if letter_type == 'appointment' else 'EXP'}/{binding.id:05d}"
     issue = _fmt(binding.accepted_at or binding.created_at)
+    wage = _money(_offered_wage(binding))
 
     if letter_type == "appointment":
         body = f"""
@@ -140,6 +161,10 @@ def render_letter(binding, letter_type: str) -> str:
           <tr><td>Designation</td><td>{w['designation']}</td></tr>
           <tr><td>Department / Unit</td><td>{w['department']}</td></tr>
           <tr><td>Date of Joining</td><td>{w['doj']}</td></tr>
+        </table>
+        <h3>D. Wages</h3>
+        <table class="kv">
+          <tr><td>Gross Monthly Wage</td><td>{wage}</td></tr>
         </table>
         <p>Your engagement is subject to applicable labour laws and the terms agreed with the contractor. You shall
         follow all site safety rules, use the personal protective equipment provided, complete site induction, and

@@ -4255,6 +4255,10 @@ def binding_consent(request, binding_id):
             b.consent_worker = True
         else:
             b.consent_contractor = True
+            # The contractor records the offered terms (incl. wage) when they
+            # approve a worker-initiated binding; these feed the appointment
+            # letter issued on acceptance.
+            _apply_binding_terms(b, request.data)
         b.consent_method = method
         if b.consent_worker and b.consent_contractor:
             b.binding_status = "ACCEPTED"
@@ -4389,6 +4393,11 @@ def binding_scan(request):
             binding = _contractor_binds_worker(user, wi.user, site=requested_site)
         except PortalMutationError as exc:
             return Response({"error": exc.message}, status=exc.status_code)
+        # Offered terms (designation/department/shift/offered wage) captured at
+        # scan time drive the worker's Current Employment Details and the
+        # appointment letter issued when the worker approves.
+        _apply_binding_terms(binding, body)
+        binding.save()
         return Response({"data": payloads._binding_row(binding)}, status=status.HTTP_201_CREATED)
     else:
         return Response({"error": "Unsupported QR."}, status=status.HTTP_400_BAD_REQUEST)
