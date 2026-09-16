@@ -1,0 +1,237 @@
+"""Login, OTP, MPIN and account registration endpoints."""
+
+# ruff: noqa: F401,F403
+from .common import *  # noqa: F401,F403
+from .aadhaar import *  # noqa: F401,F403
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def login(request):
+    body = request.data or {}
+    role = body.get("role")
+    method = body.get("method") or "password"
+    identifier = body.get("identifier")
+    credential = body.get("credential") or ""
+
+    requested_roles = None
+    if role:
+        role_lower = role.lower()
+        requested_roles = [portal for portal, label in PORTAL_ROLE.items() if label.lower() == role_lower]
+    if not requested_roles:
+        requested_roles = [role] if role in dict(User.ROLE_CHOICES) else None
+
+    if not identifier:
+        return Response({"error": "identifier is required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user = _find_user(identifier)
+    if not user:
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if requested_roles and user.role not in requested_roles:
+        return Response({"error": "Role mismatch for this account"},
+                        status=status.HTTP_401_UNAUTHORIZED)
+
+    if not _verify_credential(user, method, credential):
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not user.is_active:
+        return Response({"error": "Account is disabled"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return Response(_make_session_payload(user), status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def otp_challenge(request):
+    body = request.data or {}
+    identifier = body.get("identifier")
+    if not identifier:
+        return Response({"error": "identifier is required"}, status=status.HTTP_400_BAD_REQUEST)
+    user = _find_user(identifier)
+    if user is not None:
+        mobile = _user_mobile(user)
+    else:
+        digits = "".join(ch for ch in str(identifier) if ch.isdigit())
+        if len(digits) < 10:
+            return Response({"error": "unrecognized identifier"}, status=status.HTTP_404_NOT_FOUND)
+        mobile = str(identifier)
+    otp = _issue_otp(mobile, purpose="LOGIN")
+    return Response({
+        "challengeId": f"login-otp-{otp.id}",
+        "expiresIn": 300,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def mpin_set(request):
+    """Set/replace the caller's MPIN (hashed) on their mobile credential."""
+    mpin = str(request.data.get("mpin") or "").strip()
+    if not _MPIN_RE.fullmatch(mpin):
+        return Response({"error": "MPIN must be 4-6 digits."}, status=status.HTTP_400_BAD_REQUEST)
+    cred = _mobile_credential_for(request.user)
+    cred.mpin_hash = make_password(mpin)
+    cred.save(update_fields=["mpin_hash"])
+    return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([AllowAny])
+def mpin_reset(request):
+    """Reset an MPIN after verifying a LOGIN OTP (forgot-MPIN path)."""
+    identifier = str(request.data.get("identifier") or "").strip()
+    otp_value = str(request.data.get("otp") or "").strip()
+    mpin = str(request.data.get("mpin") or "").strip()
+    if not _MPIN_RE.fullmatch(mpin):
+        return Response({"error": "MPIN must be 4-6 digits."}, status=status.HTTP_400_BAD_REQUEST)
+    user = _find_user(identifier)
+    if user is None:
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if not _verify_login_otp(_user_mobile(user), otp_value):
+        return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+    cred = _mobile_credential_for(user)
+    cred.mpin_hash = make_password(mpin)
+    cred.save(update_fields=["mpin_hash"])
+    return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def worker_claim_mobile(request):
+    """Aadhaar-onboarded workers have no mobile number (UIDAI never returns it).
+    This lets the signed-in worker add their mobile via an SMS OTP; once verified
+    it becomes their login/contact number.
+
+    body: {action:'request-otp'|'verify', mobile, otp?}
+    """
+    if request.user.role != "worker":
+        return Response({"error": "Workers only."}, status=status.HTTP_403_FORBIDDEN)
+    body = request.data or {}
+    action = str(body.get("action") or "request-otp").lower()
+    mobile = "".join(ch for ch in str(body.get("mobile") or "") if ch.isdigit())
+    if len(mobile) != 10 or mobile[0] not in "6789":
+        return Response({"error": "Enter a valid 10-digit Indian mobile number."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    taken = (UserCredential.objects.filter(identity_type="mobile", identity_value=mobile)
+             .exclude(user=request.user).exists())
+    if action == "request-otp":
+        if taken:
+            return Response({"error": "This mobile is already linked to another account."},
+                            status=status.HTTP_409_CONFLICT)
+        _issue_otp(mobile, purpose="LOGIN")
+        return Response({"sent": True, "mobile": ("*" * 6) + mobile[-4:], "expiresIn": 300},
+                        status=status.HTTP_200_OK)
+    if action == "verify":
+        otp_value = str(body.get("otp") or "").strip()
+        if not _verify_login_otp(mobile, otp_value):
+            return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        if taken:
+            return Response({"error": "This mobile is already linked to another account."},
+                            status=status.HTTP_409_CONFLICT)
+        identity = WorkerIdentity.objects.filter(user=request.user).first()
+        if identity is None:
+            identity = WorkerIdentity.objects.create(user=request.user,
+                                                     bss_worker_id=bss_ids.new_bss_worker_id())
+        identity.mobile_number = mobile
+        identity.save(update_fields=["mobile_number"])
+        UserCredential.objects.filter(user=request.user, identity_type="mobile").delete()
+        UserCredential.objects.create(user=request.user, identity_type="mobile",
+                                      identity_value=mobile, is_primary=True, verified=True)
+        return Response({"ok": True, "mobile": mobile}, status=status.HTTP_200_OK)
+    return Response({"error": "Unsupported action."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _register_account(request, role):
+    """Shared self-registration for worker / contractor / employer.
+
+    Mirrors the worker flow for organisation roles: verified contact + OTP,
+    creates the User + role profile with a random BSS ID, and returns the same
+    session payload so the frontend can sign the account in immediately.
+    """
+    body = request.data or {}
+    role = role.lower()
+    if role not in _REGISTRATION:
+        return Response({"error": "unsupported role"}, status=status.HTTP_400_BAD_REQUEST)
+    contact = (body.get("contact") or "").strip()
+    accepted = body.get("acceptedTerms", False)
+    if not accepted:
+        return Response({"error": "terms must be accepted"}, status=status.HTTP_400_BAD_REQUEST)
+    if not contact:
+        return Response({"error": "contact is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    otp_value = body.get("otp")
+    if otp_value and not _verify_login_otp(contact, otp_value):
+        return Response({"error": "invalid or expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    identifier = f"{role}_{contact[-10:]}" if len(contact) > 10 else f"{role}_{contact}"
+    if User.objects.filter(username=identifier).exists():
+        identifier = f"{role}_{contact[-10:]}_{uuid.uuid4().hex[:4]}"
+
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=identifier, password=_REGISTRATION[role]["password"],
+            role=role, account_active=True, is_verified=True, is_active=True)
+        if role == "worker":
+            identity = WorkerIdentity.objects.create(
+                user=user, bss_worker_id=bss_ids.new_bss_worker_id(),
+                name="", mobile_number=contact)
+            WorkerOther.objects.get_or_create(user=user)
+            _record_registration_consent(user)
+            _ensure_id_card_dates(user)
+            bss_id = identity.bss_worker_id
+        elif role == "contractor":
+            profile = ContractorProfile.objects.create(
+                user=user, contractor_name="", contractor_code=bss_ids.new_bss_contractor_code(),
+                approval_status="PENDING", mobile=contact)
+            bss_id = profile.contractor_code
+        else:  # employer
+            profile = EmployerProfile.objects.create(
+                user=user, employer_name="", employer_code=bss_ids.new_bss_employer_code(),
+                approval_status="PENDING", mobile=contact)
+            bss_id = profile.employer_code
+        UserCredential.objects.get_or_create(
+            identity_type="mobile", identity_value=contact,
+            defaults={"user": user, "is_primary": True, "verified": True})
+
+    payload = _make_session_payload(user)
+    payload["bssId"] = bss_id
+    payload["subject"] = user.username
+    return Response(payload, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def register_worker(request):
+    return _register_account(request, "worker")
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def register_contractor(request):
+    return _register_account(request, "contractor")
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def register_employer(request):
+    return _register_account(request, "employer")
+
+
+__all__ = [
+    "_register_account",
+    "login",
+    "mpin_reset",
+    "mpin_set",
+    "otp_challenge",
+    "register_contractor",
+    "register_employer",
+    "register_worker",
+    "worker_claim_mobile",
+]
