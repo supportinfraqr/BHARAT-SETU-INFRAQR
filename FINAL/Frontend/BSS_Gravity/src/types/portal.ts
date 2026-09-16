@@ -288,8 +288,23 @@ export type SiteCalendar = {
   leavePolicies: Array<{id:number;leaveTypeId:number;leaveType:string;annualEntitlement:number;openingBalance:number;isActive:boolean}>;
   restrictedHolidayAllotment?:number; restrictedHolidayMaxAvail?:number; weeklyOffDays?:string[];
 };
+export type PortalSettings = {
+  interfaceLanguage?: string;
+  preferredChannel?: string;
+  jobAlerts?: boolean;
+  complianceAlerts?: boolean;
+  grievanceUpdates?: boolean;
+  largeText?: boolean;
+  highContrast?: boolean;
+  reduceMotion?: boolean;
+  consentToPublicPhoto?: boolean;
+  consentToDataSharing?: boolean;
+  bindingEnabled?: boolean;
+};
+
 export type ContractorPortalData = {
   accessibility?: { largeText?: boolean; highContrast?: boolean; reduceMotion?: boolean };
+  settings?: PortalSettings;
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
@@ -537,6 +552,7 @@ export type EmployerComplianceReport = {
 
 export type EmployerPortalData = {
   accessibility?: { largeText?: boolean; highContrast?: boolean; reduceMotion?: boolean };
+  settings?: PortalSettings;
   identity: {
     name: string;
     company: string;

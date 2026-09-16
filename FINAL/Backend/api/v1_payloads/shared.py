@@ -571,6 +571,29 @@ def _accessibility_prefs(user):
     }
 
 
+def _portal_settings(user):
+    """Full per-user portal settings (language, alerts, communication, privacy,
+    accessibility) from the UserPreference table — shared by employer/contractor."""
+    p = UserPreference.objects.filter(user=user).first()
+    notif = (p.notification_prefs or {}) if p else {}
+    comm = (p.communication_prefs or {}) if p else {}
+    a11y = (p.accessibility_prefs or {}) if p else {}
+    privacy = (p.privacy_prefs or {}) if p else {}
+    return {
+        "interfaceLanguage": (p.interface_language if p else "") or "en",
+        "preferredChannel": comm.get("preferredChannel", "sms"),
+        "jobAlerts": bool(notif.get("jobAlerts", True)),
+        "complianceAlerts": bool(notif.get("complianceAlerts", True)),
+        "grievanceUpdates": bool(notif.get("grievanceUpdates", True)),
+        "largeText": bool(a11y.get("largeText", False)),
+        "highContrast": bool(a11y.get("highContrast", False)),
+        "reduceMotion": bool(a11y.get("reduceMotion", False)),
+        "consentToPublicPhoto": bool(privacy.get("consentToPublicPhoto", False)),
+        "consentToDataSharing": bool(privacy.get("consentToDataSharing", False)),
+        "bindingEnabled": bool(p.binding_enabled) if p else True,
+    }
+
+
 def _successor_candidates(employer, leaving):
     """Contractors the employer can pick as a successor when `leaving` ends:
     their other ACCEPTED contractors first, then every other contractor in the
@@ -681,6 +704,7 @@ __all__ = [
     "_site_compliance_pct",
     "_site_leave_policies",
     "_accessibility_prefs",
+    "_portal_settings",
     "_site_past_contractors",
     "_site_scalar_data",
     "_submission_document_master",

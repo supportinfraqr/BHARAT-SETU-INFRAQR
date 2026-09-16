@@ -635,6 +635,7 @@ def build_employer_portal(user):
         "licenses": _contractor_licenses(user),
         "payroll": _employer_payroll(user),
         "accessibility": _accessibility_prefs(user),
+        "settings": _portal_settings(user),
     }
 
 
