@@ -7,6 +7,7 @@ import EnterpriseDataTable, { type DataColumn } from '@/components/worker/Enterp
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorker, ContractorWorkerDocument } from '@/types/portal';
 import WorkerQr from '@/components/qr/WorkerQr';
+import WorkerIdentityCard from '@/components/idcard/WorkerIdentityCard';
 import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
 import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow';
 import type { WorkerLike } from '@/lib/documentEngine/workerDataService';
@@ -257,38 +258,7 @@ function WorkerIdentityCardDrawer({ worker, onClose }: { worker: ContractorWorke
       </header>
       <div className="p-5 space-y-5">
         {/* Card preview — same navy identity-card language as the worker portal */}
-        <div className="relative overflow-hidden rounded-xl bg-[#0A192F] text-white shadow-xl border border-slate-400" style={{ aspectRatio: '85.6 / 53.98' }}>
-          <div aria-hidden="true" className="absolute left-0 inset-y-0 z-20 w-[3px] flex flex-col"><span className="flex-1 bg-[#FF9933]"/><span className="flex-1 bg-white"/><span className="flex-1 bg-[#138808]"/></div>
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-white/[0.07] via-transparent to-black/15"/>
-          <div className="relative z-10 h-full px-4 py-3 flex items-stretch gap-3">
-            <div className="w-[76px] h-[92px] bg-slate-100 rounded-md overflow-hidden border border-slate-300 flex-shrink-0 self-center flex items-center justify-center">
-              {worker.photoUrl && worker.photoUrl !== '/worker-profile.png' ? (
-                <img src={worker.photoUrl} alt={worker.name} className="w-full h-full object-cover" />
-              ) : (
-                <UserRound size={36} className="text-slate-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <p className="text-[6px] text-slate-300 uppercase tracking-[0.17em] font-bold">Worker Name</p>
-              <p className="text-[14px] font-extrabold uppercase tracking-[0.02em] leading-tight truncate">{worker.name}</p>
-              <p className="text-[6px] text-slate-300 uppercase tracking-[0.17em] font-bold mt-2">BSS ID</p>
-              <p className="text-[9px] font-mono font-bold tracking-[0.08em]">{worker.bssId}</p>
-              <div className="flex gap-5 mt-2">
-                <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.15em] font-bold">Designation</p><p className="text-[8px] font-semibold truncate max-w-28">{worker.designation}</p></div>
-                <div><p className="text-[5.5px] text-slate-300 uppercase tracking-[0.15em] font-bold">Site</p><p className="text-[8px] font-semibold truncate max-w-28">{worker.site}</p></div>
-              </div>
-            </div>
-            <div className="w-[48px] flex-shrink-0 flex flex-col items-center justify-center gap-1">
-              <div className="relative bg-white p-1 rounded-[4px]"><WorkerQr bssId={worker.bssId}/><span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="w-[13px] h-[13px] bg-white rounded-[2px] grid place-items-center"><img src="/bss-original-logo.png" alt="" className="w-[10px] h-[10px] object-contain"/></span></span></div>
-              <p className="text-[4.5px] text-slate-300 uppercase font-bold tracking-[0.1em]">Scan to Verify</p>
-            </div>
-          </div>
-          <div className="absolute bottom-0 inset-x-0 z-10 h-[26px] px-4 flex items-center justify-between border-t border-white/[0.08] bg-black/[0.08]">
-            <p className="text-[5.5px] text-slate-300 uppercase tracking-[0.14em] font-bold">Issue {fmt(issued)}</p>
-            <p className="text-[5.5px] text-slate-300 uppercase tracking-[0.14em] font-bold">Valid Till <span className="text-[#FFD9A8]">{fmt(validTill)}</span></p>
-            <p className="text-[5.5px] text-slate-200 font-bold tracking-[0.1em] uppercase">BSS Card · National ID</p>
-          </div>
-        </div>
+        <WorkerIdentityCard data={{ name: worker.name, bssId: worker.bssId, photoUrl: worker.photoUrl, dob: worker.dob, gender: worker.gender, designation: worker.designation, site: worker.site, employer: worker.employer, issueDate: fmt(issued), validTill: fmt(validTill) }} />
         <div className="rounded-xl border border-gray-100 p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Worker record</p>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">

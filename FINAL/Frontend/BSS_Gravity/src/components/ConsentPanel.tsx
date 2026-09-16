@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, RotateCcw, ShieldCheck, XCircle } from 'lucide-react';
-import { consentService, consentDate, type ConsentScopeRole } from '@/lib/consents';
+import { consentService, consentDate, type ConsentRecord, type ConsentScopeRole } from '@/lib/consents';
 
 /** Shows the consents a portal user has given with revoke (and re-grant) controls. */
 export default function ConsentPanel({ role }: { role: ConsentScopeRole }) {
-  const [records, setRecords] = useState(() => consentService.list(role));
+  // Consents live in localStorage, which is unavailable during SSR — start empty
+  // and hydrate after mount so the server and first client render match.
+  const [records, setRecords] = useState<ConsentRecord[]>([]);
   const [notice, setNotice] = useState('');
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate localStorage-backed consents after mount
+  useEffect(() => { setRecords(consentService.list(role)); }, [role]);
 
   const given = records.filter(record => record.status === 'given').length;
 
