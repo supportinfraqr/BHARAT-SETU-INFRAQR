@@ -7,10 +7,11 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SitePermissionsDialog from '@/components/ui/SitePermissionsDialog';
 import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import { useContractor } from '@/contexts/ContractorContext';
+import { ResendOtp } from '@/components/auth/ResendOtp';
 import type { ContractorBindingRequest } from '@/types/portal';
 
 export default function ContractorBindingRequestsPage() {
-  const { contractor, replaceContractor, employerScope } = useContractor();
+  const { contractor, replaceContractor, refresh, employerScope } = useContractor();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -36,6 +37,7 @@ export default function ContractorBindingRequestsPage() {
       const accepted = result.data?.status === 'Accepted';
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: (accepted ? 'Accepted' : 'Pending') as ContractorBindingRequest['status'], consentContractor: true } : item) });
       setNotice(accepted ? `Bound to ${row.entityName}.` : `Accepted — awaiting the worker's consent.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -63,6 +65,7 @@ export default function ContractorBindingRequestsPage() {
       if (!response.ok) throw new Error(result.error || 'Binding request could not be declined.');
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: 'Rejected' as ContractorBindingRequest['status'] } : item) });
       setNotice(`Binding request from ${row.entityName} declined.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -76,6 +79,7 @@ export default function ContractorBindingRequestsPage() {
       const cancelled = result.data?.status === 'Cancelled';
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, status: (cancelled ? 'Cancelled' : 'Accepted') as ContractorBindingRequest['status'], unbindRequested: true, unbindConsentContractor: true, unbindConsentWorker: cancelled ? true : item.unbindConsentWorker } : item) });
       setNotice(cancelled ? `${row.entityName} unbound — both parties consented.` : `Unbinding confirmed — awaiting the worker's consent.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -110,6 +114,7 @@ export default function ContractorBindingRequestsPage() {
         setNotice(accepted ? `Bound to ${otpFor.entityName} — worker consent recorded via OTP.` : `Worker consent recorded via OTP — awaiting the contractor's acceptance.`);
       }
       setOtpFor(null); setOtpSent(false); setOtp('');
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'OTP verification failed.'); }
     finally { setBusy(false); }
   }
@@ -124,6 +129,7 @@ export default function ContractorBindingRequestsPage() {
       const accepted = action === 'approve-binding';
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.bindingId === row.bindingId ? { ...item, status: (accepted ? 'Accepted' : 'Rejected') as ContractorBindingRequest['status'], consentContractor: accepted ? true : item.consentContractor } : item) });
       setNotice(accepted ? `Binding with ${row.entityName} accepted.` : `Binding with ${row.entityName} declined.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Binding could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -138,6 +144,7 @@ export default function ContractorBindingRequestsPage() {
       const cancelled = String(result.data?.status ?? '').toLowerCase() === 'cancelled';
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.bindingId === row.bindingId ? { ...item, status: (cancelled ? 'Cancelled' : 'Accepted') as ContractorBindingRequest['status'], unbindRequested: true, unbindConsentContractor: true } : item) });
       setNotice(cancelled ? `Unbound from ${row.entityName} — both parties consented.` : 'Unbinding requested — awaiting the employer’s consent.');
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unbinding could not be requested.'); }
     finally { setBusy(false); }
   }
@@ -153,6 +160,7 @@ export default function ContractorBindingRequestsPage() {
       setSitesFor(prev => prev ? { ...prev, allotments } : prev);
       replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.bindingId === sitesFor.bindingId ? { ...item, allotments } : item) });
       setNotice(action === 'approve-site' ? 'Site approved.' : 'Site rejected.');
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site permission could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -171,7 +179,7 @@ export default function ContractorBindingRequestsPage() {
   const columns: DataColumn<ContractorBindingRequest>[] = [
     { id:'entity', header:'Entity', value:r => r.entityName, render:r => <div><strong className="text-gray-900">{r.entityName}</strong><p className="font-mono text-[10px] text-gray-400">{r.bssId}</p></div> },
     { id:'type', header:'Request type', value:r => r.type, render:r => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${r.type === 'Employer' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{r.type === 'Employer' ? 'Contractor ↔ Employer' : 'Contractor ↔ Worker'}</span> },
-    { id:'site', header:'Site', value:r => r.site },
+    { id:'site', header:'Site', value:r => r.site, export:{split:','} },
     { id:'employer', header:'Employer', value:r => r.employer },
     { id:'detail', header:'Designation / Wage', value:r => r.designation, render:r => <div><p className="text-gray-800">{r.designation}</p><p className="text-[10px] text-gray-400">{r.wage}</p></div> },
     { id:'requested', header:'Requested', value:r => r.requestedOn },
@@ -234,6 +242,7 @@ export default function ContractorBindingRequestsPage() {
           <p className="text-xs text-gray-500 mt-1">{otpFor.entityName} · {otpFor.site}</p>
           <p className="text-[11px] text-gray-400 mt-2">The OTP is sent to the worker&apos;s mobile. If the worker has no smartphone, ask them to read it out and enter it here to record their {otpMode === 'unbind' ? 'unbinding' : 'binding'} consent.</p>
           {otpSent && <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="6-digit OTP" className="mt-4 w-full bg-[#F5F5F7] border border-gray-200 rounded-xl px-4 py-3 text-center tracking-[0.4em] font-bold focus:outline-none"/>}
+          {otpSent && <ResendOtp onSend={() => sendWorkerOtp(otpFor, otpMode)} className="mt-2 text-center" />}
           <div className="mt-4 flex gap-2 justify-end">
             <button onClick={() => { setOtpFor(null); setOtpSent(false); setOtp(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
             {otpSent && <button onClick={() => void verifyWorkerOtp()} disabled={busy} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Verifying…' : otpMode === 'unbind' ? 'Verify & Unbind' : 'Verify & Approve'}</button>}

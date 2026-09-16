@@ -1146,6 +1146,7 @@ def build_contractor_portal(user):
             "records": [],
             "templateColumns": [],
         },
+        "accessibility": _accessibility_prefs(user),
     }
 
 

@@ -510,6 +510,13 @@ def _rate_limit(key, limit, window_seconds):
         return True
 
 
+def _otp_send_allowed(scope, key, limit=5, window_seconds=900):
+    """Throttle OTP sends per scope+key (e.g. per mobile or per user): at most
+    `limit` sends per `window_seconds`. The client offers one send plus three
+    resends; the backend keeps a small buffer above that."""
+    return _rate_limit(f"otp:{scope}:{key}", limit, window_seconds)
+
+
 __all__ = [
     "AadhaarChallenge",
     "AllowAny",
@@ -574,6 +581,7 @@ __all__ = [
     "_parse_date",
     "_parse_iso_date",
     "_rate_limit",
+    "_otp_send_allowed",
     "_record_registration_consent",
     "_user_mobile",
     "_verify_credential",

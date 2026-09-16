@@ -374,7 +374,7 @@ def _persist_mutation(user, role_path, resource, method, body):
             p.notification_prefs = prefs
             p.save(update_fields=["notification_prefs", "updated_at"])
             return notif_id
-    if resource == "settings" and user.role == "worker" and method in ("PATCH", "POST"):
+    if resource == "settings" and user.role in ("worker", "contractor", "employer") and method in ("PATCH", "POST"):
         # Worker Portal Settings — persist every toggle/select into the real
         # UserPreference row (was silently dropped -> page reload reverted to
         # hardcoded FE defaults).

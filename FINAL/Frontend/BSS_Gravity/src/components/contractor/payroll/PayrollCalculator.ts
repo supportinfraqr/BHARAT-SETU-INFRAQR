@@ -1,6 +1,7 @@
 "use client";
 
 import type { ContractorPayrollConfig, PayrollWorkerRecord } from '@/types/portal';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 
 export const PF_WAGE_CEILING = 15000;
 export const ESI_EMPLOYEE_RATE = 0.0075;   // 0.75% of Gross Pay (CSV statutory default)
@@ -98,7 +99,7 @@ export function validateRows(rows: string[][], config: ContractorPayrollConfig, 
     const lop = get(4);
 
     if (!bssId) errors.push('Worker BSS ID is mandatory');
-    else if (!/^BSS-W[A-Z0-9]{10}$/.test(bssId) && !/^BSS\d{12}$/.test(bssId) && !/^BSS-C[A-Z0-9]{10}$/.test(bssId)) errors.push(`Invalid BSS ID format "${bssId}"`);
+    else if (!/^BSS-W[A-Z0-9]{10,11}$/.test(bssId) && !/^BSS\d{12}$/.test(bssId) && !/^BSS-C[A-Z0-9]{10,11}$/.test(bssId)) errors.push(`Invalid BSS ID format "${bssId}"`);
     else if (!knownWorkerIds.includes(bssId)) warnings.push('Worker not in current bound-worker list — will be added as unknown worker');
 
     if (!period) errors.push('Period is mandatory');
@@ -148,15 +149,9 @@ export function rowToRecord(row: string[], config: ContractorPayrollConfig): Pay
 
 export function formatInr(value: number): string { return inr(value); }
 
-/** Download an HTML-style .xls (used by template & error report when xlsx module is unavailable). */
+/** Download a table as a real .xlsx (fallback when the dynamic import is unavailable). */
 export function downloadTableAsXls(filename: string, headers: string[], rows: Array<Array<string | number>>) {
-  const escape = (value: unknown) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const html = `<html><head><meta charset="UTF-8"></head><body><table><thead><tr>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-  const file = new File([html], `${filename}.xls`, { type:'application/vnd.ms-excel' });
-  const url = URL.createObjectURL(file);
-  const a = document.createElement('a');
-  a.href = url; a.download = file.name; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  exportMatrixToXlsx({ filename, head: headers, rows, sheetName: 'Sheet1' });
 }
 
 export async function writeXlsx(filename: string, sheetName: string, headers: string[], rows: Array<Array<string | number>>) {

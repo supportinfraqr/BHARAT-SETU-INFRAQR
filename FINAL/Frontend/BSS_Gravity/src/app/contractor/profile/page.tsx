@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Handshake, Landmark, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
+import { Building2, CheckCircle2, CreditCard, FileSignature, FileText, Handshake, Landmark, Lock, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import StatutoryLicences from '@/components/portal/StatutoryLicences';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorLicence } from '@/types/portal';
@@ -18,6 +18,10 @@ const tabs = [
   ['undertaking', 'Undertaking', FileSignature],
 ] as const;
 
+type Field = { label: string; value: string; sensitive?: boolean; note?: string; type?: string };
+// BSS IDs and other system-derived values are frozen — never editable on the client.
+const isLocked = (field: Field) => (field.note ?? '').includes('System-calculated') || (field.note ?? '').includes('auto-generated') || (field.note ?? '').includes('Calculated');
+
 export default function ContractorProfilePage() {
   const { contractor, replaceContractor, mutate } = useContractor();
   const [tab, setTab] = useState('basic');
@@ -31,7 +35,7 @@ export default function ContractorProfilePage() {
     e.preventDefault();
     setBusy(true); setError('');
     const values = new FormData(e.currentTarget);
-    const section = fields.map((field, index) => ({ ...field, value: String(values.get(`field-${index}`) ?? '').trim() }));
+    const section = fields.map((field, index) => ({ ...field, value: isLocked(field) ? field.value : String(values.get(`field-${index}`) ?? '').trim() }));
     try {
       await mutate('profile', 'PATCH', { section: tab, fields: section });
       replaceContractor({ ...contractor, profileSections: { ...contractor.profileSections, [tab]: section } });
@@ -97,6 +101,7 @@ export default function ContractorProfilePage() {
             </header>
             <form onSubmit={save} className="grid sm:grid-cols-2 gap-6 mt-6">
               {fields.map((field, index) => {
+                const locked = isLocked(field);
                 const labelLower = field.label.toLowerCase();
                 const isDocField = tab === 'documents' || labelLower.includes('document') || labelLower.includes('certificate') || labelLower.includes('licence');
                 const isDateField = field.type === 'date' || labelLower.includes('date');
@@ -125,8 +130,8 @@ export default function ContractorProfilePage() {
 
                 return (
                   <label key={field.label} className="text-xs font-semibold text-gray-500 uppercase">
-                    {field.label}
-                    {editing && !field.sensitive ? (
+                    <span className="flex items-center gap-1.5">{field.label}{locked && <Lock size={11} className="text-gray-300" />}</span>
+                    {editing && !field.sensitive && !locked ? (
                       isDocField ? (
                         <div className="mt-1 space-y-2">
                           <input

@@ -35,7 +35,7 @@ function daysBetween(fromIso: string, toIso: string): number {
 const PASS_PREFIX: Record<string, string> = { 'permanent-gate-pass': 'BSS-P', 'temporary-gate-pass': 'BSS-T' };
 const ALNUM = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-/** BSS-P + 10 alphanumeric (permanent) / BSS-T + 10 alphanumeric (temporary),
+/** BSS-P + 11 alphanumeric (permanent) / BSS-T + 11 alphanumeric (temporary),
  *  derived from the worker BSS id with FNV-1a so it matches the backend number
  *  and stays stable across renders. */
 export function autoPassNo(bssId: string, type: DocumentType): string {
@@ -43,7 +43,7 @@ export function autoPassNo(bssId: string, type: DocumentType): string {
   const material = `${bssId}:${type === 'permanent-gate-pass' ? 'PGP' : 'TGP'}`;
   let hash = 2166136261;
   let suffix = '';
-  for (let round = 0; round < 10; round += 1) {
+  for (let round = 0; round < 11; round += 1) {
     for (let index = 0; index < material.length; index += 1) {
       hash ^= (material.charCodeAt(index) + round) >>> 0;
       hash = Math.imul(hash, 16777619) >>> 0;

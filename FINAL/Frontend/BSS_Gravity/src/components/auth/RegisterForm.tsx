@@ -13,6 +13,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
+import { ResendOtp } from "@/components/auth/ResendOtp";
 import { useRouter } from "next/navigation";
 import type { Language } from '@/i18n';
 
@@ -42,15 +43,18 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
   const router = useRouter();
   const isSelfService = ['Worker', 'Contractor', 'Employer'].includes(selectedRole);
 
+  const sendRegisterOtp = async () => {
+    const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', mode:'register', role:selectedRole, identifier:contact }) });
+    const result = await response.json() as { error?:string };
+    if (!response.ok) throw new Error(result.error ?? 'OTP could not be sent.');
+  };
   const requestOtp = async () => {
     setError("");
     if (!isSelfService) return setError("This role requires administrator approval. Please contact BSS support.");
     if (!/^[6-9]\d{9}$/.test(contact.trim()) && !DEMO_MOBILES.includes(contact.trim())) return setError("Enter a valid 10-digit Indian mobile number.");
     setIsCreating(true);
     try {
-      const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:selectedRole, identifier:contact }) });
-      const result = await response.json() as { error?:string };
-      if (!response.ok) throw new Error(result.error ?? 'OTP could not be sent.');
+      await sendRegisterOtp();
       setStep("otp");
     } catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'OTP could not be sent.'); }
     finally { setIsCreating(false); }
@@ -167,7 +171,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                   onChange={e => setContact(e.target.value)}
                   disabled={step === "otp"}
                 />
-                {step === "otp" && (<div className="mb-4"><label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label><input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/></div>)}
+                {step === "otp" && (<div className="mb-4"><label className="text-[11px] font-bold text-gray-500 uppercase">Verification code</label><input value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/><ResendOtp onSend={sendRegisterOtp} className="mt-1 text-center"/></div>)}
               </>
             )}
 
@@ -188,7 +192,7 @@ export default function RegisterForm({ onSwitchToLogin, currentLang, onLangChang
                     <input value={aadhaarOtp} onChange={e=>setAadhaarOtp(e.target.value.replace(/\D/g, '').slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit OTP" className="mt-2 w-full bg-[#F5F5F7] border rounded-xl px-3.5 py-2.5 text-center tracking-[0.4em] font-bold"/>
                     <div className="flex justify-between items-center mt-2">
                       <button type="button" onClick={() => setStep("aadhaar")} className="cursor-pointer text-xs font-semibold text-gray-500 hover:text-[#1E3A8A] transition-colors">‹ Edit</button>
-                      <button type="button" onClick={sendAadhaarOtp} disabled={isCreating} className="cursor-pointer text-xs font-semibold text-[#1E3A8A] hover:underline">Resend OTP</button>
+                      <ResendOtp onSend={sendAadhaarOtp} />
                     </div>
                   </div>
                 )}

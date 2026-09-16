@@ -7,7 +7,7 @@ import { useContractor } from '@/contexts/ContractorContext';
 import ContractorSiteDetailDialog, { type ContractorSiteDetail } from '@/components/site/ContractorSiteDetailDialog';
 
 export default function ContractorQrSitesPage() {
-  const { contractor, replaceContractor, mutate } = useContractor();
+  const { contractor, mutate } = useContractor();
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -22,7 +22,6 @@ export default function ContractorQrSitesPage() {
     try {
       await mutate('default-site', 'POST', { siteId: siteId || null });
       const site = contractor.sites.find(s => s.id === siteId);
-      replaceContractor({ ...contractor, defaultSite: site ? { id: site.id, name: site.name, code: site.code } : null });
       setNotice(site ? `${site.name} is now your default site for worker bindings.` : 'Default site cleared.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The default site could not be saved.');

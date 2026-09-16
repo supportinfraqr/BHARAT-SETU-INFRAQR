@@ -12,12 +12,16 @@ export async function POST(request: Request) {
     const session = await requireApiSession().catch(() => null);
     if (!session) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
     const body = await readJsonObject(request);
+    const action = String(body.action ?? 'set').toLowerCase();
     const mpin = String(body.mpin ?? '');
-    if (!/^\d{4,6}$/.test(mpin)) return NextResponse.json({ error: 'MPIN must be 4-6 digits.' }, { status: 400 });
+    const otp = String(body.otp ?? '');
+    if (!['request-otp', 'send-otp'].includes(action) && !/^\d{4,6}$/.test(mpin)) {
+      return NextResponse.json({ error: 'MPIN must be 4-6 digits.' }, { status: 400 });
+    }
     const config = getRuntimeConfig();
     const result = await upstreamRequest(config.apiBaseUrl, '/v1/auth/mpin', session, {
       method: 'POST',
-      body: JSON.stringify({ mpin }),
+      body: JSON.stringify({ action, mpin, otp }),
     });
     return NextResponse.json(result);
   } catch (error) {

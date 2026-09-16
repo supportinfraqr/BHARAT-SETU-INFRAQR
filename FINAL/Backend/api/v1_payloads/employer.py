@@ -260,6 +260,7 @@ def _employer_contractors(user):
             "contact": _d(cp.contact_person if cp else ""),
             "email": _d(cp.email if cp else ""),
             "siteIds": site_ids, "workers": wcount,
+            "sites": [a.site.site_name for a in allotment_rows if a.site and a.status == "APPROVED"],
             "allotments": [{
                 "siteId": a.site_id,
                 "status": {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected",
@@ -633,6 +634,7 @@ def build_employer_portal(user):
         "profileSections": _employer_profile_sections(user),
         "licenses": _contractor_licenses(user),
         "payroll": _employer_payroll(user),
+        "accessibility": _accessibility_prefs(user),
     }
 
 

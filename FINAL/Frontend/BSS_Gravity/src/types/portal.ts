@@ -289,6 +289,7 @@ export type SiteCalendar = {
   restrictedHolidayAllotment?:number; restrictedHolidayMaxAvail?:number; weeklyOffDays?:string[];
 };
 export type ContractorPortalData = {
+  accessibility?: { largeText?: boolean; highContrast?: boolean; reduceMotion?: boolean };
   identity: { name: string; company: string; bssId: string; incorpDate: string; entity: string; verified: boolean; rating: number; contact: string; email: string; accountStatus?: string };
   stats: { totalWorkers: number; activeSites: number; complianceScore: number; pendingAlerts: number };
   principalEmployer: { name: string; code: string; industry: string; email: string; lin: string };
@@ -458,6 +459,8 @@ export type EmployerContractor = {
   contact: string;
   email: string;
   siteIds: string[];
+  /** Approved site names for this contractor (for display/export). */
+  sites?: string[];
   allotments?: Array<{ siteId: number; status: string; source?: string }>;
   workers: number;
   compliance: number;
@@ -533,6 +536,7 @@ export type EmployerComplianceReport = {
 };
 
 export type EmployerPortalData = {
+  accessibility?: { largeText?: boolean; highContrast?: boolean; reduceMotion?: boolean };
   identity: {
     name: string;
     company: string;

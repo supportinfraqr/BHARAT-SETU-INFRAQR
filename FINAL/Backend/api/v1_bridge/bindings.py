@@ -538,6 +538,9 @@ def binding_otp(request, binding_id):
         return Response({"error": "Binding is disabled in the worker's settings."},
                         status=status.HTTP_403_FORBIDDEN)
     mobile = _user_mobile(b.worker)
+    if not _otp_send_allowed("binding", b.worker_id):
+        return Response({"error": "Too many OTP requests for this binding. Please try again in a few minutes."},
+                        status=status.HTTP_429_TOO_MANY_REQUESTS)
     _issue_otp(mobile, purpose="BINDING", ttl_minutes=5)
     masked = ("*" * max(0, len(mobile) - 4)) + mobile[-4:]
     return Response({"sent": True, "expiresIn": 300, "target": "worker", "mobile": masked},

@@ -560,6 +560,17 @@ def _site_scalar_data(s):
     return out
 
 
+def _accessibility_prefs(user):
+    """Per-user accessibility preferences (shared by every portal)."""
+    p = UserPreference.objects.filter(user=user).first()
+    a11y = (p.accessibility_prefs or {}) if p else {}
+    return {
+        "largeText": bool(a11y.get("largeText", False)),
+        "highContrast": bool(a11y.get("highContrast", False)),
+        "reduceMotion": bool(a11y.get("reduceMotion", False)),
+    }
+
+
 def _successor_candidates(employer, leaving):
     """Contractors the employer can pick as a successor when `leaving` ends:
     their other ACCEPTED contractors first, then every other contractor in the
@@ -612,7 +623,7 @@ def _auto_gate_pass_dates(worker, gp_type):
 
 
 def _auto_gate_pass_no(worker, gp_type):
-    """Stable BSS-P + 10 alphanumeric (permanent) / BSS-T + 10 alphanumeric
+    """Stable BSS-P + 11 alphanumeric (permanent) / BSS-T + 11 alphanumeric
     (temporary) id derived from the worker's BSS id, so the same worker/type
     always renders the same pass number. Uses FNV-1a so the frontend can derive
     the identical number without a server round-trip."""
@@ -623,7 +634,7 @@ def _auto_gate_pass_no(worker, gp_type):
     material = f"{seed}:{gp_type}"
     h = 2166136261
     out = []
-    for rnd in range(10):
+    for rnd in range(11):
         for ch in material:
             h ^= (ord(ch) + rnd) & 0xFFFFFFFF
             h = (h * 16777619) & 0xFFFFFFFF
@@ -669,6 +680,7 @@ __all__ = [
     "_rh_request_row",
     "_site_compliance_pct",
     "_site_leave_policies",
+    "_accessibility_prefs",
     "_site_past_contractors",
     "_site_scalar_data",
     "_submission_document_master",

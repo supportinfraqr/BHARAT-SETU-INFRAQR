@@ -9,7 +9,7 @@ import { useWorker } from '@/contexts/WorkerContext';
 import type { WorkerAvailableJob } from '@/types/portal';
 
 export default function WorkerRozgarSetuPage() {
-  const { worker, portal } = useWorker();
+  const { worker, portal, refresh } = useWorker();
   const [availableForWork, setAvailableForWork] = useState<boolean>(portal?.availability ?? true);
   const [busy, setBusy] = useState<boolean>(false);
   const [notice, setNotice] = useState<string>('');
@@ -33,6 +33,7 @@ export default function WorkerRozgarSetuPage() {
       if (!response.ok) throw new Error(result.error || 'Application could not be sent.');
       setAppliedJobs(current => current.includes(job.id) ? current : [...current, job.id]);
       setNotice(`Application and binding request submitted for ${job.title} at ${job.employer}.`);
+      void refresh();
       setTimeout(() => setNotice(''), 5000);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not submit the application.');
@@ -51,6 +52,7 @@ export default function WorkerRozgarSetuPage() {
       if (!response.ok) throw new Error('Availability could not be updated.');
       setAvailableForWork(value);
       setNotice(value ? 'Availability set to ON — employers can discover your profile.' : 'Availability set to OFF.');
+      void refresh();
       setTimeout(() => setNotice(''), 4000);
     } catch {
       setError('Could not update availability.');

@@ -15,7 +15,7 @@ const quickReasons=[
 ];
 
 export default function LeavePage(){
-  const {portal,worker}=useWorker();
+  const {portal,worker,refresh}=useWorker();
   const [records,setRecords]=useState(portal.leaveRecords);
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
@@ -89,6 +89,7 @@ export default function LeavePage(){
         if(!response.ok)throw new Error(result.error??'Restricted holiday request could not be submitted.');
         form.reset();setType('');setReason('');setRhDate('');
         setMessage('Restricted holiday requested. Your contractor will approve it.');
+        void refresh();
       }catch(reason){setError(reason instanceof Error?reason.message:'Restricted holiday request could not be submitted.')}finally{setBusy(false)}
       return;
     }
@@ -106,6 +107,7 @@ export default function LeavePage(){
       if(!response.ok||!result.data)throw new Error(result.error??'Leave request could not be submitted.');
       setRecords(current=>[result.data!,...current]);form.reset();setType('');setFrom('');setTo('');setReason('');setDays(0);
       setMessage('Leave request submitted for approval. Your supervisor has been notified.');
+      void refresh();
     }catch(reason){setError(reason instanceof Error?reason.message:'Leave request could not be submitted.')}finally{setBusy(false)}
   }
 

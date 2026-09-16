@@ -35,7 +35,7 @@ type BindingRequest = {
 
 
 export default function BindingRequestsPage() {
-  const { worker, portal } = useWorker();
+  const { worker, portal, refresh } = useWorker();
 
   const apiRequests: BindingRequest[] = (portal.bindings ?? []).map(req => ({
     id: Number(req.id),
@@ -97,6 +97,7 @@ export default function BindingRequestsPage() {
         recordBindingApproval({ contractor: req.contractor, approvedOn: formatApprovalDate(new Date()) });
       }
       setNotice(action === 'accept' ? `Binding approved — you are now bound to ${req?.contractor || 'the contractor'}.` : `You declined the binding request from ${req?.contractor || 'the contractor'}.`);
+      void refresh();
       setTimeout(() => setNotice(''), 6000);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not update binding request.');
@@ -119,6 +120,7 @@ export default function BindingRequestsPage() {
       const cancelled = result.data?.status === 'Cancelled';
       setRequests(current => current.map(r => r.id === req.id ? { ...r, status: (cancelled ? 'Cancelled' : 'Accepted') as BindingRequest['status'], unbindRequested: true, unbindConsentWorker: true, unbindConsentContractor: cancelled ? true : r.unbindConsentContractor } : r));
       setNotice(cancelled ? 'Binding unbound — both parties consented.' : 'Unbinding requested — awaiting the contractor’s consent.');
+      void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not request unbinding.');
     } finally { setBusyId(null); }

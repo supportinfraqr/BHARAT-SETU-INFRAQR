@@ -3,8 +3,8 @@ import 'server-only';
 import type { PortalRole } from '@/types/portal';
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
-const bssId = /^(?:BSS-W[A-Z0-9]{10}|BSS\d{12})$/;
-const contractorBssId = /^(?:BSS-C[A-Z0-9]{10}|BSSC\d{12})$/;
+const bssId = /^(?:BSS-W[A-Z0-9]{10,11}|BSS\d{12})$/;
+const contractorBssId = /^(?:BSS-C[A-Z0-9]{10,11}|BSSC\d{12})$/;
 
 function fail(message: string): never {
   throw Object.assign(new Error(message), { status: 422 });

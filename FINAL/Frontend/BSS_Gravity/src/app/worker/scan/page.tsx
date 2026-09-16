@@ -4,6 +4,8 @@ import { IScannerControls } from "@zxing/browser";
 import { Camera, CheckCircle2, Handshake, Home, KeyRound, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useWorker } from "@/contexts/WorkerContext";
+import ScanIdentityCard, { type ScanVerifyData } from "@/components/scan/ScanIdentityCard";
+import ListenButton from "@/components/worker/ListenButton";
 import { Role, sanitizeWorkerProfile } from "@/lib/permissions";
 import ScanFrame from "@/components/qr/ScanFrame";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -19,7 +21,7 @@ type ScanResult = {
 };
 
 export default function QRScannerWorkflow() {
-  const { worker, portal } = useWorker();
+  const { worker, portal, refresh } = useWorker();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controls = useRef<IScannerControls | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -27,6 +29,7 @@ export default function QRScannerWorkflow() {
   const [state, setState] = useState<"idle"|"scanning"|"verified"|"error"|"binding">("idle");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [verifyData, setVerifyData] = useState<ScanVerifyData | null>(null);
   const [contractor, setContractor] = useState<{bssId:string; name:string} | null>(null);
   const [contractorSite, setContractorSite] = useState("");
   const [siteCheck, setSiteCheck] = useState<'idle' | 'loading' | 'ok' | 'none'>('idle');
@@ -78,6 +81,7 @@ export default function QRScannerWorkflow() {
       const isContractor = p.type === "BSS_CONTRACTOR" || p.bssId.startsWith("BSS-C") || p.bssId.startsWith("BSSC");
       const isEmployer = p.type === "BSS_EMPLOYER" || p.bssId.startsWith("BSS-E");
       playScanBeep(true);
+      setVerifyData(null);
       if (isContractor) {
         // Contractor QR → binding request. The worker never picks a site: the
         // request always targets the contractor's default (or first) site.
@@ -89,8 +93,10 @@ export default function QRScannerWorkflow() {
         // Resolve the contractor's registered name (the QR payload carries none).
         void fetch(`/api/identity/verify/${encodeURIComponent(p.bssId)}`, { cache: 'no-store' })
           .then(r => (r.ok ? r.json() : null))
-          .then((j: { data?: { company?: string; name?: string } } | null) => {
-            const name = j?.data?.company || j?.data?.name;
+          .then((j: { data?: ScanVerifyData } | null) => {
+            if (!j?.data) return;
+            setVerifyData(j.data);
+            const name = j.data.company || j.data.name;
             if (name) setContractor(current => current && current.bssId === p.bssId ? { ...current, name } : current);
           })
           .catch(() => {});
@@ -100,6 +106,10 @@ export default function QRScannerWorkflow() {
       } else if (p.bssId === worker.identity.bssId) {
         setResult(sanitizeWorkerProfile(worker, viewerRole));
         setState("verified"); setMessage("Credential verified successfully");
+        void fetch(`/api/identity/verify/${encodeURIComponent(p.bssId)}`, { cache: 'no-store' })
+          .then(r => (r.ok ? r.json() : null))
+          .then((j: { data?: ScanVerifyData } | null) => { if (j?.data) setVerifyData(j.data); })
+          .catch(() => {});
       } else {
         // Another worker's credential — verify it against the registry instead of
         // assuming it is "not found on this device".
@@ -107,6 +117,7 @@ export default function QRScannerWorkflow() {
         const payload = lookup && lookup.ok ? await lookup.json().catch(() => null) as { data?: ScanResult } | null : null;
         if (!payload?.data?.identity) throw new Error(`No worker record found with BSS ID "${p.bssId}".`);
         setResult(payload.data);
+        setVerifyData(payload.data);
         setState("verified"); setMessage("Credential verified successfully");
       }
       controls.current?.stop();
@@ -154,6 +165,7 @@ export default function QRScannerWorkflow() {
       setBindSent(true);
       setSentSite(result.data?.site ?? "");
       setSentContractors(current => current.includes(contractor.bssId) ? current : [...current, contractor.bssId]);
+      void refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Binding request could not be created.');
     } finally { setBusy(false); }
@@ -176,7 +188,7 @@ export default function QRScannerWorkflow() {
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setContractorSite(""); setSiteCheck("idle"); setConfirmOpen(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setContractor(null); setBindSent(false); setSentSite(""); setError(""); setContractorSite(""); setSiteCheck("idle"); setConfirmOpen(false); setMessage(""); setState("idle"); };
 
   const requestSendBinding = () => {
     if (existingBinding || alreadySentToContractor) { setError(existingBinding?.status === 'Accepted' ? `You are already bound to ${contractor?.name}.` : `A binding request is already pending with ${contractor?.name}.`); return; }
@@ -189,7 +201,7 @@ export default function QRScannerWorkflow() {
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
       <div><h1 className="text-2xl font-bold text-[#062D4F]">QR Scan & Bind</h1><p className="text-sm text-gray-500 mt-1">Scan a Contractor QR to request binding · scan a Worker QR to verify identity.</p></div>
-      <div className="flex gap-2"><Link href="/worker" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/worker/binding" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">My binding requests</Link></div>
+      <div className="flex gap-2"><ListenButton /><Link href="/worker" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/worker/binding" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">My binding requests</Link></div>
     </div>
 
     <div className="grid md:grid-cols-2 gap-6">
@@ -217,6 +229,7 @@ export default function QRScannerWorkflow() {
           {state==="binding"&&contractor?(
             <div className="space-y-4">
               <div className="flex items-center gap-4"><span className="w-14 h-14 rounded-full bg-orange-50 text-[#F47A32] grid place-items-center"><Handshake size={26}/></span><div><h2 className="font-bold text-lg">{contractor.name}</h2><code className="text-xs text-[#073B67]">{contractor.bssId}</code><p className="text-xs text-orange-600 mt-1 font-semibold">Contractor QR identified</p></div></div>
+              {verifyData && <ScanIdentityCard data={verifyData} />}
               <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
                 {siteCheck === 'loading'
                   ? 'Checking the contractor\u2019s default site…'
@@ -233,9 +246,9 @@ export default function QRScannerWorkflow() {
             </div>
           ):result?(
             <div className="space-y-5">
-              <div className="flex items-center gap-4">{result.identity.photoUrl ? <img src={result.identity.photoUrl} alt="Worker" className="w-16 h-16 rounded-full object-cover"/> : <span className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-400"><UserRound size={26}/></span>}<div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>
-              <dl className="grid grid-cols-2 gap-3 text-sm">{result.identity.category&&<><dt className="text-gray-500">Category</dt><dd className="font-semibold">{result.identity.category}</dd></>}{result.employment?.status&&<><dt className="text-gray-500">Employment</dt><dd className="font-semibold">{result.employment.status}</dd></>}{result.employment?.site&&<><dt className="text-gray-500">Site</dt><dd className="font-semibold">{result.employment.site}</dd></>}{result.skills?.primary?.name&&<><dt className="text-gray-500">Primary skill</dt><dd className="font-semibold">{result.skills?.primary?.name}</dd></>}</dl>
-              <p className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900">Sensitive identifiers, family data and banking details are withheld or masked according to the selected relationship.</p>
+              {verifyData
+                ? <ScanIdentityCard data={verifyData} />
+                : <div className="flex items-center gap-4"><span className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-gray-400"><UserRound size={26}/></span><div><h2 className="font-bold text-lg">{result.identity.name}</h2><code className="text-xs text-[#073B67]">{result.identity.bssId}</code><p className="text-xs text-green-700 mt-1">Verified BSS credential</p></div></div>}
             </div>
           ):<div className="py-20 text-center text-gray-400"><ScanLine size={44} className="mx-auto mb-3"/><p className="text-sm">Scanned result will appear here.</p></div>}
         </div>

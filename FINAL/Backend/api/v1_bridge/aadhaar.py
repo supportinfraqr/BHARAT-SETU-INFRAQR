@@ -1,5 +1,7 @@
 """Aadhaar / DigiLocker verification and worker identity linking."""
 
+import re
+
 # ruff: noqa: F401,F403
 from .common import *  # noqa: F401,F403
 
@@ -91,24 +93,36 @@ def _aadhaar_address_parts(data):
     }
 
 
+_CARE_OF_RE = re.compile(
+    r"^\s*(S/O|D/O|F/O|SO|DO|FO|W/O|H/O|WO|HO|C/O|CO|CARE\s*OF)\b[\s:.\-]*(.+)$",
+    re.IGNORECASE,
+)
+
+
 def _aadhaar_care_of_parts(care_of):
-    """Map UIDAI ``care_of`` (e.g. "S/O: Talat Parvez", "W/O: ...") to
+    """Map UIDAI ``care_of`` (e.g. "S/O: Talat Parvez", "C/O: ...") to
     (father_name, spouse_name). UIDAI exposes no separate parent/spouse fields
     and never returns the mother's name, so only these two can be derived.
-    ``C/O`` (care of) is an ambiguous guardian and is left unfilled."""
+
+    "C/O" (care of) omits the relationship — common for female workers — so it
+    is kept as the father/guardian name instead of being dropped. Any value with
+    no recognisable prefix is also kept as the father/guardian so the name is
+    never lost."""
     raw = str(care_of or "").strip()
     if not raw:
         return "", ""
-    relation, _, name = raw.replace(":", " ").partition(" ")
-    relation = relation.upper().replace(".", "")
-    name = name.strip()
+    match = _CARE_OF_RE.match(raw)
+    if not match:
+        # No recognisable relationship prefix — keep the whole value as the father.
+        return raw, ""
+    relation = re.sub(r"[^A-Z]", "", match.group(1).upper())
+    name = match.group(2).strip().strip(":.-").strip()
     if not name:
         return "", ""
-    if relation in ("S/O", "SO", "D/O", "DO"):
-        return name, ""
-    if relation in ("W/O", "WO", "H/O", "HO"):
+    if relation in ("WO", "HO"):
         return "", name
-    return "", ""
+    # S/O, D/O, F/O and the ambiguous C/O -> father / guardian.
+    return name, ""
 
 
 @api_view(["POST"])

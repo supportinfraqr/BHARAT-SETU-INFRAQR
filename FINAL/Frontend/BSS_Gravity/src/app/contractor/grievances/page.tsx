@@ -13,7 +13,7 @@ const statusTone: Record<ContractorGrievance['status'], string> = {
 };
 
 export default function ContractorGrievancesPage() {
-  const { contractor, replaceContractor, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, refresh, employerScope, scoped } = useContractor();
   const [selectedId, setSelectedId] = useState('');
   const [reply, setReply] = useState('');
   const [replyFile, setReplyFile] = useState<File | null>(null);
@@ -46,6 +46,7 @@ export default function ContractorGrievancesPage() {
       const result = await response.json() as { data?: ContractorGrievance; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error || 'Grievance could not be updated.');
       replaceContractor({ ...contractor, grievances: contractor.grievances.map(g => g.id === selected.id ? result.data! : g) });
+      void refresh();
       return result.data;
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Grievance could not be updated.'); return null; }
     finally { setBusy(false); }

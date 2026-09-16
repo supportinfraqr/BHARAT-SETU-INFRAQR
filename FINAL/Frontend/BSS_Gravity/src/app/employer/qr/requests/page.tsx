@@ -13,7 +13,7 @@ import type { EmployerApproval } from '@/types/portal';
 type Row = EmployerApproval & { __decide?: (row: EmployerApproval, status: 'Approved' | 'Rejected') => void };
 
 export default function EmployerQrBindingRequestsPage() {
-  const { employer, replaceEmployer, mutate } = useEmployer();
+  const { employer, replaceEmployer, refresh, mutate } = useEmployer();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -71,6 +71,7 @@ export default function EmployerQrBindingRequestsPage() {
         workers: employer.workers.map(item => item.id === row.entityId && row.entityType === 'Worker' ? { ...item, verified: approved, status: approved ? 'Active' : 'Inactive' } : item),
       });
       setNotice(`${row.name} ${nextStatus.toLowerCase()}.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -105,6 +106,7 @@ export default function EmployerQrBindingRequestsPage() {
         'reject-site-release': 'Site release declined.',
       };
       setNotice(notices[action] ?? 'Site permissions updated.');
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site permissions could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -119,6 +121,7 @@ export default function EmployerQrBindingRequestsPage() {
       const cancelled = String(result.data?.status ?? '').toLowerCase() === 'cancelled';
       replaceEmployer({ ...employer, approvals: employer.approvals.map(item => item.id === row.id ? { ...item, status: cancelled ? 'Cancelled' : item.status, unbindRequested: true, unbindConsentEmployer: true } : item) });
       setNotice(cancelled ? `${row.name} unbound — both parties consented.` : `Unbinding requested — awaiting ${row.name}’s consent.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unbinding could not be requested.'); }
     finally { setBusy(false); }
   }
@@ -126,7 +129,7 @@ export default function EmployerQrBindingRequestsPage() {
   const columns: DataColumn<Row>[] = [
     { id:'entity', header:'Requesting entity', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[10px] text-gray-400">{row.bssId}</p></div> },
     { id:'type', header:'Request type', value:row => row.entityType, render:row => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.entityType === 'Contractor' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{row.entityType}</span> },
-    { id:'site', header:'Site', value:row => row.site },
+    { id:'site', header:'Site', value:row => row.site, export:{split:','} },
     { id:'through', header:'Connected through', value:row => row.contractor ?? 'Direct contractor request' },
     { id:'submitted', header:'Requested', value:row => row.submittedAt.slice(0, 10) },
     { id:'initiated', header:'Initiated by', value:row => row.initiatedBy || '—', render:row => <span className="font-semibold text-gray-700">{row.initiatedBy || '—'}</span> },

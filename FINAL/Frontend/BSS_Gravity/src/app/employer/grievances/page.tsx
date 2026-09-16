@@ -18,7 +18,7 @@ const statusTone: Record<ContractorGrievance['status'], string> = {
 };
 
 export default function EmployerGrievancesPage() {
-  const { employer, replaceEmployer } = useEmployer();
+  const { employer, replaceEmployer, refresh } = useEmployer();
   const grievances = employer.grievances ?? [];
   const [selectedId, setSelectedId] = useState('');
   const [reply, setReply] = useState('');
@@ -50,6 +50,7 @@ export default function EmployerGrievancesPage() {
       const result = await response.json() as { data?: ContractorGrievance; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error || 'Grievance could not be updated.');
       replaceEmployer({ ...employer, grievances: grievances.map(item => item.id === selected.id ? result.data! : item) });
+      void refresh();
       return result.data;
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Grievance could not be updated.'); return null; }
     finally { setBusy(false); }

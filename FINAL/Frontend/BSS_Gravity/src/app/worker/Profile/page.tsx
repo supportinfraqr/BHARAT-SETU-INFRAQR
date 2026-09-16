@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import type { WorkerRecord } from '@/types/portal';
 import { MobilitySection, type MobilitySectionHandle } from '@/components/worker/MobilitySection';
+import { ResendOtp } from '@/components/auth/ResendOtp';
 import { 
   UserCircle, Save, CheckCircle2, ShieldCheck, 
   MapPin, FileText, Users,
@@ -1611,6 +1612,7 @@ export default function WorkerProfilePage() {
                         <div className="space-y-2 max-w-sm">
                           <input type="text" inputMode="numeric" value={aadhaarLink.aadhaar} onChange={e => setAadhaarLink(s => ({ ...s, aadhaar: e.target.value.replace(/\D/g, '').slice(0, 12), error: '' }))} disabled={aadhaarLink.sent} placeholder="12-digit Aadhaar number" className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium tracking-wider focus:outline-none disabled:bg-gray-100" />
                           {aadhaarLink.sent && <input type="text" inputMode="numeric" value={aadhaarLink.otp} onChange={e => setAadhaarLink(s => ({ ...s, otp: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} placeholder="6-digit OTP" className="w-full bg-white border border-gray-300 rounded-xl px-4 py-2 text-[14px] font-medium tracking-[0.3em] focus:outline-none" />}
+                          {aadhaarLink.sent && <ResendOtp onSend={sendAadhaarOtp} />}
                           {aadhaarLink.error && <p className="text-[12px] text-red-600">{aadhaarLink.error}</p>}
                           {aadhaarLink.notice && <p className="text-[12px] text-green-700">{aadhaarLink.notice}</p>}
                           <div className="flex gap-2">

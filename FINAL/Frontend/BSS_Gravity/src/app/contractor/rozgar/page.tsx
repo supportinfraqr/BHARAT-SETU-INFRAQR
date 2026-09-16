@@ -20,7 +20,7 @@ type PostingDraft = {
 };
 
 export default function ContractorRozgarPage() {
-  const { contractor, replaceContractor, mutate } = useContractor();
+  const { contractor, replaceContractor, refresh, mutate } = useContractor();
   const [tab, setTab] = useState<'jobs' | 'applicants' | 'available'>('jobs');
   const [selectedId, setSelectedId] = useState(contractor.applications[0]?.id ?? '');
   const [query, setQuery] = useState('');
@@ -93,6 +93,7 @@ export default function ContractorRozgarPage() {
       const result = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be sent.');
       setNotice(`Binding request sent to ${worker.workerName} — they approve it from their portal.`);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Binding request could not be sent.'); }
     finally { setBusy(false); }
   }

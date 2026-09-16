@@ -38,6 +38,7 @@ _v1_patterns = _v1(
     ("auth/login", v1_bridge.login, "v1_login"),
     ("auth/otp", v1_bridge.otp_challenge, "v1_otp"),
     ("auth/mpin", v1_bridge.mpin_set, "v1_mpin_set"),
+    ("auth/password", v1_bridge.password_set, "v1_password_set"),
     ("auth/mpin/reset", v1_bridge.mpin_reset, "v1_mpin_reset"),
     ("auth/register/worker", v1_bridge.register_worker, "v1_register_worker"),
     ("auth/register/contractor", v1_bridge.register_contractor, "v1_register_contractor"),

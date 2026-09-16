@@ -12,7 +12,7 @@ import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow'
 const columns: DataColumn<EmployerWorker>[] = [
   { id:'name', header:'Worker', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[11px] text-gray-500">{row.bssId}</p></div> },
   { id:'contractor', header:'Contractor', value:row => row.contractor, render:row => <div><span className="font-medium text-gray-800">{row.contractor}</span><p className="text-[10px] font-mono text-gray-400">{row.contractorId}</p></div> },
-  { id:'site', header:'Site', value:row => row.site },
+  { id:'site', header:'Site', value:row => row.site, export:{split:','} },
   { id:'designation', header:'Designation', value:row => row.designation },
   { id:'compliance', header:'Compliance', value:row => row.compliance, render:row => <span className={row.compliance === 'Compliant' ? 'text-green-700' : row.compliance === 'Expiring' ? 'text-orange-700' : 'text-red-700'}>{row.compliance}</span> },
   { id:'verified', header:'Verification', value:row => row.verified ? 'Verified' : 'Pending', render:row => <span className={row.verified ? 'text-green-700' : 'text-orange-700'}>{row.verified ? 'Verified' : 'Pending'}</span> },

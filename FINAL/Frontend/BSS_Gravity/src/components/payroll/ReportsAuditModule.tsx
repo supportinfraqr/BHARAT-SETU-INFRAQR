@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { BarChart3, CheckCircle2, Download, History } from 'lucide-react';
 import { Empty, Section, StatusPill, money, recordStatusTone } from '@/components/payroll/common';
 import { formatInr, totalsOf, workerVsEmployer } from '@/lib/payroll/payrollService';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 import type { PayrollStore } from '@/components/payroll/store';
 
 type ReportId = 'period' | 'employer' | 'contractor' | 'site' | 'statutory' | 'contributions' | 'payments' | 'loans' | 'ff' | 'form16' | 'revisions' | 'worker';
@@ -26,8 +27,6 @@ export function ReportsModule({ store }: { store: PayrollStore }) {
   };
 
   const exportXls = () => {
-    const esc = (v: unknown) => String(v ?? '');
-    const build = (head: string[], body: string[][]) => `<html><head><meta charset="UTF-8"></head><body><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body.map(row => `<tr>${row.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
     let rows: Array<{ head: string[]; body: string[][] }>;
     if (report === 'period') rows = [{ head: ['Period', 'Records', 'Gross', 'Net'], body: [...new Map(records.map(r => [r.period, r])).keys()].map(p => { const list = records.filter(r => r.period === p); const t = totalsOf(list); return [p, String(list.length), String(t.gross), String(t.net)]; }) }];
     else if (report === 'employer' || report === 'contractor' || report === 'site') rows = [{ head: ['Group', 'Workers', 'Gross', 'Net', 'Employer cost'], body: groupRows(report === 'employer' ? 'employer' : report === 'contractor' ? 'contractor' : 'site').map(g => [g.name, String(g.workers), String(g.gross), String(g.net), String(g.empCost)]) }];
@@ -39,10 +38,8 @@ export function ReportsModule({ store }: { store: PayrollStore }) {
     else if (report === 'ff') rows = [{ head: ['Reference', 'Worker', 'Net payable', 'Status'], body: store.fandf.map(f => [f.id, f.worker, String(f.summary.totalNetPayable), f.status]) }];
     else if (report === 'form16') rows = [{ head: ['Worker', 'FY', 'Status'], body: store.form16.map(f => [f.worker, f.financialYear, f.generationStatus]) }];
     else rows = [{ head: ['Worker', 'Type', 'From', 'Prev CTC', 'Revised CTC', 'Status'], body: store.revisions.map(r => [r.worker, r.revisionType, r.effectiveFrom, String(r.previousCTC), String(r.revisedCTC), r.status]) }];
-    const html = build(rows[0].head, rows[0].body);
-    const file = new File([html], `payroll-${report}-report.xls`, { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 800);
-    store.notify(`${report} report exported (XLS).`);
+    exportMatrixToXlsx({ filename: `payroll-${report}-report`, head: rows[0].head, rows: rows[0].body, sheetName: report });
+    store.notify(`${report} report exported (XLSX).`);
   };
 
   return <Section title="Payroll Reports" subtitle="Integrated with BSS reporting patterns — only reports supported by available data are exposed." right={<button onClick={exportXls} className="h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-[#062D4F]"><Download size={14}/>Download (XLS)</button>}>

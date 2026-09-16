@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Phone, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useWorker } from '@/contexts/WorkerContext';
+import { ResendOtp } from '@/components/auth/ResendOtp';
 
 /**
  * Hard prompt shown to workers who onboarded with Aadhaar and therefore have no
@@ -11,7 +12,7 @@ import { useWorker } from '@/contexts/WorkerContext';
  * dismiss button — the portal stays blocked until a mobile is saved.
  */
 export default function MobileClaimModal() {
-  const { worker, updateWorker } = useWorker();
+  const { worker, updateWorker, refresh } = useWorker();
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [sent, setSent] = useState(false);
@@ -49,6 +50,7 @@ export default function MobileClaimModal() {
     try {
       await post({ action: 'verify', mobile, otp });
       updateWorker({ contact: { ...worker.contact, mobile } });
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'OTP verification failed.'); }
     finally { setBusy(false); }
   };
@@ -80,7 +82,8 @@ export default function MobileClaimModal() {
           <button onClick={() => void (sent ? verify() : sendOtp())} disabled={busy} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60">
             {busy ? 'Please wait…' : sent ? 'Verify & save mobile' : 'Send OTP'} {sent ? <ShieldCheck size={16} /> : <ArrowRight size={16} />}
           </button>
-          {sent && <button onClick={() => { setSent(false); setOtp(''); setNotice(''); }} className="w-full text-xs font-semibold text-gray-500 hover:text-[#073B67]">Change number / resend OTP</button>}
+          {sent && <button onClick={() => { setSent(false); setOtp(''); setNotice(''); }} className="w-full text-xs font-semibold text-gray-500 hover:text-[#073B67]">Change number</button>}
+          {sent && <ResendOtp onSend={() => post({ action: 'request-otp', mobile }).then(() => undefined)} className="text-center" />}
         </div>
       </section>
     </div>

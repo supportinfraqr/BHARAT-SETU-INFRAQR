@@ -356,6 +356,8 @@ export default function IdentityCardPage() {
             {/* Glossy Sheen Overlay */}
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-bl from-transparent via-white/5 to-transparent z-0 opacity-80" />
             <div className="absolute inset-0 z-0 opacity-70 mix-blend-screen" style={{ backgroundImage: waveBackground, backgroundPosition: 'bottom', backgroundSize: 'cover' }} />
+            {/* Fresh monochrome BSS emblem and lateral construction-site watermark */}
+            <img aria-hidden="true" src="/bss-construction-watermark.png" className="absolute z-0 inset-x-0 bottom-[23px] w-full h-[142px] object-cover object-center opacity-[0.075]" alt="" />
 
             <div className="px-6 py-2 flex flex-col h-full items-center justify-between relative z-10">
                {/* Magnetic strip aesthetic */}

@@ -5,6 +5,7 @@ import EnterpriseDataTable, { type DataColumn } from '@/components/worker/Enterp
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorPortalData } from '@/types/portal';
 import { INDIA_STATES } from '@/data/indiaStates';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 type Row = ContractorPortalData['compliances'][number];
 type RowDraft = { item:string; category:string; reference:string; employer:string; site:string; worker:string; issue:string; expiry:string };
 const emptyRow = (site = ''): RowDraft => ({ item:'', category:'', reference:'', employer:'', site, worker:'', issue:'', expiry:'' });
@@ -36,7 +37,7 @@ const batchColumns: DataColumn<ContractorPortalData['complianceBatches'][number]
 ];
 
 export default function ContractorCompliancePage() {
-  const { contractor, replaceContractor, mutate, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, refresh, mutate, employerScope, scoped } = useContractor();
   const [tab, setTab] = useState<Tab>('records');
   const [modal, setModal] = useState<'single' | 'bulk' | null>(null);
   const [rows, setRows] = useState<RowDraft[]>([]);
@@ -94,26 +95,16 @@ export default function ContractorCompliancePage() {
   }
 
   const bulkDownload = () => {
-    const escape = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const headers = ['Compliance item', 'Category', 'Reference', 'Employer', 'Site', 'Site Code', 'Worker', 'Issued', 'Expires', 'Verification', 'Status'];
     const body = rowsData.map(r => { const site = contractor.sites.find(s => s.name === r.site); return [r.item, r.category, r.reference, r.employer, r.site, site?.code ?? '', r.worker ?? 'Organisation level', r.issue, r.expiry, r.verification, r.status]; });
-    const html = `<html><head><meta charset="UTF-8"></head><body><table><thead><tr>${headers.map(h => `<th>${escape(h)}</th>`).join('')}</tr></thead><tbody>${body.map(row => `<tr>${row.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-    const file = new File([html], 'contractor-compliance.xls', { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setNotice('Bulk compliance register exported (XLS).');
+    exportMatrixToXlsx({ filename: 'contractor-compliance', head: headers, rows: body, sheetName: 'Compliance' });
+    setNotice('Bulk compliance register exported (XLSX).');
   };
 
   const downloadMasterTemplate = () => {
-    const rows: string[][] = [
-      ['BSS ID', 'Name', 'Site', 'Location', 'Designation'],
-      ...contractor.workers.map(w => [w.bssId, w.name, w.site, contractor.sites.find(s => s.name === w.site)?.location ?? '', w.designation]),
-    ];
-    const csv = rows
-      .map(r => r.map(cell => { const v = String(cell ?? ''); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; }).join(','))
-      .join('\r\n');
-    const file = new File([csv], 'master-template.csv', { type: 'text/csv' });
-    const url = URL.createObjectURL(file); const a = document.createElement('a');
-    a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const head = ['BSS ID', 'Name', 'Site', 'Location', 'Designation'];
+    const rows = contractor.workers.map(w => [w.bssId, w.name, w.site, contractor.sites.find(s => s.name === w.site)?.location ?? '', w.designation]);
+    exportMatrixToXlsx({ filename: 'master-template', head, rows, sheetName: 'Template' });
   };
 
   const generateRegisters = async () => {
@@ -131,6 +122,7 @@ export default function ContractorCompliancePage() {
       replaceContractor({ ...contractor, complianceBatches: [result.data, ...contractor.complianceBatches] });
       setNotice(`Generated CLRA registers for ${fy} · ${month} 2026 · ${state} from ${masterFile.name}${signatureFile ? ' with digital signature' : ''}. Download from the batch list.`);
       setMasterFile(null); setSignatureFile(null);
+      void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Registers could not be generated.'); }
     finally { setBusy(false); }
   };
@@ -212,7 +204,7 @@ export default function ContractorCompliancePage() {
     {tab === 'report' && <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
       <header className="px-5 py-4 border-b border-gray-100 flex flex-wrap justify-between gap-2 items-center">
         <div><h2 className="text-sm font-semibold text-gray-950">Contractor Report</h2><p className="text-xs text-gray-400 mt-0.5">Month, Year, State, Site and Site Code — compliance report for your contractor profile.</p></div>
-        <button onClick={() => { const escape = (v: unknown) => String(v ?? ''); const rows = [['FY', 'Month', 'Year', 'State', 'Site', 'Site Code', 'Employee Count', 'Location Count', 'Generated On', 'Generated By', 'Status'], ...contractor.complianceBatches.map(b => [b.financialYear, b.month, b.year, b.state, b.site, b.siteCode, b.employeeCount, b.locationCount, b.generatedOn, b.generatedBy, b.status])]; const html = `<html><head><meta charset="UTF-8"></head><body><table>${rows.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</table></body></html>`; const file = new File([html], 'contractor-report.xls', { type: 'application/vnd.ms-excel' }); const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); setNotice('Contractor Report exported.'); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Report (XLS)</button>
+        <button onClick={() => { const head = ['FY', 'Month', 'Year', 'State', 'Site', 'Site Code', 'Employee Count', 'Location Count', 'Generated On', 'Generated By', 'Status']; const body = contractor.complianceBatches.map(b => [b.financialYear, b.month, b.year, b.state, b.site, b.siteCode, b.employeeCount, b.locationCount, b.generatedOn, b.generatedBy, b.status]); exportMatrixToXlsx({ filename: 'contractor-report', head, rows: body, sheetName: 'Report' }); setNotice('Contractor Report exported (XLSX).'); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Report (Excel)</button>
       </header>
       <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead className="bg-gray-50 text-xs text-gray-500 font-semibold border-b border-gray-100"><tr><th className="px-5 py-3">Financial Year</th><th className="px-5 py-3">Month</th><th className="px-5 py-3">Year</th><th className="px-5 py-3">State</th><th className="px-5 py-3">Site</th><th className="px-5 py-3">Site Code</th><th className="px-5 py-3">Employee Count</th><th className="px-5 py-3">Location Count</th><th className="px-5 py-3">Generated On</th><th className="px-5 py-3">Generated By</th><th className="px-5 py-3">Status</th></tr></thead>
         <tbody className="divide-y divide-gray-100">{contractor.complianceBatches.map(b => <tr key={b.id} className="hover:bg-gray-50"><td className="px-5 py-3 font-semibold text-gray-900">{b.financialYear}</td><td className="px-5 py-3">{b.month}</td><td className="px-5 py-3">{b.year}</td><td className="px-5 py-3">{b.state}</td><td className="px-5 py-3">{b.site}</td><td className="px-5 py-3 font-mono text-blue-700">{b.siteCode}</td><td className="px-5 py-3">{b.employeeCount}</td><td className="px-5 py-3">{b.locationCount}</td><td className="px-5 py-3">{b.generatedOn}</td><td className="px-5 py-3">{b.generatedBy}</td><td className="px-5 py-3"><span className={b.status === 'Generated' ? 'text-green-700' : 'text-red-700'}>{b.status}</span></td></tr>)}</tbody></table></div>

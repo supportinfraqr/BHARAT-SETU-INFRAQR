@@ -20,7 +20,7 @@ const STATUS_META: Record<AdvanceStatus, { label: string; tone: string; hint: st
 };
 
 export default function EarningsPage() {
-  const { portal } = useWorker();
+  const { portal, refresh } = useWorker();
   const { addNotification } = useNotifications();
   const wageData = portal.wages;
   const selected = wageData.records.reduce((sum, r) => sum + r.net, 0);
@@ -49,6 +49,7 @@ export default function EarningsPage() {
       setAdvances(cur => [result.data!, ...cur]);
       setApplyOpen(false); setAmount(''); setReason('');
       setNotice(`Advance request ${result.data.id} for ${money(value)} sent to ${portal.worker.employment.contractor || 'your contractor'} — approval and disbursement happen on their side.`);
+      void refresh();
       window.setTimeout(() => setNotice(''), 8000);
       addNotification({ id: `adv-${result.data.id}`, entityId: result.data.id, category: 'Payments', title: 'Advance payment requested', message: `Salary advance of ${money(value)} requested — awaiting contractor approval and disbursement (Cash/Online).`, createdAt: new Date().toISOString(), href: '/worker/Earnings', actionLabel: 'Track advance', priority: 'high', requiresAction: false, read: false, resolved: false });
     } catch (reason_) { setError(reason_ instanceof Error ? reason_.message : 'Advance could not be requested.'); }
@@ -63,6 +64,7 @@ export default function EarningsPage() {
       if (!response.ok || !result.data) throw new Error(result.error || 'Receipt could not be confirmed.');
       setAdvances(cur => cur.map(a => a.id === advance.id ? result.data! : a));
       setNotice(`Disbursement accepted — ${money(advance.amount)} will be adjusted in your next payroll as an advance recovery.`);
+      void refresh();
       window.setTimeout(() => setNotice(''), 8000);
     } catch (reason_) { setError(reason_ instanceof Error ? reason_.message : 'Receipt could not be confirmed.'); }
     finally { setBusy(false); }

@@ -9,7 +9,7 @@ import SiteCreateForm from '@/components/employer/SiteCreateForm';
 import { SiteQrPanel } from '@/components/qr/WorkerQr';
 
 export default function EmployerSitesPage() {
-  const { employer, replaceEmployer, mutate } = useEmployer();
+  const { employer, mutate } = useEmployer();
   const [open, setOpen] = useState(false);
   const [qrSite, setQrSite] = useState<EmployerSite | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,7 +25,6 @@ export default function EmployerSitesPage() {
     try {
       await mutate('default-site', 'POST', { siteId: siteId || null });
       const site = employer.sites.find(s => s.id === siteId);
-      replaceEmployer({ ...employer, defaultSite: site ? { id: site.id, name: site.name, code: site.code } : null });
       setDefaultNotice(site ? `Default site set to ${site.name}.` : 'Default site cleared.');
     } catch (reason) {
       setDefaultError(reason instanceof Error ? reason.message : 'The default site could not be saved.');
@@ -38,19 +37,9 @@ export default function EmployerSitesPage() {
     setBusy(true);
     setError('');
     try {
-      const result = await mutate<{ success?: boolean; data?: Partial<EmployerSite> }>('sites', 'POST', payload);
-      const created: EmployerSite = {
-        id: result?.data?.id != null ? String(result.data.id) : `SITE-${Date.now()}`,
-        code: String(payload.code ?? ''),
-        name: String(payload.name ?? ''),
-        location: String(payload.location ?? ''),
-        state: String(payload.state ?? ''),
-        startDate: String(payload.startDate ?? ''),
-        endDate: String(payload.endDate ?? ''),
-        status: (String(payload.status ?? 'Active')) as EmployerSite['status'],
-        contractorIds: [], workers: 0, compliance: 0, details: {} as EmployerSite['details'],
-      };
-      replaceEmployer({ ...employer, sites: [created, ...employer.sites], stats: { ...employer.stats, activeSites: employer.stats.activeSites + (created.status === 'Active' ? 1 : 0) } });
+      await mutate('sites', 'POST', payload);
+      // The portal is re-fetched automatically by mutate(), so the new card
+      // shows its server-derived QR token, BSS id and default state.
       setOpen(false);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site could not be created.'); }
     finally { setBusy(false); }

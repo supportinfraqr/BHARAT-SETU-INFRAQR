@@ -32,8 +32,9 @@ export async function POST(request: Request) {
     if (!selectedRole) return NextResponse.json({ error:'Select a valid BSS portal role.' }, { status:400 });
     if (body.action === 'request-otp') {
       if (typeof body.identifier !== 'string') return NextResponse.json({ error:'A registered mobile number or email is required.' }, { status:400 });
+      const mode = body.mode === 'register' ? 'register' : 'login';
       assertRateLimit(`otp:${selectedRole}:${body.identifier.trim().toLowerCase()}`, 5, 10 * 60_000);
-      const result = await requestOtp(selectedRole, body.identifier);
+      const result = await requestOtp(selectedRole, body.identifier, mode);
       return NextResponse.json(result, { status:202 });
     }
     if (!['otp','mpin','password'].includes(String(body.method)) || typeof body.identifier !== 'string' || typeof body.credential !== 'string') {

@@ -19,6 +19,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import RegisterForm from '@/components/auth/RegisterForm';
+import { ResendOtp } from '@/components/auth/ResendOtp';
 import LanguageSelector from '@/components/auth/LanguageSelector';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -85,6 +86,12 @@ export default function OriginalLoginPage() {
     } finally { setIsAuthenticating(false); }
   };
 
+  const sendLoginOtp = async () => {
+    const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', mode:'login', role:selectedRole, identifier:loginIdentifier }) });
+    const result = await response.json() as { error?:string };
+    if (!response.ok) throw new Error(result.error ?? 'OTP could not be sent.');
+  };
+
   const handleOtpLogin = async () => {
     setLoginError('');
     if (!['Worker', 'Contractor', 'Employer', 'Government', 'BSS Staff', 'BSS Admin'].includes(selectedRole)) return setLoginError('Select a valid portal role.');
@@ -92,9 +99,7 @@ export default function OriginalLoginPage() {
     try {
       if (!otpSent) {
         setIsAuthenticating(true);
-        const response = await fetch('/api/auth/session', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'request-otp', role:selectedRole, identifier:loginIdentifier }) });
-        const result = await response.json() as { error?:string };
-        if (!response.ok) throw new Error(result.error ?? 'OTP could not be sent.');
+        await sendLoginOtp();
         setOtpSent(true);
         return;
       }
@@ -406,6 +411,7 @@ export default function OriginalLoginPage() {
                           )}
                         </div>
                         {otpSent && <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} className="w-full bg-[#F5F5F7] border border-gray-200/80 rounded-[12px] px-3.5 py-2.5 text-[13px] text-center tracking-[0.4em] font-bold outline-none focus:bg-white focus:ring-[3px] focus:ring-[#1E3A8A]/10" placeholder="Six-digit OTP" />}
+                        {otpSent && <ResendOtp onSend={sendLoginOtp} className="mt-1 text-center" />}
                         <button onClick={handleOtpLogin} className="mt-1 w-full bg-[#1E3A8A] hover:bg-[#152960] text-white rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold tracking-wide flex items-center justify-center transition-all shadow-[0_4px_14px_0_rgba(30,58,138,0.39)] hover:shadow-[0_6px_20px_rgba(30,58,138,0.23)] hover:-translate-y-[1px] active:scale-[0.98] group cursor-pointer">
                           {otpSent ? t('secureLogin') : t('sendOtp')}
                           <span className="ml-2 relative flex items-center justify-center h-4 w-4">

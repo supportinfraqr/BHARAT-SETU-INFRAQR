@@ -47,11 +47,11 @@ export async function authenticate(input: LoginInput): Promise<AuthResult> {
   return result;
 }
 
-export async function requestOtp(role: PortalRole, identifierValue: string): Promise<{ challengeId?: string; expiresIn: number }> {
+export async function requestOtp(role: PortalRole, identifierValue: string, mode: 'login' | 'register' = 'login'): Promise<{ challengeId?: string; expiresIn: number }> {
   const identifier = cleanIdentifier(identifierValue);
   const config = getRuntimeConfig();
   return upstreamRequest(config.authBaseUrl, '/v1/auth/otp', null, {
     method: 'POST',
-    body: JSON.stringify({ role, identifier }),
+    body: JSON.stringify({ role, identifier, mode }),
   });
 }

@@ -100,10 +100,13 @@ def geography(request):
 
 
 @api_view(["GET"])
-@authentication_classes([])
+@authentication_classes([BssSessionAuthentication])
 @permission_classes([AllowAny])
 def identity_verify(request, bss_id):
-    data = payloads.build_identity_verify(bss_id)
+    # Optional session: when the caller is signed in and bound to the worker,
+    # the payload includes the extensive post-binding record.
+    viewer = request.user if getattr(request.user, "is_authenticated", False) else None
+    data = payloads.build_identity_verify(bss_id, viewer)
     if data is None:
         return Response({"error": "Unknown identity"}, status=status.HTTP_404_NOT_FOUND)
     return Response({"data": data, "verifiedAt": payloads._dts(

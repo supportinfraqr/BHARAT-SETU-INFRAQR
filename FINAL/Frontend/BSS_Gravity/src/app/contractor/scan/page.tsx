@@ -4,6 +4,8 @@ import { IScannerControls } from "@zxing/browser";
 import { Building2, Camera, CheckCircle2, Handshake, Home, KeyRound, Link2, ScanLine, ShieldCheck, TriangleAlert, Upload, UserRound, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useContractor } from "@/contexts/ContractorContext";
+import ScanIdentityCard, { type ScanVerifyData } from "@/components/scan/ScanIdentityCard";
+import ListenButton from "@/components/worker/ListenButton";
 import ScanFrame from "@/components/qr/ScanFrame";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { playScanBeep, primeAudio } from "@/lib/scanFeedback";
@@ -14,7 +16,7 @@ type Payload = { v: number; type: "BSS_WORKER" | "BSS_CONTRACTOR" | "BSS_EMPLOYE
 type ScannedEntity = { kind: 'worker' | 'employer'; bssId: string; name: string; employer: string; site: string; designation: string };
 
 export default function ContractorScanPage() {
-  const { contractor } = useContractor();
+  const { contractor, refresh } = useContractor();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controls = useRef<IScannerControls | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -22,6 +24,7 @@ export default function ContractorScanPage() {
   const [message, setMessage] = useState("");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result, setResult] = useState<Record<string, any> | null>(null);
+  const [verifyData, setVerifyData] = useState<ScanVerifyData | null>(null);
   const [entity, setEntity] = useState<ScannedEntity | null>(null);
   const [requestSent, setRequestSent] = useState(false);
   const [alreadyPending, setAlreadyPending] = useState(false);
@@ -143,6 +146,11 @@ export default function ContractorScanPage() {
         setUnbindRequested(false);
         setState("binding");
         setMessage(known ? "Worker is bound to you — mark today's attendance." : pending ? "Binding request already sent — awaiting the worker's approval." : "Worker identified — review current relationship before requesting binding");
+        // Load the tiered identity record: public-safe now, extensive when bound.
+        void fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' })
+          .then(r => (r.ok ? r.json() : null))
+          .then((j: { data?: ScanVerifyData } | null) => { if (j?.data) setVerifyData(j.data); })
+          .catch(() => {});
       } else {
         // A contractor QR — a contractor cannot bind another contractor.
         setEntity(null);
@@ -183,6 +191,7 @@ export default function ContractorScanPage() {
       setMessage(entity.kind === 'worker'
         ? `Binding request sent to ${entity.name}. The worker must approve before binding is complete.`
         : `Binding request sent — status ${result.data?.status ?? 'Pending'}. The employer approves the binding, then proposes sites.`);
+      void refresh();
     } catch (e) {
       setRequestSent(false);
       setSendError(e instanceof Error ? e.message : 'Binding request could not be created.');
@@ -202,6 +211,7 @@ export default function ContractorScanPage() {
       if (!response.ok) throw new Error(result.error || 'Attendance could not be marked.');
       setAttendanceMarked(true);
       setMessage(`Attendance marked for ${entity.name} — it now appears on the worker's Attendance page.`);
+      void refresh();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Attendance could not be marked.');
     }
@@ -221,6 +231,7 @@ export default function ContractorScanPage() {
       if (!response.ok) throw new Error(result.error || 'Unbind could not be requested.');
       setUnbindRequested(true);
       setMessage(`Unbind requested for ${entity.name} — the worker must confirm. Once unbound you can bind the worker to a different site.`);
+      void refresh();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Unbind could not be requested.');
     }
@@ -243,14 +254,13 @@ export default function ContractorScanPage() {
     catch { setState("error"); setMessage("No valid QR code could be read from that image."); }
   };
 
-  const reset = () => { controls.current?.stop(); setResult(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setUnbindRequested(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
+  const reset = () => { controls.current?.stop(); setResult(null); setVerifyData(null); setEntity(null); setRequestSent(false); setAttendanceMarked(false); setUnbindRequested(false); setConfirmOpen(false); setMessage(""); setState("idle"); };
   // A live binding unlocks the worker's verified identity details for this contractor.
-  const boundWorker = entity ? contractor.workers.find(w => w.bssId === entity.bssId) : undefined;
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
       <div><h1 className="text-2xl font-bold text-[#062D4F]">QR Scan & Bind</h1><p className="text-sm text-gray-500 mt-1">Scan a Worker QR to request binding · scan an Employer QR to request employer binding.</p></div>
-      <div className="flex gap-2"><Link href="/contractor/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/contractor/qr/requests" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
+      <div className="flex gap-2"><ListenButton /><Link href="/contractor/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/contractor/qr/requests" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
     </div>
 
     <div className="grid md:grid-cols-2 gap-6">
@@ -284,6 +294,7 @@ export default function ContractorScanPage() {
                 <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.designation}</dd></div>
                 <div><dt className="text-gray-400">Current relationship</dt><dd className="font-semibold text-gray-800 mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
               </dl>
+              {entity.kind === 'worker' && verifyData && <ScanIdentityCard data={verifyData} />}
               <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length > 0 && (
                 <div>
@@ -315,15 +326,6 @@ export default function ContractorScanPage() {
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
                 ? <div className="space-y-3">
                     <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3">This worker is bound to you at <strong>{entity.site}</strong>. A worker holds one active site at a time — to move them to a different site, unbind this binding first, then bind again.</p>
-                    {boundWorker && (
-                      <dl className="grid grid-cols-2 gap-3 text-xs rounded-xl border border-green-100 bg-green-50/40 p-3">
-                        <div><dt className="text-gray-400">Aadhaar</dt><dd className="font-mono font-semibold text-gray-800 mt-0.5">{boundWorker.aadhaar || '—'}</dd></div>
-                        <div><dt className="text-gray-400">Date of birth</dt><dd className="font-semibold text-gray-800 mt-0.5">{boundWorker.dob || '—'}</dd></div>
-                        <div><dt className="text-gray-400">Father&apos;s name</dt><dd className="font-semibold text-gray-800 mt-0.5">{boundWorker.fatherName || '—'}</dd></div>
-                        <div><dt className="text-gray-400">Blood group</dt><dd className="font-semibold text-gray-800 mt-0.5">{boundWorker.bloodGroup || '—'}</dd></div>
-                        <div className="col-span-2 text-[10px] text-green-700">Verified identity details unlocked because this worker is bound to you.</div>
-                      </dl>
-                    )}
                     {attendanceMarked
                       ? <p className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-sm font-semibold flex items-center gap-2"><CheckCircle2 size={16}/>Attendance marked for {entity.name}. It is now visible on the worker&apos;s Attendance page.</p>
                       : <button onClick={markAttendance} className="w-full h-11 rounded-xl bg-green-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-green-700"><CheckCircle2 size={17}/>Mark today&apos;s attendance</button>}

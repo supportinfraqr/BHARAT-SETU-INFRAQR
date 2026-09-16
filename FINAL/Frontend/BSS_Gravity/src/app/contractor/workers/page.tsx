@@ -10,6 +10,7 @@ import WorkerQr from '@/components/qr/WorkerQr';
 import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
 import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow';
 import type { WorkerLike } from '@/lib/documentEngine/workerDataService';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 
 const columns: DataColumn<ContractorWorker>[] = [
   { id:'name', header:'Worker', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[11px] text-gray-500">{row.bssId}</p></div> },
@@ -17,7 +18,7 @@ const columns: DataColumn<ContractorWorker>[] = [
   { id:'mobile', header:'Mobile', value:row => row.mobile },
   { id:'designation', header:'Designation', value:row => row.designation },
   { id:'department', header:'Department', value:row => row.department ?? '—' },
-  { id:'site', header:'Site', value:row => row.site },
+  { id:'site', header:'Site', value:row => row.site, export:{split:','} },
   { id:'employer', header:'Employer', value:row => row.employer },
   { id:'doj', header:'Joined', value:row => row.doj },
   { id:'status', header:'Status', value:row => row.status, render:row => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${row.status === 'Accepted' ? 'bg-green-50 text-green-700' : row.status === 'Pending' ? 'bg-amber-50 text-amber-700' : row.status === 'Expired' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{row.status}</span> },
@@ -90,11 +91,7 @@ export default function WorkerMasterPage() {
   }
 
   function downloadTemplate() {
-    const escape = (v: unknown) => String(v ?? '');
-    const rows2 = [['BSS ID', 'Site']];
-    const html = `<html><head><meta charset="UTF-8"></head><body><table>${rows2.map(r => `<tr>${r.map(c => `<td>${escape(c)}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
-    const file = new File([html], 'worker-binding-template.xls', { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href = url; a.download = file.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    exportMatrixToXlsx({ filename: 'worker-binding-template', head: ['BSS ID', 'Site'], rows: [], sheetName: 'Template' });
   }
 
   const workerDocs = (worker: ContractorWorker) => contractor.workerDocuments.filter(d => d.workerId === worker.bssId);
@@ -164,7 +161,7 @@ export default function WorkerMasterPage() {
     {modal === 'single' && <div className="fixed inset-0 z-50 bg-black/50 p-4 grid place-items-center" role="presentation"><section role="dialog" aria-modal="true" aria-labelledby="add-worker-title" className="w-full max-w-lg bg-white rounded-2xl shadow-xl">
       <header className="p-5 border-b flex justify-between"><div><h2 id="add-worker-title" className="font-semibold">Bind an existing BSS worker</h2><p className="text-xs text-gray-500 mt-0.5">Enter the worker&apos;s BSS ID — the worker must accept before the profile unlocks. Workers register themselves; you cannot create one here.</p></div><button onClick={() => setModal(null)} aria-label="Close"><X/></button></header>
       <form onSubmit={submitSingle} className="p-5 grid sm:grid-cols-2 gap-4">
-        <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/>
+        <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10,11}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/>
         <label className="text-xs font-semibold text-gray-700">Site<select required name="site" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Bind worker'}</button></div>

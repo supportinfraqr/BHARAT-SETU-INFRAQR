@@ -46,16 +46,29 @@ def login(request):
 def otp_challenge(request):
     body = request.data or {}
     identifier = body.get("identifier")
+    mode = str(body.get("mode") or "login").strip().lower()
     if not identifier:
         return Response({"error": "identifier is required"}, status=status.HTTP_400_BAD_REQUEST)
     user = _find_user(identifier)
-    if user is not None:
-        mobile = _user_mobile(user)
-    else:
+    if mode == "register":
+        if user is not None:
+            return Response(
+                {"error": "An account already exists with this mobile / BSS ID. Please log in instead."},
+                status=status.HTTP_409_CONFLICT)
         digits = "".join(ch for ch in str(identifier) if ch.isdigit())
         if len(digits) < 10:
-            return Response({"error": "unrecognized identifier"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Enter a valid 10-digit mobile number to register."},
+                            status=status.HTTP_400_BAD_REQUEST)
         mobile = str(identifier)
+    else:
+        if user is None:
+            return Response(
+                {"error": "No account found for this BSS ID / mobile number. Please register first."},
+                status=status.HTTP_404_NOT_FOUND)
+        mobile = _user_mobile(user)
+    if not _otp_send_allowed("register" if mode == "register" else "login", mobile):
+        return Response({"error": "Too many OTP requests. Please try again in a few minutes."},
+                        status=status.HTTP_429_TOO_MANY_REQUESTS)
     otp = _issue_otp(mobile, purpose="LOGIN")
     return Response({
         "challengeId": f"login-otp-{otp.id}",
@@ -67,13 +80,67 @@ def otp_challenge(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def mpin_set(request):
-    """Set/replace the caller's MPIN (hashed) on their mobile credential."""
-    mpin = str(request.data.get("mpin") or "").strip()
+    """Set/replace the caller's MPIN (hashed) on their mobile credential.
+
+    OTP-gated: first call with {action:'request-otp'} to send an OTP to the
+    account's mobile, then submit {mpin, otp} to save it.
+    """
+    body = request.data or {}
+    action = str(body.get("action") or "set").lower()
+    mobile = _user_mobile(request.user)
+    if action in ("request-otp", "send-otp"):
+        if not mobile:
+            return Response({"error": "No mobile number on your account. Add one first."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not _otp_send_allowed("credential", request.user.id):
+            return Response({"error": "Too many OTP requests. Please try again in a few minutes."},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+        _issue_otp(mobile, purpose="LOGIN")
+        return Response({"otpSent": True, "mobile": ("*" * 6) + mobile[-4:], "expiresIn": 300},
+                        status=status.HTTP_200_OK)
+    mpin = str(body.get("mpin") or "").strip()
+    otp_value = str(body.get("otp") or "").strip()
     if not _MPIN_RE.fullmatch(mpin):
         return Response({"error": "MPIN must be 4-6 digits."}, status=status.HTTP_400_BAD_REQUEST)
+    if not otp_value:
+        return Response({"error": "Enter the OTP sent to your mobile."}, status=status.HTTP_400_BAD_REQUEST)
+    if not _verify_login_otp(mobile, otp_value):
+        return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
     cred = _mobile_credential_for(request.user)
     cred.mpin_hash = make_password(mpin)
     cred.save(update_fields=["mpin_hash"])
+    return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def password_set(request):
+    """Set/replace the caller's login password. OTP-gated (same flow as MPIN)."""
+    body = request.data or {}
+    action = str(body.get("action") or "set").lower()
+    mobile = _user_mobile(request.user)
+    if action in ("request-otp", "send-otp"):
+        if not mobile:
+            return Response({"error": "No mobile number on your account. Add one first."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if not _otp_send_allowed("credential", request.user.id):
+            return Response({"error": "Too many OTP requests. Please try again in a few minutes."},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+        _issue_otp(mobile, purpose="LOGIN")
+        return Response({"otpSent": True, "mobile": ("*" * 6) + mobile[-4:], "expiresIn": 300},
+                        status=status.HTTP_200_OK)
+    password = str(body.get("password") or "")
+    otp_value = str(body.get("otp") or "").strip()
+    if len(password) < 8:
+        return Response({"error": "Password must be at least 8 characters."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not otp_value:
+        return Response({"error": "Enter the OTP sent to your mobile."}, status=status.HTTP_400_BAD_REQUEST)
+    if not _verify_login_otp(mobile, otp_value):
+        return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
+    request.user.set_password(password)
+    request.user.save(update_fields=["password"])
     return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
@@ -122,6 +189,9 @@ def worker_claim_mobile(request):
         if taken:
             return Response({"error": "This mobile is already linked to another account."},
                             status=status.HTTP_409_CONFLICT)
+        if not _otp_send_allowed("claim", request.user.id):
+            return Response({"error": "Too many OTP requests. Please try again in a few minutes."},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
         _issue_otp(mobile, purpose="LOGIN")
         return Response({"sent": True, "mobile": ("*" * 6) + mobile[-4:], "expiresIn": 300},
                         status=status.HTTP_200_OK)
@@ -166,6 +236,11 @@ def _register_account(request, role):
     otp_value = body.get("otp")
     if otp_value and not _verify_login_otp(contact, otp_value):
         return Response({"error": "invalid or expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if _find_user(contact) is not None:
+        return Response(
+            {"error": "An account already exists with this mobile number. Please log in instead."},
+            status=status.HTTP_409_CONFLICT)
 
     identifier = f"{role}_{contact[-10:]}" if len(contact) > 10 else f"{role}_{contact}"
     if User.objects.filter(username=identifier).exists():
@@ -229,6 +304,7 @@ __all__ = [
     "login",
     "mpin_reset",
     "mpin_set",
+    "password_set",
     "otp_challenge",
     "register_contractor",
     "register_employer",

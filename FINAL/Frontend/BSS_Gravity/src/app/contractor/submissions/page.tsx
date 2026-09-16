@@ -45,7 +45,7 @@ const FALLBACK_DOCUMENTS = [
 type UploadRow = { file: File; id?: number; accuracy: number; status: 'Validating' | 'Validated' | 'Errors found'; findings?: string[] };
 
 export default function ComplianceSubmissionPage() {
-  const { contractor, replaceContractor, employerScope, scoped } = useContractor();
+  const { contractor, replaceContractor, refresh, employerScope, scoped } = useContractor();
   const [tab, setTab] = useState<Tab>('submissions');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -172,6 +172,7 @@ export default function ComplianceSubmissionPage() {
       replaceContractor({ ...contractor, auditReports: [result.data, ...contractor.auditReports] });
       setCreateOpen(false); setUploads({}); setClient(''); setSite(''); setLocation(''); setDocNameInput(''); setWarnSubmit(false);
       setNotice(`Compliance submitted. Audit report ${result.data.uniqueNo} generated — score ${result.data.scorePercent}%.`);
+      void refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Compliance could not be submitted.');
     } finally { setBusy(false); }

@@ -174,6 +174,7 @@ export default function OrganizationIdentityCard({
         >
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-bl from-transparent via-white/5 to-transparent z-0 opacity-80" />
           {standard && <div className="absolute inset-0 z-0 opacity-70 mix-blend-screen" style={{ backgroundImage: waveBackground, backgroundPosition: 'bottom', backgroundSize: 'cover' }} />}
+          {standard && <img aria-hidden="true" src="/bss-construction-watermark.png" className="absolute z-0 inset-x-0 bottom-[23px] w-full h-[142px] object-cover object-center opacity-[0.075]" alt="" />}
 
           <div className={`flex flex-col h-full items-center justify-between relative z-10 ${standard ? 'px-6 py-2' : ''}`}>
             <div className="absolute top-4 left-0 w-full h-8 bg-black/60 shadow-inner z-0"></div>

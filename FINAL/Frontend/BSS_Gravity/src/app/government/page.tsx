@@ -5,6 +5,7 @@ import { CheckCircle2, ChevronDown, Download, Lock, MapPin, RefreshCw, ShieldChe
 import { BarChart, Donut, HBar, Kpi } from '@/components/government/Charts';
 import type { GovWorker } from '@/types/portal';
 import { useGovernment } from '@/contexts/GovernmentContext';
+import { exportMatrixToXlsx } from '@/lib/exportXlsx';
 
 const YEARS = [2021, 2022, 2023, 2024, 2025, 2026];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -119,16 +120,11 @@ export default function GovernmentDashboard() {
   const contractorCount = new Set(filtered.map(w => w.contractor)).size;
   const siteCount = new Set(filtered.map(w => w.site)).size;
 
-  function exportCsv() {
+  function exportExcel() {
     const fields: Array<keyof GovWorker> = ['id', 'state', 'district', 'city', 'gender', 'age', 'category', 'occupation', 'site', 'siteType', 'employer', 'contractor', 'stateOfOrigin', 'epfoLinked', 'esicLinked', 'wage'];
-    const quote = (value: unknown) => `"${String(value).replace(/"/g, '""')}"`;
-    const body = [fields.join(','), ...filtered.map(worker => fields.map(field => quote(worker[field])).join(','))].join('\n');
-    const url = URL.createObjectURL(new Blob([`\uFEFF${body}`], { type: 'text/csv;charset=utf-8' }));
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `bss-gov-scope-${lockedState || 'india'}-${new Date().toISOString().slice(0, 10)}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    const head = fields.map(field => String(field));
+    const rows = filtered.map(worker => fields.map(field => String(worker[field] ?? '')));
+    exportMatrixToXlsx({ filename: `bss-gov-scope-${lockedState || 'india'}-${new Date().toISOString().slice(0, 10)}`, head, rows, sheetName: 'Scope' });
   }
 
   return <div className="space-y-6 pb-12">
@@ -144,7 +140,7 @@ export default function GovernmentDashboard() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => { setDemoSwitch(false); setPickerOpen(true); }} className="h-10 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-gray-50"><MapPin size={15}/> {lockedState ? lockedState : 'All India'} <Lock size={13} className="text-gray-300"/></button>
-        <button onClick={exportCsv} className="h-10 px-4 rounded-lg bg-[#0F172A] hover:bg-black text-white text-sm font-semibold inline-flex items-center gap-2"><Download size={15}/>Export scope</button>
+        <button onClick={exportExcel} className="h-10 px-4 rounded-lg bg-[#0F172A] hover:bg-black text-white text-sm font-semibold inline-flex items-center gap-2"><Download size={15}/>Export Excel</button>
       </div>
     </header>
 

@@ -8,7 +8,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import EnterpriseDataTable, { DataColumn } from '@/components/worker/EnterpriseDataTable';
 
 export default function BenefitsPage() {
-  const { worker, portal } = useWorker();
+  const { worker, portal, refresh } = useWorker();
   const { addNotification } = useNotifications();
   const pfData = portal.providentFund;
   const bonus = portal.bonus;
@@ -40,6 +40,7 @@ export default function BenefitsPage() {
       setApplication({ reference, submittedOn, status: (result.data.status || 'Submitted') as 'Submitted' | 'Under examination' | 'Approved' | 'Disbursed' | 'Rejected' });
       setApplying(false); setApplyOpen(false); setApplyReason('');
       setApplyNotice(`Gratuity application ${reference} submitted — your contractor and employer have been notified for processing.`);
+      void refresh();
       window.setTimeout(() => setApplyNotice(''), 8000);
       addNotification({ id:`grat-${reference}`, entityId:reference, category:'Benefits', title:'Gratuity application submitted', message:`Your gratuity application ${reference} was forwarded to ${worker.employment.contractor} and ${worker.employment.employer} for verification and processing.`, createdAt:submittedOn, href:'/worker/Benefits', actionLabel:'View application', priority:'high', requiresAction:false, read:false, resolved:false });
     } catch (reason) {

@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, CheckCircle2, ChevronRight, Download, Eye, Globe2, KeyRound, LockKeyhole, MessageCircle, MonitorCog, PackageCheck, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
+import { Bell, CheckCircle2, ChevronRight, Download, Eye, Globe2, LockKeyhole, MessageCircle, MonitorCog, PackageCheck, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { applyAccessibilityPrefs } from '@/components/accessibility/AccessibilityEffects';
 import ConsentPanel from '@/components/ConsentPanel';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
+import SecuritySettings from '@/components/settings/SecuritySettings';
 import { getLocale } from '@/i18n';
 import type { WorkerRecord } from '@/types/portal';
 
@@ -39,7 +40,7 @@ const initialFromPortal = (w: WorkerRecord): SettingsState => ({
 
 export default function SettingsPage() {
   const { language, t } = useLanguage();
-  const { worker, portal, saveWorker, updateWorker } = useWorker();
+  const { worker, portal, saveWorker, updateWorker, refresh } = useWorker();
   const router = useRouter();
   const locale = getLocale(language);
   const portalPrefs = useMemo(() => initialFromPortal(worker), [worker]);
@@ -47,26 +48,6 @@ export default function SettingsPage() {
   const prefs = prefsOverride ?? portalPrefs;
   const [saved, setSaved] = useState(false);
   const [profileError, setProfileError] = useState('');
-  const [mpin, setMpin] = useState('');
-  const [mpinConfirm, setMpinConfirm] = useState('');
-  const [mpinBusy, setMpinBusy] = useState(false);
-  const [mpinNotice, setMpinNotice] = useState('');
-  const [mpinError, setMpinError] = useState('');
-
-  const saveMpin = async () => {
-    setMpinError(''); setMpinNotice('');
-    if (!/^\d{4,6}$/.test(mpin)) return setMpinError('MPIN must be 4-6 digits.');
-    if (mpin !== mpinConfirm) return setMpinError('The two MPIN entries do not match.');
-    setMpinBusy(true);
-    try {
-      const response = await fetch('/api/auth/mpin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mpin }) });
-      const result = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(result.error || 'MPIN could not be saved.');
-      setMpinNotice('MPIN updated. Use your BSS ID / mobile with this MPIN to log in.');
-      setMpin(''); setMpinConfirm('');
-    } catch (reason) { setMpinError(reason instanceof Error ? reason.message : 'MPIN could not be saved.'); }
-    finally { setMpinBusy(false); }
-  };
 
   useEffect(() => {
     applyAccessibilityPrefs({ largeText: prefs.largeText, highContrast: prefs.highContrast, reduceMotion: prefs.reduceMotion });
@@ -109,6 +90,7 @@ export default function SettingsPage() {
       });
 
       setSaved(true);
+      void refresh();
       setTimeout(() => setSaved(false), 1500);
     } catch (err) {
       setPrefsOverride(previous);
@@ -220,21 +202,14 @@ export default function SettingsPage() {
         subtitle="Protect access to your worker account"
       >
         <div className="grid sm:grid-cols-2 gap-3">
-          <div className="p-3 rounded-lg border border-gray-100 bg-white">
+          <div className="p-3 rounded-lg border border-gray-100 bg-white sm:col-span-2">
             <p className="text-xs font-semibold text-gray-800 flex gap-2 items-center"><MonitorCog size={14} />Active Session</p>
             <p className="text-[11px] text-green-700 font-medium mt-1">BSS Worker ID: <span className="font-mono">{worker.identity?.bssId || 'Active'}</span></p>
-          </div>
-          <div className="p-3 rounded-lg border border-gray-100 bg-gray-50 sm:col-span-2">
-            <p className="text-xs font-semibold text-gray-800 flex gap-2 items-center"><KeyRound size={14} />Identity & MPIN</p>
             <p className="text-[11px] text-gray-600 mt-1">Aadhaar Status: <strong className="text-gray-800">{worker.identity?.aadhaarVerified ? 'Verified' : 'Pending Verification'}</strong></p>
-            <div className="mt-3 grid sm:grid-cols-2 gap-2">
-              <input type="password" inputMode="numeric" maxLength={6} value={mpin} onChange={(e)=>setMpin(e.target.value.replace(/\D/g,'').slice(0,6))} placeholder="New MPIN (4-6 digits)" className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white"/>
-              <input type="password" inputMode="numeric" maxLength={6} value={mpinConfirm} onChange={(e)=>setMpinConfirm(e.target.value.replace(/\D/g,'').slice(0,6))} placeholder="Confirm MPIN" className="h-9 rounded-lg border border-gray-200 px-3 text-xs bg-white"/>
-            </div>
-            {mpinError && <p role="alert" className="text-[11px] text-red-600 mt-2">{mpinError}</p>}
-            {mpinNotice && <p role="status" className="text-[11px] text-green-700 mt-2">{mpinNotice}</p>}
-            <button onClick={() => void saveMpin()} disabled={mpinBusy} className="mt-3 h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-semibold disabled:opacity-60">{mpinBusy ? 'Saving…' : 'Set / Change MPIN'}</button>
           </div>
+        </div>
+        <div className="mt-4">
+          <SecuritySettings />
         </div>
       </SettingSection>
 

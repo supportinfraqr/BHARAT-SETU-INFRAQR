@@ -5,6 +5,8 @@ import { IScannerControls } from '@zxing/browser';
 import { Building2, Camera, Check, CheckCircle2, Home, KeyRound, Landmark, Link2, Network, ScanLine, ShieldCheck, Upload, UserRound, X, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEmployer } from '@/contexts/EmployerContext';
+import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
+import ListenButton from '@/components/worker/ListenButton';
 import ScanFrame from '@/components/qr/ScanFrame';
 import { playScanBeep, primeAudio } from '@/lib/scanFeedback';
 import { createQrReader, QR_VIDEO_CONSTRAINTS, applyContinuousFocus, decodeQrFromImageFile } from '@/lib/qrScanner';
@@ -21,11 +23,11 @@ type ScannedEntity = {
   status: string;
 };
 
-type IdentityLookup = { name?: string; company?: string; bssId?: string; identity?: { name?: string; bssId?: string } };
+type IdentityLookup = ScanVerifyData;
 
 /** Registry lookup so a scanned credential resolves even when the party is not
  *  yet connected to this employer (worker/contractor BSS IDs both supported). */
-async function lookupIdentity(bssId: string): Promise<IdentityLookup | null> {
+async function lookupIdentity(bssId: string): Promise<ScanVerifyData | null> {
   try {
     const res = await fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' });
     if (!res.ok) return null;
@@ -37,13 +39,14 @@ async function lookupIdentity(bssId: string): Promise<IdentityLookup | null> {
 }
 
 export default function EmployerScanPage() {
-  const { employer } = useEmployer();
+  const { employer, refresh } = useEmployer();
   const videoRef = useRef<HTMLVideoElement>(null);
   const controls = useRef<IScannerControls | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<'idle' | 'scanning' | 'identified' | 'confirmed' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [entity, setEntity] = useState<ScannedEntity | null>(null);
+  const [verifyData, setVerifyData] = useState<ScanVerifyData | null>(null);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [notice, setNotice] = useState('');
   const [alreadyRequested, setAlreadyRequested] = useState<string | null>(null);
@@ -83,6 +86,7 @@ export default function EmployerScanPage() {
       if (p.bssId && p.bssId === employer.identity.bssId) throw new Error("This is your own QR — scan the other party's QR.");
       playScanBeep(true);
       setScanned(p);
+      setVerifyData(null);
       const isContractor = p.type === 'BSS_CONTRACTOR' || p.bssId.startsWith('BSS-C') || p.bssId.startsWith('BSSC');
       const isWorker = p.type === 'BSS_WORKER' || p.bssId.startsWith('BSS-W');
       if (isContractor) {
@@ -118,6 +122,7 @@ export default function EmployerScanPage() {
           status: bound ? (known!.status === 'Active' ? 'Bound · Active' : 'Bound · Pending') : (existing ? `Request ${existing.status.toLowerCase()}` : 'Not bound'),
         });
         setState('identified');
+        void lookupIdentity(p.bssId).then(setVerifyData);
         setMessage(existing ? `Binding request already ${existing.status.toLowerCase()} with this contractor.` : bound ? 'Contractor identified — binding details displayed below' : 'Contractor QR identified — this contractor is not connected to your organisation');
       } else if (isWorker) {
         setAlreadyRequested(null);
@@ -149,6 +154,7 @@ export default function EmployerScanPage() {
           status: bound ? (known?.verified ? 'Bound · Verified' : 'Bound · Pending verification') : 'Not bound',
         });
         setState('identified');
+        void lookupIdentity(p.bssId).then(setVerifyData);
         setMessage(bound ? 'Worker identified — current binding displayed below' : 'Worker credential verified — not engaged with your organisation');
       } else {
         // Another employer's QR → basic details only (employers don't bind each other).
@@ -163,6 +169,7 @@ export default function EmployerScanPage() {
           status: 'No action',
         });
         setState('identified');
+        void lookupIdentity(p.bssId).then(setVerifyData);
         setMessage('Principal Employer QR identified — no binding action between employers.');
       }
       controls.current?.stop();
@@ -191,6 +198,7 @@ export default function EmployerScanPage() {
         const siteNote = chosenSiteIds.length ? ' Site(s) proposed for the contractor to approve.' : ' No site proposed — allot sites later from Binding Requests.';
         setNotice(`Binding request sent to ${entity.name} — status ${result.data?.status ?? 'Pending'}. The contractor approves from their portal, then you allot sites in Binding Requests.${siteNote}`);
         setMessage('Binding request sent');
+        void refresh();
       } catch (e) {
         setState('error');
         setMessage(e instanceof Error ? e.message : 'Binding request could not be created.');
@@ -225,12 +233,12 @@ export default function EmployerScanPage() {
     catch { setState('error'); setMessage('No valid QR code could be read from that image.'); }
   };
 
-  const reset = () => { controls.current?.stop(); setEntity(null); setScanned(null); setNotice(''); setMessage(''); setAlreadyRequested(null); setConfirmOpen(false); setChosenSiteIds([]); setState('idle'); };
+  const reset = () => { controls.current?.stop(); setEntity(null); setScanned(null); setVerifyData(null); setNotice(''); setMessage(''); setAlreadyRequested(null); setConfirmOpen(false); setChosenSiteIds([]); setState('idle'); };
 
   return <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-6">
     <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">QR system</p><h1 className="text-2xl font-bold text-[#062D4F] mt-1">QR Scan & Verify</h1><p className="text-sm text-gray-500 mt-1">Scan a Worker QR to verify identity and binding · scan a Contractor QR to review the binding. Binding always requires review and confirmation — never scan-to-auto-bind.</p></div>
-      <div className="flex gap-2"><Link href="/employer/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/employer/qr/requests" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
+      <div className="flex gap-2"><ListenButton /><Link href="/employer/dashboard" className="p-2.5 rounded-full bg-white border" aria-label="Dashboard"><Home size={18}/></Link><Link href="/employer/qr/requests" className="bg-[#073B67] text-white px-4 py-2.5 rounded-lg font-bold text-sm">Binding requests</Link></div>
     </div>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
@@ -269,6 +277,7 @@ export default function EmployerScanPage() {
                 {entity.kind === 'employer' && <div className="col-span-2"><dt className="text-gray-400">Credential</dt><dd className="font-semibold text-gray-800 mt-0.5">Principal Employer organisation</dd></div>}
                 {entity.kind !== 'employer' && <div className="col-span-2"><dt className="text-gray-400">Current binding</dt><dd className="mt-1"><span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${entity.bound ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{entity.bound ? <CheckCircle2 size={11}/> : <Link2 size={11}/>}{entity.status}</span></dd></div>}
               </dl>
+              {verifyData && <ScanIdentityCard data={verifyData} />}
               <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'contractor'
                 ? 'A binding request connects this contractor to your organisation. The contractor must accept from their portal, then you allot sites.'
                 : entity.kind === 'worker'
