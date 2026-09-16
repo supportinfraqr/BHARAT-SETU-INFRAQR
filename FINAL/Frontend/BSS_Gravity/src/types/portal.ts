@@ -162,6 +162,9 @@ export type ContractorWorkerComplianceStatus = {
   verified?: { aadhaar: string; pan: string; bank: string; bankName?: string; ifsc?: string };
   /** Contractor has ticked "Verified" for the UAN/ESIC/PPE/Health/Welfare details. */
   contractorVerified?: boolean;
+  /** Individual per-document approvals (contractor). */
+  uanVerified?: boolean;
+  esicVerified?: boolean;
   details: {
     medicalExaminationStatus: string; medicalFitnessStatus: string; lastMedicalExamination: string; nextMedicalDue: string;
     ppeRequired: boolean; typesOfPpeGiven: string; safetyTrainingCompleted: boolean; siteInductionStatus: string;

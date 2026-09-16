@@ -132,7 +132,7 @@ def _handle_worker_compliance(user, body):
     (Medical, Safety Kit/PPE, Safety Training, Site Induction, Insurance,
     Accommodation, Police Verification)."""
     from bss_core.models import (WorkerContractorBinding, WorkerIdentity,
-                                 WorkerWelfareSafety)
+                                 WorkerSocialSecurity, WorkerWelfareSafety)
 
     bss_id = str(body.get("workerId") or "").strip().upper()
     identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
@@ -146,8 +146,15 @@ def _handle_worker_compliance(user, body):
         raise PortalMutationError("This worker is not bound to you.", 403)
 
     # UAN / ESIC are not editable by the contractor — they come from the worker's
-    # own records (worker profile / submissions) and the contractor only verifies
-    # them via the "contractorVerified" tick below.
+    # own records (worker profile / submissions). The contractor approves each
+    # document individually with uanVerified / esicVerified.
+    if body.get("uanVerified") is not None or body.get("esicVerified") is not None:
+        social, _ = WorkerSocialSecurity.objects.get_or_create(user=worker)
+        if body.get("uanVerified") is not None:
+            social.uan_verified = bool(body.get("uanVerified"))
+        if body.get("esicVerified") is not None:
+            social.esic_verified = bool(body.get("esicVerified"))
+        social.save(update_fields=["uan_verified", "esic_verified", "updated_at"])
 
     ws, _ = WorkerWelfareSafety.objects.get_or_create(user=worker)
     text_fields = {

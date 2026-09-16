@@ -118,6 +118,9 @@ class WorkerSocialSecurity(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="social_security")
     epfo_uan = models.CharField(max_length=40, blank=True)
     esic_ip_number = models.CharField(max_length=40, blank=True)
+    # The contractor approves each of these documents individually.
+    uan_verified = models.BooleanField(default=False)
+    esic_verified = models.BooleanField(default=False)
     lwf_no = models.CharField(max_length=40, blank=True)
     wc_policy_no = models.CharField(max_length=40, blank=True)
     e_shram_no = models.CharField(max_length=40, blank=True)

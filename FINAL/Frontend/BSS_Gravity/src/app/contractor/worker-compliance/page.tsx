@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { CheckCircle2, Lock, Pencil, ShieldCheck, X } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorkerComplianceStatus } from '@/types/portal';
@@ -26,6 +26,17 @@ export default function ContractorWorkerCompliancePage() {
 
   function openEdit(row: ContractorWorkerComplianceStatus) { setEditing(row); setForm({ ...row.details }); setVerifiedTick(Boolean(row.contractorVerified)); setError(''); setNotice(''); }
   function set<K extends keyof Details>(key: K, value: Details[K]) { setForm(current => current ? { ...current, [key]: value } : current); }
+
+  async function approveDoc(field: 'uanVerified' | 'esicVerified', value: boolean) {
+    if (!editing) return;
+    setBusy(true); setError('');
+    try {
+      const result = await mutate<{ data: ContractorWorkerComplianceStatus }>('worker-compliance', 'POST', { workerId: editing.workerId, [field]: value });
+      replaceContractor({ ...contractor, workerCompliance: rows.map(r => r.workerId === editing.workerId ? result.data : r) });
+      setEditing(result.data);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Approval could not be saved.'); }
+    finally { setBusy(false); }
+  }
 
   async function save() {
     if (!editing || !form) return;
@@ -120,15 +131,17 @@ export default function ContractorWorkerCompliancePage() {
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3 flex items-center gap-1.5"><Lock size={13}/>Documents (UAN / ESIC)</h3>
               <div className="grid sm:grid-cols-2 gap-3">
-                <LockedField label="UAN (EPFO)" value={editing.details.uan} verified={editing.contractorVerified}/>
-                <LockedField label="ESIC IP number" value={editing.details.esic} verified={editing.contractorVerified}/>
+                <LockedField label="UAN (EPFO)" value={editing.details.uan} verified={editing.uanVerified}
+                  action={<ApproveButton verified={Boolean(editing.uanVerified)} disabled={busy} onToggle={() => void approveDoc('uanVerified', !editing.uanVerified)}/>}/>
+                <LockedField label="ESIC IP number" value={editing.details.esic} verified={editing.esicVerified}
+                  action={<ApproveButton verified={Boolean(editing.esicVerified)} disabled={busy} onToggle={() => void approveDoc('esicVerified', !editing.esicVerified)}/>}/>
               </div>
-              <p className="text-[11px] text-gray-400 mt-2">Filled from the worker&apos;s own records — the contractor does not edit these, only verifies them with the tick below.</p>
+              <p className="text-[11px] text-gray-400 mt-2">Filled from the worker&apos;s own records — the contractor does not edit these, only approves each document.</p>
             </div>
             {/* Contractor verification tick — the contractor confirms the details above */}
             <label className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 cursor-pointer">
               <input type="checkbox" checked={verifiedTick} onChange={e => setVerifiedTick(e.target.checked)} className="w-4 h-4 rounded border-gray-300 accent-[#073B67]"/>
-              <span className="text-xs font-semibold text-gray-700">I verify the UAN, ESIC, PPE, Health &amp; Safety and Welfare details recorded above.</span>
+              <span className="text-xs font-semibold text-gray-700">I verify the PPE, Health &amp; Safety and Welfare details recorded above.</span>
             </label>
             {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
           </div>
@@ -142,7 +155,7 @@ export default function ContractorWorkerCompliancePage() {
   );
 }
 
-function LockedField({ label, value, sub, verified }: { label: string; value?: string; sub?: string; verified?: boolean }) {
+function LockedField({ label, value, sub, verified, action }: { label: string; value?: string; sub?: string; verified?: boolean; action?: ReactNode }) {
   const ok = verified !== undefined ? verified : Boolean(value && value.trim());
   return (
     <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -152,6 +165,16 @@ function LockedField({ label, value, sub, verified }: { label: string; value?: s
         {ok ? <><Lock size={10} />Verified</> : 'Pending'}
       </p>
       {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
+  );
+}
+
+function ApproveButton({ verified, disabled, onToggle }: { verified: boolean; disabled?: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" onClick={onToggle} disabled={disabled}
+      className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[10px] font-bold border transition-colors disabled:opacity-60 ${verified ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-600 hover:border-[#073B67] hover:text-[#073B67]'}`}>
+      {verified ? <><CheckCircle2 size={11}/>Approved</> : 'Approve'}
+    </button>
   );
 }
