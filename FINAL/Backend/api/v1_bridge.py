@@ -4772,7 +4772,7 @@ def employer_binding_action(request, binding_id):
         # a successor contractor for the site must be supplied.
         at_risk = _workers_at_risk(b.contractor, [site_id])
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
-                                       request.data.get("successorContractorId")) if at_risk else None
+                                       request.data.get("successorContractorId") or a.successor_contractor_id) if at_risk else None
         if at_risk and successor is None:
             return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -4794,6 +4794,29 @@ def employer_binding_action(request, binding_id):
                  f"{payloads._d(a.site.site_name) if a.site else 'a site'}.",
             notif_type="INFO",
             link="/contractor/qr/requests")
+    elif action == "set-site-successor":
+        # Persist the employer's chosen successor contractor for one site, so the
+        # choice survives a refresh and is reused when the site is released.
+        if user.role != "employer":
+            return Response({"error": "Only the employer can set a site successor."},
+                            status=status.HTTP_403_FORBIDDEN)
+        site_id = request.data.get("siteId")
+        a = ContractorSiteAllotment.objects.filter(binding=b, site_id=site_id).first()
+        if a is None:
+            return Response({"error": "Site allotment not found."},
+                            status=status.HTTP_404_NOT_FOUND)
+        successor_id = request.data.get("successorContractorId")
+        successor_user = None
+        if successor_id not in (None, ""):
+            successor_user = User.objects.filter(pk=successor_id, role="contractor").first()
+            if successor_user is None:
+                return Response({"error": "Select a valid successor contractor."},
+                                status=status.HTTP_400_BAD_REQUEST)
+            if successor_user.id == b.contractor_id:
+                return Response({"error": "The successor cannot be the current contractor."},
+                                status=status.HTTP_400_BAD_REQUEST)
+        a.successor_contractor = successor_user
+        a.save(update_fields=["successor_contractor", "updated_at"])
     elif action == "release-site":
         # Employer-initiated site release: the employer unbinds the contractor
         # from one site. If that contractor still has workers there, a successor
@@ -4808,8 +4831,9 @@ def employer_binding_action(request, binding_id):
             return Response({"error": "Only an approved site can be released."},
                             status=status.HTTP_404_NOT_FOUND)
         at_risk = _workers_at_risk(b.contractor, [site_id])
+        successor_contractor_id = request.data.get("successorContractorId") or a.successor_contractor_id
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
-                                       request.data.get("successorContractorId")) if at_risk else None
+                                       successor_contractor_id) if at_risk else None
         if at_risk and successor is None:
             return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)

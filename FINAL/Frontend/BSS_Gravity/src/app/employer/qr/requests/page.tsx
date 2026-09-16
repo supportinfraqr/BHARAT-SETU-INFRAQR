@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Building2, Clock3, History, UserRoundCheck } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import SitePermissionsDialog, { type SitePermissionStatus, type SecondaryContractor } from '@/components/ui/SitePermissionsDialog';
+import SitePermissionsDialog, { type SitePermissionStatus } from '@/components/ui/SitePermissionsDialog';
 import BindingHistoryDialog from '@/components/ui/BindingHistoryDialog';
 import BindingSitesExplainer from '@/components/qr/BindingSitesExplainer';
 import { useEmployer } from '@/contexts/EmployerContext';
@@ -20,31 +20,11 @@ export default function EmployerQrBindingRequestsPage() {
   const [allotFor, setAllotFor] = useState<EmployerApproval | null>(null);
   const [confirm, setConfirm] = useState<{ row: EmployerApproval; kind: 'approve' | 'reject' | 'unbind' } | null>(null);
   const [historyFor, setHistoryFor] = useState<EmployerApproval | null>(null);
-  const [secondarySel, setSecondarySel] = useState<number[]>([]);
   const [unbindFor, setUnbindFor] = useState<EmployerApproval | null>(null);
   const [unbindSuccessor, setUnbindSuccessor] = useState<number | ''>('');
 
-  // The secondary-contractor tickboxes are saved on the binding (server-side),
-  // so they survive a page refresh / another device.
   function openAllot(row: EmployerApproval) {
     setAllotFor(row);
-    setSecondarySel(row.secondaryBindingIds ?? []);
-  }
-  async function changeSecondary(next: number[]) {
-    setSecondarySel(next);
-    if (!allotFor?.bindingId) return;
-    try {
-      const response = await fetch('/api/employer/binding-requests', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bindingId: Number(allotFor.bindingId), action: 'set-secondary', bindingIds: next }),
-      });
-      if (!response.ok) throw new Error();
-      replaceEmployer({ ...employer, approvals: employer.approvals.map(item => item.id === allotFor.id ? { ...item, secondaryBindingIds: next } : item) });
-      setAllotFor(prev => prev ? { ...prev, secondaryBindingIds: next } : prev);
-    } catch {
-      setSecondarySel(allotFor.secondaryBindingIds ?? []);
-      setError('The secondary-contractor selection could not be saved.');
-    }
   }
 
   async function runConfirm() {
@@ -107,34 +87,24 @@ export default function EmployerQrBindingRequestsPage() {
     setAllotFor(prev => prev && prev.id === row.id ? { ...prev, ...next } : prev);
   }
 
-  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release' | 'release-site', payload: { siteIds?: number[]; siteId?: number; bindingIds?: number[]; successorContractorId?: number }) {
+  async function bindingSiteAction(action: 'allot' | 'approve-site' | 'reject-site' | 'approve-site-release' | 'reject-site-release' | 'release-site' | 'set-site-successor', payload: { siteIds?: number[]; siteId?: number; successorContractorId?: number }) {
     if (!allotFor?.bindingId) return;
     setBusy(true); setError(''); setNotice('');
     try {
       const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(allotFor.bindingId), action, ...payload }) });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { allotments?: EmployerApproval['allotments'] } };
       if (!response.ok) throw new Error(result.error || 'Site permissions could not be updated.');
-      let contractors = employer.contractors;
-      let proposedTo = '';
-      if (action === 'allot') {
-        // Reflect the proposal on the selected secondary contractors immediately.
-        const siteIds = payload.siteIds ?? [];
-        const extra = (payload.bindingIds ?? []).filter(bid => bid !== Number(allotFor.bindingId));
-        const names = employer.contractors.filter(c => c.bindingId && extra.includes(Number(c.bindingId))).map(c => c.name);
-        contractors = employer.contractors.map(c => {
-          if (!c.bindingId || !extra.includes(Number(c.bindingId))) return c;
-          const updated = [...(c.allotments ?? [])];
-          for (const sid of siteIds) {
-            const idx = updated.findIndex(a => a.siteId === sid);
-            if (idx >= 0) updated[idx] = { ...updated[idx], status: 'Pending', source: 'employer_allot' };
-            else updated.push({ siteId: sid, status: 'Pending', source: 'employer_allot' });
-          }
-          return { ...c, allotments: updated };
-        });
-        proposedTo = names.length ? ` and proposed to ${names.join(', ')}` : '';
-      }
-      applyAllotments(allotFor, result.data?.allotments ?? allotFor.allotments, contractors);
-      setNotice(action === 'allot' ? `Site proposed to ${allotFor.name}${proposedTo} — each contractor approves independently.` : action === 'approve-site' ? 'Site approved.' : 'Site rejected.');
+      applyAllotments(allotFor, result.data?.allotments ?? allotFor.allotments);
+      const notices: Partial<Record<typeof action, string>> = {
+        allot: `Site proposed to ${allotFor.name} — awaiting their approval.`,
+        'approve-site': 'Site approved.',
+        'reject-site': 'Site rejected.',
+        'set-site-successor': 'Successor saved for this site.',
+        'release-site': 'Site released.',
+        'approve-site-release': 'Site release approved.',
+        'reject-site-release': 'Site release declined.',
+      };
+      setNotice(notices[action] ?? 'Site permissions updated.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site permissions could not be updated.'); }
     finally { setBusy(false); }
   }
@@ -219,52 +189,44 @@ export default function EmployerQrBindingRequestsPage() {
     <EnterpriseDataTable title="Binding request register" rows={rows} columns={columns} rowKey={row => row.id} filename="employer-binding-requests"/>
 
     <SitePermissionsDialog
+      key={allotFor?.id ?? 'none'}
       open={!!allotFor}
       title="Site permissions"
       subtitle={allotFor ? `${allotFor.name} · ${allotFor.bssId}` : ''}
       intro="Two-step: you propose a site and the contractor approves — or the contractor requests and you approve. Workers only operate at approved sites."
-      rows={allotFor ? employer.sites.map(site => {
-        const id = Number(site.id);
-        const a = allotFor.allotments?.find(x => x.siteId === id);
-        const status = (a?.status ?? 'None') as SitePermissionStatus;
-        // A site can also be proposed to a selected secondary contractor that
-        // does not have it yet — even if the current contractor already does.
-        const secondaryOpen = employer.contractors.some(c => c.bindingId && secondarySel.includes(Number(c.bindingId))
-          && !['Approved', 'Pending'].includes((c.allotments ?? []).find(x => x.siteId === id)?.status ?? 'None'));
-        return {
-          siteId: id,
-          name: site.name,
-          code: site.code,
-          status,
-          source: a?.source,
-          isDefault: employer.defaultSite?.id === site.id,
-          canApprove: status === 'Pending' && (a?.source === 'contractor_request' || a?.source === 'site_qr'),
-          canReject: status === 'Pending' && (a?.source === 'contractor_request' || a?.source === 'site_qr'),
-          canWithdraw: status === 'Pending' && a?.source === 'employer_allot',
-          canPropose: status === 'None' || status === 'Rejected' || secondaryOpen,
-          releaseRequested: !!a?.releaseRequested,
-          canApproveRelease: status === 'Approved' && !!a?.releaseRequested,
-          canRejectRelease: status === 'Approved' && !!a?.releaseRequested,
-          canEmployerRelease: status === 'Approved' && !a?.releaseRequested,
-          workersAtRisk: a?.workersAtRisk ?? 0,
-          successorCandidates: (allotFor.successorCandidates ?? []).map(c => ({ contractorId: c.contractorId, name: c.name })),
-        };
-      }) : []}
+      rows={(allotFor?.allotments ?? []).map(a => ({
+        siteId: a.siteId,
+        name: a.site,
+        code: a.siteCode,
+        status: a.status as SitePermissionStatus,
+        source: a.source,
+        isDefault: employer.defaultSite?.id === String(a.siteId),
+        canApprove: a.status === 'Pending' && (a.source === 'contractor_request' || a.source === 'site_qr'),
+        canReject: a.status === 'Pending' && (a.source === 'contractor_request' || a.source === 'site_qr'),
+        canWithdraw: a.status === 'Pending' && a.source === 'employer_allot',
+        canPropose: a.status === 'Rejected' || a.status === 'Released',
+        releaseRequested: !!a.releaseRequested,
+        canApproveRelease: a.status === 'Approved' && !!a.releaseRequested,
+        canRejectRelease: a.status === 'Approved' && !!a.releaseRequested,
+        canEmployerRelease: a.status === 'Approved' && !a.releaseRequested,
+        workersAtRisk: a.workersAtRisk ?? 0,
+        successorContractorId: a.successorContractorId ?? null,
+        successorCandidates: (allotFor?.successorCandidates ?? []).map(c => ({ contractorId: c.contractorId, name: c.name })),
+      }))}
+      proposeableSites={allotFor ? employer.sites
+        .filter(site => !(allotFor.allotments ?? []).some(a => a.siteId === Number(site.id)))
+        .map(site => ({ siteId: Number(site.id), name: site.name, code: site.code })) : []}
       busy={busy}
       note={!employer.defaultSite ? 'No default site set — propose a site for this binding, or set a default in Sites.' : undefined}
-      secondaryContractors={employer.contractors
-        .filter(c => c.status === 'Active' && c.bindingId && String(c.bindingId) !== String(allotFor?.bindingId))
-        .map<SecondaryContractor>(c => ({ id: Number(c.id), name: c.name, bindingId: Number(c.bindingId), allotments: c.allotments }))}
-      selectedBindings={secondarySel}
-      onSelectionChange={changeSecondary}
-      onClose={() => { setAllotFor(null); setError(''); setSecondarySel([]); }}
+      onClose={() => { setAllotFor(null); setError(''); }}
       onApprove={id => void bindingSiteAction('approve-site', { siteId: id })}
       onReject={id => void bindingSiteAction('reject-site', { siteId: id })}
-      onPropose={(id, extra) => void bindingSiteAction('allot', { siteIds: [id], bindingIds: [Number(allotFor?.bindingId), ...extra] })}
+      onPropose={id => void bindingSiteAction('allot', { siteIds: [id] })}
       onRelease={() => {}}
       onApproveRelease={(id, successorContractorId) => void bindingSiteAction('approve-site-release', { siteId: id, successorContractorId })}
       onRejectRelease={id => void bindingSiteAction('reject-site-release', { siteId: id })}
       onEmployerRelease={(id, successorContractorId) => void bindingSiteAction('release-site', { siteId: id, successorContractorId })}
+      onSetSuccessor={(id, successorContractorId) => void bindingSiteAction('set-site-successor', { siteId: id, successorContractorId })}
     />
     <ConfirmDialog
       open={!!confirm}

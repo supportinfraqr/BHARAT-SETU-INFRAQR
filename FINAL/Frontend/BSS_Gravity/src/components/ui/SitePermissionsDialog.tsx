@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Check, ChevronDown, MapPin, Plus, ShieldCheck, Users, X } from "lucide-react";
+import { Check, MapPin, Plus, ShieldCheck, X } from "lucide-react";
 
 export type SitePermissionStatus = "Approved" | "Pending" | "Rejected" | "Released" | "None";
 
@@ -27,9 +27,12 @@ export type SitePermissionRow = {
   workersAtRisk?: number;
   /** Candidate successor contractors for this site's workers. */
   successorCandidates?: Array<{ contractorId: number; name: string }>;
+  /** Persisted successor contractor chosen for this site (survives refresh). */
+  successorContractorId?: number | null;
 };
 
-export type SecondaryContractor = { id: number; name: string; bindingId: number; allotments?: Array<{ siteId: number; status: string }> };
+/** A site the employer can still propose to the contractor in this binding. */
+export type ProposeableSite = { siteId: number; name: string; code: string };
 
 const STATUS_STYLE: Record<SitePermissionStatus, string> = {
   Approved: "bg-green-50 text-green-700 ring-green-100",
@@ -60,8 +63,7 @@ export default function SitePermissionsDialog({
   busy,
   note,
   footer,
-  secondaryContractors,
-  selectedBindings = [],
+  proposeableSites,
   onClose,
   onApprove,
   onReject,
@@ -70,7 +72,7 @@ export default function SitePermissionsDialog({
   onApproveRelease,
   onRejectRelease,
   onEmployerRelease,
-  onSelectionChange,
+  onSetSuccessor,
 }: {
   open: boolean;
   title: string;
@@ -80,28 +82,27 @@ export default function SitePermissionsDialog({
   busy: boolean;
   note?: string;
   footer?: ReactNode;
-  secondaryContractors?: SecondaryContractor[];
-  selectedBindings?: number[];
+  proposeableSites?: ProposeableSite[];
   onClose: () => void;
   onApprove: (siteId: number) => void;
   onReject: (siteId: number) => void;
-  onPropose: (siteId: number, extraBindingIds: number[]) => void;
+  onPropose: (siteId: number) => void;
   onRelease: (siteId: number) => void;
   onApproveRelease: (siteId: number, successorContractorId?: number) => void;
   onRejectRelease: (siteId: number) => void;
   onEmployerRelease?: (siteId: number, successorContractorId?: number) => void;
-  onSelectionChange?: (bindingIds: number[]) => void;
+  onSetSuccessor?: (siteId: number, successorContractorId?: number) => void;
 }) {
-  const [secondaryOpen, setSecondaryOpen] = useState(false);
   const [releaseSuccessor, setReleaseSuccessor] = useState<Record<number, number | undefined>>({});
-  const secondary = secondaryContractors ?? [];
-  const toggleBinding = (bindingId: number) => {
-    // Compute the next value first, then notify — never call the parent's
-    // setState inside a state updater (that runs during render).
-    const next = selectedBindings.includes(bindingId)
-      ? selectedBindings.filter(id => id !== bindingId)
-      : [...selectedBindings, bindingId];
-    onSelectionChange?.(next);
+  const [proposeSiteId, setProposeSiteId] = useState("");
+  // Transient picks live in local state; persisted successors return from each
+  // row's successorContractorId. The parent remounts this dialog per binding
+  // (key) so these reset when the binding changes.
+  const successorValue = (row: SitePermissionRow) => releaseSuccessor[row.siteId] ?? row.successorContractorId ?? "";
+  const chooseSuccessor = (row: SitePermissionRow, value: string) => {
+    const id = value ? Number(value) : undefined;
+    setReleaseSuccessor(cur => ({ ...cur, [row.siteId]: id }));
+    onSetSuccessor?.(row.siteId, id);
   };
   if (!open) return null;
   return (
@@ -134,44 +135,30 @@ export default function SitePermissionsDialog({
 
         <div className="px-6 py-4 overflow-y-auto">
           <p className="text-xs text-gray-500 bg-blue-50/60 border border-blue-100 rounded-xl px-3 py-2.5 leading-5">{intro}</p>
-          {secondaryContractors !== undefined && (
+          {proposeableSites && proposeableSites.length > 0 && (
             <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => { if (secondary.length) setSecondaryOpen(value => !value); }}
-                disabled={secondary.length === 0}
-                aria-expanded={secondaryOpen}
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-700 flex items-center justify-between hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  <Users size={14} className="text-[#073B67]" />
-                  Secondary contractors{selectedBindings.length ? ` (${selectedBindings.length})` : ""}
-                </span>
-                <ChevronDown size={14} className={`transition-transform ${secondaryOpen ? "rotate-180" : ""}`} />
-              </button>
-              {secondaryOpen && secondary.length > 0 && (
-                <div className="mt-1 rounded-xl border border-gray-200 bg-white p-1 max-h-44 overflow-y-auto">
-                  {secondary.map(contractor => {
-                    const on = selectedBindings.includes(contractor.bindingId);
-                    return (
-                      <button
-                        key={contractor.bindingId}
-                        type="button"
-                        onClick={() => toggleBinding(contractor.bindingId)}
-                        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs hover:bg-gray-50"
-                      >
-                        <span className="min-w-0 text-left font-semibold text-gray-800 truncate">{contractor.name}</span>
-                        <span className={`w-4 h-4 rounded border grid place-items-center flex-shrink-0 ${on ? "bg-[#073B67] border-[#073B67] text-white" : "border-gray-300"}`}>{on && <Check size={11} />}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <p className="mt-1 text-[10px] text-gray-400">
-                {secondary.length
-                  ? "The site is proposed to the current contractor and to each selected secondary contractor; each approves independently."
-                  : "No other contractors are bound to your organisation yet — bind another contractor to propose this site to them as a secondary contractor."}
-              </p>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Propose a site to this contractor</label>
+              <div className="flex gap-2">
+                <select
+                  value={proposeSiteId}
+                  onChange={e => setProposeSiteId(e.target.value)}
+                  className="flex-1 h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white"
+                >
+                  <option value="">Select a site…</option>
+                  {proposeableSites.map(site => (
+                    <option key={site.siteId} value={site.siteId}>{site.name}{site.code ? ` (${site.code})` : ""}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={busy || !proposeSiteId}
+                  onClick={() => { onPropose(Number(proposeSiteId)); setProposeSiteId(""); }}
+                  className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-sm font-bold hover:bg-[#062D4F] transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                >
+                  <Plus size={14} />Propose
+                </button>
+              </div>
+              <p className="mt-1 text-[10px] text-gray-400">The contractor approves the site; it then appears in this list.</p>
             </div>
           )}
           {rows.length === 0 ? (
@@ -198,16 +185,6 @@ export default function SitePermissionsDialog({
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 ${STATUS_STYLE[row.status]}`}>
                       {row.status === "None" ? "Not proposed" : row.status}
                     </span>
-                    {secondary
-                      .filter(c => selectedBindings.includes(c.bindingId) || (c.allotments ?? []).some(a => a.siteId === row.siteId))
-                      .map(c => {
-                        const st = ((c.allotments ?? []).find(a => a.siteId === row.siteId)?.status ?? "None") as SitePermissionStatus;
-                        return (
-                          <span key={c.bindingId} title={`${c.name}: ${st === "None" ? "not proposed" : st}`} className={`text-[10px] font-bold px-2 py-1 rounded-lg ring-1 max-w-[160px] truncate ${STATUS_STYLE[st] ?? STATUS_STYLE.None}`}>
-                            {c.name}: {st === "None" ? "—" : st}
-                          </span>
-                        );
-                      })}
                     {row.canApprove && (
                       <button
                         type="button"
@@ -245,8 +222,8 @@ export default function SitePermissionsDialog({
                       <>
                         {(row.workersAtRisk ?? 0) > 0 && (
                           <select
-                            value={releaseSuccessor[row.siteId] ?? ''}
-                            onChange={e => setReleaseSuccessor(cur => ({ ...cur, [row.siteId]: e.target.value ? Number(e.target.value) : undefined }))}
+                            value={successorValue(row)}
+                            onChange={e => chooseSuccessor(row, e.target.value)}
                             aria-label="Successor contractor for this site's workers"
                             className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
                           >
@@ -268,8 +245,8 @@ export default function SitePermissionsDialog({
                       <>
                         {(row.workersAtRisk ?? 0) > 0 && (
                           <select
-                            value={releaseSuccessor[row.siteId] ?? ''}
-                            onChange={e => setReleaseSuccessor(cur => ({ ...cur, [row.siteId]: e.target.value ? Number(e.target.value) : undefined }))}
+                            value={successorValue(row)}
+                            onChange={e => chooseSuccessor(row, e.target.value)}
                             aria-label="Successor contractor for this site's workers"
                             className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
                           >
@@ -301,7 +278,7 @@ export default function SitePermissionsDialog({
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() => onPropose(row.siteId, selectedBindings)}
+                        onClick={() => onPropose(row.siteId)}
                         className="h-8 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold hover:bg-[#062D4F] transition-colors disabled:opacity-60 inline-flex items-center gap-1"
                       >
                         <Plus size={13} />Propose

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (!Number.isInteger(bindingId) || bindingId <= 0) {
       return NextResponse.json({ error: 'Binding ID is required.' }, { status: 400 });
     }
-    if (!['approve-binding', 'approve-site', 'approve-site-release', 'release-site', 'reject-site-release', 'allot', 'set-secondary', 'reject', 'unbind'].includes(action)) {
+    if (!['approve-binding', 'approve-site', 'approve-site-release', 'release-site', 'reject-site-release', 'set-site-successor', 'allot', 'set-secondary', 'reject', 'unbind'].includes(action)) {
       return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }
     const config = getRuntimeConfig();

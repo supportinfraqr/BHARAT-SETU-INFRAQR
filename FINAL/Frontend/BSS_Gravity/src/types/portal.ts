@@ -196,6 +196,8 @@ export type SiteAllotment = {
   siteId: number; site: string; siteCode: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Released'; source: string;
   releaseRequested?: boolean; releaseRequestedBy?: string;
+  /** Persisted successor contractor chosen for this site (survives refresh). */
+  successorContractorId?: number | null; successorName?: string;
   /** Workers at this site that would be orphaned if the site is released. */
   workersAtRisk?: number;
 };

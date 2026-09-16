@@ -636,6 +636,11 @@ class ContractorSiteAllotment(models.Model):
     release_requested_at = models.DateTimeField(null=True, blank=True)
     release_requested_by = models.CharField(max_length=20, blank=True)
     released_at = models.DateTimeField(null=True, blank=True)
+    # Employer-chosen successor contractor for this site: when the site is
+    # released, this contractor receives its workers. Persisted so the choice
+    # survives a refresh and is reused at release time.
+    successor_contractor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
