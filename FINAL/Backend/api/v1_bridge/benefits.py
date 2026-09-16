@@ -132,7 +132,7 @@ def _handle_worker_compliance(user, body):
     (Medical, Safety Kit/PPE, Safety Training, Site Induction, Insurance,
     Accommodation, Police Verification)."""
     from bss_core.models import (WorkerContractorBinding, WorkerIdentity,
-                                 WorkerSocialSecurity, WorkerWelfareSafety)
+                                 WorkerWelfareSafety)
 
     bss_id = str(body.get("workerId") or "").strip().upper()
     identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
@@ -145,15 +145,9 @@ def _handle_worker_compliance(user, body):
     if binding is None:
         raise PortalMutationError("This worker is not bound to you.", 403)
 
-    # UAN / ESIC are the two document fields the contractor records on the
-    # worker's behalf (Aadhaar, PAN and the bank account are auto-verified).
-    if body.get("uan") is not None or body.get("esic") is not None:
-        social, _ = WorkerSocialSecurity.objects.get_or_create(user=worker)
-        if body.get("uan") is not None:
-            social.epfo_uan = str(body.get("uan") or "")[:40]
-        if body.get("esic") is not None:
-            social.esic_ip_number = str(body.get("esic") or "")[:40]
-        social.save()
+    # UAN / ESIC are not editable by the contractor — they come from the worker's
+    # own records (worker profile / submissions) and the contractor only verifies
+    # them via the "contractorVerified" tick below.
 
     ws, _ = WorkerWelfareSafety.objects.get_or_create(user=worker)
     text_fields = {

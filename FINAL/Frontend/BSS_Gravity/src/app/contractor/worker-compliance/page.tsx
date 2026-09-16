@@ -106,23 +106,24 @@ export default function ContractorWorkerCompliancePage() {
                 <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Accommodation<select value={form.accommodationProvided} onChange={e => set('accommodationProvided', e.target.value)} className={field}>{ACCOMMODATION.map(v => <option key={v} value={v}>{v || 'Select'}</option>)}</select></label>
               </div>
             </div>
-            {/* Verified (auto) — locked, contractor cannot edit */}
+            {/* Auto-verified (worker records) — locked, contractor cannot edit */}
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3 flex items-center gap-1.5"><Lock size={13}/>Verified documents (auto)</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3 flex items-center gap-1.5"><Lock size={13}/>Auto-verified documents (worker records)</h3>
               <div className="grid sm:grid-cols-3 gap-3">
                 <LockedField label="Aadhaar" value={editing.verified?.aadhaar}/>
                 <LockedField label="PAN" value={editing.verified?.pan}/>
                 <LockedField label="Bank account" value={editing.verified?.bank} sub={[editing.verified?.bankName, editing.verified?.ifsc].filter(Boolean).join(' · ')}/>
               </div>
+              <p className="text-[11px] text-gray-400 mt-2">These are verified automatically from the worker&apos;s own records (Aadhaar, PAN and the bank account). &ldquo;Pending&rdquo; means the worker has not added it yet.</p>
             </div>
-            {/* Documents — contractor records UAN & ESIC (Aadhaar/PAN/Bank are auto) */}
+            {/* Documents (UAN / ESIC) — worker records; the contractor only verifies */}
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">Documents (UAN / ESIC)</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3 flex items-center gap-1.5"><Lock size={13}/>Documents (UAN / ESIC)</h3>
               <div className="grid sm:grid-cols-2 gap-3">
-                <label className="text-xs font-semibold text-gray-600">UAN (EPFO)<input value={form.uan ?? ''} onChange={e => set('uan', e.target.value)} placeholder="e.g. 101234567890" className={field}/></label>
-                <label className="text-xs font-semibold text-gray-600">ESIC IP number<input value={form.esic ?? ''} onChange={e => set('esic', e.target.value)} placeholder="e.g. 3112345678" className={field}/></label>
-                <p className="sm:col-span-2 text-[11px] text-gray-400">Aadhaar, PAN and the bank account are auto-verified from the worker&apos;s own records; the contractor records UAN and ESIC here.</p>
+                <LockedField label="UAN (EPFO)" value={editing.details.uan} verified={editing.contractorVerified}/>
+                <LockedField label="ESIC IP number" value={editing.details.esic} verified={editing.contractorVerified}/>
               </div>
+              <p className="text-[11px] text-gray-400 mt-2">Filled from the worker&apos;s own records — the contractor does not edit these, only verifies them with the tick below.</p>
             </div>
             {/* Contractor verification tick — the contractor confirms the details above */}
             <label className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 cursor-pointer">
@@ -141,8 +142,8 @@ export default function ContractorWorkerCompliancePage() {
   );
 }
 
-function LockedField({ label, value, sub }: { label: string; value?: string; sub?: string }) {
-  const ok = Boolean(value && value.trim());
+function LockedField({ label, value, sub, verified }: { label: string; value?: string; sub?: string; verified?: boolean }) {
+  const ok = verified !== undefined ? verified : Boolean(value && value.trim());
   return (
     <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
       <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</p>
