@@ -488,17 +488,15 @@ def _handle_gate_pass(user, body):
             raise PortalMutationError("This worker is not bound to you.", 403)
         gp_type = "PGP" if str(row.get("type") or "").lower().startswith("perm") else "TGP"
         eligibility = payloads._gate_pass_eligibility(worker)
-        if gp_type == "PGP" and not (eligibility["medical"] == "Done"
-                                     and eligibility["healthSafety"] == "Done"
-                                     and eligibility["compliance"] == "Done"):
+        if gp_type == "PGP" and eligibility.get("checkCount") != 8:
             raise PortalMutationError(
-                "This worker is not eligible for a Permanent Gate Pass — Medical, "
-                "Health & Safety and Compliance must all be Done.", 400)
-        if gp_type == "TGP" and not (eligibility["medical"] == "Done"
-                                     and eligibility["healthSafety"] == "Done"):
+                "This worker is not eligible for a Permanent Gate Pass — all 8 checks "
+                "(Aadhaar, PAN, Bank, UAN, ESIC, Medical, PPE and Welfare & Safety) "
+                "must be Done.", 400)
+        if gp_type == "TGP" and eligibility.get("documentCount") != 5:
             raise PortalMutationError(
-                "This worker is not eligible for a Temporary Gate Pass — Medical and "
-                "Health & Safety must be Done.", 400)
+                "This worker is not eligible for a Temporary Gate Pass — the 5 documents "
+                "(Aadhaar, PAN, Bank, UAN and ESIC) must be Done.", 400)
         existing = WorkerGatePass.objects.filter(
             worker=worker, gate_pass_type=gp_type, status__in=("PENDING", "ACTIVE")).first()
         if existing:

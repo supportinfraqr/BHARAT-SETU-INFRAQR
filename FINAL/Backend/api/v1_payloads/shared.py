@@ -431,14 +431,19 @@ def _gate_pass_eligibility(worker):
     safety_training = bool(ws and ws.safety_training_completed)
     site_induction = bool(ws and yes(ws.site_induction_status))
     health_safety = safety_kit or safety_training or site_induction
+    ppe = safety_kit
+    welfare_safety = safety_training or site_induction
     aadhaar = bool(identity and (identity.aadhaar or "").strip())
     pan = bool(identity and (identity.pan or "").strip())
     bank = bool(banking and (banking.bank_account_number or "").strip())
     uan = bool(social and (social.epfo_uan or "").strip())
     esi = bool(social and (social.esic_ip_number or "").strip())
-    # The five documents: Aadhaar + PAN + Bank (auto-verified) + UAN + ESIC
-    # (contractor-recorded). All five unlock a Temporary gate pass.
-    compliance = aadhaar and pan and bank and uan and esi
+    # The five documents: Aadhaar + PAN + Bank (auto-verified) + UAN + ESIC.
+    # 5 documents → Temporary gate pass; all 8 checks (+ Medical, PPE and
+    # Welfare & Safety) → Permanent gate pass.
+    document_count = sum(1 for x in (aadhaar, pan, bank, uan, esi) if x)
+    check_count = document_count + sum(1 for x in (medical, ppe, welfare_safety) if x)
+    compliance = document_count == 5
 
     done = "Done"
     pending = "Pending"
@@ -449,11 +454,15 @@ def _gate_pass_eligibility(worker):
         "safetyKit": done if safety_kit else pending,
         "safetyTraining": done if safety_training else pending,
         "siteInduction": done if site_induction else pending,
+        "ppe": done if ppe else pending,
+        "welfareSafety": done if welfare_safety else pending,
         "aadhaar": done if aadhaar else pending,
         "pan": done if pan else pending,
         "bank": done if bank else pending,
         "uan": done if uan else pending,
         "esi": done if esi else pending,
+        "documentCount": document_count,
+        "checkCount": check_count,
     }
 
 
@@ -628,13 +637,10 @@ def _successor_candidates(employer, leaving):
 
 
 def _auto_gate_pass_type(worker):
-    """Auto-issued pass type from the worker's own ID-card records: a fully
-    eligible worker (medical + health & safety + compliance) gets a Permanent
-    pass, otherwise a Temporary one."""
+    """Auto-issued pass type: 5 documents (Aadhaar, PAN, Bank, UAN, ESIC) →
+    Temporary; all 8 checks (+ Medical, PPE, Welfare & Safety) → Permanent."""
     e = _gate_pass_eligibility(worker)
-    if e.get("medical") == "Done" and e.get("healthSafety") == "Done" and e.get("compliance") == "Done":
-        return "PGP"
-    return "TGP"
+    return "PGP" if e.get("checkCount") == 8 else "TGP"
 
 
 def _is_gate_pass_blocked(worker, employer):

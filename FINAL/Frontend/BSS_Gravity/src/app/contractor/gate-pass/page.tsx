@@ -38,7 +38,7 @@ export default function ContractorGatePassPage() {
     { id:'from', header:'Valid from', value:r => r.validFrom || '—' },
     { id:'to', header:'Valid to', value:r => r.validTo || '—' },
     { id:'ownership', header:'Requested / Approved', filterable:false, value:r => `${r.requestedBy || ''} ${r.approvedBy || ''}`, render:r => <div><p className="text-[11px] text-gray-600">Req: {r.requestedBy || '—'}</p><p className="text-[11px] text-gray-500">Appr: {r.approvedBy || 'Principal Employer'}</p></div> },
-    { id:'eligibility', header:'Eligibility', filterable:false, value:r => r.workerId, render:r => { const e = r.eligibility; return <div className="flex gap-1"><Dot label="M" ok={e?.medical === 'Done'} title="Medical"/><Dot label="H&S" ok={e?.healthSafety === 'Done'} title="Health & Safety"/><Dot label="C" ok={e?.compliance === 'Done'} title="Compliance"/></div>; } },
+    { id:'eligibility', header:'Eligibility', filterable:false, value:r => r.workerId, render:r => { const e = r.eligibility; return <div className="flex gap-1"><Dot label="5" ok={(e?.documentCount ?? 0) >= 5} title={`${e?.documentCount ?? 0}/5 documents (Aadhaar, PAN, Bank, UAN, ESIC) → Temporary`}/><Dot label="8" ok={(e?.checkCount ?? 0) >= 8} title={`${e?.checkCount ?? 0}/8 checks (+ Medical, PPE, Welfare & Safety) → Permanent`}/></div>; } },
     { id:'status', header:'Status', value:r => r.status },
     { id:'actions', header:'Actions', filterable:false, value:r => r.status, render:r => (
       <div className="flex items-center gap-2">
