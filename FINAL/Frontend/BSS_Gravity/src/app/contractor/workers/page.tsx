@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, CheckCircle2, Download, Eye, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, Download, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
-import type { ContractorWorker, ContractorWorkerDocument, GatePassEligibility } from '@/types/portal';
+import type { ContractorWorker, GatePassEligibility } from '@/types/portal';
 import WorkerQr from '@/components/qr/WorkerQr';
 import WorkerIdentityCard from '@/components/idcard/WorkerIdentityCard';
 import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
@@ -40,7 +40,6 @@ export default function WorkerMasterPage() {
   const [profileView, setProfileView] = useState<ContractorWorker | null>(null);
   const [profileDetail, setProfileDetail] = useState<ScanVerifyData | null>(null);
   const [docsView, setDocsView] = useState<ContractorWorker | null>(null);
-  const [busyDocs, setBusyDocs] = useState(false);
   const [idView, setIdView] = useState<ContractorWorker | null>(null);
   const [docsView2, setDocsView2] = useState<ContractorWorker | null>(null);
   const docCtx = useContractorDocView();
@@ -108,42 +107,6 @@ export default function WorkerMasterPage() {
   function downloadTemplate() {
     exportMatrixToXlsx({ filename: 'worker-binding-template', head: ['BSS ID', 'Site'], rows: [], sheetName: 'Template' });
   }
-
-  const workerDocs = (worker: ContractorWorker) => contractor.workerDocuments.filter(d => d.workerId === worker.bssId);
-
-  const viewDocument = async (doc: ContractorWorkerDocument) => {
-    setBusyDocs(true);
-    try {
-      const res = await fetch(`/api/contractor/documents/${doc.id}/token`, { method: 'POST' });
-      const json = await res.json() as { token?: string; error?: string };
-      if (!res.ok || !json.token) throw new Error(json.error || 'No preview link.');
-      window.open(`/api/contractor/documents/file/${encodeURIComponent(json.token)}`, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Preview could not be opened.');
-    } finally {
-      setBusyDocs(false);
-    }
-  };
-
-  const downloadAll = async (worker: ContractorWorker | null) => {
-    if (!worker) return;
-    for (const doc of workerDocs(worker).filter(d => Boolean(d.id) && d.status !== 'Missing')) {
-      setBusyDocs(true);
-      try {
-        const res = await fetch(`/api/contractor/documents/${doc.id}/file`);
-        if (!res.ok) continue;
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${worker.name} - ${doc.document}.${blob.type.includes('pdf') ? 'pdf' : 'jpg'}`;
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
-      } catch { /* keep going to the next document */ }
-      await new Promise(resolve => setTimeout(resolve, 350));
-    }
-    setBusyDocs(false);
-  };
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
@@ -246,15 +209,7 @@ export default function WorkerMasterPage() {
     {/* Compliance documents drawer */}
     {docsView && <div className="fixed inset-0 z-[95] bg-black/50 flex justify-end" role="presentation"><section role="dialog" aria-modal="true" aria-label="Worker compliance documents" className="bg-white w-full max-w-md h-full overflow-y-auto animate-in slide-in-from-right-4 duration-200">
       <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Compliance Documents</p><h2 className="font-semibold text-gray-950 mt-0.5">{docsView.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{docsView.bssId}</p></div><button onClick={() => setDocsView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
-      <div className="p-5 space-y-2.5"><EligibilityGrid eligibility={docsView.eligibility} />{workerDocs(docsView).length ? workerDocs(docsView).map(doc => (
-        <div key={`${doc.id}-${doc.reference}`} className="rounded-xl border border-gray-100 p-3 flex items-center justify-between gap-3"><span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.document}{doc.mandatory && <span className="text-red-500 ml-1">*</span>}</strong><span className="block text-[10px] font-mono text-gray-400 mt-0.5">{doc.reference}</span></span>
-          {doc.id && doc.status !== 'Missing' && <>
-          <a href={`/api/contractor/documents/${doc.id}/file`} download title={`Download ${doc.document}`} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border flex-shrink-0"><Download size={13} /></a>
-          <button onClick={() => void viewDocument(doc)} disabled={busyDocs} title={`Preview ${doc.document}`} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border flex-shrink-0 disabled:opacity-60"><Eye size={13} /></button>
-        </>}
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${doc.status === 'Verified' ? 'bg-green-50 text-green-700' : doc.status === 'Missing' ? 'bg-red-50 text-red-600' : doc.status === 'Issued' ? 'bg-sky-50 text-sky-700' : 'bg-orange-50 text-orange-700'}`}>{doc.status}</span></div>
-      )) : <p className="text-xs text-gray-400 text-center py-8 rounded-xl border border-dashed border-gray-200">No compliance documents recorded for this worker.</p>}
-      <div className="mt-4 flex gap-2"><button onClick={() => void downloadAll(docsView)} disabled={busyDocs} className="flex-1 h-9 rounded-lg border border-gray-200 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"><Download size={13}/>{busyDocs ? 'Downloading…' : 'Download all'}</button></div></div>
+      <div className="p-5"><EligibilityGrid eligibility={docsView.eligibility} /></div>
     </section></div>}
 
     {/* Identity card drawer — worker-level identity card from the actions menu */}
