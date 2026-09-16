@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, ChevronDown, Database, FileText, Home, Menu, ScanLine, Settings, X } from 'lucide-react';
+import { Briefcase, ChevronDown, Database, Home, Menu, ScanLine, Settings, X } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
@@ -70,7 +70,7 @@ export default function ContractorShell({ children }: { children:React.ReactNode
           <NotificationBell viewAllHref="/contractor/notifications"/>
           <div className="relative">
             <button type="button" aria-label={t('nav.settings')} aria-expanded={profile} onClick={()=>setProfile(value=>!value)} className="min-h-11 flex items-center gap-2 rounded-full hover:bg-black/5 p-1 pr-2"><span className="w-8 h-8 rounded-full bg-[#073B67] text-white flex items-center justify-center font-bold text-sm">{contractor.identity.company.charAt(0)}</span><span className="hidden xl:block text-sm font-semibold max-w-32 truncate">{contractor.identity.company}</span><ChevronDown size={14} className="text-gray-400"/></button>
-            {profile&&<div role="menu" className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl shadow-gray-900/5 border border-gray-100 overflow-hidden z-50"><div className="px-4 py-3 border-b bg-gray-50/70"><p className="text-sm font-semibold">{contractor.identity.company}</p><p className="text-[11px] text-gray-500 font-mono mt-0.5">{contractor.identity.bssId}</p></div><div className="p-1.5"><Link href="/contractor/profile" className="flex items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.profile')}</Link><Link href="/contractor/templates" className="flex items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><FileText size={16}/>{t('nav.templates')}</Link><Link href="/contractor/settings" className="flex items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link><SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-red-600 rounded-lg hover:bg-red-50"/></div></div>}
+            {profile&&<div role="menu" className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl shadow-gray-900/5 border border-gray-100 overflow-hidden z-50"><div className="px-4 py-3 border-b bg-gray-50/70"><p className="text-sm font-semibold">{contractor.identity.company}</p><p className="text-[11px] text-gray-500 font-mono mt-0.5">{contractor.identity.bssId}</p></div><div className="p-1.5"><Link href="/contractor/profile" className="flex items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.profile')}</Link><Link href="/contractor/settings" className="flex items-center gap-2 px-3 py-2.5 text-[13px] rounded-lg hover:bg-gray-50"><Settings size={16}/>{t('nav.settings')}</Link><SignOutButton className="w-full flex items-center gap-2 px-3 py-2.5 text-[13px] text-red-600 rounded-lg hover:bg-red-50"/></div></div>}
           </div>
           <button type="button" className="bss-mobile-trigger" aria-label={t('nav.menu')} aria-expanded={mobile} onClick={()=>setMobile(value=>!value)}>{mobile?<X/>:<Menu/>}</button>
         </div>
