@@ -160,6 +160,8 @@ export type ContractorWorkerComplianceStatus = {
   worker: string; workerId: string; site: string; gatePass: 'Active' | 'Pending' | 'Expired'; medical: 'Done' | 'Pending' | 'Expired'; healthSafety: 'Done' | 'Pending';
   /** Auto-verified identity/bank fields (masked) — read-only, contractor cannot edit. */
   verified?: { aadhaar: string; pan: string; bank: string; bankName?: string; ifsc?: string };
+  /** Contractor has ticked "Verified" for the UAN/ESIC/PPE/Health/Welfare details. */
+  contractorVerified?: boolean;
   details: {
     medicalExaminationStatus: string; medicalFitnessStatus: string; lastMedicalExamination: string; nextMedicalDue: string;
     ppeRequired: boolean; typesOfPpeGiven: string; safetyTrainingCompleted: boolean; siteInductionStatus: string;

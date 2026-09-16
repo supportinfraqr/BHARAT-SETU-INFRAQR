@@ -517,6 +517,7 @@ def _contractor_compliance_row(binding):
         "gatePass": gp_status,
         "medical": elig["medical"],
         "healthSafety": elig["healthSafety"],
+        "contractorVerified": bool(ws and ws.contractor_verified),
         # Auto-verified identifiers (read-only for the contractor; masked).
         "verified": {
             "aadhaar": _mask(wi.aadhaar) if wi else "",

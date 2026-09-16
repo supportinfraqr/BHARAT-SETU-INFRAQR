@@ -19,18 +19,19 @@ export default function ContractorWorkerCompliancePage() {
   const rows = contractor.workerCompliance ?? [];
   const [editing, setEditing] = useState<ContractorWorkerComplianceStatus | null>(null);
   const [form, setForm] = useState<Details | null>(null);
+  const [verifiedTick, setVerifiedTick] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  function openEdit(row: ContractorWorkerComplianceStatus) { setEditing(row); setForm({ ...row.details }); setError(''); setNotice(''); }
+  function openEdit(row: ContractorWorkerComplianceStatus) { setEditing(row); setForm({ ...row.details }); setVerifiedTick(Boolean(row.contractorVerified)); setError(''); setNotice(''); }
   function set<K extends keyof Details>(key: K, value: Details[K]) { setForm(current => current ? { ...current, [key]: value } : current); }
 
   async function save() {
     if (!editing || !form) return;
     setBusy(true); setError('');
     try {
-      const result = await mutate<{ data: ContractorWorkerComplianceStatus }>('worker-compliance', 'POST', { workerId: editing.workerId, ...form });
+      const result = await mutate<{ data: ContractorWorkerComplianceStatus }>('worker-compliance', 'POST', { workerId: editing.workerId, ...form, contractorVerified: verifiedTick });
       replaceContractor({ ...contractor, workerCompliance: rows.map(r => r.workerId === editing.workerId ? result.data : r) });
       setNotice(`Compliance updated for ${editing.worker} — it now reflects on the worker's Compliance page.`);
       setEditing(null);
@@ -123,6 +124,11 @@ export default function ContractorWorkerCompliancePage() {
                 <p className="sm:col-span-2 text-[11px] text-gray-400">Aadhaar, PAN and the bank account are auto-verified from the worker&apos;s own records; the contractor records UAN and ESIC here.</p>
               </div>
             </div>
+            {/* Contractor verification tick — the contractor confirms the details above */}
+            <label className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 cursor-pointer">
+              <input type="checkbox" checked={verifiedTick} onChange={e => setVerifiedTick(e.target.checked)} className="w-4 h-4 rounded border-gray-300 accent-[#073B67]"/>
+              <span className="text-xs font-semibold text-gray-700">I verify the UAN, ESIC, PPE, Health &amp; Safety and Welfare details recorded above.</span>
+            </label>
             {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
           </div>
           <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">

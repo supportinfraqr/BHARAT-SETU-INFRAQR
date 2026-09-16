@@ -144,6 +144,10 @@ class WorkerWelfareSafety(models.Model):
     police_verification = models.CharField(max_length=40, blank=True)
     training_date = models.DateField(null=True, blank=True)
     trainer_name = models.CharField(max_length=120, blank=True)
+    # The contractor confirms the UAN / ESIC / PPE / Health & Welfare details they
+    # recorded are verified (the worker verifies their own Aadhaar/PAN/bank).
+    contractor_verified = models.BooleanField(default=False)
+    contractor_verified_at = models.DateTimeField(null=True, blank=True)
     temp_gatepass_status = models.CharField(max_length=40, blank=True)
     tgp_no = models.CharField(max_length=40, blank=True)
     temp_gatepass_start_date = models.DateField(null=True, blank=True)

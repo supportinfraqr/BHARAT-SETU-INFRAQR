@@ -178,6 +178,12 @@ def _handle_worker_compliance(user, body):
     for key, attr in date_fields.items():
         if body.get(key) is not None:
             setattr(ws, attr, _parse_iso_date(body.get(key)))
+    # The contractor ticks "Verified" once the UAN/ESIC/PPE/Health/Welfare details
+    # they recorded are confirmed.
+    if body.get("contractorVerified") is not None:
+        verified = bool(body.get("contractorVerified"))
+        ws.contractor_verified = verified
+        ws.contractor_verified_at = timezone.now() if verified else None
     ws.save()
     return payloads._contractor_compliance_row(binding)
 
