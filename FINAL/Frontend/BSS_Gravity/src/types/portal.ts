@@ -158,10 +158,13 @@ export type ContractorWorkerDocument = {
 
 export type ContractorWorkerComplianceStatus = {
   worker: string; workerId: string; site: string; gatePass: 'Active' | 'Pending' | 'Expired'; medical: 'Done' | 'Pending' | 'Expired'; healthSafety: 'Done' | 'Pending';
+  /** Auto-verified identity/bank fields (masked) — read-only, contractor cannot edit. */
+  verified?: { aadhaar: string; pan: string; bank: string; bankName?: string; ifsc?: string };
   details: {
     medicalExaminationStatus: string; medicalFitnessStatus: string; lastMedicalExamination: string; nextMedicalDue: string;
     ppeRequired: boolean; typesOfPpeGiven: string; safetyTrainingCompleted: boolean; siteInductionStatus: string;
     insuranceStatus: string; accommodationProvided: string; policeVerification: string; trainingDate: string; trainerName: string;
+    uan: string; esic: string;
   };
 };
 
@@ -277,7 +280,7 @@ export type PayrollWorkerRecord = {
 export type PayrollSource = 'Employer' | 'Contractor';
 export type PayrollMatchState = 'Employer Provided' | 'Contractor Entered' | 'Matched' | 'Needs Review';
 
-export type GatePassEligibility = { medical:'Done'|'Pending'|'Expired'; healthSafety:'Done'|'Pending'; compliance:'Done'|'Pending'; safetyKit:'Done'|'Pending'; safetyTraining:'Done'|'Pending'; siteInduction:'Done'|'Pending'; aadhaar:'Done'|'Pending'; bank:'Done'|'Pending'; uan:'Done'|'Pending'; esi:'Done'|'Pending' };
+export type GatePassEligibility = { medical:'Done'|'Pending'|'Expired'; healthSafety:'Done'|'Pending'; compliance:'Done'|'Pending'; safetyKit:'Done'|'Pending'; safetyTraining:'Done'|'Pending'; siteInduction:'Done'|'Pending'; aadhaar:'Done'|'Pending'; pan:'Done'|'Pending'; bank:'Done'|'Pending'; uan:'Done'|'Pending'; esi:'Done'|'Pending' };
 export type AdvanceStatus = 'Requested'|'Approved'|'Disbursed'|'Accepted'|'Adjusted'|'Rejected';
 export type WorkerAdvance = { id:string; advanceId:number; amount:number; reason:string; requestedOn:string; status:AdvanceStatus; approvedOn?:string; disbursedOn?:string; mode?:string; reference?:string; payrollPeriod?:string };
 export type ContractorAdvance = WorkerAdvance & { worker:string; workerId:string };
@@ -403,6 +406,9 @@ export type EmployerGatePass = {
   auto?: boolean;
   number?: string;
   blocked?: boolean;
+  /** Employer released the pass to the worker (default undispatched = hidden). */
+  dispatched?: boolean;
+  dispatchedAt?: string;
   eligibility?: GatePassEligibility;
 };
 

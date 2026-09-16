@@ -479,12 +479,11 @@ def _worker_banking_section(user):
 
 
 def _worker_gate_passes(user):
-    """The worker's own gate passes. Explicit requests keep their status; a
-    worker with a completed (accepted) binding also gets an auto pass derived
-    from their BSS ID card, so the pass is available on the worker side."""
+    """The worker's own gate passes. A pass is only visible once the principal
+    employer dispatches it — until then it stays undispatched (the employer
+    creates and dispatches it from their Gate Pass register)."""
     rows = []
-    seen = set()
-    for g in WorkerGatePass.objects.filter(worker=user).order_by("-created_at"):
+    for g in WorkerGatePass.objects.filter(worker=user, dispatched=True).order_by("-created_at"):
         label = _GP_TYPE_LABEL.get(_d(g.gate_pass_type), _d(g.gate_pass_type))
         blocked = _is_gate_pass_blocked(g.worker, g.site.employer if g.site else None)
         rows.append({
@@ -495,33 +494,12 @@ def _worker_gate_passes(user):
             "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
             "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
             "blocked": blocked,
+            "dispatched": True,
             "requestedAt": _dts(g.created_at),
             "requestedBy": _party_name(g.issued_by),
             "approvedBy": _party_name(g.approved_by),
             "approvedAt": _dts(g.approved_at),
         })
-        seen.add(label)
-    for b in (WorkerContractorBinding.objects
-              .filter(worker=user, binding_status="ACCEPTED")
-              .select_related("site", "site__employer")):
-        gp_type = _auto_gate_pass_type(user)
-        label = _GP_TYPE_LABEL.get(gp_type, gp_type)
-        if label in seen:
-            continue
-        issue_date, valid_till = _auto_gate_pass_dates(user, gp_type)
-        blocked = _is_gate_pass_blocked(user, b.site.employer if b.site else None)
-        rows.append({
-            "id": f"auto-{b.id}",
-            "type": label,
-            "number": _auto_gate_pass_no(user, gp_type),
-            "site": b.site.site_name if b.site else "",
-            "validFrom": _dts(issue_date), "validTo": _dts(valid_till),
-            "status": "Blocked" if blocked else "Approved",
-            "blocked": blocked,
-            "requestedAt": _dts(b.created_at),
-            "requestedBy": "", "approvedBy": "", "approvedAt": "",
-        })
-        seen.add(label)
     return rows
 
 

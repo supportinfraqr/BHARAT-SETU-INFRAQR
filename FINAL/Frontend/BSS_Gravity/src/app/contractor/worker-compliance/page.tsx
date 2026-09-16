@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { CheckCircle2, Pencil, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, Lock, Pencil, ShieldCheck, X } from 'lucide-react';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorkerComplianceStatus } from '@/types/portal';
 
@@ -105,6 +105,24 @@ export default function ContractorWorkerCompliancePage() {
                 <label className="text-xs font-semibold text-gray-600 sm:col-span-2">Accommodation<select value={form.accommodationProvided} onChange={e => set('accommodationProvided', e.target.value)} className={field}>{ACCOMMODATION.map(v => <option key={v} value={v}>{v || 'Select'}</option>)}</select></label>
               </div>
             </div>
+            {/* Verified (auto) — locked, contractor cannot edit */}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3 flex items-center gap-1.5"><Lock size={13}/>Verified documents (auto)</h3>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <LockedField label="Aadhaar" value={editing.verified?.aadhaar}/>
+                <LockedField label="PAN" value={editing.verified?.pan}/>
+                <LockedField label="Bank account" value={editing.verified?.bank} sub={[editing.verified?.bankName, editing.verified?.ifsc].filter(Boolean).join(' · ')}/>
+              </div>
+            </div>
+            {/* Documents — contractor records UAN & ESIC (Aadhaar/PAN/Bank are auto) */}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">Documents (UAN / ESIC)</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className="text-xs font-semibold text-gray-600">UAN (EPFO)<input value={form.uan ?? ''} onChange={e => set('uan', e.target.value)} placeholder="e.g. 101234567890" className={field}/></label>
+                <label className="text-xs font-semibold text-gray-600">ESIC IP number<input value={form.esic ?? ''} onChange={e => set('esic', e.target.value)} placeholder="e.g. 3112345678" className={field}/></label>
+                <p className="sm:col-span-2 text-[11px] text-gray-400">Aadhaar, PAN and the bank account are auto-verified from the worker&apos;s own records; the contractor records UAN and ESIC here.</p>
+              </div>
+            </div>
             {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
           </div>
           <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
@@ -113,6 +131,20 @@ export default function ContractorWorkerCompliancePage() {
           </div>
         </div>
       </div>}
+    </div>
+  );
+}
+
+function LockedField({ label, value, sub }: { label: string; value?: string; sub?: string }) {
+  const ok = Boolean(value && value.trim());
+  return (
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{label}</p>
+      <p className="text-xs font-semibold text-gray-800 mt-0.5 font-mono break-all">{value || '—'}</p>
+      <p className={`text-[10px] font-bold mt-1 inline-flex items-center gap-1 ${ok ? 'text-green-700' : 'text-orange-600'}`}>
+        {ok ? <><Lock size={10} />Verified</> : 'Pending'}
+      </p>
+      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
     </div>
   );
 }

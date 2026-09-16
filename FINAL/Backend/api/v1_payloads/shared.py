@@ -432,10 +432,13 @@ def _gate_pass_eligibility(worker):
     site_induction = bool(ws and yes(ws.site_induction_status))
     health_safety = safety_kit or safety_training or site_induction
     aadhaar = bool(identity and (identity.aadhaar or "").strip())
+    pan = bool(identity and (identity.pan or "").strip())
     bank = bool(banking and (banking.bank_account_number or "").strip())
     uan = bool(social and (social.epfo_uan or "").strip())
     esi = bool(social and (social.esic_ip_number or "").strip())
-    compliance = aadhaar and bank and uan and esi
+    # The five documents: Aadhaar + PAN + Bank (auto-verified) + UAN + ESIC
+    # (contractor-recorded). All five unlock a Temporary gate pass.
+    compliance = aadhaar and pan and bank and uan and esi
 
     done = "Done"
     pending = "Pending"
@@ -447,6 +450,7 @@ def _gate_pass_eligibility(worker):
         "safetyTraining": done if safety_training else pending,
         "siteInduction": done if site_induction else pending,
         "aadhaar": done if aadhaar else pending,
+        "pan": done if pan else pending,
         "bank": done if bank else pending,
         "uan": done if uan else pending,
         "esi": done if esi else pending,
@@ -558,6 +562,14 @@ def _site_scalar_data(s):
         else:
             out[f] = v
     return out
+
+
+def _mask(value, keep=4):
+    """Mask all but the last `keep` characters (for verified identifiers)."""
+    v = str(value or "").strip()
+    if not v:
+        return ""
+    return v if len(v) <= keep else "•" * (len(v) - keep) + v[-keep:]
 
 
 def _accessibility_prefs(user):
@@ -703,6 +715,7 @@ __all__ = [
     "_rh_request_row",
     "_site_compliance_pct",
     "_site_leave_policies",
+    "_mask",
     "_accessibility_prefs",
     "_portal_settings",
     "_site_past_contractors",

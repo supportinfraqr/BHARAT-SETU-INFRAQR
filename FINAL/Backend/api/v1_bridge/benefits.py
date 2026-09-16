@@ -131,7 +131,8 @@ def _handle_worker_compliance(user, body):
     """Contractor records a bound worker's compliance / welfare details
     (Medical, Safety Kit/PPE, Safety Training, Site Induction, Insurance,
     Accommodation, Police Verification)."""
-    from bss_core.models import WorkerContractorBinding, WorkerIdentity, WorkerWelfareSafety
+    from bss_core.models import (WorkerContractorBinding, WorkerIdentity,
+                                 WorkerSocialSecurity, WorkerWelfareSafety)
 
     bss_id = str(body.get("workerId") or "").strip().upper()
     identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
@@ -143,6 +144,16 @@ def _handle_worker_compliance(user, body):
                .select_related("site").first())
     if binding is None:
         raise PortalMutationError("This worker is not bound to you.", 403)
+
+    # UAN / ESIC are the two document fields the contractor records on the
+    # worker's behalf (Aadhaar, PAN and the bank account are auto-verified).
+    if body.get("uan") is not None or body.get("esic") is not None:
+        social, _ = WorkerSocialSecurity.objects.get_or_create(user=worker)
+        if body.get("uan") is not None:
+            social.epfo_uan = str(body.get("uan") or "")[:40]
+        if body.get("esic") is not None:
+            social.esic_ip_number = str(body.get("esic") or "")[:40]
+        social.save()
 
     ws, _ = WorkerWelfareSafety.objects.get_or_create(user=worker)
     text_fields = {

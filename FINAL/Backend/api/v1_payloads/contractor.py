@@ -504,6 +504,8 @@ def _contractor_compliance_row(binding):
     worker = binding.worker
     wi = _get_identity(worker)
     ws = WorkerWelfareSafety.objects.filter(user=worker).first()
+    ss = WorkerSocialSecurity.objects.filter(user=worker).first()
+    bank = WorkerBanking.objects.filter(user=worker).first()
     elig = _gate_pass_eligibility(worker)
     gp = WorkerGatePass.objects.filter(worker=worker).order_by("-created_at").first()
     gp_status = {"ACTIVE": "Active", "PENDING": "Pending", "REJECTED": "Expired",
@@ -515,6 +517,15 @@ def _contractor_compliance_row(binding):
         "gatePass": gp_status,
         "medical": elig["medical"],
         "healthSafety": elig["healthSafety"],
+        # Auto-verified identifiers (read-only for the contractor; masked).
+        "verified": {
+            "aadhaar": _mask(wi.aadhaar) if wi else "",
+            "pan": _d(wi.pan) if wi else "",
+            "bank": _mask(bank.bank_account_number) if bank else "",
+            "bankName": _d(bank.bank_name) if bank else "",
+            "ifsc": _d(bank.ifsc_code) if bank else "",
+        },
+        "eligibility": elig,
         "details": {
             "medicalExaminationStatus": _d(ws.medical_examination_status) if ws else "",
             "medicalFitnessStatus": _d(ws.medical_fitness_status) if ws else "",
@@ -529,6 +540,8 @@ def _contractor_compliance_row(binding):
             "policeVerification": _d(ws.police_verification) if ws else "",
             "trainingDate": _dts(ws.training_date) if ws and ws.training_date else "",
             "trainerName": _d(ws.trainer_name) if ws else "",
+            "uan": _d(ss.epfo_uan) if ss else "",
+            "esic": _d(ss.esic_ip_number) if ss else "",
         },
     }
 

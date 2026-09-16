@@ -5,9 +5,10 @@ import { createPortal } from 'react-dom';
 import { BadgeCheck, CheckCircle2, Download, Eye, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
-import type { ContractorWorker, ContractorWorkerDocument } from '@/types/portal';
+import type { ContractorWorker, ContractorWorkerDocument, GatePassEligibility } from '@/types/portal';
 import WorkerQr from '@/components/qr/WorkerQr';
 import WorkerIdentityCard from '@/components/idcard/WorkerIdentityCard';
+import ScanIdentityCard, { type ScanVerifyData } from '@/components/scan/ScanIdentityCard';
 import { useContractorDocView } from '@/components/documentEngine/portalAdapters';
 import { WorkerDocumentsDrawer } from '@/components/documentEngine/DocumentFlow';
 import type { WorkerLike } from '@/lib/documentEngine/workerDataService';
@@ -37,6 +38,7 @@ export default function WorkerMasterPage() {
   const [notice, setNotice] = useState('');
   const [openMenuFor, setOpenMenuFor] = useState('');
   const [profileView, setProfileView] = useState<ContractorWorker | null>(null);
+  const [profileDetail, setProfileDetail] = useState<ScanVerifyData | null>(null);
   const [docsView, setDocsView] = useState<ContractorWorker | null>(null);
   const [busyDocs, setBusyDocs] = useState(false);
   const [idView, setIdView] = useState<ContractorWorker | null>(null);
@@ -47,6 +49,18 @@ export default function WorkerMasterPage() {
   const active = scopedRows.filter(w => w.status === 'Accepted').length;
   const pending = scopedRows.filter(w => w.status === 'Pending').length;
   const inactive = scopedRows.filter(w => w.status === 'Rejected' || w.status === 'Cancelled' || w.status === 'Expired').length;
+
+  // Open the full worker profile: the row carries the binding summary, and the
+  // identity-verify endpoint returns the extensive record (bound tier).
+  function openProfile(row: ContractorWorker) {
+    setProfileView(row);
+    setProfileDetail(null);
+    setOpenMenuFor('');
+    void fetch(`/api/identity/verify/${encodeURIComponent(row.bssId)}`, { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { data?: ScanVerifyData } | null) => { if (j?.data) setProfileDetail(j.data); })
+      .catch(() => {});
+  }
 
   async function submitSingle(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
@@ -153,7 +167,7 @@ export default function WorkerMasterPage() {
     <EnterpriseDataTable
       title="Workforce directory"
       rows={scopedRows}
-      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => { setProfileView(row); setOpenMenuFor(''); }} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} /> }]}
+      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} /> }]}
       rowKey={row => row.id}
       filename="contractor-workers"
     />
@@ -209,26 +223,30 @@ export default function WorkerMasterPage() {
       </header>
       <div className="p-5 space-y-4 text-xs">
         <div className="flex flex-wrap gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${profileView.status === 'Accepted' ? 'bg-green-50 text-green-700' : profileView.status === 'Pending' ? 'bg-amber-50 text-amber-700' : profileView.status === 'Expired' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-700'}`}>{profileView.status}</span></div>
-        <dl className="grid grid-cols-2 gap-3">
-          <Info label="Ref Worker Code" value={profileView.refCode ?? '—'}/>
-          <Info label="Designation" value={profileView.designation}/>
-          <Info label="Department" value={profileView.department ?? '—'}/>
-          <Info label="Category" value={profileView.category ?? '—'}/>
-          <Info label="Gender / Age" value={`${profileView.gender ?? '—'} / ${profileView.age ?? '—'}`}/>
-          <Info label="Mobile" value={profileView.mobile}/>
-          <Info label="Site" value={profileView.site}/>
-          <Info label="Employer" value={profileView.employer}/>
-          <Info label="Date of Joining" value={profileView.doj}/>
-        </dl>
-        {profileView.skills && profileView.skills.length > 0 && <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Skills</p><div className="flex flex-wrap gap-1.5">{profileView.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
-        <p className="text-[11px] text-gray-400">Full worker profile is available after the worker accepts the binding request. Compliance documents and identity card are accessible from the actions menu.</p>
+        {profileDetail
+          ? <ScanIdentityCard data={profileDetail} />
+          : <p className="text-xs text-gray-400 py-6 text-center rounded-xl border border-dashed border-gray-200">Loading full profile…</p>}
+        <EligibilityGrid eligibility={profileView.eligibility} />
+        <div className="rounded-xl border border-gray-100 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Binding</p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Info label="Ref Worker Code" value={profileView.refCode ?? '—'}/>
+            <Info label="Designation" value={profileView.designation || '—'}/>
+            <Info label="Site" value={profileView.site || '—'}/>
+            <Info label="Employer" value={profileView.employer || '—'}/>
+            <Info label="Date of Joining" value={profileView.doj || '—'}/>
+            <Info label="Compliance" value={profileView.compliance}/>
+          </dl>
+          {profileView.skills && profileView.skills.length > 0 && <div className="mt-3"><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Skills</p><div className="flex flex-wrap gap-1.5">{profileView.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
+        </div>
+        <p className="text-[11px] text-gray-400">Compliance documents and the identity card are available from the actions menu.</p>
       </div>
     </section></div>}
 
     {/* Compliance documents drawer */}
     {docsView && <div className="fixed inset-0 z-[95] bg-black/50 flex justify-end" role="presentation"><section role="dialog" aria-modal="true" aria-label="Worker compliance documents" className="bg-white w-full max-w-md h-full overflow-y-auto animate-in slide-in-from-right-4 duration-200">
       <header className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Compliance Documents</p><h2 className="font-semibold text-gray-950 mt-0.5">{docsView.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{docsView.bssId}</p></div><button onClick={() => setDocsView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
-      <div className="p-5 space-y-2.5">{workerDocs(docsView).length ? workerDocs(docsView).map(doc => (
+      <div className="p-5 space-y-2.5"><EligibilityGrid eligibility={docsView.eligibility} />{workerDocs(docsView).length ? workerDocs(docsView).map(doc => (
         <div key={`${doc.id}-${doc.reference}`} className="rounded-xl border border-gray-100 p-3 flex items-center justify-between gap-3"><span className="flex-1 min-w-0"><strong className="block text-xs text-gray-900">{doc.document}{doc.mandatory && <span className="text-red-500 ml-1">*</span>}</strong><span className="block text-[10px] font-mono text-gray-400 mt-0.5">{doc.reference}</span></span>
           {doc.id && doc.status !== 'Missing' && <>
           <a href={`/api/contractor/documents/${doc.id}/file`} download title={`Download ${doc.document}`} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border flex-shrink-0"><Download size={13} /></a>
@@ -315,3 +333,30 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDoc
 function parseCsv(line: string): string[] { const out: string[] = []; let cur = '', inQuotes = false; for (const char of line) { if (char === '"') { inQuotes = !inQuotes; continue; } if (char === ',' && !inQuotes) { out.push(cur); cur = ''; continue; } cur += char; } out.push(cur); return out; }
 function Field({ name, label, pattern, placeholder }: { name:string; label:string; pattern?:string; placeholder?:string }) { return <label className="text-xs font-semibold text-gray-700">{label}<input required name={name} pattern={pattern} placeholder={placeholder} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm"/></label>; }
 function Info({ label, value }: { label:string; value:string }) { return <div className="rounded-lg border border-gray-100 p-2.5"><dt className="text-gray-400 text-[10px]">{label}</dt><dd className="font-semibold text-gray-800 mt-0.5">{value}</dd></div>; }
+
+function EligibilityGrid({ eligibility }: { eligibility?: GatePassEligibility }) {
+  const done = (v?: string) => v === 'Done';
+  const items: Array<[string, boolean]> = [
+    ['Aadhaar', done(eligibility?.aadhaar)],
+    ['PAN', done(eligibility?.pan)],
+    ['Bank account', done(eligibility?.bank)],
+    ['UAN', done(eligibility?.uan)],
+    ['ESIC', done(eligibility?.esi)],
+    ['Medical', done(eligibility?.medical)],
+    ['PPE', done(eligibility?.safetyKit)],
+    ['Welfare & Safety', done(eligibility?.safetyTraining) || done(eligibility?.siteInduction)],
+  ];
+  return (
+    <div className="rounded-xl border border-gray-100 p-4">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Eligibility — 8 checks</p>
+      <div className="grid grid-cols-2 gap-2">
+        {items.map(([label, ok]) => (
+          <div key={label} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${ok ? 'border-green-100 bg-green-50/50' : 'border-gray-100'}`}>
+            <span className={`w-4 h-4 rounded-full grid place-items-center text-white text-[9px] flex-shrink-0 ${ok ? 'bg-green-600' : 'bg-gray-300'}`}>{ok ? '✓' : '✗'}</span>
+            <span className="text-[11px] font-semibold text-gray-700 truncate">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

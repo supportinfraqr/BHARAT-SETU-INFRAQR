@@ -425,6 +425,8 @@ def _employer_gate_pass_row(g):
         "validFrom": _dts(g.start_date), "validTo": _dts(g.end_date),
         "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
         "blocked": blocked,
+        "dispatched": bool(g.dispatched),
+        "dispatchedAt": _dts(g.dispatched_at) if g.dispatched_at else "",
         "eligibility": _gate_pass_eligibility(g.worker),
     }
 
@@ -469,6 +471,8 @@ def _employer_gate_passes(user):
             "validTo": _dts(valid_till),
             "status": "Blocked" if blocked else "Approved",
             "blocked": blocked,
+            "dispatched": False,
+            "dispatchedAt": "",
             "eligibility": _gate_pass_eligibility(b.worker),
         })
     return rows[:200]

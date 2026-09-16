@@ -375,6 +375,57 @@ def _employer_set_gate_pass_dates(user, body):
     return payloads._employer_gate_pass_row(gp)
 
 
+def _employer_set_gate_pass_dispatch(user, body):
+    """Dispatch (or recall) gate passes so the worker can see them.
+
+    Accepts row ids — explicit WorkerGatePass ids and/or auto ids
+    ("auto-<bindingId>", materialised into real rows first). Default is
+    undispatched: the worker cannot see a pass until the employer dispatches it.
+    """
+    from bss_core.models import WorkerGatePass, WorkerContractorBinding
+
+    want = bool(body.get("dispatched", True))
+    raw = body.get("ids")
+    if not isinstance(raw, list) or not raw:
+        raw = [body.get("id")] if body.get("id") else []
+    now = timezone.now()
+    updated = []
+    for raw_id in raw:
+        rid = str(raw_id or "").strip()
+        gp = None
+        if rid.startswith("auto-"):
+            binding = (WorkerContractorBinding.objects
+                       .filter(pk=int(rid[5:] or 0), site__employer=user)
+                       .select_related("worker", "site").first())
+            if binding is None:
+                continue
+            gp_type = payloads._auto_gate_pass_type(binding.worker)
+            gp = WorkerGatePass.objects.filter(
+                worker=binding.worker, gate_pass_type=gp_type,
+                status__in=("PENDING", "ACTIVE")).first()
+            if gp is None:
+                issue_date, valid_till = payloads._auto_gate_pass_dates(binding.worker, gp_type)
+                gp = WorkerGatePass.objects.create(
+                    worker=binding.worker, site=binding.site, gate_pass_type=gp_type,
+                    gate_pass_no=payloads._auto_gate_pass_no(binding.worker, gp_type),
+                    status="ACTIVE", issued_by=user, source="SYSTEM",
+                    start_date=issue_date, end_date=valid_till)
+        elif rid.isdigit():
+            gp = WorkerGatePass.objects.filter(pk=int(rid), site__employer=user).first()
+        if gp is None:
+            continue
+        gp.dispatched = want
+        gp.dispatched_at = now if want else None
+        gp.dispatched_by = user if want else None
+        gp.save(update_fields=["dispatched", "dispatched_at", "dispatched_by", "updated_at"])
+        updated.append(gp.id)
+    if not updated:
+        raise PortalMutationError("No gate passes matched.", 404)
+    rows = [payloads._employer_gate_pass_row(g)
+            for g in WorkerGatePass.objects.filter(pk__in=updated)]
+    return rows[0] if len(rows) == 1 else rows
+
+
 def _handle_gate_pass(user, body):
     """Gate pass workflow.
 
@@ -386,11 +437,14 @@ def _handle_gate_pass(user, body):
     from bss_core.models import WorkerGatePass, WorkerIdentity, WorkerContractorBinding
 
     if user.role == "employer":
-        # Employer may block/unblock generation, or edit a pass validity window.
+        # Employer may block/unblock generation, edit a pass validity window, or
+        # dispatch passes to the workers.
         if "blocked" in body:
             return _employer_set_gate_pass_block(user, body)
         if "validFrom" in body or "validTo" in body:
             return _employer_set_gate_pass_dates(user, body)
+        if "dispatched" in body:
+            return _employer_set_gate_pass_dispatch(user, body)
         ids = body.get("ids") or ([body.get("id")] if body.get("id") else [])
         decision = str(body.get("status") or "").strip().lower()
         today = timezone.localdate()

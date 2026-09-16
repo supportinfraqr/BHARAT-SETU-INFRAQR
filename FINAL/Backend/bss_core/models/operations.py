@@ -178,6 +178,12 @@ class WorkerGatePass(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     remarks = models.CharField(max_length=255, blank=True)
     source = models.CharField(max_length=20, choices=SOURCE, default="CONTRACTOR_GATE_PASS")
+    # Dispatch: the employer releases the pass to the worker. Until dispatched the
+    # pass is invisible on the worker side (default = undispatched).
+    dispatched = models.BooleanField(default=False)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    dispatched_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
