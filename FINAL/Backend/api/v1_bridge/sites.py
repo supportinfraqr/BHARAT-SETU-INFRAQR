@@ -355,6 +355,10 @@ def _employer_set_gate_pass_dates(user, body):
         if binding is None:
             raise PortalMutationError("Gate pass not found.", 404)
         gp_type = payloads._auto_gate_pass_type(binding.worker)
+        if not gp_type:
+            raise PortalMutationError(
+                "This worker is not eligible for a gate pass yet — the 5 documents "
+                "unlock a Temporary pass and all 8 checks a Permanent one.", 400)
         gp = WorkerGatePass.objects.filter(
             worker=binding.worker, gate_pass_type=gp_type,
             status__in=("PENDING", "ACTIVE")).first()
@@ -400,6 +404,8 @@ def _employer_set_gate_pass_dispatch(user, body):
             if binding is None:
                 continue
             gp_type = payloads._auto_gate_pass_type(binding.worker)
+            if not gp_type:
+                continue
             gp = WorkerGatePass.objects.filter(
                 worker=binding.worker, gate_pass_type=gp_type,
                 status__in=("PENDING", "ACTIVE")).first()

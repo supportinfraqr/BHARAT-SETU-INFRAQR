@@ -637,10 +637,15 @@ def _successor_candidates(employer, leaving):
 
 
 def _auto_gate_pass_type(worker):
-    """Auto-issued pass type: 5 documents (Aadhaar, PAN, Bank, UAN, ESIC) →
-    Temporary; all 8 checks (+ Medical, PPE, Welfare & Safety) → Permanent."""
+    """Pass type from the worker's own records: all 8 checks → Permanent; the 5
+    documents (Aadhaar, PAN, Bank, UAN, ESIC) → Temporary; otherwise the worker
+    is not eligible for a pass yet and "" is returned."""
     e = _gate_pass_eligibility(worker)
-    return "PGP" if e.get("checkCount") == 8 else "TGP"
+    if e.get("checkCount") == 8:
+        return "PGP"
+    if e.get("documentCount") == 5:
+        return "TGP"
+    return ""
 
 
 def _is_gate_pass_blocked(worker, employer):

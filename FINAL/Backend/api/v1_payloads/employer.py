@@ -445,6 +445,8 @@ def _employer_gate_passes(user):
     for b in bindings:
         meta = _gate_pass_worker_meta(b.worker)
         gp_type = _auto_gate_pass_type(b.worker)
+        if not gp_type:
+            continue
         label = _GP_TYPE_LABEL.get(gp_type, gp_type)
         if (meta["workerId"], label) in seen:
             continue
