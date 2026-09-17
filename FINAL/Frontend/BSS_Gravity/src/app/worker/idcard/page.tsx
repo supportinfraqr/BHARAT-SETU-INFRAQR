@@ -198,7 +198,7 @@ export default function IdentityCardPage() {
   async function seeGatePass() {
     if (!issuedPass) return;
     const type = issuedPass.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass';
-    const html = await buildGatePassHtml(docView.owner, docView.view, docView.workerLike, type, { validFrom: issuedPass.validFrom, validTo: issuedPass.validTo, number: issuedPass.number });
+    const html = await buildGatePassHtml(docView.owner, docView.view, docView.workerLike, type, { validFrom: issuedPass.validFrom, validTo: issuedPass.validTo, number: issuedPass.number, status: issuedPass.status });
     setPassPreview({ html, title: `${docView.workerLike.name} · ${issuedPass.type} Gate Pass` });
   }
 

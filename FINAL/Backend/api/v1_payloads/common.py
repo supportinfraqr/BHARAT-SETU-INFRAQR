@@ -132,7 +132,7 @@ _WORKER_BINDING_STATUS = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                           "EXPIRED": "Expired"}
 _GP_TYPE_LABEL = {"TGP": "Temporary", "PGP": "Permanent"}
 _GP_STATUS_LABEL = {"ACTIVE": "Approved", "PENDING": "Pending", "REJECTED": "Rejected",
-                    "EXPIRED": "Expired", "REVOKED": "Rejected"}
+                    "EXPIRED": "Expired", "REVOKED": "Revoked"}
 _SITE_SCALAR_FIELDS = tuple(
     f.name for f in Site._meta.get_fields()
     if not getattr(f, "auto_created", False)

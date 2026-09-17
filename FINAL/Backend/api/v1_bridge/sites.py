@@ -432,6 +432,78 @@ def _employer_set_gate_pass_dispatch(user, body):
     return rows[0] if len(rows) == 1 else rows
 
 
+def _gate_pass_for_actor(user, gp_id):
+    """Resolve a gate pass the actor may act on: the employer who owns the site,
+    or the contractor who issued it / whose worker it belongs to."""
+    from bss_core.models import WorkerContractorBinding, WorkerGatePass
+    gp = WorkerGatePass.objects.filter(pk=gp_id).select_related("site", "worker").first()
+    if gp is None:
+        raise PortalMutationError("Gate pass not found.", 404)
+    if user.role == "employer" and gp.site and gp.site.employer_id == user.id:
+        return gp
+    if user.role == "contractor" and (
+            gp.issued_by_id == user.id or WorkerContractorBinding.objects.filter(
+                worker=gp.worker, contractor=user, binding_status="ACCEPTED").exists()):
+        return gp
+    raise PortalMutationError("You cannot act on this gate pass.", 403)
+
+
+def _revoke_gate_pass(user, body):
+    """Revoke an active gate pass (employer or contractor). A reason is mandatory;
+    a revoked pass can never be renewed."""
+    gp = _gate_pass_for_actor(user, body.get("id"))
+    reason = str(body.get("reason") or "").strip()
+    if not reason:
+        raise PortalMutationError("A revocation reason is mandatory.", 400)
+    if gp.status == "REVOKED":
+        raise PortalMutationError("This gate pass is already revoked.", 409)
+    gp.status = "REVOKED"
+    gp.revoked_reason = reason[:255]
+    gp.revoked_by = user
+    gp.revoked_at = timezone.now()
+    gp.renewal_blocked = True
+    gp.save(update_fields=["status", "revoked_reason", "revoked_by", "revoked_at",
+                           "renewal_blocked", "updated_at"])
+    for party in (gp.worker, getattr(gp, "issued_by", None)):
+        if party is not None and party.id != user.id:
+            _create_notification(
+                user=party, title="Gate pass revoked",
+                body=f"Gate pass {gp.gate_pass_no} was revoked. Reason: {reason}.",
+                notif_type="WARNING", link="/worker/gate-pass")
+    return payloads._employer_gate_pass_row(gp)
+
+
+def _renew_gate_pass(user, body):
+    """Renew an expired gate pass: re-checks eligibility, issues a fresh pass
+    with new validity. Blocked for revoked passes and ineligible workers."""
+    from bss_core.models import WorkerGatePass
+    gp = _gate_pass_for_actor(user, body.get("id"))
+    if gp.status != "EXPIRED":
+        raise PortalMutationError("Only an expired gate pass can be renewed.", 409)
+    if gp.renewal_blocked:
+        raise PortalMutationError("A revoked gate pass cannot be renewed — issue a fresh "
+                                  "dispatch instead.", 409)
+    gp_type = payloads._auto_gate_pass_type(gp.worker)
+    if not gp_type:
+        raise PortalMutationError(
+            "This worker is not eligible for renewal — Medical and Health & Safety "
+            "must be Done.", 409)
+    today = timezone.localdate()
+    new_gp = WorkerGatePass.objects.create(
+        worker=gp.worker, site=gp.site, gate_pass_type=gp_type,
+        gate_pass_no=payloads._auto_gate_pass_no(gp.worker, gp_type),
+        status="ACTIVE", start_date=today,
+        end_date=today + timedelta(days=365 if gp_type == "PGP" else 7),
+        issued_by=user, source=gp.source, renewed_from=gp,
+        dispatched=gp.dispatched, dispatched_at=gp.dispatched_at,
+        dispatched_by=gp.dispatched_by)
+    _create_notification(
+        user=gp.worker, title="Gate pass renewed",
+        body=f"Your gate pass was renewed — {new_gp.gate_pass_no} is now active.",
+        notif_type="APPROVAL", link="/worker/gate-pass")
+    return payloads._employer_gate_pass_row(new_gp)
+
+
 def _handle_gate_pass(user, body):
     """Gate pass workflow.
 
@@ -443,14 +515,18 @@ def _handle_gate_pass(user, body):
     from bss_core.models import WorkerGatePass, WorkerIdentity, WorkerContractorBinding
 
     if user.role == "employer":
-        # Employer may block/unblock generation, edit a pass validity window, or
-        # dispatch passes to the workers.
+        # Employer may block/unblock generation, edit a pass validity window,
+        # dispatch passes, revoke, or renew.
         if "blocked" in body:
             return _employer_set_gate_pass_block(user, body)
         if "validFrom" in body or "validTo" in body:
             return _employer_set_gate_pass_dates(user, body)
         if "dispatched" in body:
             return _employer_set_gate_pass_dispatch(user, body)
+        if str(body.get("action") or "").lower() == "revoke":
+            return _revoke_gate_pass(user, body)
+        if str(body.get("action") or "").lower() == "renew":
+            return _renew_gate_pass(user, body)
         ids = body.get("ids") or ([body.get("id")] if body.get("id") else [])
         decision = str(body.get("status") or "").strip().lower()
         today = timezone.localdate()
@@ -477,7 +553,12 @@ def _handle_gate_pass(user, body):
                 for g in WorkerGatePass.objects.filter(pk__in=updated)]
         return rows[0] if len(rows) == 1 else rows
 
-    # Contractor: request single / bulk
+    # Contractor: request single / bulk, or revoke/renew an existing pass.
+    action = str(body.get("action") or "").lower()
+    if action == "revoke":
+        return _revoke_gate_pass(user, body)
+    if action == "renew":
+        return _renew_gate_pass(user, body)
     rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
     created = []
     for row in rows_in:
@@ -494,15 +575,14 @@ def _handle_gate_pass(user, body):
             raise PortalMutationError("This worker is not bound to you.", 403)
         gp_type = "PGP" if str(row.get("type") or "").lower().startswith("perm") else "TGP"
         eligibility = payloads._gate_pass_eligibility(worker)
-        if gp_type == "PGP" and eligibility.get("checkCount") != 8:
+        if gp_type == "PGP" and not eligibility.get("permanentEligible"):
             raise PortalMutationError(
-                "This worker is not eligible for a Permanent Gate Pass — all 8 checks "
-                "(Aadhaar, PAN, Bank, UAN, ESIC, Medical, PPE and Welfare & Safety) "
-                "must be Done.", 400)
-        if gp_type == "TGP" and eligibility.get("documentCount") != 5:
+                "This worker is not eligible for a Permanent Gate Pass — Medical, "
+                "Health & Safety and Compliance must all be Done.", 400)
+        if gp_type == "TGP" and not eligibility.get("temporaryEligible"):
             raise PortalMutationError(
-                "This worker is not eligible for a Temporary Gate Pass — the 5 documents "
-                "(Aadhaar, PAN, Bank, UAN and ESIC) must be Done.", 400)
+                "This worker is not eligible for a Temporary Gate Pass — Medical and "
+                "Health & Safety must be Done.", 400)
         existing = WorkerGatePass.objects.filter(
             worker=worker, gate_pass_type=gp_type, status__in=("PENDING", "ACTIVE")).first()
         if existing:

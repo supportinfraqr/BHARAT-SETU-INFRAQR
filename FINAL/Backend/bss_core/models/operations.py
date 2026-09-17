@@ -184,6 +184,16 @@ class WorkerGatePass(models.Model):
     dispatched_at = models.DateTimeField(null=True, blank=True)
     dispatched_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                                       related_name="+")
+    # Revocation (employer or contractor) — reason is mandatory; a revoked pass
+    # can never be renewed.
+    revoked_reason = models.CharField(max_length=255, blank=True)
+    revoked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+")
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    renewal_blocked = models.BooleanField(default=False)
+    # Renewal lineage: the expired pass this one was renewed from.
+    renewed_from = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name="renewals")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -691,3 +701,106 @@ class SupportCaseState(models.Model):
 
     def __str__(self):
         return f"{self.case_ref} {self.status}"
+
+
+class GatePassScan(models.Model):
+    """A gate scan event — Allow (entry) or Deny, with the reason.
+
+    Gate Pass Management System §6: an Active pass within its validity allows
+    entry and logs it; anything else denies, logs a scan and raises an alert."""
+
+    RESULT = [("ALLOW", "Allow"), ("DENY", "Deny")]
+
+    gate_pass = models.ForeignKey(WorkerGatePass, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name="scans")
+    worker = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                               related_name="gate_scans")
+    site = models.ForeignKey(Site, on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="gate_scans")
+    gate = models.ForeignKey("SiteGate", on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="scans")
+    gate_pass_no = models.CharField(max_length=40, blank=True)
+    result = models.CharField(max_length=10, choices=RESULT)
+    reason = models.CharField(max_length=255, blank=True)
+    scanned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+")
+    scanned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "gate_pass_scan"
+        ordering = ["-scanned_at"]
+        indexes = [models.Index(fields=["gate_pass"], name="idx_gate_scan_pass"),
+                   models.Index(fields=["scanned_at"], name="idx_gate_scan_at")]
+
+    def __str__(self):
+        return f"{self.gate_pass_no} {self.result}"
+
+
+class GatePassComplianceTemplate(models.Model):
+    """Employer-owned compliance template for gate passes: which checklist fields
+    are required, branding, and validity rules. A checklist is auto-created for
+    each worker/contractor onboarded against it."""
+
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_templates")
+    name = models.CharField(max_length=120)
+    # required fields: {"medical": true, "safety_kit": true, ...}
+    required_fields = models.JSONField(default=dict, blank=True)
+    # branding: {"companyName": ..., "logoUrl": ..., "header": ...}
+    branding = models.JSONField(default=dict, blank=True)
+    # validity rules: {"temporaryDays": 7, "permanentDays": 365}
+    validity = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "gate_pass_compliance_template"
+
+    def __str__(self):
+        return self.name
+
+
+class WorkerComplianceChecklist(models.Model):
+    """The per-worker compliance checklist auto-created on onboarding."""
+
+    worker = models.ForeignKey(User, on_delete=models.CASCADE, related_name="compliance_checklists")
+    binding = models.ForeignKey("WorkerContractorBinding", on_delete=models.SET_NULL,
+                                null=True, blank=True, related_name="compliance_checklists")
+    template = models.ForeignKey(GatePassComplianceTemplate, on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name="checklists")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "worker_compliance_checklist"
+
+    def __str__(self):
+        return f"checklist:{self.worker_id}"
+
+
+class ComplianceChecklistField(models.Model):
+    """One field on a checklist, with its category and the officer responsible."""
+
+    STATUS = [("PENDING", "Pending"), ("DONE", "Done")]
+    CATEGORY = [("MEDICAL", "Medical"), ("HEALTH_SAFETY", "Health & Safety"),
+                ("COMPLIANCE", "Compliance")]
+
+    checklist = models.ForeignKey(WorkerComplianceChecklist, on_delete=models.CASCADE,
+                                  related_name="fields")
+    key = models.CharField(max_length=40)      # medical / safety_kit / ... / esi
+    label = models.CharField(max_length=80, blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY)
+    status = models.CharField(max_length=10, choices=STATUS, default="PENDING")
+    officer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name="+")
+    completed_at = models.DateTimeField(null=True, blank=True)
+    sort_order = models.SmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "compliance_checklist_field"
+        ordering = ["sort_order", "id"]
+        constraints = [models.UniqueConstraint(fields=["checklist", "key"],
+                                               name="uq_checklist_field")]
+
+    def __str__(self):
+        return f"{self.key} {self.status}"

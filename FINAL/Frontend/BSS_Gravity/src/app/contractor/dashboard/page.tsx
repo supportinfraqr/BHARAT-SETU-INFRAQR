@@ -45,18 +45,12 @@ export default function ContractorDashboardPage() {
   const growth = useMemo(() => growthRange === '6' ? contractor.workforceGrowth.sixMonths : contractor.workforceGrowth.oneYear, [contractor.workforceGrowth, growthRange]);
   const maxWorkers = Math.max(1, ...growth.map(p => p.workers));
 
-  // The 8 worker-compliance checkpoints — same set that drives gate-pass
-  // eligibility (5 documents → Temporary, all 8 → Permanent). Counted across
-  // the contractor's bound workers.
+  // The three gate-pass eligibility categories (Gate Pass Management System).
+  // Counted across the contractor's bound workers.
   const docChecks: Array<[string, (e?: GatePassEligibility) => boolean]> = [
-    ['Aadhaar', e => e?.aadhaar === 'Done'],
-    ['PAN', e => e?.pan === 'Done'],
-    ['Bank account', e => e?.bank === 'Done'],
-    ['UAN', e => e?.uan === 'Done'],
-    ['ESIC', e => e?.esi === 'Done'],
     ['Medical', e => e?.medical === 'Done'],
-    ['PPE', e => e?.ppe === 'Done'],
-    ['Welfare & Safety', e => e?.welfareSafety === 'Done'],
+    ['Health & Safety', e => e?.healthSafety === 'Done'],
+    ['Compliance', e => e?.compliance === 'Done'],
   ];
   const docSummary = docChecks.map(([name, test]) => {
     const verified = workers.filter(worker => test(worker.eligibility)).length;
@@ -311,7 +305,7 @@ export default function ContractorDashboardPage() {
                   ? <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${doc.done ? 'text-green-700 bg-green-50' : 'text-orange-700 bg-orange-50'}`}>{doc.verified}/{doc.total}</span>
                   : <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">Not uploaded</span>}
               </li>
-            ))}<p className="pt-2 text-[11px] text-gray-400">Aadhaar · PAN · Bank · UAN · ESIC · Medical · PPE · Welfare &amp; Safety — verified across bound workers</p></ul>
+            ))}<p className="pt-2 text-[11px] text-gray-400">Medical · Health &amp; Safety · Compliance — verified across bound workers</p></ul>
           </section>
 
           {/* Worker Compliance Overview */}

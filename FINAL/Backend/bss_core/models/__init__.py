@@ -69,6 +69,10 @@ from .operations import (
     WorkerGatePassBlock,
     SupportTicket,
     SupportCaseState,
+    GatePassScan,
+    GatePassComplianceTemplate,
+    WorkerComplianceChecklist,
+    ComplianceChecklistField,
 )
 from .learning import (
     Course,
@@ -179,7 +183,7 @@ __all__ = [
     "BonusConfig", "SalaryComponent", "SalaryDeduction", "SalaryBenefit",
     "SalaryReimbursement", "FfsConfig", "StaffPortalConfig", "PayrollPeriod",
     "PayrollWorkspaceStore", "BonusStateMinWage",
-    "SupportTicket", "SupportCaseState",
+    "SupportTicket", "SupportCaseState", "GatePassScan", "GatePassComplianceTemplate", "WorkerComplianceChecklist", "ComplianceChecklistField",
     "CostSheetTemplate", "CostSheetDesignation", "CostSheetMinimumWage",
     "CostSheetStatutoryLine", "CostSheetCustomLine",
 ]

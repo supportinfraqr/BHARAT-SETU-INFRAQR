@@ -17,6 +17,8 @@ from .register_templates import *  # noqa: F401,F403
 from .payroll import *  # noqa: F401,F403
 from .admin_console import *  # noqa: F401,F403
 from .cost_sheets import *  # noqa: F401,F403
+from .gate import *  # noqa: F401,F403
+from .compliance_checklists import *  # noqa: F401,F403
 from .mutations import *  # noqa: F401,F403
 
 
@@ -357,6 +359,11 @@ def payroll_workspace(request):
 
 __all__ = [
     "admin_actions",
+    "compliance_templates",
+    "compliance_checklists",
+    "compliance_checklist_field",
+    "gate_scan",
+    "gate_scans",
     "cost_sheets",
     "cost_sheet_detail",
     "cost_sheet_preview",

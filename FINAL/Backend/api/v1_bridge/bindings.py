@@ -448,6 +448,12 @@ def _sync_employment_from_binding(binding):
     if not emp.id_card_validity_till:
         emp.id_card_validity_till = _id_card_validity(emp.id_card_issue_date)
     emp.save()
+    # Auto-create the gate-pass compliance checklist for the new engagement.
+    try:
+        from .compliance_checklists import _ensure_checklist
+        _ensure_checklist(binding)
+    except Exception:  # noqa: BLE001 — checklist creation must never block a bind
+        pass
 
 
 def _unlink_employment_from_binding(binding):

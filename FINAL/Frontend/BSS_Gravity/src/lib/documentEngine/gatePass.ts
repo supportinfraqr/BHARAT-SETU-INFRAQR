@@ -12,6 +12,7 @@ export type GatePassOverrides = {
   days?: string;
   reason?: string;
   place?: string;
+  status?: string;
 };
 
 function plusDays(fromIso: string, days: number): string {
@@ -134,7 +135,13 @@ export async function buildGatePassHtml(
     'document.reason': overrides.reason ?? tokens['document.reason'] ?? '',
     'document.place': overrides.place ?? tokens['document.place'] ?? '',
   };
-  return renderDocumentHtml({ template, tokens: merged });
+  const html = renderDocumentHtml({ template, tokens: merged });
+  const status = String(overrides.status || '');
+  if (status === 'Expired' || status === 'Revoked') {
+    const mark = `<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:9999;font:900 64px/1 Arial,sans-serif;color:rgba(190,20,20,0.16);transform:rotate(-24deg);letter-spacing:.12em;text-transform:uppercase">${status}</div>`;
+    return html.replace(/<\/body>/i, `${mark}</body>`);
+  }
+  return html;
 }
 
 /** Open the freshly-rendered pass in a printable window (print / Save as PDF). */

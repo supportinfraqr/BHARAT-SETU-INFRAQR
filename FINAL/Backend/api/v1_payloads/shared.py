@@ -426,17 +426,19 @@ def _gate_pass_eligibility(worker):
     def yes(value):
         return str(value or "").strip().lower() in ("done", "yes", "completed", "fit", "verified", "true")
 
-    medical = bool(ws and (yes(ws.medical_examination_status) or yes(ws.medical_fitness_status)))
+    # Doc "Gate Pass Management System": Medical = Medical Examination completed;
+    # Health & Safety = Safety Kit AND Safety Training AND Site Induction;
+    # Compliance = Aadhaar AND Bank AND UAN AND ESI (PAN is not a gate check).
+    medical = bool(ws and yes(ws.medical_examination_status))
     safety_kit = bool(ws and (ws.ppe_required or (ws.types_of_ppe_given or "").strip()))
     safety_training = bool(ws and ws.safety_training_completed)
     site_induction = bool(ws and yes(ws.site_induction_status))
-    health_safety = safety_kit or safety_training or site_induction
+    health_safety = safety_kit and safety_training and site_induction
     ppe = safety_kit
-    welfare_safety = safety_training or site_induction
+    welfare_safety = safety_training and site_induction
     # Documents count as verified only from a verification action — never from a
     # merely uploaded/typed record:
     #   Aadhaar — only ever stored after Aadhaar OTP / DigiLocker oKYC.
-    #   PAN     — DigiLocker-verified (pan_verified).
     #   Bank    — penny-drop verified (bank_verification_status == Verified).
     #   UAN/ESIC— approved by the contractor (uan_verified / esic_verified).
     aadhaar = bool(identity and (identity.aadhaar or "").strip())
@@ -445,12 +447,13 @@ def _gate_pass_eligibility(worker):
                 and str(banking.bank_verification_status or "").strip().lower() == "verified")
     uan = bool(social and social.uan_verified and (social.epfo_uan or "").strip())
     esi = bool(social and social.esic_verified and (social.esic_ip_number or "").strip())
-    # The five documents: Aadhaar + PAN + Bank (auto-verified) + UAN + ESIC.
-    # 5 documents → Temporary gate pass; all 8 checks (+ Medical, PPE and
-    # Welfare & Safety) → Permanent gate pass.
-    document_count = sum(1 for x in (aadhaar, pan, bank, uan, esi) if x)
-    check_count = document_count + sum(1 for x in (medical, ppe, welfare_safety) if x)
-    compliance = document_count == 5
+    # Category aggregation → gate-pass eligibility:
+    #   Medical + Health & Safety            → Temporary
+    #   Medical + Health & Safety + Compliance → Permanent
+    #   Medical pending                        → no pass
+    compliance = aadhaar and bank and uan and esi
+    temporary_eligible = medical and health_safety
+    permanent_eligible = temporary_eligible and compliance
 
     done = "Done"
     pending = "Pending"
@@ -468,8 +471,8 @@ def _gate_pass_eligibility(worker):
         "bank": done if bank else pending,
         "uan": done if uan else pending,
         "esi": done if esi else pending,
-        "documentCount": document_count,
-        "checkCount": check_count,
+        "temporaryEligible": temporary_eligible,
+        "permanentEligible": permanent_eligible,
     }
 
 
@@ -644,27 +647,28 @@ def _successor_candidates(employer, leaving):
 
 
 def _auto_gate_pass_type(worker):
-    """Pass type from the worker's own records: all 8 checks → Permanent; the 5
-    documents (Aadhaar, PAN, Bank, UAN, ESIC) → Temporary; otherwise the worker
-    is not eligible for a pass yet and "" is returned."""
+    """Pass type from the worker's own records (Gate Pass Management System):
+    Medical + Health & Safety → Temporary; all three categories (+ Compliance)
+    → Permanent; otherwise no pass is issued (medical pending blocks)."""
     e = _gate_pass_eligibility(worker)
-    if e.get("checkCount") == 8:
+    if e.get("permanentEligible"):
         return "PGP"
-    if e.get("documentCount") == 5:
+    if e.get("temporaryEligible"):
         return "TGP"
     return ""
 
 
 _GATE_PASS_CHECK_LABELS = (
-    ("aadhaar", "Aadhaar"), ("pan", "PAN"), ("bank", "Bank account"),
-    ("uan", "UAN"), ("esi", "ESIC"), ("medical", "Medical"),
-    ("ppe", "PPE"), ("welfareSafety", "Welfare & Safety"),
+    ("medical", "Medical"), ("safetyKit", "Safety Kit"),
+    ("safetyTraining", "Safety Training"), ("siteInduction", "Site Induction"),
+    ("aadhaar", "Aadhaar"), ("bank", "Bank account"),
+    ("uan", "UAN"), ("esi", "ESIC"),
 )
 
 
 def _gate_pass_missing(worker):
-    """Labels of the documents/checks a worker has not completed yet (why no
-    gate pass has been issued)."""
+    """Labels of the category items a worker has not completed yet (why no gate
+    pass has been issued)."""
     e = _gate_pass_eligibility(worker)
     return [label for key, label in _GATE_PASS_CHECK_LABELS if e.get(key) != "Done"]
 

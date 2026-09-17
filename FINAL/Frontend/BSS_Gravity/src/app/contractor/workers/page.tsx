@@ -367,27 +367,30 @@ function Info({ label, value }: { label:string; value:string }) { return <div cl
 
 function EligibilityGrid({ eligibility }: { eligibility?: GatePassEligibility }) {
   const done = (v?: string) => v === 'Done';
-  const items: Array<[string, boolean]> = [
-    ['Aadhaar', done(eligibility?.aadhaar)],
-    ['PAN', done(eligibility?.pan)],
-    ['Bank account', done(eligibility?.bank)],
-    ['UAN', done(eligibility?.uan)],
-    ['ESIC', done(eligibility?.esi)],
-    ['Medical', done(eligibility?.medical)],
-    ['PPE', done(eligibility?.safetyKit)],
-    ['Welfare & Safety', done(eligibility?.safetyTraining) || done(eligibility?.siteInduction)],
+  const categories: Array<{ label:string; ok:boolean; items:Array<[string, boolean]> }> = [
+    { label:'Medical', ok:done(eligibility?.medical), items:[['Medical examination', done(eligibility?.medical)]] },
+    { label:'Health & Safety', ok:done(eligibility?.healthSafety), items:[['Safety Kit', done(eligibility?.safetyKit)], ['Safety Training', done(eligibility?.safetyTraining)], ['Site Induction', done(eligibility?.siteInduction)]] },
+    { label:'Compliance', ok:done(eligibility?.compliance), items:[['Aadhaar', done(eligibility?.aadhaar)], ['Bank account', done(eligibility?.bank)], ['UAN', done(eligibility?.uan)], ['ESIC', done(eligibility?.esi)]] },
   ];
+  const tempOk = eligibility?.temporaryEligible ?? (done(eligibility?.medical) && done(eligibility?.healthSafety));
+  const permOk = eligibility?.permanentEligible ?? (tempOk && done(eligibility?.compliance));
   return (
     <div className="rounded-xl border border-gray-100 p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Eligibility — 8 checks</p>
-      <div className="grid grid-cols-2 gap-2">
-        {items.map(([label, ok]) => (
-          <div key={label} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${ok ? 'border-green-100 bg-green-50/50' : 'border-gray-100'}`}>
-            <span className={`w-4 h-4 rounded-full grid place-items-center text-white text-[9px] flex-shrink-0 ${ok ? 'bg-green-600' : 'bg-gray-300'}`}>{ok ? '✓' : '✗'}</span>
-            <span className="text-[11px] font-semibold text-gray-700 truncate">{label}</span>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Eligibility — 3 categories</p>
+      <div className="space-y-2">
+        {categories.map(cat => (
+          <div key={cat.label} className={`rounded-lg border px-2.5 py-2 ${cat.ok ? 'border-green-100 bg-green-50/50' : 'border-gray-100'}`}>
+            <div className="flex items-center gap-2">
+              <span className={`w-4 h-4 rounded-full grid place-items-center text-white text-[9px] flex-shrink-0 ${cat.ok ? 'bg-green-600' : 'bg-gray-300'}`}>{cat.ok ? '✓' : '✗'}</span>
+              <span className="text-[11px] font-bold text-gray-800">{cat.label}</span>
+            </div>
+            <div className="mt-1.5 pl-6 flex flex-wrap gap-1.5">
+              {cat.items.map(([label, ok]) => <span key={label} className={`text-[10px] px-1.5 py-0.5 rounded ${ok ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{label} {ok ? '✓' : '✗'}</span>)}
+            </div>
           </div>
         ))}
       </div>
+      <p className="mt-3 text-[10px] text-gray-500">Temporary: <strong className={tempOk ? 'text-green-700' : 'text-orange-600'}>{tempOk ? 'eligible' : 'not eligible'}</strong> · Permanent: <strong className={permOk ? 'text-green-700' : 'text-orange-600'}>{permOk ? 'eligible' : 'not eligible'}</strong></p>
     </div>
   );
 }

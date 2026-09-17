@@ -9,8 +9,8 @@ import { GatePassViewer } from '@/components/documentEngine/GatePassViewer';
 import type { ContractorPortalData, GatePassEligibility } from '@/types/portal';
 type Pass = ContractorPortalData['gatePasses'][number];
 
-const tempAllowed = (e?: GatePassEligibility) => !!e && (e.documentCount ?? 0) >= 5;
-const permAllowed = (e?: GatePassEligibility) => !!e && (e.checkCount ?? 0) >= 8;
+const tempAllowed = (e?: GatePassEligibility) => !!e && (e.temporaryEligible ?? (e.medical === 'Done' && e.healthSafety === 'Done'));
+const permAllowed = (e?: GatePassEligibility) => !!e && (e.permanentEligible ?? (e.medical === 'Done' && e.healthSafety === 'Done' && e.compliance === 'Done'));
 
 export default function ContractorGatePassPage() {
   const { contractor, scoped } = useContractor();
@@ -22,7 +22,7 @@ export default function ContractorGatePassPage() {
   async function viewPass(row: Pass) {
     const worker = docCtx.workers.find(item => item.bssId === row.workerId || item.name === row.workerName);
     if (!worker) return;
-    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo, number: row.number });
+    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo, number: row.number, status: row.status });
     setPassPreview({ html, title: `${row.workerName} · ${row.type} Gate Pass` });
   }
 
@@ -40,7 +40,7 @@ export default function ContractorGatePassPage() {
     { id:'from', header:'Valid from', value:r => r.validFrom || '—' },
     { id:'to', header:'Valid to', value:r => r.validTo || '—' },
     { id:'ownership', header:'Requested / Approved', filterable:false, value:r => `${r.requestedBy || ''} ${r.approvedBy || ''}`, render:r => <div><p className="text-[11px] text-gray-600">Req: {r.requestedBy || '—'}</p><p className="text-[11px] text-gray-500">Appr: {r.approvedBy || 'Principal Employer'}</p></div> },
-    { id:'eligibility', header:'Eligibility', filterable:false, value:r => r.workerId, render:r => { const e = r.eligibility; return <div className="flex gap-1"><Dot label="5" ok={(e?.documentCount ?? 0) >= 5} title={`${e?.documentCount ?? 0}/5 documents (Aadhaar, PAN, Bank, UAN, ESIC) → Temporary`}/><Dot label="8" ok={(e?.checkCount ?? 0) >= 8} title={`${e?.checkCount ?? 0}/8 checks (+ Medical, PPE, Welfare & Safety) → Permanent`}/></div>; } },
+    { id:'eligibility', header:'Eligibility', filterable:false, value:r => r.workerId, render:r => { const e = r.eligibility; return <div className="flex gap-1"><Dot label="M" ok={e?.medical === 'Done'} title="Medical examination"/><Dot label="H&S" ok={e?.healthSafety === 'Done'} title="Health & Safety (safety kit + safety training + site induction)"/><Dot label="C" ok={e?.compliance === 'Done'} title="Compliance (Aadhaar + Bank + UAN + ESIC)"/></div>; } },
     { id:'status', header:'Status', value:r => r.status },
     { id:'actions', header:'Actions', filterable:false, value:r => r.status, render:r => (
       <div className="flex items-center gap-2">
@@ -54,7 +54,7 @@ export default function ContractorGatePassPage() {
 
   return <div className="space-y-6 pb-12">
     <header className="flex flex-col sm:flex-row justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Gate Passes</h1><p className="text-sm text-gray-500 mt-1">View site access gate passes issued by the Principal Employer for bound workers. A Temporary pass is issued once the 5 documents (Aadhaar, PAN, Bank, UAN, ESIC) are done; a Permanent pass once all 8 checks (+ Medical, PPE, Welfare &amp; Safety) are done.</p></div>
+      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Master data</p><h1 className="text-2xl font-bold mt-1">Worker Gate Passes</h1><p className="text-sm text-gray-500 mt-1">View site access gate passes issued by the Principal Employer for bound workers. A Temporary pass is issued once Medical and Health &amp; Safety are done; a Permanent pass once Compliance is done too.</p></div>
     </header>
 
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -75,9 +75,9 @@ export default function ContractorGatePassPage() {
     <details className="bg-white border border-gray-200 rounded-2xl p-4">
       <summary className="list-none flex items-center justify-between cursor-pointer text-xs font-semibold text-blue-700 select-none"><span className="flex items-center gap-2"><ShieldCheck size={15}/>Eligibility criteria — when a pass is issued</span><span className="text-gray-400">▾</span></summary>
       <div className="mt-4 space-y-2 text-xs text-gray-600">
-        <p><strong className="text-gray-800">Temporary Gate Pass</strong> — issued once the 5 documents are done: Aadhaar, PAN, Bank account, UAN and ESIC.</p>
-        <p><strong className="text-gray-800">Permanent Gate Pass</strong> — issued once all 8 checks are done: the 5 documents plus Medical, PPE and Welfare &amp; Safety.</p>
-        <p className="text-gray-400">Workers who have not completed the 5 documents are shown as &ldquo;Not eligible&rdquo; with the missing items.</p>
+        <p><strong className="text-gray-800">Temporary Gate Pass</strong> — issued once Medical and Health &amp; Safety (safety kit + training + site induction) are done.</p>
+        <p><strong className="text-gray-800">Permanent Gate Pass</strong> — issued once Compliance (Aadhaar + Bank + UAN + ESIC) is done too.</p>
+        <p className="text-gray-400">Workers who have not completed Medical and Health &amp; Safety are shown as &ldquo;Not eligible&rdquo; with the missing items.</p>
       </div>
     </details>
 
@@ -101,8 +101,8 @@ function EligibilityDrawer({ bssId, name, eligibility, onClose }: { bssId:string
       <div className="p-5 space-y-3">
         <ul className="space-y-2">{rows.map(([label, value]) => <li key={label} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2.5 text-xs"><span className="text-gray-600">{label}</span><span className={`font-bold flex items-center gap-1.5 ${value === 'Done' ? 'text-green-700' : value === 'Expired' ? 'text-red-600' : 'text-orange-600'}`}>{value === 'Done' ? <CheckCircle2 size={13}/> : value === 'Expired' ? <XCircle size={13}/> : <Clock size={13}/>}{value}</span></li>)}</ul>
         {!e && <p className="text-xs text-gray-400">No eligibility data recorded for this worker yet.</p>}
-        <div className={`rounded-xl p-3 text-xs flex gap-2 ${tempAllowed(e) ? 'bg-blue-50 border border-blue-100 text-blue-900' : 'bg-orange-50 border border-orange-100 text-orange-800'}`}><ShieldCheck size={15} className="flex-shrink-0 mt-0.5"/><div><p className="font-bold">{tempAllowed(e) ? 'Temporary Gate Pass — eligible' : 'Temporary Gate Pass — not eligible'}</p><p className="mt-0.5">Requires the 5 documents: Aadhaar, PAN, Bank account, UAN and ESIC ({e?.documentCount ?? 0}/5 done).</p></div></div>
-        <div className={`rounded-xl p-3 text-xs flex gap-2 ${permAllowed(e) ? 'bg-green-50 border border-green-100 text-green-800' : 'bg-gray-50 border border-gray-100 text-gray-600'}`}><ShieldCheck size={15} className="flex-shrink-0 mt-0.5"/><div><p className="font-bold">{permAllowed(e) ? 'Permanent Gate Pass — eligible' : 'Permanent Gate Pass — not eligible'}</p><p className="mt-0.5">Requires all 8 checks: the 5 documents plus Medical, PPE and Welfare &amp; Safety ({e?.checkCount ?? 0}/8 done).</p></div></div>
+        <div className={`rounded-xl p-3 text-xs flex gap-2 ${tempAllowed(e) ? 'bg-blue-50 border border-blue-100 text-blue-900' : 'bg-orange-50 border border-orange-100 text-orange-800'}`}><ShieldCheck size={15} className="flex-shrink-0 mt-0.5"/><div><p className="font-bold">{tempAllowed(e) ? 'Temporary Gate Pass — eligible' : 'Temporary Gate Pass — not eligible'}</p><p className="mt-0.5">Requires Medical = Done and Health &amp; Safety = Done.</p></div></div>
+        <div className={`rounded-xl p-3 text-xs flex gap-2 ${permAllowed(e) ? 'bg-green-50 border border-green-100 text-green-800' : 'bg-gray-50 border border-gray-100 text-gray-600'}`}><ShieldCheck size={15} className="flex-shrink-0 mt-0.5"/><div><p className="font-bold">{permAllowed(e) ? 'Permanent Gate Pass — eligible' : 'Permanent Gate Pass — not eligible'}</p><p className="mt-0.5">Requires Medical, Health &amp; Safety and Compliance = Done.</p></div></div>
       </div>
     </section>
   </div>;

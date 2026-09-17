@@ -38,7 +38,9 @@ def build_government_portal():
                 "LEAVE" if status_text == "LEAVE" else "PRESENT")
 
         eligibility = _gate_pass_eligibility(worker)
-        compliance = int(round((eligibility.get("checkCount", 0) / 8) * 100))
+        categories = sum(1 for key in ("medical", "healthSafety", "compliance")
+                         if eligibility.get(key) == "Done")
+        compliance = int(round((categories / 3) * 100))
         migrant = bool(mobility and mobility.migrant_worker)
         origin = _d(mobility.permanent_state if mobility else "")
 
