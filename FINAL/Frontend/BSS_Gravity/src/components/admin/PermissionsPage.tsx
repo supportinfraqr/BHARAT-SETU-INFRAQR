@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from 'react';
-import { Check, CheckCircle2, ChevronDown, ChevronRight, ShieldCheck, X } from 'lucide-react';
-import { MENU_PERMISSIONS, PERMISSION_ACTIONS, PERMISSION_MODULES, StatusBadge } from '@/data/adminMasters';
+import { useCallback, useEffect, useState } from 'react';
+import { Check, CheckCircle2, ChevronDown, ChevronRight, Loader2, ShieldCheck, X } from 'lucide-react';
+import { PERMISSION_ACTIONS, PERMISSION_MODULES, StatusBadge } from '@/data/adminMasters';
 
 type PermissionUser = {
   id: number;
@@ -14,18 +14,30 @@ type PermissionUser = {
   permissions: Record<string, string[]>;
 };
 
-const seedUsers: PermissionUser[] = [
-  { id: 1, username: 'ananya.mehta', name: 'Ananya Mehta', partyType: 'Employer', partyName: 'L&T Construction', status: 'Active', permissions: { Workers: ['View', 'Edit'], Contractors: ['View', 'Approve'], Sites: ['View', 'Edit'], Compliance: ['View', 'Approve', 'Export'] } },
-  { id: 2, username: 'rajesh.kumar', name: 'Rajesh Kumar', partyType: 'Contractor', partyName: 'RK Buildcon Pvt. Ltd.', status: 'Active', permissions: { Workers: ['View'], 'Gate Pass': ['View', 'Approve'], Compliance: ['View'], Payroll: ['View', 'Edit'] } },
-  { id: 3, username: 'ops.staff', name: 'Operations Staff', partyType: 'BSS Staff', partyName: 'Bharat Shram Setu', status: 'Pending', permissions: { Compliance: ['View'], 'QR / Binding': ['View'] } },
-];
-
 export default function PermissionsPage() {
-  const [users, setUsers] = useState<PermissionUser[]>(seedUsers);
-  const [selectedId, setSelectedId] = useState<number>(1);
+  const [users, setUsers] = useState<PermissionUser[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [openModule, setOpenModule] = useState<string | null>('Workers');
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/permissions', { cache:'no-store' });
+      const body = await response.json().catch(() => ({})) as { users?:PermissionUser[]; error?:string };
+      if (!response.ok) throw new Error(body.error ?? 'Permissions could not be loaded.');
+      setUsers(body.users ?? []);
+      setSelectedId(current => current ?? body.users?.[0]?.id ?? null);
+      setError('');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Permissions could not be loaded.'); }
+    finally { setLoading(false); }
+  }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
+  useEffect(() => { void load(); }, [load]);
 
   const user = users.find(u => u.id === selectedId) ?? users[0];
 
@@ -44,30 +56,41 @@ export default function PermissionsPage() {
     setUsers(current => current.map(u => u.id === userId ? { ...u, permissions: { ...u.permissions, [module]: enable ? [...PERMISSION_ACTIONS] : [] } } : u));
   }
 
-  function save() {
-    setUsers(current => current.map(u => u.id === user.id ? { ...u, status: 'Active' } : u));
-    setDirty(false); setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  async function save() {
+    if (!user) return;
+    try {
+      const response = await fetch('/api/admin/permissions', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ userId: user.id, permissions: user.permissions }),
+      });
+      const body = await response.json().catch(() => ({})) as { error?:string };
+      if (!response.ok) throw new Error(body.error ?? 'Permissions could not be saved.');
+      setDirty(false); setSaved(true);
+      window.setTimeout(() => setSaved(false), 3000);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Permissions could not be saved.'); }
   }
 
-  function reset() { setUsers(seedUsers); setDirty(false); }
+  function reset() { setDirty(false); void load(); }
+
+  if (loading && !user) return <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading users…</p>;
 
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Access</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Permission Page</h1><p className="text-sm text-gray-500 mt-1">User-wise menu permission management — select a user, grant module permissions and save. Frontend enforcement is for demo only; real security must be enforced server-side.</p></div>
+      <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Access</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Permission Page</h1><p className="text-sm text-gray-500 mt-1">User-wise menu permission management — select a user, grant module permissions and save. Grants are persisted server-side and recorded in the audit trail.</p></div>
       <div className="flex gap-2">
         <button onClick={reset} disabled={!dirty} className="h-10 px-4 rounded-lg border border-gray-200 text-sm font-semibold flex items-center gap-2 disabled:opacity-50"><X size={15}/>Reset / Cancel</button>
-        <button onClick={save} disabled={!dirty} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50"><Check size={15}/>Save Changes</button>
+        <button onClick={() => void save()} disabled={!dirty} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black disabled:opacity-50"><Check size={15}/>Save Changes</button>
       </div>
     </header>
 
-    {saved && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>Permissions saved for {user.username} — changes recorded in the audit trail.</p>}
+    {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+    {saved && user && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>Permissions saved for {user.username} — changes recorded in the audit trail.</p>}
 
-    <div className="grid lg:grid-cols-[280px_1fr] gap-5 items-start">
+    {user && <div className="grid lg:grid-cols-[280px_1fr] gap-5 items-start">
       {/* User selection */}
       <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <header className="px-4 py-3 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-950">User Selection</h2><p className="text-[11px] text-gray-400 mt-0.5">Choose the user to configure</p></header>
-        <div className="divide-y divide-gray-100">{users.map(u => (
+        <div className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">{users.map(u => (
           <button key={u.id} onClick={() => setSelectedId(u.id)} className={`w-full px-4 py-3 text-left hover:bg-gray-50 ${selectedId === u.id ? 'bg-blue-50/60' : ''}`}>
             <div className="flex items-center justify-between gap-2"><span className="font-mono text-xs text-blue-700">{u.username}</span><StatusBadge value={u.status}/></div>
             <p className="text-sm font-semibold text-gray-900 mt-1">{u.name}</p>
@@ -100,6 +123,8 @@ export default function PermissionsPage() {
         </div>
         <footer className="px-5 py-3 border-t border-gray-100 text-[11px] text-gray-400 flex items-center gap-1.5"><ShieldCheck size={13}/>Menu-level access is also governed by the role menu map — modules not in the user&apos;s role menu remain hidden regardless of permission state.</footer>
       </section>
-    </div>
+    </div>}
+
+    {!user && !loading && <p className="text-sm text-gray-400 py-8">No users found.</p>}
   </div>;
 }

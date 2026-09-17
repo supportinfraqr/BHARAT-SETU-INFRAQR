@@ -10,6 +10,7 @@ import {
 import { useContractor } from '@/contexts/ContractorContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopyButton } from '@/components/ui/CopyButton';
+import type { GatePassEligibility } from '@/types/portal';
 
 export default function ContractorDashboardPage() {
   const { contractor, employerScope, scoped } = useContractor();
@@ -44,22 +45,23 @@ export default function ContractorDashboardPage() {
   const growth = useMemo(() => growthRange === '6' ? contractor.workforceGrowth.sixMonths : contractor.workforceGrowth.oneYear, [contractor.workforceGrowth, growthRange]);
   const maxWorkers = Math.max(1, ...growth.map(p => p.workers));
 
-  const docSummary = useMemo(() => {
-    const stats = new Map<string, { total: number; verified: number }>();
-    for (const d of contractor.workerDocuments) {
-      if (!d.document) continue;
-      const e = stats.get(d.document) ?? { total: 0, verified: 0 };
-      e.total += 1;
-      if (d.verified) e.verified += 1;
-      stats.set(d.document, e);
-    }
-    const statutory = ['Aadhaar', 'PAN', 'UAN', 'ESIC IP', 'Bank Verification'];
-    const other = [...stats.keys()].filter(n => !statutory.includes(n));
-    return [...statutory, ...other].map(name => {
-      const e = stats.get(name) ?? { total: 0, verified: 0 };
-      return { name, total: e.total, verified: e.verified, done: e.total > 0 && e.verified === e.total, missing: e.total === 0 };
-    });
-  }, [contractor.workerDocuments]);
+  // The 8 worker-compliance checkpoints — same set that drives gate-pass
+  // eligibility (5 documents → Temporary, all 8 → Permanent). Counted across
+  // the contractor's bound workers.
+  const docChecks: Array<[string, (e?: GatePassEligibility) => boolean]> = [
+    ['Aadhaar', e => e?.aadhaar === 'Done'],
+    ['PAN', e => e?.pan === 'Done'],
+    ['Bank account', e => e?.bank === 'Done'],
+    ['UAN', e => e?.uan === 'Done'],
+    ['ESIC', e => e?.esi === 'Done'],
+    ['Medical', e => e?.medical === 'Done'],
+    ['PPE', e => e?.ppe === 'Done'],
+    ['Welfare & Safety', e => e?.welfareSafety === 'Done'],
+  ];
+  const docSummary = docChecks.map(([name, test]) => {
+    const verified = workers.filter(worker => test(worker.eligibility)).length;
+    return { name, total: workers.length, verified, done: workers.length > 0 && verified === workers.length, missing: workers.length === 0 };
+  });
 
   return (
     <div className="space-y-5 pb-12">
@@ -309,7 +311,7 @@ export default function ContractorDashboardPage() {
                   ? <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 flex-shrink-0 ${doc.done ? 'text-green-700 bg-green-50' : 'text-orange-700 bg-orange-50'}`}>{doc.verified}/{doc.total}</span>
                   : <span className="text-[10px] font-semibold text-gray-400 flex-shrink-0">Not uploaded</span>}
               </li>
-            ))}<p className="pt-2 text-[11px] text-gray-400">Aadhaar · PAN · UAN · ESIC IP · Bank — verification across bound workers</p></ul>
+            ))}<p className="pt-2 text-[11px] text-gray-400">Aadhaar · PAN · Bank · UAN · ESIC · Medical · PPE · Welfare &amp; Safety — verified across bound workers</p></ul>
           </section>
 
           {/* Worker Compliance Overview */}

@@ -189,10 +189,108 @@ def _handle_worker_compliance(user, body):
     return payloads._contractor_compliance_row(binding)
 
 
+def _handle_worker_site(user, body):
+    """The contractor moves one of their bound workers to another of their sites.
+
+    Only the contractor holds this power, and only to a site they are engaged at
+    (allotted + approved by the employer). The worker↔contractor pair is kept; the
+    binding's site — and everything derived from it — changes."""
+    from bss_core.models import Site, WorkerContractorBinding
+    from .bindings import _contractor_engaged_at_site, _sync_employment_from_binding
+
+    binding = (WorkerContractorBinding.objects
+               .filter(pk=body.get("bindingId") or body.get("id"), contractor=user)
+               .select_related("worker", "site").first())
+    if binding is None:
+        raise PortalMutationError("Worker binding not found.", 404)
+    if binding.binding_status not in ("PENDING", "ACCEPTED"):
+        raise PortalMutationError("Only an active binding can be moved to another site.", 409)
+    site = Site.objects.filter(pk=body.get("siteId")).first()
+    if site is None:
+        raise PortalMutationError("Select a valid site.", 400)
+    if not _contractor_engaged_at_site(user, site.id):
+        raise PortalMutationError(
+            "You are not engaged at this site. Ask the employer to allot this site to you first.", 403)
+    if binding.site_id != site.id:
+        clash = (WorkerContractorBinding.objects
+                 .filter(worker=binding.worker, contractor=user, site=site,
+                         binding_status__in=("PENDING", "ACCEPTED"))
+                 .exclude(pk=binding.pk).exists())
+        if clash:
+            raise PortalMutationError("This worker already has a binding with you at that site.", 409)
+        binding.site = site
+        binding.save(update_fields=["site", "updated_at"])
+        _sync_employment_from_binding(binding)
+    return {"bindingId": binding.id, "siteId": str(binding.site_id or "")}
+
+
+def _period_range(period):
+    """'August 2026' → (first day, last day) of that month."""
+    text = str(period or "").strip()
+    start = None
+    for fmt in ("%B %Y", "%b %Y", "%Y-%m"):
+        try:
+            start = datetime.strptime(text, fmt).date().replace(day=1)
+            break
+        except ValueError:
+            continue
+    if start is None:
+        start = timezone.localdate().replace(day=1)
+    nxt = (start.replace(year=start.year + 1, month=1) if start.month == 12
+           else start.replace(month=start.month + 1))
+    return start, nxt - timedelta(days=1)
+
+
+def _handle_salaries(user, body):
+    """Contractor/employer records a bound worker's salary/wage for a period."""
+    from bss_core.models import WorkerContractorBinding, WorkerIdentity, WorkerWages
+
+    rows_in = body.get("bulk") if isinstance(body.get("bulk"), list) else [body]
+    created = []
+    for row in rows_in:
+        row = row if isinstance(row, dict) else {}
+        bss_id = str(row.get("workerId") or "").strip().upper()
+        identity = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first() if bss_id else None
+        if identity is None:
+            raise PortalMutationError(f"No worker found with BSS ID {bss_id}.", 404)
+        bindings = WorkerContractorBinding.objects.filter(
+            worker=identity.user, binding_status="ACCEPTED").select_related("site", "contractor")
+        bindings = (bindings.filter(contractor=user) if user.role == "contractor"
+                    else bindings.filter(site__employer=user))
+        binding = bindings.first()
+        if binding is None:
+            raise PortalMutationError("This worker is not bound to you.", 403)
+        start, end = _period_range(row.get("period"))
+        gross = payloads._num(row.get("gross")) or 0
+        deductions = payloads._num(row.get("deductions")) or 0
+        existing = WorkerWages.objects.filter(
+            worker=identity.user, period_start=start, period_end=end).first()
+        if existing is not None:
+            if existing.status != "DRAFT":
+                raise PortalMutationError(
+                    "A verified wage record already exists for this worker and period.", 409)
+            existing.contractor = binding.contractor
+            existing.site = binding.site
+            existing.gross_wage = gross
+            existing.deductions_amount = deductions
+            existing.net_wage = max(0, gross - deductions)
+            existing.save()
+            created.append(existing)
+        else:
+            created.append(WorkerWages.objects.create(
+                worker=identity.user, contractor=binding.contractor, site=binding.site,
+                period_start=start, period_end=end, wage_frequency="MONTHLY",
+                gross_wage=gross, deductions_amount=deductions,
+                net_wage=max(0, gross - deductions), status="DRAFT"))
+    return [payloads._salary_row(w) for w in created]
+
+
 __all__ = [
     "_handle_advance_contractor",
     "_handle_advance_worker",
     "_handle_benefits",
     "_handle_gratuity_apply",
+    "_handle_salaries",
     "_handle_worker_compliance",
+    "_handle_worker_site",
 ]

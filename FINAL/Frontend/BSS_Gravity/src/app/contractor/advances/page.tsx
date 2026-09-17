@@ -32,12 +32,6 @@ export default function ContractorAdvancesPage() {
 
   return (
     <div className="relative p-4 lg:p-6 space-y-5">
-      <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-20 overflow-hidden">
-        <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
-          {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
-        </div>
-      </div>
-
       <header>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Payroll</p>
         <h1 className="text-2xl font-bold mt-1">Salary Advances</h1>

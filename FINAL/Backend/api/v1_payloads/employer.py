@@ -277,9 +277,18 @@ def _employer_contractors(user):
 
 
 def _employer_workers(user):
-    bindings = WorkerContractorBinding.objects.filter(site__employer=user, binding_status="ACCEPTED")
+    bindings = (WorkerContractorBinding.objects
+                .filter(site__employer=user, binding_status="ACCEPTED")
+                .select_related("worker", "site", "contractor")
+                .order_by("worker_id", "-created_at"))
     rows = []
+    seen = set()
     for b in bindings:
+        # One row per worker — a re-bind (bind → unbind → bind again) can leave
+        # more than one live row behind, which showed the worker twice.
+        if b.worker_id in seen:
+            continue
+        seen.add(b.worker_id)
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
         cp = getattr(b.contractor, "contractor_profile", None)
         rows.append({
@@ -604,8 +613,9 @@ def _employer_labour_compliance():
 def _employer_payroll(user):
     return {
         "config": _contractor_payroll_config(user),
-        "records": [],
-        "templateColumns": [],
+        "records": _payroll_records(employer=user),
+        "templateColumns": ["id", "workerId", "workerName", "employer", "site", "contractor",
+                            "period", "status", "gross", "netPay"],
     }
 
 

@@ -19,6 +19,8 @@ const mastersGroup = { key: 'Masters', icon: BookOpenCheck, items: [
   ['Document Master', '/admin/masters/document'],
   ['Compliance Master', '/admin/masters/compliance'],
   ['Register Doc Master', '/admin/masters/register-doc'],
+  ['Register Templates', '/admin/masters/register-template'],
+  ['State Applicability', '/admin/masters/state-applicability'],
 ] as const };
 const mappingsGroup = { key: 'Mappings', icon: Link2, items: [
   ['Employer Document Mapping', '/admin/mappings/employer-document'],

@@ -67,6 +67,8 @@ from .operations import (
     RestrictedHolidayRequest,
     DocumentTemplateStore,
     WorkerGatePassBlock,
+    SupportTicket,
+    SupportCaseState,
 )
 from .learning import (
     Course,
@@ -99,6 +101,10 @@ from .registry import (
 )
 from .compliance import (
     RegisterDocumentMaster,
+    RegisterTemplate,
+    StateCode,
+    StateFormApplicability,
+    StateFeeMaster,
     ComplianceMaster,
     ComplianceDocument,
     ComplianceReport,
@@ -113,6 +119,7 @@ from .compliance import (
     LicenseMaster,
     MinimumWage,
     MenuPermission,
+    UserMenuPermission,
 )
 from .payroll import (
     PayrollConfig,
@@ -128,6 +135,8 @@ from .payroll import (
     FfsConfig,
     StaffPortalConfig,
     PayrollPeriod,
+    PayrollWorkspaceStore,
+    BonusStateMinWage,
 )
 
 __all__ = [
@@ -153,11 +162,14 @@ __all__ = [
     "PartyDirector", "PartyStatutoryRegistration", "PartyContact",
     "PartyBank", "PartyContract", "PartyDocument", "PartyConsentDeclaration",
     "PartyMaster",
-    "RegisterDocumentMaster", "ComplianceMaster", "ComplianceDocument",
+    "RegisterDocumentMaster", "RegisterTemplate", "StateCode", "StateFormApplicability",
+    "StateFeeMaster", "ComplianceMaster", "ComplianceDocument",
     "ComplianceReport", "ComplianceReportItem", "EmployerDocumentMapping",
     "EmployerRegisterMapping", "EmployerActMapping", "PtMaster", "PtSlab",
-    "LwfMaster", "LicenseMaster", "MinimumWage", "MenuPermission",
+    "LwfMaster", "LicenseMaster", "MinimumWage", "MenuPermission", "UserMenuPermission",
     "PayrollConfig", "EpfConfig", "EsiConfig", "PtConfig", "LwfConfig",
     "BonusConfig", "SalaryComponent", "SalaryDeduction", "SalaryBenefit",
     "SalaryReimbursement", "FfsConfig", "StaffPortalConfig", "PayrollPeriod",
+    "PayrollWorkspaceStore", "BonusStateMinWage",
+    "SupportTicket", "SupportCaseState",
 ]

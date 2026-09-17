@@ -11,6 +11,7 @@ reported as unsupported if it is not installed.
 
 import csv
 import io
+import re
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -105,11 +106,172 @@ def _bold(ws, cell, size=11):
     ws[cell].font = Font(bold=True, size=size)
 
 
+# Template column label → canonical master-file key (best-effort fuzzy match).
+_COLUMN_RULES = (
+    (("sl", "no"), "sl"),
+    (("serial",), "sl"),
+    (("father",), "fatherName"),
+    (("husband",), "fatherName"),
+    (("spouse",), "fatherName"),
+    (("sex",), "gender"),
+    (("gender",), "gender"),
+    (("name",), "name"),
+    (("designation",), "designation"),
+    (("nature of employment",), "designation"),
+    (("nature of work",), "designation"),
+    (("department",), "department"),
+    (("date of joining",), "doj"),
+    (("joining",), "doj"),
+    (("mobile",), "mobile"),
+    (("contact",), "mobile"),
+    (("site",), "site"),
+    (("location",), "location"),
+    (("bss",), "bssId"),
+)
+
+
+def match_column(label):
+    """Map a register-template column label to a master-file key ('' if none)."""
+    text = " ".join(str(label or "").lower().split())
+    if not text:
+        return ""
+    for needles, key in _COLUMN_RULES:
+        if all(n in text for n in needles):
+            return key
+    return ""
+
+
+MASTER_TEMPLATE_COLUMNS = ["BSS ID", "Name", "Site", "Location", "Designation",
+                           "Department", "Mobile", "Date of Joining"]
+
+
+# ── master-file validation ───────────────────────────────────────────────────
+REQUIRED_KEYS = ("name", "site")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$|^\d{2}[/-]\d{2}[/-]\d{4}$")
+_BSS_RE = re.compile(r"^(BSS-W[A-Za-z0-9]{10,11}|BSS[A-Za-z0-9]{8,})$")
+
+
+def validate_master(rows, *, state="", month="", year=""):
+    """Validate parsed master-file rows. Returns a structured report.
+
+    ``errors`` block generation; ``warnings`` are advisory."""
+    errors = []
+    warnings = []
+    if not rows:
+        errors.append({"row": 0, "field": "", "message": "The file has no data rows."})
+        return {"errors": errors, "warnings": warnings, "rowCount": 0, "validRows": 0,
+                "siteCount": 0, "locationCount": 0, "sites": []}
+
+    present = set()
+    for row in rows:
+        present.update(k for k, v in row.items() if v)
+    for key in REQUIRED_KEYS:
+        if key not in present:
+            errors.append({"row": 0, "field": key,
+                           "message": f"Required column '{key}' is missing or blank in every row."})
+
+    seen_codes = {}
+    seen_names = {}
+    valid_rows = 0
+    for index, row in enumerate(rows, start=1):
+        name = (row.get("name") or "").strip()
+        site = (row.get("site") or "").strip()
+        if not name:
+            errors.append({"row": index, "field": "name", "message": "Name is blank."})
+        if not site:
+            errors.append({"row": index, "field": "site", "message": "Site is blank."})
+        code = (row.get("bssId") or "").strip()
+        if code and not _BSS_RE.match(code):
+            warnings.append({"row": index, "field": "bssId",
+                             "message": f"'{code}' does not look like a BSS ID."})
+        doj = (row.get("doj") or "").strip()
+        if doj and not _DATE_RE.match(doj):
+            warnings.append({"row": index, "field": "doj",
+                             "message": f"Date '{doj}' is not YYYY-MM-DD or DD/MM/YYYY."})
+        if code:
+            if code in seen_codes:
+                errors.append({"row": index, "field": "bssId",
+                               "message": f"Duplicate BSS ID '{code}' (also row {seen_codes[code]})."})
+            else:
+                seen_codes[code] = index
+        name_key = f"{name}|{site}".lower()
+        if name and site:
+            if name_key in seen_names:
+                warnings.append({"row": index, "field": "name",
+                                 "message": f"Possible duplicate of '{name}' at {site} (row {seen_names[name_key]})."})
+            else:
+                seen_names[name_key] = index
+            valid_rows += 1
+
+    if not state:
+        warnings.append({"row": 0, "field": "state", "message": "No state selected — templates cannot be matched."})
+    if not year:
+        warnings.append({"row": 0, "field": "year", "message": "No year selected."})
+    if not month:
+        warnings.append({"row": 0, "field": "month", "message": "No month selected."})
+
+    sites = sorted({(r.get("site") or "").strip() for r in rows if (r.get("site") or "").strip()})
+    locations = sorted({(r.get("location") or "").strip() for r in rows if (r.get("location") or "").strip()})
+    return {
+        "errors": errors, "warnings": warnings,
+        "rowCount": len(rows), "validRows": valid_rows,
+        "siteCount": len(sites), "locationCount": len(locations) or 1,
+        "sites": sites[:200],
+    }
+
+
+def build_master_template():
+    """Return the bytes of the standard CLRA master-file upload template."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Master"
+    header_fill = PatternFill("solid", fgColor="0A192F")
+    header_font = Font(bold=True, color="FFFFFF")
+    for col, label in enumerate(MASTER_TEMPLATE_COLUMNS, start=1):
+        cell = ws.cell(row=1, column=col, value=label)
+        cell.fill = header_fill
+        cell.font = header_font
+        ws.column_dimensions[cell.column_letter].width = max(14, len(label) + 4)
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
+def _write_template_sheet(wb, template, rows, header_fill, header_font):
+    columns = [str(c) for c in (template.get("columns") or [])]
+    if not columns:
+        columns = [label for label, _ in REGISTER_COLUMNS]
+    title = (template.get("formCode") or template.get("title") or "Register")[:31]
+    ws = wb.create_sheet(title=title)
+    ws["A1"] = template.get("title") or template.get("formCode") or "Register"
+    _bold(ws, "A1", 12)
+    ws["A2"] = (f"Form: {template.get('formCode', '')}    "
+                f"State: {template.get('state', '')}")
+    mapping = [match_column(col) for col in columns]
+    for col, label in enumerate(columns, start=1):
+        cell = ws.cell(row=4, column=col, value=label)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", wrap_text=True)
+    for i, row in enumerate(rows, start=1):
+        for col, key in enumerate(mapping, start=1):
+            if key == "sl":
+                ws.cell(row=4 + i, column=col, value=i)
+            elif key:
+                ws.cell(row=4 + i, column=col, value=row.get(key, ""))
+    return ws
+
+
 def build_workbook(rows, *, contractor="", site="", site_code="", state="",
                    financial_year="", month="", year="", registers=None,
-                   generated_on=""):
-    """Return the bytes of an XLSX workbook: cover sheet + one sheet per register."""
+                   generated_on="", templates=None):
+    """Return the bytes of an XLSX workbook: cover sheet + one sheet per register.
+
+    When ``templates`` (the State+Form register templates) are supplied, each
+    sheet uses that template's parsed column schema and the master rows are
+    mapped onto it; otherwise the generic ``REGISTER_COLUMNS`` layout is used."""
     registers = list(registers or [])
+    templates = list(templates or [])
     wb = Workbook()
     cover = wb.active
     cover.title = "Cover"
@@ -125,7 +287,7 @@ def build_workbook(rows, *, contractor="", site="", site_code="", state="",
         ("Financial Year", financial_year),
         ("Wage Period", f"{month} {year}".strip()),
         ("Workers", str(len(rows))),
-        ("Registers generated", str(len(registers))),
+        ("Registers generated", str(len(templates) or len(registers))),
         ("Generated on", generated_on),
     ]
     for i, (label, value) in enumerate(meta, start=3):
@@ -134,6 +296,13 @@ def build_workbook(rows, *, contractor="", site="", site_code="", state="",
 
     header_fill = PatternFill("solid", fgColor="0A192F")
     header_font = Font(bold=True, color="FFFFFF")
+    if templates:
+        for template in templates:
+            _write_template_sheet(wb, template, rows, header_fill, header_font)
+        out = io.BytesIO()
+        wb.save(out)
+        return out.getvalue()
+
     for reg in registers:
         title = reg.get("formNo") or reg.get("name") or "Register"
         ws = wb.create_sheet(title=str(title)[:31])
@@ -154,3 +323,57 @@ def build_workbook(rows, *, contractor="", site="", site_code="", state="",
     out = io.BytesIO()
     wb.save(out)
     return out.getvalue()
+
+
+def _esc(value):
+    return (str(value if value is not None else "")
+            .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+def render_register_html(template, rows, *, contractor="", site="", site_code="",
+                         state="", month="", year="", financial_year="", generated_on=""):
+    """Render one State+Form register as printable HTML (template columns + rows)."""
+    columns = [str(c) for c in (template.get("columns") or [])]
+    mapping = [match_column(col) for col in columns]
+    title = template.get("title") or template.get("formCode") or "Register"
+    head = "".join(f"<th>{_esc(col)}</th>" for col in columns)
+    body = []
+    for index, row in enumerate(rows, start=1):
+        cells = []
+        for key in mapping:
+            if key == "sl":
+                value = index
+            elif key:
+                value = row.get(key, "")
+            else:
+                value = ""
+            cells.append(f"<td>{_esc(value)}</td>")
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    meta = [
+        ("Contractor", contractor), ("Site", site), ("Site Code", site_code),
+        ("State", state), ("Financial Year", financial_year),
+        ("Wage Period", f"{month} {year}".strip()),
+    ]
+    meta_html = "".join(f"<div><span>{_esc(k)}</span><strong>{_esc(v)}</strong></div>"
+                        for k, v in meta if v)
+    return f"""<!doctype html><html><head><meta charset="utf-8"><title>{_esc(title)}</title>
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: Arial, Helvetica, sans-serif; margin: 24px; color: #111; }}
+  h1 {{ font-size: 16px; margin: 0 0 2px; }}
+  .sub {{ font-size: 11px; color: #555; margin-bottom: 12px; }}
+  .meta {{ display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 11px; margin-bottom: 12px; }}
+  .meta span {{ color: #666; margin-right: 4px; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: 10px; }}
+  th, td {{ border: 1px solid #999; padding: 4px 5px; text-align: left; vertical-align: top; }}
+  th {{ background: #0A192F; color: #fff; }}
+  tbody tr:nth-child(even) {{ background: #f5f7fa; }}
+  .foot {{ margin-top: 18px; font-size: 10px; color: #666; display: flex; justify-content: space-between; }}
+  @media print {{ body {{ margin: 8mm; }} }}
+</style></head><body>
+  <h1>{_esc(title)}</h1>
+  <div class="sub">{_esc(template.get('formCode',''))} · {_esc(template.get('state',''))} · {len(rows)} record(s)</div>
+  <div class="meta">{meta_html}</div>
+  <table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>
+  <div class="foot"><span>Generated on {_esc(generated_on)}</span><span>Signature: ____________________</span></div>
+</body></html>"""

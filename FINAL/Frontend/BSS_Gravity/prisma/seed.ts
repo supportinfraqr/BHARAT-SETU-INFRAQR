@@ -53,12 +53,11 @@ export async function seedDatabase() {
 
   console.log('Existing records cleared.');
 
-  // 2. Users for all 6 roles
+  // 2. Users for the active portal roles (IT Help Desk was consolidated into BSS Staff)
   const users = [
     { subject: 'BSS234567890124', role: 'Worker', contact: '9876543210' },
     { subject: 'BSSC198200000001', role: 'Contractor', contact: '+91 98765 43210' },
     { subject: 'BSSE100210000001', role: 'Employer', contact: '+91 22 6752 5656' },
-    { subject: 'BSSIT2026HDK00001', role: 'IT Help Desk', contact: 'it.helpdesk@bss.gov.in' },
     { subject: 'BSSST2026STF00001', role: 'BSS Staff', contact: 'staff.workbench@bss.gov.in' },
     { subject: 'BSSGOV2026ADM00001', role: 'Government', contact: 'director.analytics@labour.gov.in' },
   ];
@@ -680,7 +679,7 @@ export async function seedDatabase() {
 
   console.log('Employer domain seeded.');
 
-  // 6. IT Help Desk & Operations Domain
+  // 6. Operations & Service Health Domain
   const now = new Date();
   const services = [
     { id: 'identity', name: 'Identity & Session', host: 'identity.bss.gov.in', status: 'Operational', latencyMs: 46, uptime: 99.99, lastCheckedAt: now },

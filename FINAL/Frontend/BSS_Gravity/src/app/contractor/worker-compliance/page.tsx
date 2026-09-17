@@ -121,9 +121,9 @@ export default function ContractorWorkerCompliancePage() {
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3 flex items-center gap-1.5"><Lock size={13}/>Auto-verified documents (worker records)</h3>
               <div className="grid sm:grid-cols-3 gap-3">
-                <LockedField label="Aadhaar" value={editing.verified?.aadhaar}/>
-                <LockedField label="PAN" value={editing.verified?.pan}/>
-                <LockedField label="Bank account" value={editing.verified?.bank} sub={[editing.verified?.bankName, editing.verified?.ifsc].filter(Boolean).join(' · ')}/>
+                <LockedField label="Aadhaar" value={editing.verified?.aadhaar} verified={editing.verified?.aadhaarVerified}/>
+                <LockedField label="PAN" value={editing.verified?.pan} verified={editing.verified?.panVerified}/>
+                <LockedField label="Bank account" value={editing.verified?.bank} verified={editing.verified?.bankVerified} sub={[editing.verified?.bankName, editing.verified?.ifsc].filter(Boolean).join(' · ')}/>
               </div>
               <p className="text-[11px] text-gray-400 mt-2">These are verified automatically from the worker&apos;s own records (Aadhaar, PAN and the bank account). &ldquo;Pending&rdquo; means the worker has not added it yet.</p>
             </div>

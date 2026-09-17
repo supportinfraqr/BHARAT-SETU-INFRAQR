@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, CheckCircle2, Download, FileText, IdCard, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, Download, FileText, IdCard, MapPin, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorker, GatePassEligibility } from '@/types/portal';
@@ -41,6 +41,8 @@ export default function WorkerMasterPage() {
   const [profileDetail, setProfileDetail] = useState<ScanVerifyData | null>(null);
   const [docsView, setDocsView] = useState<ContractorWorker | null>(null);
   const [idView, setIdView] = useState<ContractorWorker | null>(null);
+  const [siteView, setSiteView] = useState<ContractorWorker | null>(null);
+  const [siteChoice, setSiteChoice] = useState('');
   const [docsView2, setDocsView2] = useState<ContractorWorker | null>(null);
   const docCtx = useContractorDocView();
   const scopedRows = scoped(contractor.workers, w => w.employer);
@@ -59,6 +61,17 @@ export default function WorkerMasterPage() {
       .then(r => (r.ok ? r.json() : null))
       .then((j: { data?: ScanVerifyData } | null) => { if (j?.data) setProfileDetail(j.data); })
       .catch(() => {});
+  }
+
+  async function changeSite(row: ContractorWorker, siteId: string) {
+    setBusy(true); setError('');
+    try {
+      await mutate('worker-site', 'POST', { bindingId: row.bindingId, siteId });
+      setSiteView(null);
+      setNotice(`${row.name} was moved to the selected site.`);
+      setTimeout(() => setNotice(''), 5000);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The site could not be changed.'); }
+    finally { setBusy(false); }
   }
 
   async function submitSingle(event: React.FormEvent<HTMLFormElement>) {
@@ -84,8 +97,7 @@ export default function WorkerMasterPage() {
     finally { setBusy(false); }
   }
 
-  function addRow() { setRows(current => [...current, emptyRow()]); }
-  function updateRow(index: number, key: keyof RowDraft, value: string) { setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
+  function addRow() { setRows(current => [...current, emptyRow()]); }  function updateRow(index: number, key: keyof RowDraft, value: string) { setRows(current => current.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
   function removeRow(index: number) { setRows(current => current.filter((_, i) => i !== index)); }
 
   function importCsv(file?: File) {
@@ -130,7 +142,7 @@ export default function WorkerMasterPage() {
     <EnterpriseDataTable
       title="Workforce directory"
       rows={scopedRows}
-      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} /> }]}
+      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} onChangeSite={() => { setSiteView(row); setSiteChoice(''); setError(''); setOpenMenuFor(''); }} /> }]}
       rowKey={row => row.id}
       filename="contractor-workers"
     />
@@ -212,6 +224,17 @@ export default function WorkerMasterPage() {
       <div className="p-5"><EligibilityGrid eligibility={docsView.eligibility} /></div>
     </section></div>}
 
+    {/* Change site modal — only the contractor can move a bound worker between sites */}
+    {siteView && <div className="fixed inset-0 z-[97] bg-black/50 p-4 grid place-items-center" role="presentation"><section role="dialog" aria-modal="true" aria-label="Change worker site" className="w-full max-w-md bg-white rounded-2xl shadow-xl">
+      <header className="p-5 border-b border-gray-100 flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Change Site</p><h2 className="font-semibold text-gray-950 mt-0.5">{siteView.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{siteView.bssId}</p></div><button onClick={() => setSiteView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
+      <div className="p-5 space-y-4">
+        <p className="text-xs text-gray-500">Current site: <strong className="text-gray-800">{siteView.site || '—'}</strong>. Move this worker to another of your allotted sites. Only you (the contractor) can change a worker&apos;s site.</p>
+        <label className="text-xs font-semibold text-gray-700">New site<select value={siteChoice} onChange={e => setSiteChoice(e.target.value)} disabled={busy} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:opacity-60"><option value="">Select site</option>{contractor.sites.filter(s => s.id !== siteView.siteId).map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}</select></label>
+        {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+        <div className="flex justify-end gap-2"><button onClick={() => setSiteView(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !siteChoice} onClick={() => void changeSite(siteView, siteChoice)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Moving…' : 'Move worker'}</button></div>
+      </div>
+    </section></div>}
+
     {/* Identity card drawer — worker-level identity card from the actions menu */}
     {idView && <WorkerIdentityCardDrawer worker={idView} onClose={() => setIdView(null)}/>}
   {docsView2 && (() => { const row = docsView2; const like: WorkerLike = { id: row.id, name: row.name, bssId: row.bssId, mobile: row.mobile, site: row.site, siteId: row.site, employer: row.employer, designation: row.designation, department: row.department, doj: row.doj, category: row.category, gender: row.gender, age: row.age, photoUrl: row.photoUrl, status: row.status, skills: row.skills, refCode: row.refCode }; return <WorkerDocumentsDrawer owner={docCtx.owner} view={docCtx.view} worker={like} onClose={() => setDocsView2(null)} />; })()}
@@ -249,7 +272,7 @@ function WorkerIdentityCardDrawer({ worker, onClose }: { worker: ContractorWorke
   </div>;
 }
 
-function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDocs }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onIdCard: () => void; onDocs?: () => void }) {
+function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDocs, onChangeSite }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onIdCard: () => void; onDocs?: () => void; onChangeSite?: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
 
@@ -280,6 +303,7 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDoc
         <button role="menuitem" onClick={onIdCard} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><IdCard size={14} className="text-gray-400"/>Identity Card</button>
         <button role="menuitem" onClick={onViewDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-gray-400"/>Compliance Documents</button>
         <button role="menuitem" onClick={onDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-[#073B67]"/>Documents — Generate / Issue</button>
+        {onChangeSite && <button role="menuitem" onClick={onChangeSite} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><MapPin size={14} className="text-gray-400"/>Change Site</button>}
       </div>
     </>, document.body)}
   </>;

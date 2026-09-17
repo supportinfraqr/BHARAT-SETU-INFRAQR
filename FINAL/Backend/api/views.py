@@ -156,8 +156,13 @@ class BindingViewSet(viewsets.ModelViewSet):
         if request.user.role != "contractor":
             return Response({"detail": "Only contractors may propose bindings."},
                             status=status.HTTP_403_FORBIDDEN)
-        binding = WorkerContractorBinding.objects.create(
-            worker_id=worker_id, contractor=request.user, site_id=site_id)
+        binding = (WorkerContractorBinding.objects
+                   .filter(worker_id=worker_id, contractor=request.user, site_id=site_id,
+                           binding_status__in=("PENDING", "ACCEPTED"))
+                   .order_by("-created_at").first())
+        if binding is None:
+            binding = WorkerContractorBinding.objects.create(
+                worker_id=worker_id, contractor=request.user, site_id=site_id)
         return Response(self.get_serializer(binding).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])

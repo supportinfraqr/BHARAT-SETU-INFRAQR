@@ -25,6 +25,7 @@ class RegisterDocumentMaster(models.Model):
     is_mandatory = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     sort_order = models.SmallIntegerField(default=0)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -36,6 +37,97 @@ class RegisterDocumentMaster(models.Model):
         return f"{self.code} {self.document_name}"
 
 
+class RegisterTemplate(models.Model):
+    """A State + Form statutory register template (the PAN-India CLRA library).
+
+    Each row keeps the ordered column headers parsed from the source register so
+    the contractor's uploaded master data can be rendered into the register.
+    One active template per (state, form); re-import bumps the version."""
+
+    state = models.CharField(max_length=60, db_index=True)
+    form_code = models.CharField(max_length=60)
+    title = models.CharField(max_length=200, blank=True)
+    source_format = models.CharField(max_length=10, blank=True)  # xlsx / xls / docx
+    document = models.ForeignKey(RegisterDocumentMaster, on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name="templates")
+    columns = models.JSONField(default=list, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
+    source_file = models.FileField(upload_to="clra/templates/%Y/", blank=True)
+    is_active = models.BooleanField(default=True)
+    format_available = models.BooleanField(default=True)
+    version = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "register_template"
+        constraints = [models.UniqueConstraint(fields=["state", "form_code"],
+                                               name="uq_register_template_state_form")]
+        indexes = [models.Index(fields=["state"], name="idx_register_template_state")]
+
+    def __str__(self):
+        return f"{self.state} {self.form_code}"
+
+
+class StateCode(models.Model):
+    """State / UT reference: 2-letter code + LWF / NH-FH applicability."""
+
+    state = models.CharField(max_length=60, unique=True)
+    code = models.CharField(max_length=10, blank=True)
+    is_union_territory = models.BooleanField(default=False)
+    lwf = models.CharField(max_length=40, blank=True)
+    nh_fh = models.CharField(max_length=120, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "state_code"
+
+    def __str__(self):
+        return f"{self.state} ({self.code})"
+
+
+class StateFormApplicability(models.Model):
+    """The PAN-India CLRA applicability matrix: state + purpose → applicable form."""
+
+    state = models.CharField(max_length=60, db_index=True)
+    purpose = models.CharField(max_length=160)
+    form_label = models.CharField(max_length=80, blank=True)
+    strength_rc_pe = models.CharField(max_length=40, blank=True)
+    strength_licence = models.CharField(max_length=40, blank=True)
+    lwf = models.CharField(max_length=40, blank=True)
+    hra = models.CharField(max_length=40, blank=True)
+    nh_fh = models.CharField(max_length=120, blank=True)
+    pt_frequency = models.CharField(max_length=120, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "state_form_applicability"
+        constraints = [models.UniqueConstraint(fields=["state", "purpose"],
+                                               name="uq_state_form_applicability")]
+        indexes = [models.Index(fields=["state"], name="idx_state_form_applicability")]
+
+    def __str__(self):
+        return f"{self.state} · {self.purpose} → {self.form_label}"
+
+
+class StateFeeMaster(models.Model):
+    """State-wise CLRA security / government fees."""
+
+    state = models.CharField(max_length=60, unique=True)
+    security_fee_per_employee = models.CharField(max_length=80, blank=True)
+    govt_fees = models.CharField(max_length=80, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "state_fee_master"
+
+    def __str__(self):
+        return f"Fees {self.state}"
+
+
 class ComplianceMaster(models.Model):
     """Compliance matrix line item (act + form, its nature & max score)."""
 
@@ -45,6 +137,7 @@ class ComplianceMaster(models.Model):
     remark = models.CharField(max_length=255, blank=True)
     max_score = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -168,6 +261,7 @@ class EmployerDocumentMapping(models.Model):
                                      related_name="employer_mappings")
     is_mandatory = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -186,6 +280,7 @@ class EmployerRegisterMapping(models.Model):
     register_doc = models.ForeignKey(RegisterDocumentMaster, on_delete=models.CASCADE,
                                      related_name="employer_register_mappings")
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -205,6 +300,7 @@ class EmployerActMapping(models.Model):
     register_doc = models.ForeignKey(RegisterDocumentMaster, on_delete=models.SET_NULL,
                                      null=True, blank=True, related_name="act_mappings")
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -224,6 +320,7 @@ class PtMaster(models.Model):
     pt_number = models.CharField(max_length=80, blank=True)
     payment_frequency = models.CharField(max_length=20, choices=FREQ, default="MONTHLY")
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -264,6 +361,7 @@ class LwfMaster(models.Model):
     lwf_type = models.CharField(max_length=40, blank=True)
     designation = models.CharField(max_length=80, blank=True)
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -288,6 +386,7 @@ class LicenseMaster(models.Model):
     bonus_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     wage_zone = models.CharField(max_length=40, blank=True)
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -312,6 +411,7 @@ class MinimumWage(models.Model):
     effective_from = models.DateField(null=True, blank=True)
     effective_to = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -342,6 +442,21 @@ class MenuPermission(models.Model):
 
     def __str__(self):
         return f"{self.role} {self.menu_code} {self.allowed}"
+
+
+class UserMenuPermission(models.Model):
+    """Per-user module → action grants (the admin Permission Page)."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="menu_permissions")
+    permissions = models.JSONField(default=dict, blank=True)  # {"Workers": ["View", "Edit"]}
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "user_menu_permission"
+
+    def __str__(self):
+        return f"perms:{self.user_id}"
 
 
 class ComplianceBatch(models.Model):

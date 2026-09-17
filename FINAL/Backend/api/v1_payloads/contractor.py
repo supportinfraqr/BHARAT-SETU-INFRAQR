@@ -189,6 +189,8 @@ def _contractor_workers(user):
             emp = getattr(b.site.employer, "employer_profile", None)
         rows.append({
             "id": b.worker_id,
+            "bindingId": b.id,
+            "siteId": str(b.site_id) if b.site_id else "",
             "name": _d(wi.name if wi else b.worker.username),
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "mobile": _d(wi.mobile_number if wi else ""),
@@ -264,21 +266,43 @@ def _contractor_gate_passes(user):
     for b in bindings:
         meta = _gate_pass_worker_meta(b.worker)
         gp_type = _auto_gate_pass_type(b.worker)
+        site = b.site
+        ep = getattr(site.employer, "employer_profile", None) if (site and site.employer) else None
+        employer_name = _d(ep.employer_name if ep else (site.employer.username if site and site.employer else ""))
         if not gp_type:
+            # Not eligible yet — show the worker with the reason so the contractor
+            # knows why no pass has been issued.
+            if (meta["workerId"], "Not eligible") in seen:
+                continue
+            rows.append({
+                "id": f"auto-{b.id}",
+                "auto": True,
+                "number": "",
+                **meta,
+                "employer": employer_name,
+                "type": "Not eligible",
+                "site": site.site_name if site else "",
+                "validFrom": "", "validTo": "",
+                "requestedAt": _dts(b.created_at),
+                "requestedBy": "", "approvedBy": "", "approvedAt": "",
+                "status": "Not eligible",
+                "blocked": False,
+                "eligible": False,
+                "missing": _gate_pass_missing(b.worker),
+                "eligibility": _gate_pass_eligibility(b.worker),
+            })
             continue
         label = _GP_TYPE_LABEL.get(gp_type, gp_type)
         if (meta["workerId"], label) in seen:
             continue
         issue_date, valid_till = _auto_gate_pass_dates(b.worker, gp_type)
-        site = b.site
-        ep = getattr(site.employer, "employer_profile", None) if (site and site.employer) else None
         blocked = _is_gate_pass_blocked(b.worker, b.site.employer if b.site else None)
         rows.append({
             "id": f"auto-{b.id}",
             "auto": True,
             "number": _auto_gate_pass_no(b.worker, gp_type),
             **meta,
-            "employer": _d(ep.employer_name if ep else (site.employer.username if site and site.employer else "")),
+            "employer": employer_name,
             "type": label,
             "site": site.site_name if site else "",
             "validFrom": _dts(issue_date), "validTo": _dts(valid_till),
@@ -286,6 +310,8 @@ def _contractor_gate_passes(user):
             "requestedBy": "", "approvedBy": "", "approvedAt": "",
             "status": "Blocked" if blocked else "Approved",
             "blocked": blocked,
+            "eligible": True,
+            "missing": [],
             "eligibility": _gate_pass_eligibility(b.worker),
         })
     return rows[:200]
@@ -440,8 +466,36 @@ def _contractor_worker_benefits(user):
     return {"bonus": rows("BONUS"), "leaveEncashment": rows("LEAVE_ENCASHMENT")}
 
 
+def _salary_row(w):
+    """One salary/wage register row from a WorkerWages record."""
+    wi = WorkerIdentity.objects.filter(user_id=w.worker_id).first()
+    site = w.site
+    ep = getattr(site.employer, "employer_profile", None) if site and site.employer else None
+    status_map = {"DRAFT": "Pending verification", "APPROVED": "Verified",
+                  "PAID": "Verified", "CANCELLED": "Returned"}
+    return {
+        "id": str(w.id),
+        "worker": _d(wi.name if wi else w.worker.username),
+        "workerId": _d(wi.bss_worker_id if wi else ""),
+        "employer": _d(ep.employer_name if ep else ""),
+        "site": site.site_name if site else "",
+        "period": w.period_start.strftime("%b %Y") if w.period_start else "",
+        "gross": _num(w.gross_wage),
+        "deductions": _num(w.deductions_amount),
+        "net": _num(w.net_wage),
+        "paidOn": _dts(w.period_end) if w.period_end else "",
+        "fileName": "",
+        "status": status_map.get(w.status, "Pending verification"),
+        "source": "contractor",
+    }
+
+
 def _contractor_salaries(user):
-    return []
+    """The contractor's salary/wage register — from WorkerWages records."""
+    qs = (WorkerWages.objects.filter(contractor=user)
+          .select_related("worker", "site", "site__employer")
+          .order_by("-period_start")[:200])
+    return [_salary_row(w) for w in qs]
 
 
 def _contractor_licenses(user):
@@ -525,8 +579,11 @@ def _contractor_compliance_row(binding):
         # Auto-verified identifiers (read-only for the contractor; masked).
         "verified": {
             "aadhaar": _mask(wi.aadhaar) if wi else "",
+            "aadhaarVerified": bool(wi and (wi.aadhaar or "").strip()),
             "pan": _d(wi.pan) if wi else "",
+            "panVerified": bool(wi and wi.pan_verified),
             "bank": _mask(bank.bank_account_number) if bank else "",
+            "bankVerified": bool(bank and str(bank.bank_verification_status or "").strip().lower() == "verified"),
             "bankName": _d(bank.bank_name) if bank else "",
             "ifsc": _d(bank.ifsc_code) if bank else "",
         },
@@ -965,21 +1022,20 @@ def _contractor_payroll_config(user):
                    "otherDetail": ""}
         bonus_obj = getattr(pc, "bonus", None)
         if bonus_obj:
-            bonus = {"minWageStates": [], "paymentCycle": _d(bonus_obj.payment_cycle) or "annual",
+            bonus = {"minWageStates": [_d(b.state) for b in pc.bonus_min_wages.all()],
+                     "paymentCycle": _d(bonus_obj.payment_cycle) or "annual",
                      "percentage": _num(bonus_obj.bonus_pct)}
-        pt_obj = getattr(pc, "pt", None)
-        if pt_obj:
-            pt_rows = [{"location": _d(pt_obj.work_location), "ptNumber": _d(pt_obj.pt_number),
-                        "state": _d(pt_obj.state), "cycle": _d(pt_obj.deduction_cycle) or "monthly",
-                        "applicable": bool(pt_obj.applicable), "slabs": []}]
-        lwf_obj = getattr(pc, "lwf", None)
-        if lwf_obj:
-            lwf_rows = [{"state": _d(lwf_obj.state), "minAmount": _num(lwf_obj.min_amount),
-                         "maxAmount": _num(lwf_obj.max_amount),
-                         "employeeShare": _num(lwf_obj.employee_share),
-                         "employerShare": _num(lwf_obj.employer_share),
-                         "deductionCycle": _d(lwf_obj.deduction_cycle) or "half-yearly",
-                         "enabled": bool(lwf_obj.applicable)}]
+        pt_rows = [{"location": _d(p.location or p.work_location), "ptNumber": _d(p.pt_number),
+                    "state": _d(p.state), "cycle": _d(p.deduction_cycle) or "monthly",
+                    "applicable": bool(p.applicable), "slabs": []}
+                   for p in pc.pt_configs.all()]
+        lwf_rows = [{"state": _d(l.state), "minAmount": _num(l.min_amount),
+                     "maxAmount": _num(l.max_amount),
+                     "employeeShare": _num(l.employee_share),
+                     "employerShare": _num(l.employer_share),
+                     "deductionCycle": _d(l.deduction_cycle) or "half-yearly",
+                     "enabled": bool(l.status_enabled)}
+                    for l in pc.lwf_configs.all()]
         earnings = [{"name": _d(c.name), "type": _d(c.type), "calculation": _d(c.calculation_method),
                      "value": _num(c.calc_value), "considerForPf": bool(c.consider_for_pf),
                      "considerForEsi": bool(c.consider_for_esi)} for c in pc.earnings.all()]
@@ -1161,8 +1217,9 @@ def build_contractor_portal(user):
         "grievances": _contractor_grievances(user),
         "payroll": {
             "config": _contractor_payroll_config(user),
-            "records": [],
-            "templateColumns": [],
+            "records": _payroll_records(contractor=user),
+            "templateColumns": ["id", "workerId", "workerName", "employer", "site", "contractor",
+                                "period", "status", "gross", "netPay"],
         },
         "accessibility": _accessibility_prefs(user),
         "settings": _portal_settings(user),
@@ -1199,6 +1256,7 @@ __all__ = [
     "_contractor_registers",
     "_contractor_restricted_holiday_requests",
     "_contractor_salaries",
+    "_salary_row",
     "_contractor_site_calendars",
     "_contractor_sites",
     "_contractor_stats",

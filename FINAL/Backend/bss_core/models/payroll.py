@@ -77,7 +77,11 @@ class EsiConfig(models.Model):
 
 
 class PtConfig(models.Model):
-    config = models.OneToOneField(PayrollConfig, on_delete=models.CASCADE, related_name="pt")
+    """Professional Tax config — one row per work location (a state may have
+    several locations, and applicability differs by state)."""
+
+    config = models.ForeignKey(PayrollConfig, on_delete=models.CASCADE, related_name="pt_configs")
+    location = models.CharField(max_length=120, blank=True)
     pt_number = models.CharField(max_length=40, blank=True)
     applicable = models.BooleanField(default=False)
     slab_lookup = models.CharField(max_length=40, blank=True)
@@ -91,13 +95,16 @@ class PtConfig(models.Model):
         db_table = "pt_config"
 
     def __str__(self):
-        return f"PT {self.pt_number}"
+        return f"PT {self.location or self.work_location or self.state}"
 
 
 class LwfConfig(models.Model):
-    config = models.OneToOneField(PayrollConfig, on_delete=models.CASCADE, related_name="lwf")
+    """Labour Welfare Fund config — one row per state (with an enable toggle)."""
+
+    config = models.ForeignKey(PayrollConfig, on_delete=models.CASCADE, related_name="lwf_configs")
     lwf_number = models.CharField(max_length=40, blank=True)
     applicable = models.BooleanField(default=False)
+    status_enabled = models.BooleanField(default=True)
     employer_share = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     employee_share = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     state = models.CharField(max_length=60, blank=True)
@@ -111,7 +118,27 @@ class LwfConfig(models.Model):
         db_table = "lwf_config"
 
     def __str__(self):
-        return f"LWF {self.lwf_number}"
+        return f"LWF {self.state}"
+
+
+class BonusStateMinWage(models.Model):
+    """Statutory-bonus minimum wage configured per state (drives eligibility)."""
+
+    config = models.ForeignKey(PayrollConfig, on_delete=models.CASCADE,
+                               related_name="bonus_min_wages")
+    state = models.CharField(max_length=60)
+    min_wage = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    configured = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "bonus_state_min_wage"
+        constraints = [models.UniqueConstraint(fields=["config", "state"],
+                                               name="uq_bonus_state_min_wage")]
+
+    def __str__(self):
+        return f"Bonus min wage {self.state}"
 
 
 class BonusConfig(models.Model):
@@ -284,3 +311,26 @@ class PayrollPeriod(models.Model):
 
     def __str__(self):
         return f"{self.period_start} - {self.period_end} {self.status}"
+
+
+class PayrollWorkspaceStore(models.Model):
+    """Server-side store for the payroll workspace module state.
+
+    The workspace keeps runs, payments, approvals, loans, salary structures,
+    revisions, Form-16, full-&-final and VPF requests. Persisting the module
+    JSON per owner makes that state durable and shared across devices instead of
+    living only in the browser session."""
+
+    owner_type = models.CharField(max_length=20)   # contractor | employer | admin
+    owner_id = models.CharField(max_length=80)
+    records = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "payroll_workspace_store"
+        constraints = [models.UniqueConstraint(fields=["owner_type", "owner_id"],
+                                               name="uq_payroll_workspace_owner")]
+
+    def __str__(self):
+        return f"{self.owner_type}:{self.owner_id}"

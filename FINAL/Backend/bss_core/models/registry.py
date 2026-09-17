@@ -211,6 +211,7 @@ class PartyMaster(models.Model):
     contact_mobile = models.CharField(max_length=20, blank=True)
     contact_email = models.EmailField(max_length=120, blank=True)
     is_active = models.BooleanField(default=True)
+    details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -110,13 +110,7 @@ export default function ContractorSalariesPage() {
   }
 
   return <div className="relative space-y-6">
-    <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-20 overflow-hidden">
-      <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
-        {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
-      </div>
-    </div>
-
-    <header className="flex flex-col sm:flex-row justify-between gap-4"><div><h1 className="text-2xl font-bold">Salary & Wages</h1><p className="text-sm text-gray-500 mt-1">Record and submit employer-wise wage details for bound workers.</p></div></header>
+    <header className="flex flex-col sm:flex-row justify-between gap-4"><div><h1 className="text-2xl font-bold">Salary &amp; Wages</h1><p className="text-sm text-gray-500 mt-1">Record and submit employer-wise wage details for bound workers.</p></div></header>
     <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Salary details are filled and submitted by the contractor for each bound worker and employer.</div>
 
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3"><Metric label="Records" value={totals.total} icon={FileText} tone="bg-blue-50 text-blue-700"/><Metric label="Gross recorded" value={money(totals.gross)} icon={IndianRupee} tone="bg-emerald-50 text-emerald-700"/><Metric label="Net paid" value={money(totals.net)} icon={IndianRupee} tone="bg-green-50 text-green-700"/><Metric label="Net of all entries" value={money(totals.net)} icon={IndianRupee} tone="bg-orange-50 text-orange-700"/></div>

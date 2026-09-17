@@ -17,6 +17,8 @@ export type PayrollStore = {
   orgId: string;
   period: string;
   config: ContractorPayrollConfig;
+  updateConfig: (patch: Partial<ContractorPayrollConfig>) => void;
+  saveConfig: () => void;
   employers: string[];
   contractors: string[];
   sites: string[];

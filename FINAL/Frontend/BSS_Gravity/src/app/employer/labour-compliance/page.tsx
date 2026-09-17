@@ -48,12 +48,6 @@ export default function EmployerLabourCompliancePage() {
   ];
 
   return <div className="relative space-y-6">
-    <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-20 overflow-hidden">
-      <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
-        {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
-      </div>
-    </div>
-
     <header><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">Governance</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">Labour Law Compliance</h1><span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">Central Rules</span></div><p className="text-sm text-gray-500 mt-1">Ten central-government requirements enforced and surfaced to workers on fulfilment.</p></header>
     <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Employer constitution: <strong>{employer.govtScope === 'central' ? 'Central Government / PSU / central-govt governed' : 'State Government / state-owned entity'}</strong>. For a state-governed employer some rules may differ (see per-rule state notes).</div>
 

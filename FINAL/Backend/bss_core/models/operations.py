@@ -648,3 +648,46 @@ class WorkerGatePassBlock(models.Model):
 
     def __str__(self):
         return f"{self.worker_id} blocked={self.blocked}"
+
+
+class SupportTicket(models.Model):
+    """An operational ticket for the BSS Staff workbench (service incidents,
+    failed jobs, integration issues)."""
+
+    STATUS = [("OPEN", "Open"), ("IN_PROGRESS", "In progress"),
+              ("MONITORING", "Monitoring"), ("RESOLVED", "Resolved"),
+              ("ESCALATED", "Escalated")]
+    PRIORITY = [("P1", "P1"), ("P2", "P2"), ("P3", "P3"), ("P4", "P4")]
+
+    title = models.CharField(max_length=200)
+    service = models.CharField(max_length=80, blank=True)
+    priority = models.CharField(max_length=4, choices=PRIORITY, default="P3")
+    status = models.CharField(max_length=20, choices=STATUS, default="OPEN")
+    assignee = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="+")
+    opened_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "support_ticket"
+        ordering = ["-opened_at"]
+
+    def __str__(self):
+        return f"{self.id} {self.title}"
+
+
+class SupportCaseState(models.Model):
+    """Staff-side overlay for a derived support case (assignee + status), keyed
+    by the case reference (e.g. grievance ticket number)."""
+
+    case_ref = models.CharField(max_length=80, unique=True)
+    assignee = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name="+")
+    status = models.CharField(max_length=30, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "support_case_state"
+
+    def __str__(self):
+        return f"{self.case_ref} {self.status}"

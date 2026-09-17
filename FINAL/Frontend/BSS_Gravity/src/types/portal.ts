@@ -123,6 +123,8 @@ export type WorkerRecord = {
 
 export type ContractorWorker = {
   id: string; name: string; bssId: string; mobile: string; site: string; employer: string;
+  /** The underlying worker↔contractor binding and its site (for moving a worker). */
+  bindingId?: number; siteId?: string;
   designation: string; doj: string; compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
   status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired';
   refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
@@ -159,7 +161,7 @@ export type ContractorWorkerDocument = {
 export type ContractorWorkerComplianceStatus = {
   worker: string; workerId: string; site: string; gatePass: 'Active' | 'Pending' | 'Expired'; medical: 'Done' | 'Pending' | 'Expired'; healthSafety: 'Done' | 'Pending';
   /** Auto-verified identity/bank fields (masked) — read-only, contractor cannot edit. */
-  verified?: { aadhaar: string; pan: string; bank: string; bankName?: string; ifsc?: string };
+  verified?: { aadhaar: string; pan: string; bank: string; bankName?: string; ifsc?: string; aadhaarVerified?: boolean; panVerified?: boolean; bankVerified?: boolean };
   /** Contractor has ticked "Verified" for the UAN/ESIC/PPE/Health/Welfare details. */
   contractorVerified?: boolean;
   /** Individual per-document approvals (contractor). */
@@ -321,7 +323,7 @@ export type ContractorPortalData = {
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;
-  gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected' | 'Blocked'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; auto?: boolean; number?: string; blocked?: boolean; eligibility?: GatePassEligibility }>;
+  gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent' | 'Not eligible'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected' | 'Blocked' | 'Not eligible'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; auto?: boolean; number?: string; blocked?: boolean; eligible?: boolean; missing?: string[]; eligibility?: GatePassEligibility }>;
   applications: Array<{ id: string; workerName: string; workerId: string; employer: string; trade: string; experience: string; expectedWage: number; location: string; status: 'Pending' | 'Shortlisted' | 'Hired' | 'Rejected'; dateApplied: string; matchScore: number }>;
   availableWorkers: Array<{ id: number; workerName: string; workerId: string; trade: string; skills: string[]; experience: string; expectedWage: number; location: string; status: string; dateApplied: string; matchScore: number }>;
   employers: Array<{ id: string; name: string; employerId: string; sites: string[]; siteDetails?: Array<{ id: string; name: string; code: string; location: string; state: string }>; status: 'Active' | 'Inactive'; boundSince: string }>;

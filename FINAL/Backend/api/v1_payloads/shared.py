@@ -433,11 +433,18 @@ def _gate_pass_eligibility(worker):
     health_safety = safety_kit or safety_training or site_induction
     ppe = safety_kit
     welfare_safety = safety_training or site_induction
+    # Documents count as verified only from a verification action — never from a
+    # merely uploaded/typed record:
+    #   Aadhaar — only ever stored after Aadhaar OTP / DigiLocker oKYC.
+    #   PAN     — DigiLocker-verified (pan_verified).
+    #   Bank    — penny-drop verified (bank_verification_status == Verified).
+    #   UAN/ESIC— approved by the contractor (uan_verified / esic_verified).
     aadhaar = bool(identity and (identity.aadhaar or "").strip())
-    pan = bool(identity and (identity.pan or "").strip())
-    bank = bool(banking and (banking.bank_account_number or "").strip())
-    uan = bool(social and (social.epfo_uan or "").strip())
-    esi = bool(social and (social.esic_ip_number or "").strip())
+    pan = bool(identity and identity.pan_verified and (identity.pan or "").strip())
+    bank = bool(banking and (banking.bank_account_number or "").strip()
+                and str(banking.bank_verification_status or "").strip().lower() == "verified")
+    uan = bool(social and social.uan_verified and (social.epfo_uan or "").strip())
+    esi = bool(social and social.esic_verified and (social.esic_ip_number or "").strip())
     # The five documents: Aadhaar + PAN + Bank (auto-verified) + UAN + ESIC.
     # 5 documents → Temporary gate pass; all 8 checks (+ Medical, PPE and
     # Welfare & Safety) → Permanent gate pass.
@@ -648,6 +655,20 @@ def _auto_gate_pass_type(worker):
     return ""
 
 
+_GATE_PASS_CHECK_LABELS = (
+    ("aadhaar", "Aadhaar"), ("pan", "PAN"), ("bank", "Bank account"),
+    ("uan", "UAN"), ("esi", "ESIC"), ("medical", "Medical"),
+    ("ppe", "PPE"), ("welfareSafety", "Welfare & Safety"),
+)
+
+
+def _gate_pass_missing(worker):
+    """Labels of the documents/checks a worker has not completed yet (why no
+    gate pass has been issued)."""
+    e = _gate_pass_eligibility(worker)
+    return [label for key, label in _GATE_PASS_CHECK_LABELS if e.get(key) != "Done"]
+
+
 def _is_gate_pass_blocked(worker, employer):
     """True when the principal employer has blocked gate-pass generation for a worker."""
     if not employer:
@@ -699,11 +720,83 @@ def _submission_review_label(status):
     return "Pending review"
 
 
+def _payroll_records(*, contractor=None, employer=None):
+    """The unified worker payroll records (from WorkerWages), role-scoped.
+
+    Shared by the admin, employer and contractor payroll workspaces so all three
+    see the same record shape from one source of truth."""
+    qs = (WorkerWages.objects.select_related("worker", "site", "contractor")
+          .order_by("-period_start"))
+    if contractor is not None:
+        qs = qs.filter(contractor=contractor)
+    if employer is not None:
+        qs = qs.filter(site__employer=employer)
+
+    records = []
+    for w in qs:
+        wi = WorkerIdentity.objects.filter(user_id=w.worker_id).first()
+        binding = WorkerContractorBinding.objects.filter(worker_id=w.worker_id,
+                                                         binding_status="ACCEPTED").first()
+        site = w.site or (binding.site if binding else None)
+        contractor_user = w.contractor or (binding.contractor if binding else None)
+        cp = getattr(contractor_user, "contractor_profile", None) if contractor_user else None
+        ep = getattr(site.employer, "employer_profile", None) if site else None
+
+        gross = _num(w.gross_wage)
+        basic = gross if not w.base_wage else float(w.base_wage)
+        employee_pf = round(basic * 0.12, 2)
+        employer_pf = round(basic * 0.12, 2)
+        eps = round(basic * 0.0833, 2)
+        edli = round(basic * 0.005, 2)
+        admin = round(basic * 0.005, 2)
+        employee_esi = round(gross * 0.0075, 2)
+        employer_esi = round(gross * 0.0325, 2)
+        total_deductions = _num(w.deductions_amount)
+        net = _num(w.net_wage)
+        employer_cost = round(gross + employer_pf + employer_esi + 200.0 + 12.0 + admin, 2)
+
+        status_label = {"DRAFT": "Draft", "APPROVED": "Reviewed", "PAID": "Verified",
+                        "CANCELLED": "Exception"}.get(w.status, "Draft")
+
+        records.append({
+            "id": f"PW{w.id}",
+            "workerId": _d(wi.bss_worker_id if wi else ""),
+            "workerName": _d(wi.name if wi else w.worker.username),
+            "employer": _d(ep.employer_name if ep else ""),
+            "site": site.site_name if site else "",
+            "period": w.period_start.strftime("%b %Y") if w.period_start else "",
+            "status": status_label,
+            "attendanceDays": _num(w.days_present),
+            "lopDays": _num(w.days_absent),
+            "pfWage": round(basic, 2),
+            "earnings": [{"component": "Basic + Allowances", "amount": round(gross, 2)}],
+            "deductions": [{"component": "Statutory Deductions", "amount": round(total_deductions, 2)}],
+            "contributions": {
+                "employeePF": employee_pf, "employerPF": employer_pf, "eps": eps, "edli": edli,
+                "admin": admin, "employeeESI": employee_esi, "employerESI": employer_esi,
+                "employeePT": 200.0, "employerPT": 200.0,
+                "lwfEmployee": 12.0, "lwfEmployer": 12.0,
+            },
+            "gross": round(gross, 2),
+            "totalDeductions": round(total_deductions, 2),
+            "netPay": round(net, 2),
+            "employerCost": employer_cost,
+            "updatedAt": _dts(w.updated_at),
+            "updatedBy": _d(cp.contractor_name if cp else "") or _d(ep.employer_name if ep else "") or "System",
+            "source": "Contractor" if contractor_user else "Employer",
+            "matchState": "Needs Review",
+            "contractor": _d(cp.contractor_name if cp else ""),
+        })
+    return records
+
+
 __all__ = [
     "_advance_row",
+    "_payroll_records",
     "_auto_gate_pass_dates",
     "_auto_gate_pass_no",
     "_auto_gate_pass_type",
+    "_gate_pass_missing",
     "_benefit_row",
     "_binding_row",
     "_ce_binding_row",

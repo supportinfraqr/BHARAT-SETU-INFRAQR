@@ -345,14 +345,24 @@ def contractor_compliance_batches(request):
         for m in RegisterDocumentMaster.objects.filter(kind="register", is_active=True)
         .order_by("sort_order")
     ]
+    # Prefer the PAN-India State+Form register templates (parsed column schema),
+    # filtered by the applicability matrix; fall back to the generic layout.
+    from .register_templates import applicable_templates
+    templates = [
+        {"formCode": t.form_code, "title": t.title, "state": t.state,
+         "columns": list(t.columns or [])}
+        for t in applicable_templates(state)[0]
+    ] if state else []
     generated_on = timezone.localdate()
     data = clra.build_workbook(
         rows, contractor=payloads._party_name(user),
         site=(site.site_name if site else site_label),
         site_code=(site.site_code if site else ""), state=state,
         financial_year=fy, month=month, year=year, registers=registers,
-        generated_on=str(generated_on),
+        generated_on=str(generated_on), templates=templates,
     )
+
+    register_count = len(templates) or len(registers)
 
     batch = ComplianceBatch(
         contractor=user, site=site,
@@ -361,7 +371,7 @@ def contractor_compliance_batches(request):
         location_count=len({r.get("location", "") for r in rows if r.get("location")}) or 1,
         generated_on=generated_on, generated_by=payloads._party_name(user),
         rows_count=len(rows),
-        notes=f"{len(registers)} register(s) generated from {len(rows)} worker row(s).",
+        notes=f"{register_count} register(s) generated from {len(rows)} worker row(s).",
         status="GENERATED",
     )
     stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
@@ -400,10 +410,158 @@ def compliance_batch_download(request, role_path, batch_id):
                         filename=os.path.basename(batch.generated_file.name))
 
 
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def contractor_clra_validate(request):
+    """Validate an uploaded CLRA master file (multipart: master, state, month, year)
+    and return the error/warning report without generating anything."""
+    from api import clra
+    if request.user.role != "contractor":
+        return Response({"error": "Only contractors can validate master files."},
+                        status=status.HTTP_403_FORBIDDEN)
+    master = request.FILES.get("master")
+    if master is None:
+        return Response({"error": "Choose a master file."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        rows = clra.parse_master(master)
+    except clra.MasterFileError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    report = clra.validate_master(
+        rows,
+        state=(request.data.get("state") or "").strip(),
+        month=(request.data.get("month") or "").strip(),
+        year=(request.data.get("year") or "").strip())
+    return Response({"data": report}, status=status.HTTP_200_OK)
+
+
+def _batch_master_rows(batch):
+    """Re-parse the batch's stored master file into rows (best effort)."""
+    from api import clra
+    if not batch.master_file:
+        return []
+    try:
+        batch.master_file.open("rb")
+        return clra.parse_master(batch.master_file)
+    except Exception:  # noqa: BLE001 — a missing/corrupt file just yields no rows
+        return []
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_summary(request, batch_id):
+    """State/Site-wise drill-down of a generated batch."""
+    from bss_core.models import ComplianceBatch
+    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    rows = _batch_master_rows(batch)
+    grouped = {}
+    for row in rows:
+        key = ((row.get("site") or "").strip(), (row.get("location") or "").strip())
+        grouped[key] = grouped.get(key, 0) + 1
+    sites = [{"site": site, "location": location, "employees": count}
+             for (site, location), count in sorted(grouped.items())]
+    return Response({"data": {
+        "id": str(batch.id), "state": batch.state, "month": batch.month,
+        "year": batch.year, "site": batch.site.site_name if batch.site else "",
+        "employees": len(rows), "sites": sites,
+    }}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_site_documents(request, batch_id):
+    """Documents applicable to one site of a batch: employer mapping + state templates."""
+    from bss_core.models import ComplianceBatch, EmployerDocumentMapping
+    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    site_name = (request.query_params.get("site") or "").strip()
+    site = (Site.objects.filter(site_name__iexact=site_name).first() if site_name else batch.site)
+    state = (site.state if site and site.state else batch.state)
+    employer = site.employer if site else None
+
+    # The applicability matrix is the authority on which forms apply in a state;
+    # the templates are filtered to it (fallback: every template in the folder).
+    from .register_templates import applicable_templates, state_strength
+    templates_list, mapped_forms = applicable_templates(state)
+    by_form = {t.form_code.strip().upper(): t for t in templates_list}
+
+    # Employer document mapping (which documents this employer is subject to).
+    mapped_docs = {}
+    if employer is not None:
+        for mapping in (EmployerDocumentMapping.objects
+                        .filter(employer=employer, is_active=True)
+                        .select_related("register_doc")):
+            doc = mapping.register_doc
+            mapped_docs[(doc.form_number or "").strip().upper()] = bool(
+                doc.is_mandatory or mapping.is_mandatory)
+
+    # Applicable purposes from the matrix → the documents the site must file.
+    from bss_core.models import StateFormApplicability
+    documents = []
+    for row in StateFormApplicability.objects.filter(state__iexact=state).order_by("purpose"):
+        label = (row.form_label or "").strip().upper()
+        if not label.startswith("FORM"):
+            continue
+        template = by_form.get(label)
+        documents.append({
+            "purpose": row.purpose,
+            "form": row.form_label,
+            "templateId": template.id if template else None,
+            "mandatory": mapped_docs.get(label, False),
+            "frequency": (template.title if template else ""),
+        })
+    templates = [{
+        "id": t.id, "formCode": t.form_code, "title": t.title,
+        "columns": len(t.columns or []), "hasFile": bool(t.source_file),
+    } for t in templates_list]
+    return Response({"data": {
+        "site": site.site_name if site else site_name, "siteCode": site.site_code if site else "",
+        "state": state, "documents": documents, "templates": templates,
+        "mappedForms": sorted(mapped_forms), "strength": state_strength(state),
+    }}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def compliance_batch_register(request, batch_id, template_id):
+    """Render one register (a State+Form template) from a generated batch."""
+    from api import clra
+    from bss_core.models import ComplianceBatch, RegisterTemplate
+    batch = ComplianceBatch.objects.filter(pk=batch_id, contractor=request.user).first()
+    if batch is None:
+        return Response({"error": "batch not found"}, status=status.HTTP_404_NOT_FOUND)
+    template = RegisterTemplate.objects.filter(pk=template_id).first()
+    if template is None:
+        return Response({"error": "template not found"}, status=status.HTTP_404_NOT_FOUND)
+    rows = _batch_master_rows(batch)
+    html = clra.render_register_html(
+        {"formCode": template.form_code, "title": template.title, "state": template.state,
+         "columns": list(template.columns or [])},
+        rows,
+        contractor=payloads._party_name(request.user),
+        site=(batch.site.site_name if batch.site else ""),
+        site_code=(batch.site.site_code if batch.site else ""),
+        state=batch.state, month=batch.month, year=batch.year,
+        financial_year=batch.financial_year, generated_on=payloads._dts(timezone.now())[:10],
+    )
+    return Response({"data": {"html": html, "title": f"{template.state} · {template.form_code}"}},
+                    status=status.HTTP_200_OK)
+
+
 __all__ = [
     "_handle_submission_review",
     "_submissions",
     "compliance_batch_download",
+    "compliance_batch_register",
+    "compliance_batch_site_documents",
+    "compliance_batch_summary",
+    "contractor_clra_validate",
     "contractor_compliance_batches",
     "contractor_submissions",
     "submission_file_download",

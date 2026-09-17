@@ -13,6 +13,9 @@ from .bindings import *  # noqa: F401,F403
 from .leave import *  # noqa: F401,F403
 from .sites import *  # noqa: F401,F403
 from .submissions import *  # noqa: F401,F403
+from .register_templates import *  # noqa: F401,F403
+from .payroll import *  # noqa: F401,F403
+from .admin_console import *  # noqa: F401,F403
 from .mutations import *  # noqa: F401,F403
 
 
@@ -58,32 +61,82 @@ def bss_staff_operations(request):
     return Response(payloads.build_operations("BSS Staff"), status=status.HTTP_200_OK)
 
 
+def _operations_action(user, body):
+    """Handle a BSS Staff / Admin operations action against real records."""
+    from bss_core.models import SupportCaseState, SupportTicket
+
+    action = str(body.get("action") or "run").lower()
+    if action == "probe-service":
+        service_id = str(body.get("id") or "")
+        for service in payloads._service_catalog():
+            if service["id"] == service_id:
+                return {"message": f"{service['name']} · {service['status']} ({service['latencyMs']} ms)",
+                        "output": [f"{service['host']} → {service['status']}"]}
+        return {"message": "Unknown service.", "output": []}
+
+    if action == "ticket":
+        transition = str(body.get("transition") or "").lower()
+        if transition == "create":
+            ticket = SupportTicket.objects.create(
+                title=str(body.get("title") or "Operational issue")[:200],
+                service=str(body.get("service") or "")[:80],
+                priority=str(body.get("priority") or "P3")[:4])
+            log_audit(user, "CREATE", "support_ticket", ticket.id,
+                      after={"summary": f"Ticket created: {ticket.title}"})
+            return {"message": f"Ticket TCK-{ticket.id} created.", "output": []}
+        ticket = SupportTicket.objects.filter(pk=str(body.get("id") or "").replace("TCK-", "")).first()
+        if ticket is None:
+            return {"message": "Ticket not found.", "output": []}
+        mapping = {"claim": ("IN_PROGRESS", True), "monitor": ("MONITORING", False),
+                   "resolve": ("RESOLVED", False), "escalate": ("ESCALATED", False)}
+        new_status, take = mapping.get(transition, ("IN_PROGRESS", False))
+        ticket.status = new_status
+        if take and ticket.assignee_id is None:
+            ticket.assignee = user
+        ticket.save(update_fields=["status", "assignee", "updated_at"])
+        log_audit(user, "UPDATE", "support_ticket", ticket.id,
+                  after={"summary": f"Ticket {ticket.id} → {new_status}"})
+        return {"message": f"Ticket TCK-{ticket.id} → {ticket.get_status_display()}.", "output": []}
+
+    if action == "case":
+        case_ref = str(body.get("id") or "")[:80]
+        if not case_ref:
+            return {"message": "Missing case reference.", "output": []}
+        transition = str(body.get("transition") or "").lower()
+        status_map = {"claim": "In progress", "wait": "Waiting for evidence",
+                      "resolve": "Resolved", "escalate": "Escalated"}
+        state, _ = SupportCaseState.objects.get_or_create(case_ref=case_ref)
+        state.status = status_map.get(transition, "In progress")
+        if transition == "claim" and state.assignee_id is None:
+            state.assignee = user
+        state.save()
+        log_audit(user, "UPDATE", "support_case", case_ref,
+                  after={"summary": f"Case {case_ref} → {state.status}"})
+        return {"message": f"Case {case_ref} → {state.status}.", "output": []}
+
+    if action == "command":
+        return {"message": f"Command '{body.get('command')}' acknowledged.", "output": []}
+    return {"message": "Action completed.", "output": []}
+
+
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_actions(request):
-    body = request.data or {}
-    action = body.get("action") or "run"
-    return Response({
-        "success": True,
-        "message": "Action completed",
-        "output": [],
-        "completedAt": payloads._dts(timezone.now()),
-    }, status=status.HTTP_200_OK)
+    result = _operations_action(request.user, request.data or {})
+    return Response({"success": True, **result,
+                     "completedAt": payloads._dts(timezone.now())},
+                    status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def bss_staff_actions(request):
-    body = request.data or {}
-    action = body.get("action") or "run"
-    return Response({
-        "success": True,
-        "message": "Action completed",
-        "output": [],
-        "completedAt": payloads._dts(timezone.now()),
-    }, status=status.HTTP_200_OK)
+    result = _operations_action(request.user, request.data or {})
+    return Response({"success": True, **result,
+                     "completedAt": payloads._dts(timezone.now())},
+                    status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -154,6 +207,12 @@ def mutate_portal(request, role_path, resource):
     except PortalMutationError as exc:
         return Response({"error": exc.message}, status=exc.status_code)
 
+    # Append-only audit trail for every successful portal mutation.
+    log_audit(user, {"POST": "CREATE", "PATCH": "UPDATE", "DELETE": "DELETE"}.get(
+        request.method, "UPDATE"), resource,
+        result if isinstance(result, (str, int)) else "",
+        after={"summary": f"{request.method} {resource}"})
+
     if request.method == "DELETE":
         return Response({"success": True, "deleted": True, "id": result},
                         status=status.HTTP_200_OK)
@@ -177,6 +236,56 @@ def admin_payroll(request):
     if request.user.role not in ("bss_admin", "bss_staff", "government", "admin"):
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
     return Response(payloads.build_admin_payroll(request.user), status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_master_counts(request):
+    """Record counts for every admin master (admin overview KPIs)."""
+    from .admin_masters import _counts
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    return Response({"counts": _counts()}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_masters(request, key):
+    """List (GET) or create (POST) a BSS Admin master record."""
+    from .admin_masters import _masters
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        result = _masters(request, key)
+    except PortalMutationError as exc:
+        return Response({"error": exc.message}, status=exc.status_code)
+    if result is None:
+        return Response({"error": "Unknown master."}, status=status.HTTP_404_NOT_FOUND)
+    if request.method == "POST":
+        log_audit(request.user, "CREATE", f"master:{key}",
+                  (result.get("row") or {}).get("id", ""), after={"summary": f"Created {key} record"})
+    return Response(result, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "PATCH", "POST", "DELETE"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def admin_master_detail(request, key, pk):
+    """Update (PATCH/POST) or delete (DELETE) a BSS Admin master record."""
+    from .admin_masters import _master_detail
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        result = _master_detail(request, key, pk)
+    except PortalMutationError as exc:
+        return Response({"error": exc.message}, status=exc.status_code)
+    if result is None:
+        return Response({"error": "Unknown master."}, status=status.HTTP_404_NOT_FOUND)
+    log_audit(request.user, "DELETE" if request.method == "DELETE" else "UPDATE",
+              f"master:{key}", pk, after={"summary": f"{request.method} {key} #{pk}"})
+    return Response(result, status=status.HTTP_200_OK)
 
 
 @api_view(["GET", "POST"])
@@ -212,8 +321,46 @@ def document_templates(request):
     return Response({"data": {"records": row.records}}, status=status.HTTP_200_OK)
 
 
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def payroll_workspace(request):
+    """Durable storage for the payroll workspace module state (runs, payments,
+    approvals, loans, structures, revisions, Form-16, F&F, VPF) per owner.
+
+    GET  -> {"data": {"records": {...}}}
+    POST {"records": {...}} -> replaces that owner's records.
+    """
+    from bss_core.models import PayrollWorkspaceStore
+    role = request.user.role
+    owner_type = {"contractor": "contractor", "employer": "employer",
+                  "bss_admin": "admin"}.get(role)
+    if owner_type is None:
+        return Response({"error": "Payroll is available to contractors, employers and admins."},
+                        status=status.HTTP_403_FORBIDDEN)
+    owner_id = str(request.user.id)
+    if request.method == "GET":
+        row = PayrollWorkspaceStore.objects.filter(
+            owner_type=owner_type, owner_id=owner_id).first()
+        return Response({"data": {"records": row.records if row else {}}},
+                        status=status.HTTP_200_OK)
+    body = request.data if isinstance(request.data, dict) else {}
+    records = body.get("records")
+    if not isinstance(records, dict):
+        return Response({"error": "records must be a JSON object."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    row, _ = PayrollWorkspaceStore.objects.update_or_create(
+        owner_type=owner_type, owner_id=owner_id, defaults={"records": records})
+    return Response({"data": {"records": row.records}}, status=status.HTTP_200_OK)
+
+
 __all__ = [
     "admin_actions",
+    "admin_activity",
+    "admin_permissions",
+    "admin_master_counts",
+    "admin_master_detail",
+    "admin_masters",
     "admin_operations",
     "admin_payroll",
     "bss_staff_actions",
@@ -226,5 +373,16 @@ __all__ = [
     "identity_verify",
     "mutate_portal",
     "notifications",
+    "payroll_workspace",
+    "payroll_setup",
+    "clra_master_template",
+    "compliance_batch_register",
+    "compliance_batch_site_documents",
+    "compliance_batch_summary",
+    "contractor_clra_validate",
+    "contractor_register_templates",
+    "register_template_file",
+    "register_templates",
+    "state_applicability",
     "worker_portal",
 ]

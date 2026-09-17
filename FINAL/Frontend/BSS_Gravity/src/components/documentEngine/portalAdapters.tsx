@@ -37,7 +37,13 @@ export function useEmployerDocView(): { owner: OwnerScope; view: PortalView; wor
   const { employer } = useEmployer();
   return useMemo(() => {
     const owner: OwnerScope = { ownerType: 'employer', ownerId: employer.identity.bssId, ownerName: employer.identity.company, bssId: employer.identity.bssId };
-    const workers: WorkerLike[] = employer.workers.map(worker => ({
+    const seen = new Set<string>();
+    const workers: WorkerLike[] = employer.workers.filter(worker => {
+      // One entry per worker — a re-bind can leave duplicate rows behind.
+      if (seen.has(worker.bssId)) return false;
+      seen.add(worker.bssId);
+      return true;
+    }).map(worker => ({
       id: worker.id, name: worker.name, bssId: worker.bssId, mobile: worker.mobile, site: worker.site, siteId: worker.siteId,
       employer: employer.identity.company, employerId: employer.identity.bssId,
       contractor: worker.contractor, contractorId: worker.contractorId,

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from 'react';
-import { AlertCircle, Banknote, Calculator, CheckCircle2, ClipboardCheck, FileText, Filter, History, IndianRupee, Landmark, ListChecks, Network, Settings2, ShieldCheck, TriangleAlert, Upload, UserRound, UsersRound, UserRoundCog } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Banknote, Calculator, CheckCircle2, ClipboardCheck, FileText, Filter, History, IndianRupee, Landmark, ListChecks, Network, Settings2, ShieldCheck, TriangleAlert, Upload, UserRound, UserRoundCog } from 'lucide-react';
 import type { ContractorPortalData, EmployerPortalData, ContractorPayrollConfig, PayrollWorkerRecord } from '@/types/portal';
 import type { AdminPayrollSnapshot, PayRun, PayrollApprovalItem, PayrollLoan, PayrollRequest, SalaryRevision, FnFRequest, Form16Record, SalaryStructure, AuditEvent, PayrollWorkerRef, PayrollRole } from '@/lib/payroll/types';
 import { PAYROLL_MODULES } from '@/lib/payroll/types';
@@ -31,7 +31,6 @@ type WorkspacePortal = ContractorPortalData | EmployerPortalData | AdminPayrollS
 type Props = { role: PayrollRole; portal: WorkspacePortal };
 
 export default function PayrollWorkspace({ role, portal }: Props) {
-  const config: ContractorPayrollConfig = (portal as { payroll: { config: ContractorPayrollConfig } }).payroll.config;
   const initialRecords = (portal as { payroll: { records: PayrollWorkerRecord[] } }).payroll.records;
 
   const actor = role === 'Employer' ? (portal as EmployerPortalData).identity.name : role === 'Contractor' ? (portal as ContractorPortalData).identity.name : 'BSS Admin';
@@ -40,6 +39,7 @@ export default function PayrollWorkspace({ role, portal }: Props) {
 
   const [tab, setTab] = useState('overview');
   const [records, setRecords] = useState<PayrollWorkerRecord[]>(initialRecords);
+  const [config, setConfig] = useState<ContractorPayrollConfig>(() => (portal as { payroll: { config: ContractorPayrollConfig } }).payroll.config);
   const [employerFilter, setEmployerFilter] = useState('');
   const [contractorFilter, setContractorFilter] = useState('');
   const [siteFilter, setSiteFilter] = useState('');
@@ -72,6 +72,64 @@ export default function PayrollWorkspace({ role, portal }: Props) {
     window.setTimeout(() => setNotice(null), 5000);
   }, []);
 
+  // Durable workspace state — restored from and saved to the server so the
+  // module data survives across sessions and devices.
+  const hydrated = useRef(false);
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/payroll/workspace', { cache: 'no-store' })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { data?: { records?: Record<string, unknown> } } | null) => {
+        if (!active) return;
+        const saved = body?.data?.records as Partial<{
+          payments: Record<string, import('@/lib/payroll/types').PaymentInfo>;
+          runs: PayRun[]; approvals: PayrollApprovalItem[]; loans: PayrollLoan[];
+          structures: SalaryStructure[]; vpfRequests: PayrollRequest[]; fandf: FnFRequest[];
+          form16: Form16Record[]; revisions: SalaryRevision[];
+        }> | undefined;
+        if (saved) {
+          if (saved.payments && typeof saved.payments === 'object') setPayments(saved.payments);
+          if (Array.isArray(saved.runs)) setRuns(saved.runs);
+          if (Array.isArray(saved.approvals)) setApprovals(saved.approvals);
+          if (Array.isArray(saved.loans)) setLoans(saved.loans);
+          if (Array.isArray(saved.structures) && saved.structures.length) setStructures(saved.structures);
+          if (Array.isArray(saved.vpfRequests)) setVpfRequests(saved.vpfRequests);
+          if (Array.isArray(saved.fandf)) setFandf(saved.fandf);
+          if (Array.isArray(saved.form16) && saved.form16.length) setForm16(saved.form16);
+          if (Array.isArray(saved.revisions)) setRevisions(saved.revisions);
+        }
+        hydrated.current = true;
+      })
+      .catch(() => { hydrated.current = true; });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const timer = window.setTimeout(() => {
+      void fetch('/api/payroll/workspace', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records: { payments, runs, approvals, loans, structures, vpfRequests, fandf, form16, revisions } }),
+      }).catch(() => {});
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [payments, runs, approvals, loans, structures, vpfRequests, fandf, form16, revisions]);
+
+  const saveSetup = useCallback(async () => {
+    try {
+      await fetch('/api/payroll/setup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+    } catch { /* keep the local state */ }
+  }, [config]);
+
+  // Persist the payroll setup config when it changes (debounced).
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void saveSetup(); }, 900);
+    return () => window.clearTimeout(timer);
+  }, [config, saveSetup]);
+
   const logAudit = useCallback((event: AuditEvent) => setAudit(cur => [event, ...cur]), []);
 
   const { employers, contractors, sites, workers } = useMemo(() => buildScope(role, portal, orgName), [role, portal, orgName]);
@@ -80,6 +138,8 @@ export default function PayrollWorkspace({ role, portal }: Props) {
 
   const store: PayrollStore = {
     role, roleLabel: role === 'Admin' ? 'BSS Admin' : role, actor, orgName, orgId, period: 'August 2026', config,
+    updateConfig: (patch) => setConfig(cur => ({ ...cur, ...patch })),
+    saveConfig: () => { void saveSetup(); },
     employers, contractors, sites, workers,
     employerFilter, contractorFilter, siteFilter, setEmployerFilter, setContractorFilter, setSiteFilter,
     visibleRecords,
@@ -100,12 +160,6 @@ export default function PayrollWorkspace({ role, portal }: Props) {
   const scoped = records.length;
 
   return <div className="relative space-y-6 pb-12">
-    <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-20 overflow-hidden">
-      <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-x-20 gap-y-28 -rotate-[24deg] scale-[1.6]">
-        {Array.from({ length: 14 }).map((_, i) => <span key={i} className="text-2xl sm:text-3xl font-black uppercase tracking-[0.28em] text-black/5 whitespace-nowrap">Under Development</span>)}
-      </div>
-    </div>
-
     {/* Role-aware header */}
     <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div>

@@ -17,7 +17,10 @@ export default function SetupModule({ store }: { store: PayrollStore }) {
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-xs text-gray-500">Payroll Setup determines <strong>HOW Payroll works</strong>. Configuration is shared across the Employer ↔ Contractor payroll record — not recreated per portal.</p>
-      {store.role === 'Admin' && <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2.5 py-1"><Settings2 size={12}/>Admin has supervisory control of the same setup</span>}
+      <div className="flex items-center gap-2">
+        {store.role === 'Admin' && <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-gray-500 bg-gray-100 rounded-full px-2.5 py-1"><Settings2 size={12}/>Admin has supervisory control of the same setup</span>}
+        <button onClick={() => store.saveConfig()} className={primaryBtn + ' !h-9 !px-3 !text-xs'}><Save size={14}/>Save setup</button>
+      </div>
     </div>
     <div className="flex border-b overflow-x-auto">{tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap ${tab === id ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>{label}</button>)}</div>
     {tab === 'schedule' && <PayScheduleSection store={store} />}
@@ -48,7 +51,7 @@ function PayScheduleSection({ store }: { store: PayrollStore }) {
     </div>
     {changeDay && <Modal title="Change Pay Day" subtitle="Stored on the shared Pay Schedule; upcoming payroll dates re-derive automatically." onClose={() => setChangeDay(false)}>
       <Field label="New pay day"><input value={newDay} onChange={e => setNewDay(e.target.value)} placeholder="e.g. 7th of each month" className={inputClass}/></Field>
-      <div className="mt-5 flex justify-end gap-2"><button onClick={() => setChangeDay(false)} className={secondaryBtn}>Cancel</button><button onClick={() => { store.logAudit({ id: `AUD-${Date.now().toString().slice(-6)}`, timestamp: new Date().toISOString(), actor: store.actor, actorRole: store.role, action: 'Changed', entity: 'Pay Schedule — Pay Day', reference: 'PaySchedule', oldValue: cfg.paySchedule.payDay, newValue: newDay, worker: '—', employer: '—', contractor: '—', period: '—', reason: null }); store.notify(`Pay day updated to "${newDay}" — upcoming payrolls will follow.`); setChangeDay(false); }} className={primaryBtn}><Save size={15}/>Save pay day</button></div>
+      <div className="mt-5 flex justify-end gap-2"><button onClick={() => setChangeDay(false)} className={secondaryBtn}>Cancel</button><button onClick={() => { store.updateConfig({ paySchedule: { ...cfg.paySchedule, payDay: newDay } }); store.logAudit({ id: `AUD-${Date.now().toString().slice(-6)}`, timestamp: new Date().toISOString(), actor: store.actor, actorRole: store.role, action: 'Changed', entity: 'Pay Schedule — Pay Day', reference: 'PaySchedule', oldValue: cfg.paySchedule.payDay, newValue: newDay, worker: '—', employer: '—', contractor: '—', period: '—', reason: null }); store.notify(`Pay day updated to "${newDay}" — upcoming payrolls will follow.`); setChangeDay(false); }} className={primaryBtn}><Save size={15}/>Save pay day</button></div>
     </Modal>}
   </Section>;
 }
@@ -189,12 +192,12 @@ function StaffPortalSection({ cfg, store }: { cfg: ContractorPayrollConfig; stor
   return <Section title="Staff Portal — payroll self-service context" subtitle="Not the BSS Staff role. Portal access, banner, payroll contact, document visibility and custom web tabs.">
     <div className="p-5 grid md:grid-cols-2 gap-6">
       <div className="space-y-3 text-xs">
-        <ToggleRow label="Enable Payroll Portal Access" checked={sp.portalAccess} onToggle={() => store.notify('Worker portal access to salary info, payroll activities and documents.')} />
-        <Field label="Banner message"><input readOnly value={sp.bannerMessage || 'No banner configured'} className={inputClass + ' bg-gray-50'}/></Field>
-        <Field label="Display until"><input readOnly value={sp.bannerTill || '—'} className={inputClass + ' bg-gray-50'}/></Field>
-        <FieldValue label="Payroll / HR contact" value={sp.contact} />
-        <ToggleRow label="Show payroll documents in worker portal" checked={sp.showDocuments} onToggle={() => store.notify('Payroll documents visibility uses the existing BSS document storage.')} />
-        <ToggleRow label="Show salary revision letter" checked={sp.showSalaryRevision} onToggle={() => store.notify('Salary revision letter visibility toggled (existing documents infra).')} />
+        <ToggleRow label="Enable Payroll Portal Access" checked={sp.portalAccess} onToggle={() => store.updateConfig({ staffPortal: { ...sp, portalAccess: !sp.portalAccess } })} />
+        <Field label="Banner message"><input value={sp.bannerMessage} onChange={e => store.updateConfig({ staffPortal: { ...sp, bannerMessage: e.target.value } })} placeholder="No banner configured" className={inputClass}/></Field>
+        <Field label="Display until"><input value={sp.bannerTill} onChange={e => store.updateConfig({ staffPortal: { ...sp, bannerTill: e.target.value } })} placeholder="YYYY-MM-DD" className={inputClass}/></Field>
+        <Field label="Payroll / HR contact"><input value={sp.contact} onChange={e => store.updateConfig({ staffPortal: { ...sp, contact: e.target.value } })} className={inputClass}/></Field>
+        <ToggleRow label="Show payroll documents in worker portal" checked={sp.showDocuments} onToggle={() => store.updateConfig({ staffPortal: { ...sp, showDocuments: !sp.showDocuments } })} />
+        <ToggleRow label="Show salary revision letter" checked={sp.showSalaryRevision} onToggle={() => store.updateConfig({ staffPortal: { ...sp, showSalaryRevision: !sp.showSalaryRevision } })} />
       </div>
       <div>
         <div className="flex items-center justify-between mb-3"><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Custom web tabs</p><button onClick={() => setOpenTab(true)} className={secondaryBtn + ' !h-8 !px-2.5 !text-xs'}><Plus size={13}/>New web tab</button></div>

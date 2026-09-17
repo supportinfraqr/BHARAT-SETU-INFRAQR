@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { CheckCircle2, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { CheckCircle2, Loader2, Pencil, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { MASTER_BY_KEY, type AdminField, type AdminRow, type MasterConfig } from '@/data/adminMasters';
 
@@ -10,54 +10,92 @@ const inputArea = 'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-
 
 export default function MasterCrudPage({ configKey }: { configKey: string }) {
   const config: MasterConfig = MASTER_BY_KEY[configKey];
-  const [rows, setRows] = useState<AdminRow[]>(config.rows);
+  const [rows, setRows] = useState<AdminRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<'add' | 'edit' | null>(null);
   const [editing, setEditing] = useState<AdminRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminRow | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/masters/${encodeURIComponent(configKey)}`, { cache:'no-store' });
+      const body = await response.json().catch(() => ({})) as { rows?:AdminRow[]; error?:string };
+      if (!response.ok) throw new Error(body.error ?? 'Records could not be loaded.');
+      setRows(body.rows ?? []);
+      setError('');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Records could not be loaded.'); }
+    finally { setLoading(false); }
+  }, [configKey]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data load
+  useEffect(() => { void load(); }, [load]);
+
+  const label = (row: AdminRow) => String(row.name ?? row.employer ?? row.username ?? row.state ?? row.id);
+
   const columns: DataColumn<AdminRow>[] = config.columns.map(col => ({ id: col.id, header: col.header, value: col.value, render: col.render }));
   columns.push({ id: 'actions', header: 'Actions', filterable: false, value: r => String(r.id), render: r => (
     <div className="flex gap-1 items-center">
       <button onClick={() => { setEditing(r); setModal('edit'); setError(''); }} aria-label="Edit" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50"><Pencil size={14}/></button>
-      {config.statusField && <button onClick={() => toggleStatus(r)} aria-label="Toggle status" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-green-700 hover:bg-green-50" title={String(r[config.statusField]) === 'Active' ? 'Deactivate' : 'Activate'}>{String(r[config.statusField]) === 'Active' ? <CheckCircle2 size={14}/> : <ShieldCheck size={14}/>}</button>}
+      {config.statusField && <button onClick={() => void toggleStatus(r)} aria-label="Toggle status" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-green-700 hover:bg-green-50" title={String(r[config.statusField]) === 'Active' ? 'Deactivate' : 'Activate'}>{String(r[config.statusField]) === 'Active' ? <CheckCircle2 size={14}/> : <ShieldCheck size={14}/>}</button>}
       {config.canDelete && <button onClick={() => setDeleteTarget(r)} aria-label="Delete" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>}
     </div>
   ) });
 
-  function toggleStatus(row: AdminRow) {
+  async function toggleStatus(row: AdminRow) {
     const field = config.statusField!;
     const next = String(row[field]) === 'Active' ? 'Inactive' : 'Active';
-    setRows(current => current.map(r => r.id === row.id ? { ...r, [field]: next } : r));
-    setNotice(`${config.title}: "${row.name ?? row.employer ?? row.state}" ${next.toLowerCase()}.`);
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/admin/masters/${encodeURIComponent(configKey)}/${row.id}`, {
+        method:'PATCH', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ [field]: next }),
+      });
+      const body = await response.json().catch(() => ({})) as { row?:AdminRow; error?:string };
+      if (!response.ok || !body.row) throw new Error(body.error ?? 'The status could not be changed.');
+      setRows(current => current.map(r => r.id === row.id ? body.row! : r));
+      setNotice(`${config.title}: "${label(row)}" ${next.toLowerCase()}.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The status could not be changed.'); }
+    finally { setBusy(false); }
   }
 
-  function save(event: React.FormEvent<HTMLFormElement>) {
+  async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError('');
+    setBusy(true); setError('');
     const values = new FormData(event.currentTarget);
     const record: AdminRow = {};
     config.fields.forEach(field => {
       const raw = values.get(field.name);
       record[field.name] = field.type === 'number' ? Number(raw || 0) : String(raw ?? '');
     });
-    if (modal === 'edit' && editing) {
-      setRows(current => current.map(r => r.id === editing.id ? { ...r, ...record } : r));
-      setNotice(`${config.title}: record updated.`);
-    } else {
-      record.id = Date.now();
-      setRows(current => [record as AdminRow, ...current]);
-      setNotice(`${config.title}: record created.`);
-    }
-    setModal(null); setEditing(null);
+    try {
+      const isEdit = modal === 'edit' && editing;
+      const response = await fetch(`/api/admin/masters/${encodeURIComponent(configKey)}${isEdit ? `/${editing!.id}` : ''}`, {
+        method:isEdit ? 'PATCH' : 'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(record),
+      });
+      const body = await response.json().catch(() => ({})) as { row?:AdminRow; error?:string };
+      if (!response.ok || !body.row) throw new Error(body.error ?? 'The record could not be saved.');
+      setRows(current => isEdit ? current.map(r => r.id === editing!.id ? body.row! : r) : [body.row!, ...current]);
+      setNotice(`${config.title}: record ${isEdit ? 'updated' : 'created'}.`);
+      setModal(null); setEditing(null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The record could not be saved.'); }
+    finally { setBusy(false); }
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleteTarget) return;
-    setRows(current => current.filter(r => r.id !== deleteTarget.id));
-    setNotice(`${config.title}: "${deleteTarget.name ?? deleteTarget.employer ?? deleteTarget.state}" deleted.`);
-    setDeleteTarget(null);
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/admin/masters/${encodeURIComponent(configKey)}/${deleteTarget.id}`, { method:'DELETE' });
+      const body = await response.json().catch(() => ({})) as { error?:string };
+      if (!response.ok) throw new Error(body.error ?? 'The record could not be deleted.');
+      setRows(current => current.filter(r => r.id !== deleteTarget.id));
+      setNotice(`${config.title}: "${label(deleteTarget)}" deleted.`);
+      setDeleteTarget(null);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The record could not be deleted.'); }
+    finally { setBusy(false); }
   }
 
   return <div className="space-y-6 pb-10">
@@ -69,7 +107,8 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
 
-    <EnterpriseDataTable title={config.title} rows={rows} columns={columns} rowKey={r => String(r.id)} filename={`bss-admin-${config.key}`}/>
+    {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading records…</p>
+      : <EnterpriseDataTable title={config.title} rows={rows} columns={columns} rowKey={r => String(r.id)} filename={`bss-admin-${config.key}`}/>}
 
     {/* Add / Edit modal */}
     {modal && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" aria-label={modal === 'edit' ? 'Edit record' : 'Add record'} className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden">
@@ -77,14 +116,14 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
       <form onSubmit={save} className="p-5 grid sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
         {config.fields.map(field => <Field key={field.name} field={field} value={modal === 'edit' ? editing?.[field.name] : config.initial?.[field.name]}/>)}
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
-        <div className="sm:col-span-2 flex justify-end gap-2 pt-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold">{modal === 'edit' ? 'Save changes' : 'Save record'}</button></div>
+        <div className="sm:col-span-2 flex justify-end gap-2 pt-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-60">{busy ? 'Saving…' : modal === 'edit' ? 'Save changes' : 'Save record'}</button></div>
       </form>
     </section></div>}
 
     {/* Delete confirmation */}
     {deleteTarget && <div className="fixed inset-0 z-[90] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" aria-label="Confirm delete" className="w-full max-w-md bg-white rounded-2xl p-6">
-      <div className="flex items-start gap-3"><span className="w-10 h-10 rounded-lg bg-red-50 text-red-600 grid place-items-center flex-shrink-0"><Trash2 size={18}/></span><div><h2 className="font-semibold text-gray-950">Delete this record?</h2><p className="text-sm text-gray-500 mt-1">&ldquo;{deleteTarget.name ?? deleteTarget.employer ?? deleteTarget.state ?? deleteTarget.username}&rdquo; will be permanently removed. Deletion is irreversible and will be recorded in the audit trail.</p></div></div>
-      <div className="flex justify-end gap-2 mt-5"><button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm">Cancel</button><button onClick={confirmDelete} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">Delete</button></div>
+      <div className="flex items-start gap-3"><span className="w-10 h-10 rounded-lg bg-red-50 text-red-600 grid place-items-center flex-shrink-0"><Trash2 size={18}/></span><div><h2 className="font-semibold text-gray-950">Delete this record?</h2><p className="text-sm text-gray-500 mt-1">&ldquo;{label(deleteTarget)}&rdquo; will be permanently removed. Deletion is irreversible and will be recorded in the audit trail.</p></div></div>
+      <div className="flex justify-end gap-2 mt-5"><button onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} onClick={() => void confirmDelete()} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-60">{busy ? 'Deleting…' : 'Delete'}</button></div>
     </section></div>}
 
     <p className="text-[11px] text-gray-400 flex items-center gap-1.5"><ShieldCheck size={13}/>Every create / update / deactivate / delete action is visible in the Activity Report with actor, role and timestamp.</p>

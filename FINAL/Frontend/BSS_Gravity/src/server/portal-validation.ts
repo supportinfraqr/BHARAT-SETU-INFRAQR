@@ -60,6 +60,10 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
   if (role === 'Contractor' && resource === 'worker-compliance' && method !== 'DELETE') {
     requiredString(body, 'workerId', 20);
   }
+  if (role === 'Contractor' && resource === 'worker-site' && method !== 'DELETE') {
+    requiredString(body, 'bindingId', 40);
+    requiredString(body, 'siteId', 40);
+  }
   if ((role === 'Contractor' || role === 'Employer') && resource === 'grievances' && method !== 'DELETE') {
     requiredString(body, 'id', 40);
     const gAction = String(body.action ?? '').toLowerCase();
