@@ -51,6 +51,12 @@ export type WorkerRecord = {
     typeOfWork?: string;
     idCardIssueDate?: string;
     idCardValidityTill?: string;
+    /** Cost sheet applied at binding — wage + CTC breakdown. */
+    costSheet?: string;
+    costSheetName?: string;
+    offeredWage?: number;
+    ctc?: number;
+    costBreakdown?: CostBreakdown;
     contractorDetails?: { name: string; code: string; contact: string; email: string; lin: string; state?: string; address?: string };
     employerDetails?: { name: string; code: string; industry: string; email: string; lin: string; state?: string; address?: string };
     siteDetails?: { name: string; code: string; location: string; medicalOfficer: string; officerContact: string; state?: string };

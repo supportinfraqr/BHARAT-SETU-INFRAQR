@@ -1163,6 +1163,20 @@ export default function WorkerProfilePage() {
                 <p className="text-[13px] text-[#2F9E67] font-medium">These employment and binding details are generated automatically by the system upon your successful binding with a contractor.</p>
               </div>
 
+              {worker.employment.costBreakdown && ((worker.employment.costBreakdown.statutory?.length ?? 0) > 0 || (worker.employment.costBreakdown.custom?.length ?? 0) > 0) && (
+                <div className="bg-white border border-black/5 rounded-2xl p-5 mb-6">
+                  <h3 className="text-[15px] font-semibold text-[#1D1D1F] mb-4">Worker Cost &amp; CTC · {worker.employment.costBreakdown.templateCode || 'cost sheet'}</h3>
+                  <div className="grid grid-cols-2 gap-y-2 text-[13px]">
+                    <span className="text-[#86868B]">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.minimumWage ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[#86868B]">Statutory total</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.statutoryTotal ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[#86868B]">Custom total</span><span className="font-semibold text-right">₹{(worker.employment.costBreakdown.customTotal ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-[#1D1D1F] border-t border-black/5 pt-2">Employer cost</span><span className="font-bold text-right border-t border-black/5 pt-2">₹{(worker.employment.costBreakdown.employerCost ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-[#1D1D1F]">CTC (monthly)</span><span className="font-bold text-right text-[#0066CC]">₹{(worker.employment.costBreakdown.ctc ?? worker.employment.ctc ?? 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">{(worker.employment.costBreakdown.statutory ?? []).map(s => <span key={s.component} className="text-[11px] px-2 py-0.5 rounded-full bg-[#F5F5F7] text-[#1D1D1F]">{s.component} ₹{s.amount.toLocaleString('en-IN')}</span>)}{(worker.employment.costBreakdown.custom ?? []).map(c => <span key={c.name} className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8F0FE] text-[#0066CC]">{c.name} ₹{c.computed.toLocaleString('en-IN')}</span>)}</div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 <div>
                    <label className="block text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Employer Name</label>

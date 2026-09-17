@@ -117,12 +117,10 @@ export async function buildGatePassHtml(
     if (validTo > cap) validTo = cap;
   }
   // QR carries two things: the worker BSS ID and the pass/card ID.
-  // Permanent passes carry the QR; temporary passes do not.
+  // Every pass carries a unique QR so it can be scanned at the gate.
   const verifyUrl = `https://bharatshramsetu.com/verify/pass?worker=${encodeURIComponent(worker.bssId)}&pass=${encodeURIComponent(passNo)}`;
   let qr = '';
-  if (type === 'permanent-gate-pass') {
-    try { qr = await qrWithLogo(verifyUrl); } catch { qr = ''; }
-  }
+  try { qr = await qrWithLogo(verifyUrl); } catch { qr = ''; }
   const merged: Record<string, string> = {
     ...tokens,
     'document.number': passNo,
