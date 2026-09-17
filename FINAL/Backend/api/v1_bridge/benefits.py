@@ -285,6 +285,29 @@ def _handle_salaries(user, body):
     return [payloads._salary_row(w) for w in created]
 
 
+def _handle_worker_cost_sheet(user, body):
+    """The contractor changes the cost sheet template on a worker's binding and
+    the system recalculates wage / statutory / custom cost / CTC."""
+    from bss_core.models import WorkerContractorBinding
+    from .bindings import _apply_binding_terms
+
+    binding = (WorkerContractorBinding.objects
+               .filter(pk=body.get("bindingId") or body.get("id"), contractor=user)
+               .select_related("worker", "site", "contractor").first())
+    if binding is None:
+        raise PortalMutationError("Worker binding not found.", 404)
+    if binding.binding_status not in ("PENDING", "ACCEPTED"):
+        raise PortalMutationError("Only an active binding can be updated.", 409)
+    sheet_id = body.get("costSheetId")
+    if sheet_id in (None, ""):
+        raise PortalMutationError("Select a cost sheet template.", 400)
+    _apply_binding_terms(binding, {"costSheetId": sheet_id})
+    binding.save()
+    return {"bindingId": binding.id, "costSheetId": binding.cost_sheet_id,
+            "ctc": payloads._num(binding.computed_ctc),
+            "breakdown": binding.cost_breakdown or {}}
+
+
 __all__ = [
     "_handle_advance_contractor",
     "_handle_advance_worker",
@@ -292,5 +315,6 @@ __all__ = [
     "_handle_gratuity_apply",
     "_handle_salaries",
     "_handle_worker_compliance",
+    "_handle_worker_cost_sheet",
     "_handle_worker_site",
 ]

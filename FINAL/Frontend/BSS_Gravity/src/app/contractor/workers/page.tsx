@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, CheckCircle2, Download, FileText, IdCard, MapPin, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
+import { BadgeCheck, Calculator, CheckCircle2, Download, FileText, IdCard, MapPin, MoreVertical, Plus, Trash2, Upload, UserRound, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import { useContractor } from '@/contexts/ContractorContext';
 import type { ContractorWorker, GatePassEligibility } from '@/types/portal';
@@ -44,6 +44,8 @@ export default function WorkerMasterPage() {
   const [siteView, setSiteView] = useState<ContractorWorker | null>(null);
   const [siteChoice, setSiteChoice] = useState('');
   const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string }>>([]);
+  const [sheetView, setSheetView] = useState<ContractorWorker | null>(null);
+  const [sheetChoice, setSheetChoice] = useState('');
   const [docsView2, setDocsView2] = useState<ContractorWorker | null>(null);
   const docCtx = useContractorDocView();
   const scopedRows = scoped(contractor.workers, w => w.employer);
@@ -84,6 +86,17 @@ export default function WorkerMasterPage() {
       setNotice(`${row.name} was moved to the selected site.`);
       setTimeout(() => setNotice(''), 5000);
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'The site could not be changed.'); }
+    finally { setBusy(false); }
+  }
+
+  async function changeCostSheet(row: ContractorWorker, costSheetId: string) {
+    setBusy(true); setError('');
+    try {
+      await mutate('worker-cost-sheet', 'POST', { bindingId: row.bindingId, costSheetId });
+      setSheetView(null);
+      setNotice(`${row.name}'s cost sheet was updated — wage and CTC recalculated.`);
+      setTimeout(() => setNotice(''), 5000);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The cost sheet could not be changed.'); }
     finally { setBusy(false); }
   }
 
@@ -155,7 +168,7 @@ export default function WorkerMasterPage() {
     <EnterpriseDataTable
       title="Workforce directory"
       rows={scopedRows}
-      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} onChangeSite={() => { setSiteView(row); setSiteChoice(''); setError(''); setOpenMenuFor(''); }} /> }]}
+      columns={[...columns, { id:'actions', header:'Actions', filterable:false, value:row => row.id, render:row => <ActionMenu open={openMenuFor === row.id} onToggle={() => setOpenMenuFor(openMenuFor === row.id ? '' : row.id)} onViewProfile={() => openProfile(row)} onViewDocs={() => { setDocsView(row); setOpenMenuFor(''); }} onIdCard={() => { setIdView(row); setOpenMenuFor(''); }} onDocs={() => { setDocsView2(row); setOpenMenuFor(''); }} onChangeSite={() => { setSiteView(row); setSiteChoice(""); setError(""); setOpenMenuFor(""); }} onChangeCostSheet={() => { setSheetView(row); setSheetChoice(""); setError(""); setOpenMenuFor(""); }} /> }]}
       rowKey={row => row.id}
       filename="contractor-workers"
     />
@@ -229,6 +242,17 @@ export default function WorkerMasterPage() {
             <Info label="CTC (monthly)" value={profileView.ctc ? `₹${profileView.ctc.toLocaleString('en-IN')}` : '—'}/>
           </dl>
           {profileView.skills && profileView.skills.length > 0 && <div className="mt-3"><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Skills</p><div className="flex flex-wrap gap-1.5">{profileView.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
+          {profileView.costBreakdown && ((profileView.costBreakdown.statutory?.length ?? 0) > 0 || (profileView.costBreakdown.custom?.length ?? 0) > 0) && <div className="mt-4 rounded-xl border border-gray-100 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Worker cost · {profileView.costBreakdown.templateCode || 'cost sheet'}</p>
+            <div className="grid grid-cols-2 gap-y-1.5 text-xs">
+              <span className="text-gray-500">Basic + VDA (wage)</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.minimumWage ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-gray-500">Statutory total</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.statutoryTotal ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-gray-500">Custom total</span><span className="font-semibold text-right">₹{(profileView.costBreakdown.customTotal ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-gray-700 font-bold border-t border-gray-100 pt-1.5">Employer cost</span><span className="font-bold text-right border-t border-gray-100 pt-1.5">₹{(profileView.costBreakdown.employerCost ?? 0).toLocaleString('en-IN')}</span>
+              <span className="text-gray-700 font-bold">CTC (monthly)</span><span className="font-bold text-right text-[#073B67]">₹{(profileView.costBreakdown.ctc ?? profileView.ctc ?? 0).toLocaleString('en-IN')}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">{(profileView.costBreakdown.statutory ?? []).map(s => <span key={s.component} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-gray-600">{s.component} ₹{s.amount.toLocaleString('en-IN')}</span>)}{(profileView.costBreakdown.custom ?? []).map(c => <span key={c.name} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 border border-blue-100 text-blue-700">{c.name} ₹{c.computed.toLocaleString('en-IN')}</span>)}</div>
+          </div>}
         </div>
         <p className="text-[11px] text-gray-400">Compliance documents and the identity card are available from the actions menu.</p>
       </div>
@@ -248,6 +272,17 @@ export default function WorkerMasterPage() {
         <label className="text-xs font-semibold text-gray-700">New site<select value={siteChoice} onChange={e => setSiteChoice(e.target.value)} disabled={busy} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:opacity-60"><option value="">Select site</option>{contractor.sites.filter(s => s.id !== siteView.siteId).map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}</select></label>
         {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
         <div className="flex justify-end gap-2"><button onClick={() => setSiteView(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !siteChoice} onClick={() => void changeSite(siteView, siteChoice)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Moving…' : 'Move worker'}</button></div>
+      </div>
+    </section></div>}
+
+    {/* Change cost sheet modal — the contractor selects the template; the wage/CTC recalculate */}
+    {sheetView && <div className="fixed inset-0 z-[97] bg-black/50 p-4 grid place-items-center" role="presentation"><section role="dialog" aria-modal="true" aria-label="Change cost sheet" className="w-full max-w-md bg-white rounded-2xl shadow-xl">
+      <header className="p-5 border-b border-gray-100 flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Change Cost Sheet</p><h2 className="font-semibold text-gray-950 mt-0.5">{sheetView.name}</h2><p className="text-xs text-gray-500 font-mono mt-0.5">{sheetView.bssId}</p></div><button onClick={() => setSheetView(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
+      <div className="p-5 space-y-4">
+        <p className="text-xs text-gray-500">Current cost sheet: <strong className="text-gray-800">{sheetView.costSheetName || sheetView.costSheet || '—'}</strong>. Selecting a new template recalculates the wage, statutory components, custom costs and CTC.</p>
+        <label className="text-xs font-semibold text-gray-700">Cost sheet template<select value={sheetChoice} onChange={e => setSheetChoice(e.target.value)} disabled={busy} className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white disabled:opacity-60"><option value="">Select template</option>{costSheets.map(s => <option key={s.id} value={s.id}>{s.name} · {s.code}</option>)}</select></label>
+        {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-2.5">{error}</p>}
+        <div className="flex justify-end gap-2"><button onClick={() => setSheetView(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !sheetChoice} onClick={() => void changeCostSheet(sheetView, sheetChoice)} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Applying…' : 'Apply cost sheet'}</button></div>
       </div>
     </section></div>}
 
@@ -288,7 +323,7 @@ function WorkerIdentityCardDrawer({ worker, onClose }: { worker: ContractorWorke
   </div>;
 }
 
-function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDocs, onChangeSite }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onIdCard: () => void; onDocs?: () => void; onChangeSite?: () => void }) {
+function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDocs, onChangeSite, onChangeCostSheet }: { open: boolean; onToggle: () => void; onViewProfile: () => void; onViewDocs: () => void; onIdCard: () => void; onDocs?: () => void; onChangeSite?: () => void; onChangeCostSheet?: () => void }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
 
@@ -320,6 +355,7 @@ function ActionMenu({ open, onToggle, onViewProfile, onViewDocs, onIdCard, onDoc
         <button role="menuitem" onClick={onViewDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-gray-400"/>Compliance Documents</button>
         <button role="menuitem" onClick={onDocs} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><FileText size={14} className="text-[#073B67]"/>Documents — Generate / Issue</button>
         {onChangeSite && <button role="menuitem" onClick={onChangeSite} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><MapPin size={14} className="text-gray-400"/>Change Site</button>}
+        {onChangeCostSheet && <button role="menuitem" onClick={onChangeCostSheet} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs rounded-lg hover:bg-gray-50 text-left"><Calculator size={14} className="text-gray-400"/>Change Cost Sheet</button>}
       </div>
     </>, document.body)}
   </>;

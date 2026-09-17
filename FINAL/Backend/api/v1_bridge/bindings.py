@@ -400,6 +400,12 @@ def _apply_binding_terms(binding, data):
         from bss_core.models import CostSheetTemplate
         sheet = CostSheetTemplate.objects.filter(pk=sheet_id, status="PUBLISHED").first()
         if sheet is not None:
+            # Applicability validation — state must match the site when both are set.
+            site_state = str(getattr(binding.site, "state", "") or "").strip()
+            if sheet.state and site_state and sheet.state.lower() != site_state.lower():
+                raise PortalMutationError(
+                    f"This cost sheet is for {sheet.state}, but the site is in {site_state}. "
+                    "Select a cost sheet for the site's state.", 409)
             result = costsheet.compute_worker_cost(
                 sheet, include_contractor=getattr(binding.contractor, "role", "") == "contractor")
             binding.cost_sheet = sheet

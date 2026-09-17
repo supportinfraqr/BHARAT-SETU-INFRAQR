@@ -133,7 +133,16 @@ export type ContractorWorker = {
   eligibility?: GatePassEligibility;
   /** Cost sheet template applied at binding (replaces manual wage). */
   costSheetId?: number | null; costSheet?: string; costSheetName?: string;
-  offeredWage?: number; ctc?: number; costBreakdown?: Record<string, unknown>;
+  offeredWage?: number; ctc?: number; costBreakdown?: CostBreakdown;
+};
+
+export type CostBreakdown = {
+  basicWage?: number; vda?: number; minimumWage?: number; dailyWage?: number;
+  statutoryTotal?: number; customTotal?: number; employerCost?: number;
+  contractorBilling?: number | null; ctc?: number; currency?: string;
+  templateCode?: string; templateName?: string;
+  statutory?: Array<{ component:string; rate:number; rateType?:string; amount:number }>;
+  custom?: Array<{ name:string; computed:number; appliesTo?:string; frequency?:string }>;
 };
 
 export type ContractorBenefitRecord = {

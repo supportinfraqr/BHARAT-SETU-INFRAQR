@@ -382,6 +382,133 @@ def cost_sheet_clone(request, template_id):
     return Response({"data": _template_row(clone, full=True)}, status=status.HTTP_201_CREATED)
 
 
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def cost_sheet_statutory_master(request):
+    """The statutory component rate master (defaults for a template's lines)."""
+    from bss_core.models import StatutoryMaster
+    if not _require_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    rows = [{
+        "component": m.component, "label": payloads._d(m.label), "rate": _num(m.rate),
+        "rateType": m.rate_type, "condition": payloads._d(m.condition),
+        "mandatory": m.mandatory,
+    } for m in StatutoryMaster.objects.filter(is_active=True).order_by("component")]
+    return Response({"rows": rows}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def cost_sheet_min_wage_lookup(request):
+    """Auto-fetch the minimum wage for state + category + effective date."""
+    from bss_core.models import MinimumWage
+    if not _require_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    state = (request.query_params.get("state") or "").strip()
+    category = (request.query_params.get("category") or "").strip()
+    on_date = _date(request.query_params.get("date"))
+    qs = MinimumWage.objects.filter(is_active=True)
+    if state:
+        qs = qs.filter(state__iexact=state)
+    if category:
+        qs = qs.filter(employment_category__iexact=category)
+    if on_date:
+        qs = qs.filter(effective_from__lte=on_date)
+    row = qs.order_by("-effective_from", "-id").first()
+    if row is None:
+        return Response({"data": None}, status=status.HTTP_200_OK)
+    total = _num(row.total_wage)
+    return Response({"data": {
+        "id": row.id, "state": payloads._d(row.state), "zone": payloads._d(row.wage_zone),
+        "district": "", "scheduledEmployment": payloads._d(row.industry),
+        "workerCategory": payloads._d(row.employment_category),
+        "basicWage": _num(row.basic_wage), "vda": _num(row.vda),
+        "minimumMonthlyWage": total, "minimumDailyWage": round(total / 26, 2) if total else 0,
+        "notificationNumber": "", "effectiveDate": payloads._dts(row.effective_from) if row.effective_from else "",
+    }}, status=status.HTTP_200_OK)
+
+
+@api_view(["PATCH", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def org_cost_sheet_update(request, template_id):
+    """An org edits its own customised template — name + the custom cost lines
+    flagged 'editable by org'. Statutory and minimum-wage values stay locked."""
+    from bss_core.models import CostSheetTemplate
+    if request.user.role not in ("contractor", "employer"):
+        return Response({"error": "Only employers and contractors can edit their cost sheets."},
+                        status=status.HTTP_403_FORBIDDEN)
+    t = CostSheetTemplate.objects.filter(pk=template_id, owner=request.user).first()
+    if t is None:
+        return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+    body = request.data if isinstance(request.data, dict) else {}
+    if body.get("name"):
+        t.name = str(body["name"])[:160]
+        t.save(update_fields=["name", "updated_at"])
+    custom = body.get("custom")
+    if isinstance(custom, list):
+        for row in custom:
+            if not isinstance(row, dict) or row.get("amount") is None:
+                continue
+            line = t.custom_lines.filter(name=str(row.get("name") or "")).first()
+            if line is not None and line.editable_by_org:
+                line.amount = _num(row["amount"])
+                line.save(update_fields=["amount", "updated_at"])
+    log_audit(request.user, "UPDATE", "cost_sheet_template", t.id,
+              after={"summary": f"Org updated cost sheet {t.code}"})
+    return Response({"data": _template_row(t, full=True)}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def org_cost_sheet_preview(request, template_id):
+    """An org previews the computed cost for a published or own template."""
+    from api import costsheet
+    from bss_core.models import CostSheetTemplate
+    if request.user.role not in ("contractor", "employer"):
+        return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
+    t = CostSheetTemplate.objects.filter(pk=template_id).first()
+    if t is None or t.owner_id not in (None, request.user.id):
+        return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+    body = request.data if isinstance(request.data, dict) else {}
+    overrides = body.get("overrides") if isinstance(body.get("overrides"), dict) else None
+    result = costsheet.compute_worker_cost(
+        t, include_contractor=request.user.role == "contractor", overrides=overrides)
+    return Response({"data": result}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def cost_sheet_new_version(request, template_id):
+    """Create the next version of a template and supersede the current one."""
+    from bss_core.models import CostSheetTemplate
+    if not _require_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    source = CostSheetTemplate.objects.filter(pk=template_id).first()
+    if source is None:
+        return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+    clone = _clone_template(source, None, name=source.name)
+    clone.parent = source.parent or source
+    clone.superseded_by = None
+    clone.status = "DRAFT"
+    clone.version = source.version + 1
+    clone.owner = source.owner
+    clone.save(update_fields=["parent", "status", "version", "owner", "updated_at"])
+    source.status = "ARCHIVED"
+    source.superseded_by = clone
+    source.save(update_fields=["status", "superseded_by", "updated_at"])
+    log_audit(request.user, "CREATE", "cost_sheet_template", clone.id,
+              after={"summary": f"New version v{clone.version} of {source.code}"})
+    return Response({"data": _template_row(clone, full=True)}, status=status.HTTP_201_CREATED)
+
+
 __all__ = ["cost_sheets", "cost_sheet_detail", "cost_sheet_preview",
            "cost_sheet_transition", "cost_sheets_available", "cost_sheet_clone",
+           "cost_sheet_statutory_master", "cost_sheet_min_wage_lookup",
+           "org_cost_sheet_update", "org_cost_sheet_preview",
+           "cost_sheet_new_version",
            "_template_row", "_apply_template", "_clone_template"]

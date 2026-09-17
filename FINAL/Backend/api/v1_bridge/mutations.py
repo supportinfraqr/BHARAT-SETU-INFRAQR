@@ -506,6 +506,8 @@ def _persist_mutation(user, role_path, resource, method, body):
         return _handle_site_calendar(user, body, method)
     if resource == "worker-compliance" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_worker_compliance(user, body)
+    if resource == "worker-cost-sheet" and role_path == "contractor" and method in ("POST", "PATCH"):
+        return _handle_worker_cost_sheet(user, body)
     if resource == "worker-site" and role_path == "contractor" and method in ("POST", "PATCH"):
         return _handle_worker_site(user, body)
     if resource == "salaries" and method in ("POST", "PATCH"):

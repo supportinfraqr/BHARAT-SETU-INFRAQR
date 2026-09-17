@@ -491,3 +491,24 @@ class ComplianceBatch(models.Model):
 
     def __str__(self):
         return f"{self.contractor_id} {self.month} {self.year}"
+
+
+class StatutoryMaster(models.Model):
+    """Statutory component rate master (EPF/EPS/EDLI/ESIC/Bonus/Gratuity/LWF/
+    leave/holidays). Cost sheet templates source their locked rates here."""
+
+    component = models.CharField(max_length=30, unique=True)
+    label = models.CharField(max_length=80, blank=True)
+    rate = models.DecimalField(max_digits=8, decimal_places=4, default=0)
+    rate_type = models.CharField(max_length=10, default="PERCENT")  # PERCENT / FIXED / DAYS
+    condition = models.CharField(max_length=200, blank=True)
+    mandatory = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "statutory_master"
+
+    def __str__(self):
+        return f"{self.component} {self.rate}"

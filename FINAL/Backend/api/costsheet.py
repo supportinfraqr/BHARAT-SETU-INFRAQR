@@ -39,6 +39,20 @@ def _base_for(component, *, wage, basic, pf_cap, esic_threshold):
     return wage
 
 
+def resolve_root(template):
+    """Walk up the inheritance chain to the root that owns the statutory rules.
+
+    A level inherits its parent's statutory rules unless it opted out via
+    ``inherits_parent_rules = False``. Statutory rules can only be added to or
+    narrowed down the chain, never overridden from above."""
+    node = template
+    seen = set()
+    while node.parent_id and node.inherits_parent_rules and node.id not in seen:
+        seen.add(node.id)
+        node = node.parent
+    return node
+
+
 def compute_worker_cost(template, *, basic_wage=None, vda=None, working_days=26,
                         pf_cap=_PF_WAGE_CAP, esic_threshold=_ESIC_WAGE_THRESHOLD,
                         include_contractor=False, overrides=None):
@@ -48,7 +62,10 @@ def compute_worker_cost(template, *, basic_wage=None, vda=None, working_days=26,
     name to a replacement amount (org customisation, respecting editable_by_org).
     """
     overrides = overrides or {}
-    minimum_wage = template.minimum_wages.first()
+    # Statutory rules + minimum wage are inherited from the root template; the
+    # template's own custom cost lines are applied on top.
+    statutory_source = resolve_root(template)
+    minimum_wage = statutory_source.minimum_wages.first() or template.minimum_wages.first()
     basic = _f(basic_wage if basic_wage is not None
                else (minimum_wage.basic_wage if minimum_wage else 0))
     dearness = _f(vda if vda is not None else (minimum_wage.vda if minimum_wage else 0))
@@ -57,7 +74,7 @@ def compute_worker_cost(template, *, basic_wage=None, vda=None, working_days=26,
 
     statutory_rows = []
     statutory_total = 0.0
-    for line in template.statutory_lines.all():
+    for line in statutory_source.statutory_lines.all():
         if not line.applicable:
             continue
         rate = _f(line.rate)

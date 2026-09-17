@@ -14,7 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const groups = [
   { key:'nav.dashboard', href:'/contractor/dashboard', icon:Home },
-  { key:'nav.master', icon:Database, items:[['nav.gatePass','/contractor/gate-pass'],['nav.rozgar','/contractor/rozgar'],['nav.leaveApprovals','/contractor/leave'],['nav.siteCalendar','/contractor/calendar'],['nav.compliance','/contractor/compliance'],['nav.workerMaster','/contractor/workers'],['nav.workerCompliance','/contractor/worker-compliance'],['nav.skills','/contractor/skills'],['nav.salaries','/contractor/salaries'],['nav.submissions','/contractor/submissions']] },
+  { key:'nav.master', icon:Database, items:[['nav.gatePass','/contractor/gate-pass'],['nav.rozgar','/contractor/rozgar'],['nav.leaveApprovals','/contractor/leave'],['nav.siteCalendar','/contractor/calendar'],['nav.compliance','/contractor/compliance'],['nav.workerMaster','/contractor/workers'],['nav.workerCompliance','/contractor/worker-compliance'],['nav.skills','/contractor/skills'],['nav.salaries','/contractor/salaries'],['Cost Sheets','/contractor/cost-sheets'],['nav.submissions','/contractor/submissions']] },
   { key:'nav.operations', icon:Briefcase, items:[['nav.payroll','/contractor/payroll'],['nav.advances','/contractor/advances'],['nav.grievanceCentre','/contractor/grievances']] },
   { key:'nav.qrSystem', icon:ScanLine, items:[['nav.allottedSites','/contractor/qr/sites'],['nav.myWorkers','/contractor/workers'],['nav.myEmployers','/contractor/qr/employers'],['nav.bindingRequestsCentre','/contractor/qr/requests'],['nav.idCard','/contractor/idcard'],['nav.scanQr','/contractor/scan']] },
 ] as const;

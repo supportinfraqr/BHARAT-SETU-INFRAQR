@@ -45,6 +45,42 @@ export default function CostSheetTemplatesPage() {
   const [error, setError] = useState("");
   const [draft, setDraft] = useState<Template | null>(null);
   const [busy, setBusy] = useState(false);
+  const [statutoryMaster, setStatutoryMaster] = useState<Statutory[]>(DEFAULT_STATUTORY);
+
+  // Statutory component defaults come from the statutory master (never hardcoded).
+  useEffect(() => {
+    void fetch("/api/admin/cost-sheets/statutory-master", { cache:"no-store" })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { rows?: Array<{ component:string; rate:number; rateType:string; condition:string; mandatory:boolean }> } | null) => {
+        if (body?.rows?.length) {
+          setStatutoryMaster(body.rows.map(x => ({ component:x.component, rate:x.rate, rateType:x.rateType, applicable:true, condition:x.condition, mandatory:x.mandatory })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  function makeEmpty(): Template {
+    return { ...emptyTemplate(), statutory: statutoryMaster.map(s => ({ ...s })) };
+  }
+
+  // Auto-fetch the minimum wage when state + category + effective date are set.
+  const draftState = draft?.state;
+  const draftCategory = draft?.workerCategory;
+  const draftDate = draft?.effectiveDate;
+  useEffect(() => {
+    if (!draftState) return;
+    const params = new URLSearchParams({ state: draftState });
+    if (draftCategory) params.set("category", draftCategory);
+    if (draftDate) params.set("date", draftDate);
+    let active = true;
+    void fetch(`/api/admin/cost-sheets/min-wage?${params.toString()}`, { cache:"no-store" })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { data?: MinimumWage | null } | null) => {
+        if (active && body?.data) setDraft(d => d ? { ...d, minimumWage: { ...body.data! } } : d);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [draftState, draftCategory, draftDate]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,6 +120,17 @@ export default function CostSheetTemplatesPage() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Delete failed."); }
   }
 
+  async function newVersion(row: Template) {
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/admin/cost-sheets/${row.id}/new-version`, { method:"POST" });
+      const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? "A new version could not be created.");
+      setRows(current => [body.data!, ...current.map(r => r.id === row.id ? { ...r, status:"ARCHIVED" } : r)]);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Versioning failed."); }
+    finally { setBusy(false); }
+  }
+
   const set = <K extends keyof Template>(key: K, value: Template[K]) => setDraft(d => d ? { ...d, [key]: value } : d);
 
   const columns: DataColumn<Template>[] = [
@@ -97,6 +144,7 @@ export default function CostSheetTemplatesPage() {
     { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => (
       <div className="flex items-center gap-2">
         <button onClick={() => setDraft({ ...r, minimumWage: r.minimumWage ?? { ...EMPTY_MW } })} className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"><Pencil size={12}/>Edit</button>
+        {r.status === "PUBLISHED" && <button disabled={busy} onClick={() => void newVersion(r)} className="text-xs font-semibold text-gray-700 hover:text-[#073B67] inline-flex items-center gap-1 disabled:opacity-50">New version</button>}
         <button onClick={() => void remove(r)} className="text-xs font-semibold text-red-600 hover:underline inline-flex items-center gap-1"><Trash2 size={12}/>Delete</button>
       </div>
     ) },
@@ -105,7 +153,7 @@ export default function CostSheetTemplatesPage() {
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Cost Sheet Templates</h1><p className="text-sm text-gray-500 mt-1">Universal worker cost templates — platform-locked statutory rules + minimum-wage link + org-configurable custom costs. Drives a worker&apos;s wage, employer cost and CTC.</p></div>
-      <button onClick={() => { setDraft(emptyTemplate()); setError(""); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>New template</button>
+      <button onClick={() => { setDraft(makeEmpty()); setError(""); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>New template</button>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}

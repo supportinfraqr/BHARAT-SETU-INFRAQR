@@ -40,6 +40,8 @@ class CostSheetTemplate(models.Model):
     inherits_parent_rules = models.BooleanField(default=True)
     parent = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
                                related_name="children")
+    superseded_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True,
+                                      related_name="supersedes")
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
                               related_name="cost_sheet_templates")
     status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
