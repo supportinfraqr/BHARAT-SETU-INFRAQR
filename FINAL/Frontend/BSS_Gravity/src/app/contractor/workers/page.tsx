@@ -43,9 +43,22 @@ export default function WorkerMasterPage() {
   const [idView, setIdView] = useState<ContractorWorker | null>(null);
   const [siteView, setSiteView] = useState<ContractorWorker | null>(null);
   const [siteChoice, setSiteChoice] = useState('');
+  const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string }>>([]);
   const [docsView2, setDocsView2] = useState<ContractorWorker | null>(null);
   const docCtx = useContractorDocView();
   const scopedRows = scoped(contractor.workers, w => w.employer);
+
+  // Cost sheet templates available for binding (replaces manual wage entry).
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/contractor/cost-sheets', { cache:'no-store' })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { rows?: Array<{ id:number; name:string; code:string }> } | null) => {
+        if (active && body?.rows) setCostSheets(body.rows);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const active = scopedRows.filter(w => w.status === 'Accepted').length;
   const pending = scopedRows.filter(w => w.status === 'Pending').length;
@@ -153,6 +166,7 @@ export default function WorkerMasterPage() {
       <form onSubmit={submitSingle} className="p-5 grid sm:grid-cols-2 gap-4">
         <Field name="bssId" label="BSS ID" pattern="(?:BSS-W[A-Za-z0-9]{10,11}|BSS\d{12})" placeholder="BSS-W7KQ2M9X4RT"/>
         <label className="text-xs font-semibold text-gray-700">Site<select required name="site" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">Select site</option>{contractor.sites.map(s => <option key={s.id} value={s.name}>{s.name} — {s.employer}</option>)}</select></label>
+        <label className="text-xs font-semibold text-gray-700 sm:col-span-2">Cost sheet template<select name="costSheetId" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm bg-white"><option value="">No template — enter wage manually</option>{costSheets.map(s => <option key={s.id} value={s.id}>{s.name} · {s.code}</option>)}</select><span className="block text-[10px] text-gray-400 mt-1">Selecting a template auto-computes the wage, statutory components, custom costs and CTC.</span></label>
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 bg-blue-700 text-white rounded-lg text-sm font-semibold">{busy ? 'Saving…' : 'Bind worker'}</button></div>
       </form>
@@ -211,6 +225,8 @@ export default function WorkerMasterPage() {
             <Info label="Employer" value={profileView.employer || '—'}/>
             <Info label="Date of Joining" value={profileView.doj || '—'}/>
             <Info label="Compliance" value={profileView.compliance}/>
+            <Info label="Cost sheet" value={profileView.costSheetName || profileView.costSheet || '—'}/>
+            <Info label="CTC (monthly)" value={profileView.ctc ? `₹${profileView.ctc.toLocaleString('en-IN')}` : '—'}/>
           </dl>
           {profileView.skills && profileView.skills.length > 0 && <div className="mt-3"><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Skills</p><div className="flex flex-wrap gap-1.5">{profileView.skills.map(s => <span key={s} className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">{s}</span>)}</div></div>}
         </div>

@@ -131,6 +131,9 @@ export type ContractorWorker = {
   /** Extended identity — only present for workers bound to the requesting contractor. */
   aadhaar?: string; dob?: string; fatherName?: string; bloodGroup?: string;
   eligibility?: GatePassEligibility;
+  /** Cost sheet template applied at binding (replaces manual wage). */
+  costSheetId?: number | null; costSheet?: string; costSheetName?: string;
+  offeredWage?: number; ctc?: number; costBreakdown?: Record<string, unknown>;
 };
 
 export type ContractorBenefitRecord = {

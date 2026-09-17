@@ -16,6 +16,7 @@ from .submissions import *  # noqa: F401,F403
 from .register_templates import *  # noqa: F401,F403
 from .payroll import *  # noqa: F401,F403
 from .admin_console import *  # noqa: F401,F403
+from .cost_sheets import *  # noqa: F401,F403
 from .mutations import *  # noqa: F401,F403
 
 
@@ -356,6 +357,12 @@ def payroll_workspace(request):
 
 __all__ = [
     "admin_actions",
+    "cost_sheets",
+    "cost_sheet_detail",
+    "cost_sheet_preview",
+    "cost_sheet_transition",
+    "cost_sheets_available",
+    "cost_sheet_clone",
     "admin_activity",
     "admin_permissions",
     "admin_master_counts",

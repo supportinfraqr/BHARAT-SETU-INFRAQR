@@ -384,13 +384,32 @@ def _contractor_binds_worker(contractor_user, worker_user, site=None):
 
 
 def _apply_binding_terms(binding, data):
-    """Capture the offered terms (designation/department/shift/offered wage) at
-    bind time. These drive the worker's Current Employment Details."""
+    """Capture the offered terms at bind time. A cost sheet template, when
+    selected, computes the wage/statutory/custom cost and CTC automatically —
+    replacing manual wage entry."""
     from decimal import Decimal, InvalidOperation
+    from api import costsheet
+
     for field in ("designation", "department", "shift"):
         value = data.get(field)
         if value not in (None, ""):
             setattr(binding, field, str(value).strip()[:80])
+
+    sheet_id = data.get("costSheetId", data.get("cost_sheet_id"))
+    if sheet_id not in (None, ""):
+        from bss_core.models import CostSheetTemplate
+        sheet = CostSheetTemplate.objects.filter(pk=sheet_id, status="PUBLISHED").first()
+        if sheet is not None:
+            result = costsheet.compute_worker_cost(
+                sheet, include_contractor=getattr(binding.contractor, "role", "") == "contractor")
+            binding.cost_sheet = sheet
+            binding.computed_ctc = Decimal(str(result["ctc"]))
+            binding.offered_wage = Decimal(str(result["minimumWage"]))
+            binding.cost_breakdown = result
+            if sheet.designation and not binding.designation:
+                binding.designation = sheet.designation[:80]
+            return binding
+
     wage = data.get("offeredWage", data.get("offered_wage"))
     if wage not in (None, ""):
         try:

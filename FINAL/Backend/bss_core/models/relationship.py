@@ -523,6 +523,11 @@ class WorkerContractorBinding(models.Model):
     department = models.CharField(max_length=80, blank=True)
     shift = models.CharField(max_length=40, blank=True)
     offered_wage = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    # The cost sheet template applied at binding (replaces manual wage entry).
+    cost_sheet = models.ForeignKey("CostSheetTemplate", on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name="bindings")
+    computed_ctc = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost_breakdown = models.JSONField(default=dict, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     # Who declined the request and when (worker / contractor).
     rejected_by = models.CharField(max_length=20, blank=True)

@@ -50,3 +50,13 @@ export async function adminPermissionsUpstream(method: 'GET' | 'POST', body?: un
     method, body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
+
+/** Universal worker cost sheet templates. */
+export async function costSheetsUpstream(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', body?: unknown, id?: number) {
+  const session = await requireApiSession('BSS Admin');
+  const config = getRuntimeConfig();
+  const path = `/v1/admin/cost-sheets${id ? `/${id}` : ''}`;
+  return upstreamRequest(config.apiBaseUrl, path, session, {
+    method, body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}

@@ -289,7 +289,13 @@ def _contractor_gate_passes(user):
                 "blocked": False,
                 "eligible": False,
                 "missing": _gate_pass_missing(b.worker),
-                "eligibility": _gate_pass_eligibility(b.worker),
+            "eligibility": _gate_pass_eligibility(b.worker),
+            "costSheetId": b.cost_sheet_id,
+            "costSheet": _d(b.cost_sheet.code) if b.cost_sheet_id else "",
+            "costSheetName": _d(b.cost_sheet.name) if b.cost_sheet_id else "",
+            "offeredWage": _num(b.offered_wage),
+            "ctc": _num(b.computed_ctc),
+            "costBreakdown": b.cost_breakdown or {},
             })
             continue
         label = _GP_TYPE_LABEL.get(gp_type, gp_type)

@@ -121,6 +121,12 @@ def _worker_employment_section(user, identity):
         "typeOfWork": _d(emp.type_of_work) if emp else "",
         "idCardIssueDate": _dts(emp.id_card_issue_date) if emp and emp.id_card_issue_date else "",
         "idCardValidityTill": _dts(emp.id_card_validity_till) if emp and emp.id_card_validity_till else "",
+        # Cost sheet applied at binding — the worker's wage / CTC breakdown.
+        "costSheet": _d(binding.cost_sheet.code) if binding and binding.cost_sheet_id else "",
+        "costSheetName": _d(binding.cost_sheet.name) if binding and binding.cost_sheet_id else "",
+        "offeredWage": _num(binding.offered_wage) if binding else 0,
+        "ctc": _num(binding.computed_ctc) if binding else 0,
+        "costBreakdown": (binding.cost_breakdown or {}) if binding else {},
         "contractorDetails": {
             "name": contractor_name,
             "code": contractor_code,
