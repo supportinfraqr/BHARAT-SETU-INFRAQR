@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BSS — 3-Phase Delivery Plan</title>
+<style>
+  :root{
+    --navy:#073B67; --navy-2:#0F172A; --ink:#111827; --muted:#6b7280;
+    --line:#e5e7eb; --band:#f3f6fa; --green:#15803d; --green-bg:#e8f5e9;
+    --amber:#b45309; --amber-bg:#fff7ed; --violet:#6d28d9; --violet-bg:#f5f3ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f6f7f9;color:var(--ink);
+       font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 20px 64px}
+  header h1{margin:0;font-size:26px;letter-spacing:-.02em;color:var(--navy-2)}
+  header p{margin:6px 0 0;color:var(--muted)}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--navy)}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+  .strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .card .n{font-size:22px;font-weight:800;color:var(--navy-2)}
+  .card .l{font-size:12px;color:var(--muted);margin-top:2px}
+  .card.p1{border-top:3px solid var(--green)}
+  .card.p2{border-top:3px solid var(--amber)}
+  .card.p3{border-top:3px solid var(--violet)}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;
+        border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  thead th{position:sticky;top:0;background:var(--navy-2);color:#fff;text-align:left;
+           font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:12px 14px;z-index:2}
+  thead th.c{text-align:center;width:120px}
+  tbody td{padding:11px 14px;border-top:1px solid var(--line);vertical-align:middle}
+  tbody tr:nth-child(even) td{background:#fcfcfd}
+  .num{color:var(--muted);font-variant-numeric:tabular-nums;width:44px}
+  .band td{background:var(--band)!important;font-weight:800;color:var(--navy);
+           letter-spacing:.04em;text-transform:uppercase;font-size:11px}
+  .c{text-align:center}
+  .tick{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+        border-radius:50%;background:var(--green-bg);color:var(--green);font-weight:900;font-size:14px}
+      .dash{color:#d99b9b;font-weight:800;font-size:15px}
+  .star{font-weight:700}
+  footer{margin-top:18px;color:var(--muted);font-size:12px}
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    thead th{position:static}
+    @page{size:A4 portrait;margin:12mm}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span><span class="eyebrow">Bharat Shram Setu · Delivery plan</span></div>
+    <h1>3-Phase Delivery Plan</h1>
+    <p>Checkpoints in rows · tick mark against the phase column.</p>
+  </header>
+
+  <div class="strip">
+    <div class="card p1"><div class="n">32</div><div class="l">Phase 1 — core build</div></div>
+    <div class="card p2"><div class="n">1</div><div class="l">Phase 2 — prospective template updation</div></div>
+    <div class="card p3"><div class="n">2</div><div class="l">Phase 3 — officer roles + AI agent</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Work item</th>
+        <th class="c">Phase 1</th><th class="c">Phase 2</th><th class="c">Phase 3</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="band"><td colspan="5">A · Cost Sheet Templates</td></tr>
+      <tr><td class="num">1</td><td>Cost sheet — approval workflow → Employer Review</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">2</td><td>Cost sheet — template creation (Super Admin)</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">3</td><td>Cost sheet — configure type / scope / category</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">4</td><td>Cost sheet — minimum-wage link (auto-fetch)</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">5</td><td>Cost sheet — statutory rules</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">6</td><td>Cost sheet — custom cost heads</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">7</td><td>Cost sheet — org customisation</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">8</td><td>Cost sheet — rule + cost engine (layers / employer cost / billing / CTC)</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">9</td><td>Cost sheet — inheritance + versioning</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">10</td><td>Cost sheet — binding selection + worker display</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">11</td><td class="star">Prospective template updation</td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td></tr>
+
+      <tr class="band"><td colspan="5">B · Gate Pass Management</td></tr>
+      <tr><td class="num">12</td><td>Gate pass — 3-category eligibility</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">13</td><td>Gate pass — dispatch + unique QR</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">14</td><td>Gate pass — gate scan + entry/scan logs</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">15</td><td>Gate pass — automatic expiry</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">16</td><td>Gate pass — renewal</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">17</td><td>Gate pass — revocation</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">18</td><td>Gate pass — compliance template + auto checklist</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">19</td><td>Gate pass — officer assignment on fields</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">20</td><td class="star">Officer role creation (Medical / H&amp;S / Training / Compliance / Security)</td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="tick">✓</span></td></tr>
+
+      <tr class="band"><td colspan="5">C · CLRA Registers</td></tr>
+      <tr><td class="num">21</td><td>CLRA — PAN-India register library + importer</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">22</td><td>CLRA — state applicability matrix</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">23</td><td>CLRA — contractor register workflow</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+
+      <tr class="band"><td colspan="5">D · Audit / Verification &amp; Reports</td></tr>
+      <tr><td class="num">24</td><td>Audit — central 100% verification data model</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">25</td><td>Audit — C1–C8 classification engine</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">26</td><td>Audit — Results Engine (11 metrics)</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">27</td><td>Audit — verification framework (~35 parameters)</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">28</td><td>Audit — report mapping (3 audiences)</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">29</td><td>Audit — Compliance Officer report</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">30</td><td>Audit — Management / Board report</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">31</td><td>Audit — Auditor report</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">32</td><td>Audit — CAPA workflow</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">33</td><td>Audit — cross-module reconciliation</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+      <tr><td class="num">34</td><td>Audit — evidence completeness + traceability</td><td class="c"><span class="tick">✓</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td></tr>
+
+      <tr class="band"><td colspan="5">E · AI Agent</td></tr>
+      <tr><td class="num">35</td><td class="star">AI agent</td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="dash">✗</span></td><td class="c"><span class="tick">✓</span></td></tr>
+    </tbody>
+  </table>
+
+  <footer>Phase 1 = core build · Phase 2 = prospective template updation · Phase 3 = officer roles + AI agent. Tick = delivered in that phase.</footer>
+</div>
+</body>
+</html>
