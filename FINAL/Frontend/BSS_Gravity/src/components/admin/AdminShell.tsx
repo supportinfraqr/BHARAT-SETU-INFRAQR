@@ -57,7 +57,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               {openMenu === group.key && <div role="menu" className="absolute top-full left-0 pt-2 w-60 z-50"><div className="bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-900/5 p-1.5">{group.items.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} role="menuitem" onClick={() => setOpenMenu(null)} className={`block px-3 py-2.5 rounded-lg text-[13px] ${itemActive(item[1]) ? 'bg-[#073B67]/5 text-[#073B67] font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>{item[0]}</Link>)}</div></div>}
             </div>
           ))}
-          <Link href="/admin/plan" aria-current={itemActive('/admin/plan') ? 'page' : undefined} className={`px-3 py-2 rounded-full text-[13px] font-medium whitespace-nowrap ${itemActive('/admin/plan') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Delivery Plan</Link>
           <Link href="/admin/activity" aria-current={pathname.startsWith('/admin/activity') ? 'page' : undefined} className={`px-3 py-2 rounded-full text-[13px] font-medium whitespace-nowrap ${pathname.startsWith('/admin/activity') ? 'bg-gray-950 text-white' : 'text-gray-600 transition-colors duration-150 hover:bg-gray-100'}`}>Activity Report</Link>
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -73,7 +72,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <Link href="/admin" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Overview</Link>
         <Link href="/admin/payroll" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold text-[#073B67] hover:bg-gray-50">Payroll</Link>
         {flat.map(item => <Link key={`${item[0]}-${item[1]}`} href={item[1]} onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm hover:bg-gray-50">{item[0]}</Link>)}
-        <Link href="/admin/plan" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Delivery Plan</Link>
         <Link href="/admin/activity" onClick={() => setMobile(false)} className="block px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-50">Activity Report</Link>
         <SignOutButton className="w-full flex items-center gap-2 px-4 py-3 text-red-600"/>
       </nav>}
