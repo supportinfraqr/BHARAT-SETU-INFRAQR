@@ -193,6 +193,12 @@ def _employer_sites(user):
             "compliance": site_compliance,
             "qrToken": _d(s.site_qr_token),
             "bssId": _d(s.bss_site_id),
+            "appointmentLetterTemplateId": s.appointment_letter_template_id,
+            "experienceLetterTemplateId": s.experience_letter_template_id,
+            "appointmentLetterTemplateName": (
+                _d(s.appointment_letter_template.name) if s.appointment_letter_template_id else ""),
+            "experienceLetterTemplateName": (
+                _d(s.experience_letter_template.name) if s.experience_letter_template_id else ""),
             "data": _site_scalar_data(s),
         })
     return rows

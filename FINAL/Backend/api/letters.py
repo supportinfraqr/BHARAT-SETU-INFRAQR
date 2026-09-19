@@ -127,7 +127,64 @@ def _shell(title: str, body: str) -> str:
     )
 
 
+def _letter_tokens(binding, letter_type: str) -> dict:
+    """Values injected into an admin-authored HTML template. Tokens are written
+    as {{token}} (or {{ token }}) — values are HTML-escaped by the facts helpers."""
+    w = _worker_facts(binding.worker)
+    p = _party_facts(binding)
+    ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")
+    ref = f"BSS/{ref_prefix}/{binding.id:05d}"
+    issue = _fmt(binding.accepted_at or binding.created_at)
+    wage = _money(_offered_wage(binding))
+    return {
+        "letterTitle": _e(LETTER_NAMES.get(letter_type, "Letter")),
+        "refNo": _e(ref),
+        "issueDate": _e(issue),
+        "workerName": w["name"], "workerBssId": w["bssId"], "fatherName": w["father"],
+        "dob": w["dob"], "gender": w["gender"], "mobile": w["mobile"], "address": w["address"],
+        "designation": w["designation"], "department": w["department"], "doj": w["doj"],
+        "wage": _e(wage),
+        "contractorName": p["contractor"], "contractorBssId": p["contractorBss"],
+        "contractorAddress": p["contractorAddr"],
+        "employerName": p["employer"],
+        "siteName": p["site"], "siteAddress": p["siteAddr"],
+    }
+
+
+def _resolve_letter_template(binding, letter_type: str):
+    """Template priority: the site's selected template → a state template →
+    the all-India default. Returns a LetterTemplate or None."""
+    from bss_core.models import LetterTemplate
+    kind = "APPOINTMENT" if letter_type == "appointment" else "EXPERIENCE"
+    site = binding.site
+    if site is not None:
+        chosen = (site.appointment_letter_template if kind == "APPOINTMENT"
+                  else site.experience_letter_template)
+        if chosen is not None and chosen.is_active and chosen.html.strip():
+            return chosen
+        state = (site.state or "").strip()
+        if state:
+            t = (LetterTemplate.objects
+                 .filter(letter_type=kind, state__iexact=state, is_active=True)
+                 .exclude(html="").order_by("-updated_at").first())
+            if t is not None:
+                return t
+    return (LetterTemplate.objects
+            .filter(letter_type=kind, state="", is_active=True)
+            .exclude(html="").order_by("-updated_at").first())
+
+
+def _render_template_html(html_text: str, tokens: dict) -> str:
+    out = html_text
+    for key, value in tokens.items():
+        out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
+    return out
+
+
 def render_letter(binding, letter_type: str) -> str:
+    template = _resolve_letter_template(binding, letter_type)
+    if template is not None:
+        return _render_template_html(template.html, _letter_tokens(binding, letter_type))
     w = _worker_facts(binding.worker)
     p = _party_facts(binding)
     ref_prefix = {"appointment": "APPT"}.get(letter_type, "EXP")

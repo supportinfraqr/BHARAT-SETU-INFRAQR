@@ -310,6 +310,19 @@ def _handle_site(user, body, method):
                 continue
             setattr(site, field, coerced)
 
+    # State-wise letter templates are FKs (many-to-one) so they are excluded from
+    # the scalar editable fields — set them explicitly.
+    def _tid(value):
+        try:
+            return int(value) if value not in (None, "", "null") else None
+        except (TypeError, ValueError):
+            return None
+
+    if "appointmentLetterTemplateId" in body:
+        site.appointment_letter_template_id = _tid(body.get("appointmentLetterTemplateId"))
+    if "experienceLetterTemplateId" in body:
+        site.experience_letter_template_id = _tid(body.get("experienceLetterTemplateId"))
+
     site.save()
     return site.id
 

@@ -13,6 +13,9 @@ python manage.py seed_compliance_master || echo "WARNING: seed_compliance_master
 echo "== Ensuring leave-type catalog (mandatory seed) =="
 python manage.py seed_leave_types || echo "WARNING: seed_leave_types failed"
 
+echo "== Ensuring default letter templates (mandatory seed) =="
+python manage.py seed_letter_templates || echo "WARNING: seed_letter_templates failed"
+
 echo "== Collecting static =="
 # Incremental (no --clear): only copies changed files, so the container comes
 # back up fast and the site isn't briefly 502 during a deploy.

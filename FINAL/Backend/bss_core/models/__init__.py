@@ -73,6 +73,7 @@ from .operations import (
     GatePassComplianceTemplate,
     WorkerComplianceChecklist,
     ComplianceChecklistField,
+    LetterTemplate,
 )
 from .learning import (
     Course,

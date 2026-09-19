@@ -22,6 +22,7 @@ const mastersGroup = { key: 'Masters', icon: BookOpenCheck, items: [
   ['Register Templates', '/admin/masters/register-template'],
   ['State Applicability', '/admin/masters/state-applicability'],
   ['Cost Sheet Templates', '/admin/masters/cost-sheet'],
+  ['Letter Templates', '/admin/masters/letter-templates'],
 ] as const };
 const mappingsGroup = { key: 'Mappings', icon: Link2, items: [
   ['Employer Document Mapping', '/admin/mappings/employer-document'],

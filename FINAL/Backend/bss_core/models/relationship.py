@@ -32,6 +32,14 @@ class Site(models.Model):
     gate_timing = models.CharField(max_length=40, blank=True)
     workforce_model = models.CharField(max_length=60, blank=True)
     compliance_client = models.CharField(max_length=120, blank=True)
+    # Employer-selected state-wise letter templates for this site (admin-owned
+    # LetterTemplate). All workers at the site get their letters in this format.
+    appointment_letter_template = models.ForeignKey(
+        "bss_core.LetterTemplate", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+")
+    experience_letter_template = models.ForeignKey(
+        "bss_core.LetterTemplate", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+")
     statutory_applicability = models.CharField(max_length=255, blank=True)
     reporting_period = models.CharField(max_length=40, blank=True)
     preferred_calendar = models.CharField(max_length=40, blank=True)

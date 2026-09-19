@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -25,7 +25,15 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   const [draft, setDraft] = useState<Record<string, unknown>>({});
   const [qrOpen, setQrOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [letterTemplates, setLetterTemplates] = useState<Array<{ id:number; name:string; state:string; letterType:'APPOINTMENT'|'EXPERIENCE'; letterTypeLabel:string }>>([]);
   const site = employer.sites.find(item => item.id === siteId);
+
+  useEffect(() => {
+    fetch('/api/employer/letter-templates', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { rows?: typeof letterTemplates } | null) => setLetterTemplates(j?.rows ?? []))
+      .catch(() => {});
+  }, []);
 
   if (!site) return <div className="space-y-6"><h1 className="text-2xl font-bold">Site not found</h1><p className="text-sm text-gray-500 mt-1">This site does not belong to your organisation or has been removed.</p><Link href="/employer/sites" className="inline-flex items-center gap-1 text-sm text-blue-700 font-semibold"><ArrowLeft size={15}/>Back to sites</Link></div>;
 
@@ -35,7 +43,7 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
   const siteWorkers = employer.workers.filter(w => String(w.siteId) === String(current.id));
 
   function startEdit() {
-    setDraft({ ...data });
+    setDraft({ ...data, appointmentLetterTemplateId: current.appointmentLetterTemplateId ?? '', experienceLetterTemplateId: current.experienceLetterTemplateId ?? '' });
     setEditing(true);
     setError('');
   }
@@ -47,6 +55,12 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
       // Edit spans every tab: save any changed field across the whole site master.
       for (const name of Object.values(TAB_FIELDS).flat()) {
         if (draft[name] !== data[name]) payload[name] = draft[name];
+      }
+      if (String(draft.appointmentLetterTemplateId ?? '') !== String(current.appointmentLetterTemplateId ?? '')) {
+        payload.appointmentLetterTemplateId = draft.appointmentLetterTemplateId ?? '';
+      }
+      if (String(draft.experienceLetterTemplateId ?? '') !== String(current.experienceLetterTemplateId ?? '')) {
+        payload.experienceLetterTemplateId = draft.experienceLetterTemplateId ?? '';
       }
       if (Object.keys(payload).length === 1) { setEditing(false); return; }
       await mutate('sites', 'PATCH', payload);
@@ -104,6 +118,31 @@ export default function SiteDetailPage({ params }: { params: Promise<{ siteId:st
           ) : <dd className="text-sm font-medium mt-1 text-gray-800 break-words">{fieldValue(name)}</dd>}
         </div>;
       })}</dl>
+
+      <div className="border-t border-gray-100 mt-6 pt-5">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Worker letters</h3>
+        <p className="text-xs text-gray-500 mb-4">Appointment and Experience (releasing) letters for every worker at this site are rendered from these state-wise templates. Leave blank to use the state / all-India default.</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-[11px] uppercase font-semibold text-gray-400">Appointment letter template</p>
+            {editing ? (
+              <select value={String(draft.appointmentLetterTemplateId ?? '')} onChange={e => setDraft(d => ({ ...d, appointmentLetterTemplateId: e.target.value }))} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm">
+                <option value="">Default (state / all-India)</option>
+                {letterTemplates.filter(t => t.letterType === 'APPOINTMENT').map(t => <option key={t.id} value={t.id}>{t.name}{t.state ? ` — ${t.state}` : ' — All India'}</option>)}
+              </select>
+            ) : <p className="text-sm font-medium mt-1 text-gray-800">{current.appointmentLetterTemplateName || 'Default (state / all-India)'}</p>}
+          </div>
+          <div>
+            <p className="text-[11px] uppercase font-semibold text-gray-400">Experience / releasing letter template</p>
+            {editing ? (
+              <select value={String(draft.experienceLetterTemplateId ?? '')} onChange={e => setDraft(d => ({ ...d, experienceLetterTemplateId: e.target.value }))} className="mt-1 w-full h-10 border border-gray-200 rounded-lg px-3 bg-white text-sm">
+                <option value="">Default (state / all-India)</option>
+                {letterTemplates.filter(t => t.letterType === 'EXPERIENCE').map(t => <option key={t.id} value={t.id}>{t.name}{t.state ? ` — ${t.state}` : ' — All India'}</option>)}
+              </select>
+            ) : <p className="text-sm font-medium mt-1 text-gray-800">{current.experienceLetterTemplateName || 'Default (state / all-India)'}</p>}
+          </div>
+        </div>
+      </div>
 
       {tab === 'address' && (() => { const lat = parseCoordinate(data.latitude as string | number | null | undefined); const lng = parseCoordinate(data.longitude as string | number | null | undefined); if (lat === null || lng === null) return null; return <div className="mt-8 pt-6 border-t border-gray-100"><p className="text-[11px] uppercase font-semibold text-gray-400 mb-3 flex items-center gap-1.5"><MapPin size={12}/>Map preview — OpenStreetMap</p><SiteMapView lat={lat} lng={lng} name={current.name}/></div>; })()}
 

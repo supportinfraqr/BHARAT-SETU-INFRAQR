@@ -408,6 +408,11 @@ export type EmployerSite = {
   compliance: number;
   qrToken?: string;
   bssId?: string;
+  /** State-wise letter templates selected for this site (admin-owned). */
+  appointmentLetterTemplateId?: number | null;
+  experienceLetterTemplateId?: number | null;
+  appointmentLetterTemplateName?: string;
+  experienceLetterTemplateName?: string;
   details?: EmployerSiteDetail;
   /** Raw scalar site-master fields (snake_case model column names) from the Site Detail sheet. */
   data?: Record<string, unknown>;

@@ -639,6 +639,35 @@ class DocumentTemplateStore(models.Model):
         return f"{self.owner_type}:{self.owner_id}"
 
 
+class LetterTemplate(models.Model):
+    """Admin-owned, state-wise HTML letter template for appointment / experience
+    (releasing) letters. An employer selects one per site; every worker of that
+    site then receives their letter in that format."""
+
+    TYPES = [("APPOINTMENT", "Appointment Letter"),
+             ("EXPERIENCE", "Experience / Releasing Letter")]
+    # Blank state = the all-India default used when no state template matches.
+    state = models.CharField(max_length=60, blank=True)
+    letter_type = models.CharField(max_length=20, choices=TYPES)
+    name = models.CharField(max_length=120)
+    html = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "letter_template"
+        constraints = [
+            models.UniqueConstraint(fields=["state", "letter_type", "name"],
+                                    name="uq_letter_template"),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_letter_type_display()}{' · ' + self.state if self.state else ' · all-India'})"
+
+
 class WorkerGatePassBlock(models.Model):
     """Principal employer's switch to stop gate-pass generation for a worker
     (both temporary and permanent). When blocked the pass is not generated."""
