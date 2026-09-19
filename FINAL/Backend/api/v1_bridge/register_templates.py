@@ -16,6 +16,7 @@ def _template_row(t):
         "sourceFormat": t.source_format,
         "columns": list(t.columns or []),
         "meta": t.meta or {},
+        "html": t.html or "",
         "active": t.is_active,
         "formatAvailable": t.format_available,
         "version": t.version,
@@ -90,6 +91,33 @@ def register_templates(request):
     states = list(RegisterTemplate.objects.values_list("state", flat=True)
                   .distinct().order_by("state"))
     return Response({"rows": rows, "states": states}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "PATCH"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def register_template_detail(request, template_id):
+    """Admin: read / update one register template's HTML layout and title."""
+    from bss_core.models import RegisterTemplate
+    from .admin_console import log_audit
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    template = RegisterTemplate.objects.filter(pk=template_id).first()
+    if template is None:
+        return Response({"error": "Template not found."}, status=status.HTTP_404_NOT_FOUND)
+    if request.method == "GET":
+        return Response({"data": _template_row(template)}, status=status.HTTP_200_OK)
+    body = request.data if isinstance(request.data, dict) else {}
+    if body.get("html") is not None:
+        template.html = str(body.get("html") or "")
+    if body.get("title") is not None:
+        template.title = str(body.get("title") or "")[:200]
+    if body.get("active") is not None:
+        template.is_active = bool(body.get("active"))
+    template.save()
+    log_audit(request.user, "UPDATE", "register_template", template.id,
+              after={"summary": f"Updated register template {template.state} {template.form_code}"})
+    return Response({"data": _template_row(template)}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -177,7 +205,7 @@ def state_applicability(request):
                     status=status.HTTP_200_OK)
 
 
-__all__ = ["register_templates", "register_template_file",
+__all__ = ["register_templates", "register_template_detail", "register_template_file",
            "contractor_register_templates", "clra_master_template",
            "state_applicability",
            "applicable_form_codes", "applicable_templates", "state_strength"]

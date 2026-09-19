@@ -330,9 +330,13 @@ def _esc(value):
             .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
-def render_register_html(template, rows, *, contractor="", site="", site_code="",
+def render_register_html(template, rows, *, contractor="", employer="", site="", site_code="",
                          state="", month="", year="", financial_year="", generated_on=""):
-    """Render one State+Form register as printable HTML (template columns + rows)."""
+    """Render one State+Form register.
+
+    If the admin authored an HTML layout (`template['html']`) it is used, with
+    ``{{TOKENS}}`` for the header/meta and ``{{HEAD}}`` / ``{{ROWS}}`` for the
+    data table. Otherwise a plain columns-based table is generated."""
     columns = [str(c) for c in (template.get("columns") or [])]
     mapping = [match_column(col) for col in columns]
     title = template.get("title") or template.get("formCode") or "Register"
@@ -349,6 +353,22 @@ def render_register_html(template, rows, *, contractor="", site="", site_code=""
                 value = ""
             cells.append(f"<td>{_esc(value)}</td>")
         body.append("<tr>" + "".join(cells) + "</tr>")
+
+    admin_html = (template.get("html") or "").strip()
+    if admin_html:
+        tokens = {
+            "TITLE": _esc(title), "FORM_CODE": _esc(template.get("formCode", "")),
+            "STATE": _esc(template.get("state", "")), "CONTRACTOR_NAME": _esc(contractor),
+            "EMPLOYER_NAME": _esc(employer), "SITE_NAME": _esc(site), "SITE_CODE": _esc(site_code),
+            "MONTH": _esc(month), "YEAR": _esc(year), "FINANCIAL_YEAR": _esc(financial_year),
+            "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(rows)),
+            "HEAD": head, "ROWS": "".join(body),
+        }
+        out = admin_html
+        for key, value in tokens.items():
+            out = out.replace("{{" + key + "}}", value).replace("{{ " + key + " }}", value)
+        return out
+
     meta = [
         ("Contractor", contractor), ("Site", site), ("Site Code", site_code),
         ("State", state), ("Financial Year", financial_year),

@@ -1,15 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, FileSpreadsheet, Loader2, Search, X } from 'lucide-react';
+import { CheckCircle2, Download, FileSpreadsheet, Loader2, Pencil, Search, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 
 type TemplateRow = {
   id: number; state: string; formCode: string; title: string; sourceFormat: string;
-  columns: string[]; meta: { lines?: string[]; file?: string }; active: boolean;
+  columns: string[]; meta: { lines?: string[]; file?: string }; html: string; active: boolean;
   formatAvailable?: boolean;
   version: number; fileName: string; hasFile: boolean;
 };
+
+const REGISTER_TOKENS = [
+  'TITLE', 'FORM_CODE', 'STATE', 'CONTRACTOR_NAME', 'EMPLOYER_NAME', 'SITE_NAME', 'SITE_CODE',
+  'MONTH', 'YEAR', 'FINANCIAL_YEAR', 'GENERATED_ON', 'RECORD_COUNT', 'HEAD', 'ROWS',
+];
 
 export default function RegisterTemplatesPage() {
   const [rows, setRows] = useState<TemplateRow[]>([]);
@@ -19,6 +24,10 @@ export default function RegisterTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [view, setView] = useState<TemplateRow | null>(null);
+  const [htmlFor, setHtmlFor] = useState<TemplateRow | null>(null);
+  const [htmlDraft, setHtmlDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,6 +48,22 @@ export default function RegisterTemplatesPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial + filter reload
   useEffect(() => { void load(); }, [load]);
 
+  async function saveHtml() {
+    if (!htmlFor) return;
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/admin/register-templates/${htmlFor.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: htmlDraft }),
+      });
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? 'Save failed.');
+      setRows(current => current.map(r => r.id === htmlFor.id ? { ...r, html: htmlDraft } : r));
+      setHtmlFor(null); setNotice('Register HTML saved.');
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Save failed.'); }
+    finally { setBusy(false); }
+  }
+
   const columns: DataColumn<TemplateRow>[] = [
     { id:'state', header:'State / Region', value:r => r.state },
     { id:'form', header:'Form', value:r => r.formCode, render:r => <div className="flex items-center gap-2"><span className="font-mono text-xs font-semibold text-gray-800">{r.formCode}</span>{r.formatAvailable === false && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700" title="The source matrix lists no official register format for this state">No format</span>}</div> },
@@ -48,6 +73,7 @@ export default function RegisterTemplatesPage() {
     { id:'version', header:'Version', value:r => r.version },
     { id:'actions', header:'Actions', filterable:false, value:r => r.id, render:r => (
       <div className="flex items-center gap-2">
+        <button onClick={() => { setHtmlFor(r); setHtmlDraft(r.html || ''); setError(''); }} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><Pencil size={13}/>{r.html ? 'Edit HTML' : 'Add HTML'}</button>
         <button onClick={() => setView(r)} className="text-xs font-semibold text-blue-700 hover:underline">View fields</button>
         {r.hasFile && <a href={`/api/register-templates/${r.id}/file`} download className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-[#073B67]"><Download size={13}/>Source</a>}
       </div>
@@ -62,6 +88,7 @@ export default function RegisterTemplatesPage() {
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+    {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
 
     <div className="flex flex-wrap items-center gap-3">
       <label className="text-xs font-semibold text-gray-600">State
@@ -93,5 +120,25 @@ export default function RegisterTemplatesPage() {
         {view.hasFile && <a href={`/api/register-templates/${view.id}/file`} download className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold"><Download size={14}/>Download source ({view.sourceFormat.toUpperCase()})</a>}
       </div>
     </section></div>}
+
+    {htmlFor && <div className="fixed inset-0 z-[96] bg-black/50 grid place-items-center p-4">
+      <section role="dialog" aria-modal="true" aria-label="Register HTML template" className="w-full max-w-3xl bg-white rounded-2xl overflow-hidden max-h-[92vh] flex flex-col">
+        <header className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div><h2 className="text-sm font-semibold">Register HTML · {htmlFor.state} · {htmlFor.formCode}</h2><p className="text-[11px] text-gray-500 mt-0.5">Authors the register layout. When blank, the register renders from the parsed columns.</p></div>
+          <button onClick={() => setHtmlFor(null)} aria-label="Close"><X size={16}/></button>
+        </header>
+        <div className="p-5 space-y-3 overflow-y-auto">
+          <div className="flex flex-wrap gap-1.5">
+            {REGISTER_TOKENS.map(tok => <button key={tok} type="button" onClick={() => setHtmlDraft(d => d + `{{${tok}}}`)} className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">{`{{${tok}}}`}</button>)}
+          </div>
+          <textarea value={htmlDraft} onChange={e => setHtmlDraft(e.target.value)} rows={18} spellCheck={false} placeholder="<!doctype html>… <table><thead><tr>{{HEAD}}</tr></thead><tbody>{{ROWS}}</tbody></table> …" className="w-full rounded-lg border border-gray-200 p-3 font-mono text-[11px] leading-relaxed" />
+          <p className="text-[11px] text-gray-400">Tokens: header/meta values plus <code>{'{{HEAD}}'}</code> (table header cells) and <code>{'{{ROWS}}'}</code> (data rows) from the uploaded master file.</p>
+        </div>
+        <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+          <button onClick={() => setHtmlFor(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>
+          <button disabled={busy} onClick={() => void saveHtml()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>{busy ? 'Saving…' : 'Save HTML'}</button>
+        </footer>
+      </section>
+    </div>}
   </div>;
 }

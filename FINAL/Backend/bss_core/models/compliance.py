@@ -52,6 +52,9 @@ class RegisterTemplate(models.Model):
                                  null=True, blank=True, related_name="templates")
     columns = models.JSONField(default=list, blank=True)
     meta = models.JSONField(default=dict, blank=True)
+    # Admin-authored HTML layout for the register (with {{tokens}} / {{ROWS}}).
+    # When blank, the register is rendered from `columns` as a plain table.
+    html = models.TextField(blank=True)
     source_file = models.FileField(upload_to="clra/templates/%Y/", blank=True)
     is_active = models.BooleanField(default=True)
     format_available = models.BooleanField(default=True)

@@ -540,11 +540,13 @@ def compliance_batch_register(request, batch_id, template_id):
     if template is None:
         return Response({"error": "template not found"}, status=status.HTTP_404_NOT_FOUND)
     rows = _batch_master_rows(batch)
+    employer_name = payloads._org_name(batch.site.employer) if (batch.site and batch.site.employer) else ""
     html = clra.render_register_html(
         {"formCode": template.form_code, "title": template.title, "state": template.state,
-         "columns": list(template.columns or [])},
+         "columns": list(template.columns or []), "html": template.html or ""},
         rows,
         contractor=payloads._party_name(request.user),
+        employer=employer_name,
         site=(batch.site.site_name if batch.site else ""),
         site_code=(batch.site.site_code if batch.site else ""),
         state=batch.state, month=batch.month, year=batch.year,
