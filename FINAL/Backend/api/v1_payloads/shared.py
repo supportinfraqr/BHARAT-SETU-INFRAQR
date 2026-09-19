@@ -239,6 +239,7 @@ def _ce_binding_row(b):
     allot_status = {"PENDING": "Pending", "APPROVED": "Approved", "REJECTED": "Rejected",
                     "RELEASED": "Released"}
     initiated_by, accepted_by = _ce_initiator_acceptor(b)
+    approved_site_count = b.allotments.filter(status="APPROVED").count()
     allotments = [
         {
             "id": a.id,
@@ -253,7 +254,7 @@ def _ce_binding_row(b):
             "successorName": _org_name(a.successor_contractor) if a.successor_contractor else "",
             "workersAtRisk": WorkerContractorBinding.objects.filter(
                 contractor=b.contractor, site_id=a.site_id
-            ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).count(),
+            ).exclude(binding_status__in=TERMINAL_BINDING_STATUSES).count(),
         }
         for a in b.allotments.all()
     ]
@@ -273,6 +274,7 @@ def _ce_binding_row(b):
         "unbindRequested": bool(b.unbind_requested_at),
         "unbindConsentContractor": bool(b.unbind_consent_contractor),
         "unbindConsentEmployer": bool(b.unbind_consent_employer),
+        "sitesAtRisk": approved_site_count,
         "requestedOn": _dts(b.created_at),
         "allotments": allotments,
         "history": _ce_history(b),

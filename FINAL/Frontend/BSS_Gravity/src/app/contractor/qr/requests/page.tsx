@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Building2, CheckCircle2, Clock3, Handshake, History, KeyRound, Link2, UserRound } from 'lucide-react';
+import { Building2, CheckCircle2, Clock3, Handshake, History, KeyRound, Link2, MapPin, UserRound } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import SitePermissionsDialog from '@/components/ui/SitePermissionsDialog';
@@ -11,7 +11,7 @@ import { ResendOtp } from '@/components/auth/ResendOtp';
 import type { ContractorBindingRequest } from '@/types/portal';
 
 export default function ContractorBindingRequestsPage() {
-  const { contractor, replaceContractor, refresh, employerScope } = useContractor();
+  const { contractor, replaceContractor, refresh, mutate, employerScope } = useContractor();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -25,6 +25,9 @@ export default function ContractorBindingRequestsPage() {
   const [confirm, setConfirm] = useState<{ row: ContractorBindingRequest; kind: 'approve' | 'reject' | 'accept' | 'ce-unbind' | 'worker-unbind' | 'worker-decline' } | null>(null);
   const [sitesFor, setSitesFor] = useState<ContractorBindingRequest | null>(null);
   const [historyFor, setHistoryFor] = useState<ContractorBindingRequest | null>(null);
+  const [siteMoveFor, setSiteMoveFor] = useState<ContractorBindingRequest | null>(null);
+  const [siteMoveChoice, setSiteMoveChoice] = useState('');
+  const [siteMoveError, setSiteMoveError] = useState('');
 
   const rows = employerScope === 'all' ? contractor.bindingRequests : contractor.bindingRequests.filter(r => r.employer === employerScope);
 
@@ -149,6 +152,33 @@ export default function ContractorBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
+  async function rejectCeUnbind(row: ContractorBindingRequest) {
+    if (!row.bindingId) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/contractor/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: row.bindingId, action: 'reject-unbind' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'The unbind request could not be rejected.');
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.bindingId === row.bindingId ? { ...item, unbindRequested: false, unbindConsentContractor: false } : item) });
+      setNotice(`Unbind request from ${row.entityName} rejected — the binding stays active.`);
+      void refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The unbind request could not be rejected.'); }
+    finally { setBusy(false); }
+  }
+
+  async function rejectWorkerUnbind(row: ContractorBindingRequest) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: row.id, action: 'decline-unbind', side: 'contractor' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'The unbind request could not be rejected.');
+      replaceContractor({ ...contractor, bindingRequests: contractor.bindingRequests.map(item => item.id === row.id ? { ...item, unbindRequested: false, unbindConsentContractor: false } : item) });
+      setNotice(`Unbind request from ${row.entityName} rejected — the binding stays active.`);
+      void refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The unbind request could not be rejected.'); }
+    finally { setBusy(false); }
+  }
+
   async function contractorSiteAction(action: 'approve-site' | 'reject-site' | 'request-site-release' | 'cancel-site-release', siteId: number) {
     if (!sitesFor?.bindingId) return;
     setBusy(true); setError(''); setNotice('');
@@ -162,6 +192,18 @@ export default function ContractorBindingRequestsPage() {
       setNotice(action === 'approve-site' ? 'Site approved.' : 'Site rejected.');
       void refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Site permission could not be updated.'); }
+    finally { setBusy(false); }
+  }
+
+  async function changeWorkerSite() {
+    if (!siteMoveFor?.bindingId || !siteMoveChoice) return;
+    setBusy(true); setError(''); setNotice(''); setSiteMoveError('');
+    try {
+      await mutate('worker-site', 'POST', { bindingId: String(siteMoveFor.bindingId), siteId: String(siteMoveChoice) });
+      setSiteMoveFor(null); setSiteMoveChoice('');
+      setNotice('Worker moved — the old binding is closed and a new one was created at the selected site.');
+      void refresh();
+    } catch (reason) { setSiteMoveError(reason instanceof Error ? reason.message : 'The site could not be changed.'); }
     finally { setBusy(false); }
   }
 
@@ -185,7 +227,7 @@ export default function ContractorBindingRequestsPage() {
     { id:'requested', header:'Requested', value:r => r.requestedOn },
     { id:'initiated', header:'Initiated by', value:r => r.initiatedBy || '—', render:r => <span className="font-semibold text-gray-700">{r.initiatedBy || '—'}</span> },
     { id:'accepted', header:'Accepted by', value:r => r.acceptedBy || '—', render:r => <span className={r.acceptedBy ? 'font-semibold text-green-700' : 'text-gray-400'}>{r.acceptedBy || '—'}</span> },
-    { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-green-700' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-red-700' : 'text-orange-700'}>{r.status}</span> },
+    { id:'status', header:'Relationship', value:r => r.status, render:r => <span className={r.status === 'Accepted' ? 'text-green-700' : r.status === 'Rejected' || r.status === 'Cancelled' ? 'text-red-700' : r.status === 'Site Changed' ? 'text-slate-500' : 'text-orange-700'}>{r.status}</span> },
     { id:'actions', header:'Action', filterable:false, value:r => r.status, render:r => {
       if (r.type === 'Employer') {
         if (r.status === 'Pending' && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'approve' })} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'reject' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
@@ -194,18 +236,18 @@ export default function ContractorBindingRequestsPage() {
           if (r.unbindRequested) {
             return r.unbindConsentContractor
               ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting employer</span>
-              : <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button>;
+              : <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectCeUnbind(r)} className="h-8 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
           }
           return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setSitesFor(r)} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Site permissions</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'ce-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
         }
         return <span className="text-gray-400">—</span>;
       }
-      if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button>;
+      if (r.status === 'Accepted' && r.unbindRequested && !r.unbindConsentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectWorkerUnbind(r)} className="h-8 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
       if (r.status === 'Accepted' && r.unbindRequested) return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting worker</span><button disabled={busy} onClick={() => void sendWorkerOtp(r, 'unbind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button></div>;
       if (r.status === 'Pending' && r.consentWorker && !r.consentContractor) return <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => openWagePrompt(r)} className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Accept binding</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-decline' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Decline</button></div>;
       if (r.status === 'Pending' && !r.consentWorker && r.type === 'Worker') return <button disabled={busy} onClick={() => void sendWorkerOtp(r, 'bind')} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><KeyRound size={13}/>Send OTP</button>;
       if (r.status === 'Pending' && !r.consentWorker) return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/60">Awaiting worker</span>;
-      if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
+      if (r.status === 'Accepted') return <div className="flex items-center gap-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Active</span><button disabled={busy} onClick={() => { setSiteMoveFor(r); setSiteMoveChoice(''); setSiteMoveError(''); }} className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#073B67] active:scale-95 text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-50"><MapPin size={13}/>Change Site</button><button disabled={busy} onClick={() => setConfirm({ row: r, kind: 'worker-unbind' })} className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Request unbind</button></div>;
       return <span className="text-gray-400">—</span>;
     } },
     { id:'history', header:'History', filterable:false, value:() => '', render:r => <button disabled={busy} onClick={() => setHistoryFor(r)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><History size={13}/>History</button> },
@@ -304,6 +346,25 @@ export default function ContractorBindingRequestsPage() {
       events={historyFor?.history ?? []}
       onClose={() => setHistoryFor(null)}
     />
+    {siteMoveFor && (
+      <div className="fixed inset-0 z-[60] bg-black/50 grid place-items-center p-4">
+        <section role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 w-full max-w-sm">
+          <h2 className="font-semibold text-gray-900">Change worker site</h2>
+          <p className="text-xs text-gray-500 mt-1">{siteMoveFor.entityName} · current site {siteMoveFor.site || '—'}</p>
+          <p className="text-[11px] text-gray-400 mt-2">Moving the worker closes the current binding and creates a new one at the selected site of the same employer. As the contractor you can do this yourself — the worker&apos;s consent is not required again.</p>
+          <label className="block mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">New site</label>
+          <select value={siteMoveChoice} onChange={e => { setSiteMoveChoice(e.target.value); setSiteMoveError(''); }} disabled={busy} className="mt-1 w-full bg-white border border-gray-200 rounded-xl px-3 py-3 text-sm font-semibold focus:outline-none">
+            <option value="">Select site</option>
+            {contractor.sites.filter(s => String(s.id) !== String(siteMoveFor.siteId) && (!siteMoveFor.employer || s.employer === siteMoveFor.employer)).map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}
+          </select>
+          {siteMoveError && <p className="text-[11px] text-red-600 font-semibold mt-2">{siteMoveError}</p>}
+          <div className="mt-4 flex gap-2 justify-end">
+            <button onClick={() => { setSiteMoveFor(null); setSiteMoveChoice(''); setSiteMoveError(''); }} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold">Cancel</button>
+            <button onClick={() => void changeWorkerSite()} disabled={busy || !siteMoveChoice} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60">{busy ? 'Moving…' : 'Move worker'}</button>
+          </div>
+        </section>
+      </div>
+    )}
     <ConfirmDialog
       open={!!confirm}
       tone={confirm?.kind === 'approve' || confirm?.kind === 'accept' ? 'positive' : 'negative'}

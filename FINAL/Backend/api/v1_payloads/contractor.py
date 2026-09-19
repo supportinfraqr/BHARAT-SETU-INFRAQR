@@ -104,7 +104,8 @@ def _contractor_identity(user):
 
 def _contractor_stats(user):
     bindings = WorkerContractorBinding.objects.filter(contractor=user)
-    sites = Site.objects.filter(bindings__contractor=user).distinct()
+    sites = Site.objects.filter(bindings__contractor=user,
+                                bindings__binding_status__in=("PENDING", "ACCEPTED")).distinct()
     workers = bindings.filter(binding_status="ACCEPTED").count()
     return {
         "totalWorkers": workers,
@@ -115,7 +116,8 @@ def _contractor_stats(user):
 
 
 def _contractor_principal_employer(user):
-    binding = WorkerContractorBinding.objects.filter(contractor=user).first()
+    binding = (WorkerContractorBinding.objects.filter(contractor=user, binding_status="ACCEPTED").first()
+               or WorkerContractorBinding.objects.filter(contractor=user).first())
     if binding and binding.site and binding.site.employer:
         ep = getattr(binding.site.employer, "employer_profile", None)
         return {
@@ -178,7 +180,9 @@ def _contractor_pending_sites(user):
 
 
 def _contractor_workers(user):
-    bindings = WorkerContractorBinding.objects.filter(contractor=user).order_by("-created_at")
+    bindings = (WorkerContractorBinding.objects
+                .filter(contractor=user, binding_status__in=("PENDING", "ACCEPTED"))
+                .order_by("-created_at"))
     rows = []
     for b in bindings:
         wi = WorkerIdentity.objects.filter(user=b.worker).first()
@@ -781,6 +785,9 @@ def _contractor_binding_requests(user):
         ep = getattr(b.site.employer, "employer_profile", None) if b.site and b.site.employer else None
         rows.append({
             "id": b.id, "type": "Worker",
+            "bindingId": b.id,
+            "siteId": str(b.site_id) if b.site_id else "",
+            "employerId": b.site.employer_id if b.site and b.site.employer_id else None,
             "entityName": _d(wi.name if wi else b.worker.username),
             "bssId": _d(wi.bss_worker_id if wi else ""),
             "site": b.site.site_name if b.site else "",
@@ -789,7 +796,8 @@ def _contractor_binding_requests(user):
             "wage": float(b.offered_wage) if b.offered_wage else 0,
             "requestedOn": _dts(b.created_at),
             "status": {"PENDING": "Pending", "ACCEPTED": "Accepted", "REJECTED": "Rejected",
-                       "CANCELLED": "Cancelled", "EXPIRED": "Expired"}.get(
+                       "CANCELLED": "Cancelled", "EXPIRED": "Expired",
+                       "TRANSFERRED": "Site Changed"}.get(
                            str(b.binding_status).upper(), "Pending"),
             "initiatedBy": _wc_initiator_acceptor(b)[0],
             "acceptedBy": _wc_initiator_acceptor(b)[1],

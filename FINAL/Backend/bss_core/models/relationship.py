@@ -500,7 +500,8 @@ class WorkerContractorBinding(models.Model):
     One worker = one ACTIVE site (partial unique index). Employer derived via site."""
 
     STATUS = [("PENDING", "Pending"), ("ACCEPTED", "Accepted"),
-              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled"), ("EXPIRED", "Expired")]
+              ("REJECTED", "Rejected"), ("CANCELLED", "Cancelled"), ("EXPIRED", "Expired"),
+              ("TRANSFERRED", "Site Changed")]
     CONSENT_METHOD = [("app", "App"), ("ivr", "IVR"), ("sms_otp", "SMS OTP"), ("voice", "Voice")]
     INITIATOR = [("worker", "Worker"), ("contractor", "Contractor")]
 

@@ -385,7 +385,7 @@ def _employer_approvals(user):
                 "successorName": _org_name(a.successor_contractor) if a.successor_contractor else "",
                 "workersAtRisk": WorkerContractorBinding.objects.filter(
                     contractor=e.contractor, site_id=a.site_id
-                ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).count(),
+                ).exclude(binding_status__in=TERMINAL_BINDING_STATUSES).count(),
             } for a in e.allotments.all()],
             "submittedAt": _dts(e.created_at),
             "checks": ["KYC", "Licence"],
@@ -400,7 +400,10 @@ def _employer_approvals(user):
             # the candidate successor contractors (other ACCEPTED bindings).
             "workersAtRisk": WorkerContractorBinding.objects.filter(
                 contractor=e.contractor, site__employer=user
-            ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).count(),
+            ).exclude(binding_status__in=TERMINAL_BINDING_STATUSES).count(),
+            # Approved sites this contractor holds at the employer — handed to a
+            # successor when the engagement ends (even with zero workers).
+            "sitesAtRisk": e.allotments.filter(status="APPROVED").count(),
             "successorCandidates": _successor_candidates(user, e),
             "unbindRequested": bool(e.unbind_requested_at),
             "unbindConsentEmployer": bool(e.unbind_consent_employer),

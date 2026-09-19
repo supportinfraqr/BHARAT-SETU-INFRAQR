@@ -20,7 +20,7 @@ type BindingRequest = {
   designation: string;
   wage: string;
   requestedOn: string;
-  status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled';
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Expired' | 'Cancelled' | 'Site Changed';
   initiatedBy?: string;
   acceptedBy?: string;
   contractorDetails?: { name: string; code: string; tradeName: string; lin: string; contactPerson: string; email: string; state: string; address: string };
@@ -48,7 +48,7 @@ export default function BindingRequestsPage() {
     designation: String(req.designation || ''),
     wage: String(req.wage || ''),
     requestedOn: String(req.requestedOn || '—'),
-    status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
+    status: (['Pending', 'Accepted', 'Rejected', 'Expired', 'Cancelled', 'Site Changed'].includes(req.status) ? req.status : 'Pending') as BindingRequest['status'],
     initiatedBy: String(req.initiatedBy || ''),
     acceptedBy: String(req.acceptedBy || ''),
     contractorDetails: req.contractorDetails,
@@ -126,6 +126,20 @@ export default function BindingRequestsPage() {
     } finally { setBusyId(null); }
   };
 
+  const rejectUnbind = async (req: BindingRequest) => {
+    setBusyId(req.id); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/worker/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: req.id, action: 'decline-unbind', side: 'worker' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Could not reject the unbind request.');
+      setRequests(current => current.map(r => r.id === req.id ? { ...r, unbindRequested: false, unbindConsentWorker: false, unbindConsentContractor: false } : r));
+      setNotice('Unbind request rejected — the binding stays active.');
+      void refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not reject the unbind request.');
+    } finally { setBusyId(null); }
+  };
+
   const badge = (status: string) => {
     const map: Record<string, string> = { Pending:'bg-orange-100 text-orange-700', Accepted:'bg-green-100 text-green-700', Rejected:'bg-red-100 text-red-700', Expired:'bg-gray-100 text-gray-500' };
     return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${map[status]}`}>{status}</span>;
@@ -198,6 +212,7 @@ export default function BindingRequestsPage() {
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
               <p className="text-xs text-orange-700 font-semibold flex items-center gap-1.5"><XCircle size={14}/>{req.unbindConsentWorker ? 'Unbinding requested — awaiting the contractor’s consent.' : 'The contractor requested unbinding — awaiting your consent.'}</p>
               {!req.unbindConsentWorker && <button onClick={() => setConfirm({ req, kind: 'unbind' })} disabled={busyId===req.id} className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-red-700 disabled:opacity-60"><XCircle size={14}/>{busyId===req.id?'Confirming…':'Confirm unbind'}</button>}
+              {!req.unbindConsentWorker && <button onClick={() => void rejectUnbind(req)} disabled={busyId===req.id} className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-60">Reject request</button>}
             </div>
           ) : (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
@@ -206,6 +221,7 @@ export default function BindingRequestsPage() {
             </div>
           ))}
           {req.status === 'Cancelled' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding unbound — both parties consented.</p>}
+          {req.status === 'Site Changed' && <p className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 font-semibold">Binding closed — your contractor moved you to another site; your engagement continues there.</p>}
         </article>
       ))}
     </div>

@@ -190,13 +190,17 @@ def _handle_worker_compliance(user, body):
 
 
 def _handle_worker_site(user, body):
-    """The contractor moves one of their bound workers to another of their sites.
+    """The contractor moves one of their bound workers to another site by
+    breaking the current binding and creating a fresh one at the target site.
 
-    Only the contractor holds this power, and only to a site they are engaged at
-    (allotted + approved by the employer). The worker↔contractor pair is kept; the
-    binding's site — and everything derived from it — changes."""
-    from bss_core.models import Site, WorkerContractorBinding
+    Contractor-only: the worker is already engaged with this contractor, so the
+    two-sided consent is bypassed and the new binding is created ACCEPTED. The
+    old binding is kept as history with status TRANSFERRED ("Site Changed"). The
+    move is limited to another site of the *same employer* that the contractor is
+    engaged at (allotted + approved)."""
+    from bss_core.models import Site, WorkerContractorBinding, WorkerGatePass
     from .bindings import _contractor_engaged_at_site, _sync_employment_from_binding
+    from .admin_console import log_audit
 
     binding = (WorkerContractorBinding.objects
                .filter(pk=body.get("bindingId") or body.get("id"), contractor=user)
@@ -208,20 +212,49 @@ def _handle_worker_site(user, body):
     site = Site.objects.filter(pk=body.get("siteId")).first()
     if site is None:
         raise PortalMutationError("Select a valid site.", 400)
+    if binding.site_id == site.id:
+        raise PortalMutationError("The worker is already at this site.", 409)
+    if binding.site and site.employer_id != binding.site.employer_id:
+        raise PortalMutationError(
+            "A worker can only be moved between sites of the same employer.", 409)
     if not _contractor_engaged_at_site(user, site.id):
         raise PortalMutationError(
             "You are not engaged at this site. Ask the employer to allot this site to you first.", 403)
-    if binding.site_id != site.id:
-        clash = (WorkerContractorBinding.objects
-                 .filter(worker=binding.worker, contractor=user, site=site,
-                         binding_status__in=("PENDING", "ACCEPTED"))
-                 .exclude(pk=binding.pk).exists())
-        if clash:
-            raise PortalMutationError("This worker already has a binding with you at that site.", 409)
-        binding.site = site
-        binding.save(update_fields=["site", "updated_at"])
-        _sync_employment_from_binding(binding)
-    return {"bindingId": binding.id, "siteId": str(binding.site_id or "")}
+    clash = (WorkerContractorBinding.objects
+             .filter(worker=binding.worker, contractor=user, site=site,
+                     binding_status__in=("PENDING", "ACCEPTED"))
+             .exclude(pk=binding.pk).exists())
+    if clash:
+        raise PortalMutationError("This worker already has a binding with you at that site.", 409)
+
+    now = timezone.now()
+    # Break the old binding — kept as history, not deleted.
+    binding.binding_status = "TRANSFERRED"
+    binding.unbound_at = now
+    binding.unbind_requested_by = "contractor"
+    binding.save(update_fields=["binding_status", "unbound_at", "unbind_requested_by", "updated_at"])
+    # Create the new ACCEPTED binding at the target site — consent bypassed
+    # because the worker is already engaged with this contractor.
+    new_binding = WorkerContractorBinding.objects.create(
+        worker=binding.worker, contractor=user, site=site,
+        binding_status="ACCEPTED", consent_worker=True, consent_contractor=True,
+        consent_method="app", initiated_by="contractor", accepted_at=now,
+        designation=binding.designation, department=binding.department, shift=binding.shift,
+        offered_wage=binding.offered_wage, cost_sheet=binding.cost_sheet,
+        computed_ctc=binding.computed_ctc, cost_breakdown=binding.cost_breakdown or {},
+    )
+    _sync_employment_from_binding(new_binding)
+    # The worker's existing passes now belong to the new site (same pass number).
+    WorkerGatePass.objects.filter(worker=binding.worker).update(site=site)
+    _create_notification(
+        user=binding.worker,
+        title="Your site was changed",
+        body=(f"Your contractor moved you to {payloads._d(site.site_name)}. "
+              f"Your engagement continues without a break."),
+        notif_type="INFO", link="/worker/binding")
+    log_audit(user, "TRANSFER", "worker_binding", new_binding.id,
+              after={"site": site.site_name, "previousBinding": binding.id})
+    return {"bindingId": new_binding.id, "siteId": str(new_binding.site_id or "")}
 
 
 def _period_range(period):

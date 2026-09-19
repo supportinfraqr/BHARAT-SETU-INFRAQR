@@ -16,6 +16,15 @@ function requiredString(body: Record<string, unknown>, key: string, max = 500): 
   return value.trim();
 }
 
+/** Accepts a string or a numeric id and returns it as a bounded string. */
+function requiredId(body: Record<string, unknown>, key: string, max = 40): string {
+  const value = body[key];
+  const text = typeof value === 'number' && Number.isFinite(value) ? String(value)
+    : typeof value === 'string' ? value.trim() : '';
+  if (!text || text.length > max) fail(`${key} is invalid.`);
+  return text;
+}
+
 function assertBounded(value: unknown, depth = 0): void {
   if (depth > 8) fail('Request data is too deeply nested.');
   if (typeof value === 'string' && value.length > 10_000) fail('A request field is too long.');
@@ -61,8 +70,8 @@ export function validatePortalMutation(role: PortalRole, resource: string, metho
     requiredString(body, 'workerId', 20);
   }
   if (role === 'Contractor' && resource === 'worker-site' && method !== 'DELETE') {
-    requiredString(body, 'bindingId', 40);
-    requiredString(body, 'siteId', 40);
+    requiredId(body, 'bindingId');
+    requiredId(body, 'siteId');
   }
   if ((role === 'Contractor' || role === 'Employer') && resource === 'grievances' && method !== 'DELETE') {
     requiredString(body, 'id', 40);

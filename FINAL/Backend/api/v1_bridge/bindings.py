@@ -35,7 +35,7 @@ def _release_contractor_workers(binding):
     letter (the E-S-C-W pair for their engagement ends)."""
     released = list(WorkerContractorBinding.objects.filter(
         contractor=binding.contractor, site__employer=binding.employer
-    ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]))
+    ).exclude(binding_status__in=payloads.TERMINAL_BINDING_STATUSES))
     if not released:
         return
     WorkerContractorBinding.objects.filter(pk__in=[b.id for b in released]).update(
@@ -51,7 +51,7 @@ def _workers_at_risk(contractor, site_ids):
         return []
     return list(WorkerContractorBinding.objects.filter(
         contractor=contractor, site_id__in=list(site_ids)
-    ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"])
+    ).exclude(binding_status__in=payloads.TERMINAL_BINDING_STATUSES)
         .select_related("worker", "site", "site__employer"))
 
 
@@ -122,7 +122,7 @@ def _shift_workers_to_successor(old_contractor, successor, site_ids, employer=No
     live binding are skipped. Returns (moved, skipped) user lists."""
     from bss_core.models import ContractorSiteAllotment, WorkerContractorBinding
 
-    moved, skipped = [], []
+    moved, skipped, moved_sites = [], [], []
     if successor is None or successor.role != "contractor":
         return moved, skipped
     if employer is None and site_ids:
@@ -188,11 +188,20 @@ def _shift_workers_to_successor(old_contractor, successor, site_ids, employer=No
                     binding=successor_ce, site=old_allot.site,
                     defaults={"status": "APPROVED", "source": "successor_shift",
                               "release_requested_at": None, "release_requested_by": ""})
-    if moved:
+                if old_allot.site and old_allot.site.site_name not in moved_sites:
+                    moved_sites.append(old_allot.site.site_name)
+    if moved or moved_sites:
+        if moved and moved_sites:
+            body = (f"{len(moved)} worker(s) and {len(moved_sites)} site(s) were "
+                    f"transferred to you by the principal employer.")
+        elif moved:
+            body = f"{len(moved)} worker(s) were transferred to you by the principal employer."
+        else:
+            body = f"{len(moved_sites)} site(s) were transferred to you by the principal employer."
         _create_notification(
             user=successor,
-            title="Workers transferred to you",
-            body=f"{len(moved)} worker(s) were transferred to you by the principal employer.",
+            title="Sites transferred to you",
+            body=body,
             notif_type="INFO", link="/contractor/workers")
     return moved, skipped
 
@@ -639,6 +648,27 @@ def binding_consent(request, binding_id):
             link="/contractor/qr/requests" if other_user.role == "contractor" else "/worker/binding"
         )
         return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
+    if action == "decline-unbind":
+        # A party declined the unbind request — the binding stays active.
+        if not b.unbind_requested_at:
+            return Response({"error": "There is no pending unbind request."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        b.unbind_requested_at = None
+        b.unbind_requested_by = ""
+        b.unbind_consent_worker = False
+        b.unbind_consent_contractor = False
+        b.save(update_fields=["unbind_requested_at", "unbind_requested_by",
+                              "unbind_consent_worker", "unbind_consent_contractor", "updated_at"])
+        other_user = b.contractor if side == "worker" else b.worker
+        actor_name = payloads._notification_actor_name(user)
+        _create_notification(
+            user=other_user,
+            title="Unbind request declined",
+            body=f"{actor_name} declined the request to end the binding.",
+            notif_type="WARNING",
+            link="/contractor/qr/requests" if other_user.role == "contractor" else "/worker/binding"
+        )
+        return Response({"data": payloads._binding_row(b)}, status=status.HTTP_200_OK)
     if action == "unbind":
         if side == "worker":
             b.unbind_consent_worker = True
@@ -971,7 +1001,10 @@ def employer_binding_action(request, binding_id):
         )
     elif action == "unbind":
         # Two-sided unbinding — either party may request; the binding is
-        # cancelled only once both consents are recorded.
+        # cancelled only once both consents are recorded. A successor is
+        # mandatory only when workers would be orphaned; otherwise the employer
+        # may optionally hand the sites to a successor. The choice is staged on
+        # the binding and only acted on at the final cancel.
         if user.role == "contractor":
             b.unbind_consent_contractor = True
         else:
@@ -980,24 +1013,21 @@ def employer_binding_action(request, binding_id):
             b.unbind_requested_at = timezone.now()
             b.unbind_requested_by = user.role
         site_ids = list(Site.objects.filter(employer=b.employer).values_list("id", flat=True))
-        successor = None
-        # The employer must name a successor when workers are at risk — at request
-        # time (persisted) and again at the final cancel, so no worker is orphaned.
         if user.role == "employer":
-            at_risk = _workers_at_risk(b.contractor, site_ids)
-            if at_risk:
-                successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
-                                               request.data.get("successorContractorId"))
-                if successor is None:
-                    b.save()
-                    return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
-                                    status=status.HTTP_400_BAD_REQUEST)
-                b.unbind_successor = successor
+            provided = (request.data.get("successorContractorId")
+                        or request.data.get("successorBindingId"))
+            if provided:
+                b.unbind_successor = _resolve_successor(
+                    b.employer, b, request.data.get("successorBindingId"),
+                    request.data.get("successorContractorId"))
+        successor = b.unbind_successor
+        at_risk = _workers_at_risk(b.contractor, site_ids)
+        # The employer must name a successor when workers are at risk.
+        if user.role == "employer" and at_risk and successor is None:
+            b.save()
+            return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
+                            status=status.HTTP_400_BAD_REQUEST)
         if b.unbind_consent_contractor and b.unbind_consent_employer:
-            if successor is None:
-                successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
-                                               request.data.get("successorContractorId"))
-            at_risk = _workers_at_risk(b.contractor, site_ids)
             if at_risk and successor is None:
                 b.save()
                 return Response({"error": f"This contractor still has {len(at_risk)} worker(s) on your sites. Provide a successor contractor so they are not orphaned."},
@@ -1036,6 +1066,27 @@ def employer_binding_action(request, binding_id):
                 notif_type="APPROVAL",
                 link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
             )
+    elif action == "reject-unbind":
+        # The counterparty declined the unbind request — the binding stays active.
+        if not b.unbind_requested_at:
+            return Response({"error": "There is no pending unbind request."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        b.unbind_requested_at = None
+        b.unbind_requested_by = ""
+        b.unbind_consent_contractor = False
+        b.unbind_consent_employer = False
+        b.unbind_successor = None
+        b.save(update_fields=["unbind_requested_at", "unbind_requested_by",
+                              "unbind_consent_contractor", "unbind_consent_employer",
+                              "unbind_successor", "updated_at"])
+        other_user = b.contractor if user == b.employer else b.employer
+        _create_notification(
+            user=other_user,
+            title="Unbind request declined",
+            body=f"{payloads._notification_actor_name(user)} declined the request to end the binding.",
+            notif_type="WARNING",
+            link="/contractor/qr/requests" if other_user.role == "contractor" else "/employer/qr/requests"
+        )
     elif action == "approve-site":
         # Two-step: whoever did NOT raise the proposal approves it.
         site_id = request.data.get("siteId")
@@ -1122,8 +1173,11 @@ def employer_binding_action(request, binding_id):
         # Never orphan workers: if the contractor still has workers at this site,
         # a successor contractor for the site must be supplied.
         at_risk = _workers_at_risk(b.contractor, [site_id])
+        provided = (request.data.get("successorContractorId")
+                    or request.data.get("successorBindingId")
+                    or a.successor_contractor_id)
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
-                                       request.data.get("successorContractorId") or a.successor_contractor_id) if at_risk else None
+                                       provided) if provided else None
         if at_risk and successor is None:
             return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -1136,7 +1190,7 @@ def employer_binding_action(request, binding_id):
         # Release any remaining workers from that site (skipped/had another binding).
         WorkerContractorBinding.objects.filter(
             contractor=b.contractor, site_id=site_id
-        ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).update(
+        ).exclude(binding_status__in=payloads.TERMINAL_BINDING_STATUSES).update(
             binding_status="CANCELLED", unbound_at=timezone.now())
         _create_notification(
             user=b.contractor,
@@ -1182,9 +1236,11 @@ def employer_binding_action(request, binding_id):
             return Response({"error": "Only an approved site can be released."},
                             status=status.HTTP_404_NOT_FOUND)
         at_risk = _workers_at_risk(b.contractor, [site_id])
-        successor_contractor_id = request.data.get("successorContractorId") or a.successor_contractor_id
+        provided = (request.data.get("successorContractorId")
+                    or request.data.get("successorBindingId")
+                    or a.successor_contractor_id)
         successor = _resolve_successor(b.employer, b, request.data.get("successorBindingId"),
-                                       successor_contractor_id) if at_risk else None
+                                       provided) if provided else None
         if at_risk and successor is None:
             return Response({"error": f"This contractor still has {len(at_risk)} worker(s) at this site. Provide a successor contractor so they are not orphaned."},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -1199,7 +1255,7 @@ def employer_binding_action(request, binding_id):
                               "release_requested_by", "updated_at"])
         WorkerContractorBinding.objects.filter(
             contractor=b.contractor, site_id=site_id
-        ).exclude(binding_status__in=["REJECTED", "CANCELLED", "EXPIRED"]).update(
+        ).exclude(binding_status__in=payloads.TERMINAL_BINDING_STATUSES).update(
             binding_status="CANCELLED", unbound_at=timezone.now())
         _create_notification(
             user=b.contractor,

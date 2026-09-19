@@ -32,10 +32,11 @@ export default function EmployerQrBindingRequestsPage() {
     const { row, kind } = confirm;
     setConfirm(null);
     if (kind === 'unbind') {
-      // Workers must not be orphaned — pick a successor contractor first.
-      if ((row.workersAtRisk ?? 0) > 0) {
+      // Hand the contractor's sites (and workers) to a successor. A successor is
+      // mandatory only when workers would be orphaned; otherwise it is optional.
+      if ((row.workersAtRisk ?? 0) > 0 || (row.sitesAtRisk ?? 0) > 0) {
         setUnbindFor(row);
-        setUnbindSuccessor(row.successorCandidates?.[0]?.contractorId ?? '');
+        setUnbindSuccessor((row.workersAtRisk ?? 0) > 0 ? (row.successorCandidates?.[0]?.contractorId ?? '') : '');
         return;
       }
       await decideUnbind(row);
@@ -126,6 +127,20 @@ export default function EmployerQrBindingRequestsPage() {
     finally { setBusy(false); }
   }
 
+  async function rejectUnbind(row: EmployerApproval) {
+    if (!row.bindingId) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch('/api/employer/binding-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindingId: Number(row.bindingId), action: 'reject-unbind' }) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'The unbind request could not be rejected.');
+      replaceEmployer({ ...employer, approvals: employer.approvals.map(item => item.id === row.id ? { ...item, unbindRequested: false, unbindConsentEmployer: false } : item) });
+      setNotice(`Unbind request from ${row.name} rejected — the binding stays active.`);
+      void refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The unbind request could not be rejected.'); }
+    finally { setBusy(false); }
+  }
+
   const columns: DataColumn<Row>[] = [
     { id:'entity', header:'Requesting entity', value:row => row.name, render:row => <div><strong className="text-gray-900">{row.name}</strong><p className="font-mono text-[10px] text-gray-400">{row.bssId}</p></div> },
     { id:'type', header:'Request type', value:row => row.entityType, render:row => <span className={`px-2 py-1 rounded text-[10px] font-semibold ${row.entityType === 'Contractor' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'}`}>{row.entityType}</span> },
@@ -168,7 +183,7 @@ export default function EmployerQrBindingRequestsPage() {
         if (row.unbindRequested) {
           return row.unbindConsentEmployer
             ? <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Awaiting contractor</span>
-            : <button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button>;
+            : <div className="flex items-center gap-1.5"><button disabled={busy} onClick={() => setConfirm({ row, kind: 'unbind' })} className="h-8 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50">Confirm unbind</button><button disabled={busy} onClick={() => void rejectUnbind(row)} className="h-8 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 active:scale-95 text-xs font-bold transition-all disabled:opacity-50">Reject request</button></div>;
         }
         return (
           <div className="flex items-center gap-1.5">
@@ -258,31 +273,39 @@ export default function EmployerQrBindingRequestsPage() {
       events={historyFor?.history ?? []}
       onClose={() => setHistoryFor(null)}
     />
-    {unbindFor && <div className="fixed inset-0 z-[95] grid place-items-center p-4 bg-slate-950/60 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setUnbindFor(null)}>
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-950">Move workers before unbinding</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{unbindFor.name} · {unbindFor.bssId}</p>
+    {unbindFor && (() => {
+      const requiresSuccessor = (unbindFor.workersAtRisk ?? 0) > 0;
+      const candidates = unbindFor.successorCandidates ?? [];
+      return <div className="fixed inset-0 z-[95] grid place-items-center p-4 bg-slate-950/60 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={() => setUnbindFor(null)}>
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-gray-950">{requiresSuccessor ? 'Move workers before unbinding' : 'Hand over sites before unbinding'}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{unbindFor.name} · {unbindFor.bssId}</p>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <p className="text-xs text-gray-600 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 leading-5">
+              {unbindFor.name} still has <strong>{unbindFor.workersAtRisk ?? 0}</strong> worker(s) and <strong>{unbindFor.sitesAtRisk ?? 0}</strong> site(s) with you.{' '}
+              {requiresSuccessor
+                ? 'Choose a successor contractor so the workers and sites are moved instead of being orphaned.'
+                : 'You may hand these sites to a successor contractor, or release them without one.'}
+            </p>
+            {candidates.length ? (
+              <label className="block text-xs font-bold text-gray-700">Successor contractor {requiresSuccessor ? <span className="text-rose-600">*</span> : <span className="font-normal text-gray-400">(optional)</span>}
+                <select value={unbindSuccessor} onChange={e => setUnbindSuccessor(e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+                  <option value="">{requiresSuccessor ? 'Select a contractor…' : 'No successor — release only'}</option>
+                  {candidates.map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
+                </select>
+              </label>
+            ) : <p className="text-xs text-red-600">{requiresSuccessor ? 'No other contractor is available in the system — onboard another contractor first, then unbind.' : 'No other contractor is available — the sites will be released without a successor.'}</p>}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+            <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
+            {!requiresSuccessor && <button disabled={busy} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row); }} className="h-10 px-4 rounded-xl border border-rose-200 text-rose-700 text-sm font-bold hover:bg-rose-50 disabled:opacity-50">Release without successor</button>}
+            <button disabled={busy || (requiresSuccessor && !unbindSuccessor)} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row, unbindSuccessor ? Number(unbindSuccessor) : undefined); }} className="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-50">{requiresSuccessor ? 'Move workers & unbind' : 'Hand over & unbind'}</button>
+          </div>
         </div>
-        <div className="px-6 py-4 space-y-3">
-          <p className="text-xs text-gray-600 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 leading-5">
-            {unbindFor.name} still has <strong>{unbindFor.workersAtRisk}</strong> worker(s) on your sites. Choose a successor contractor so they are moved instead of becoming orphaned.
-          </p>
-          {(unbindFor.successorCandidates ?? []).length ? (
-            <label className="block text-xs font-bold text-gray-700">Successor contractor
-              <select value={unbindSuccessor} onChange={e => setUnbindSuccessor(e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
-                <option value="">Select a contractor…</option>
-                {(unbindFor.successorCandidates ?? []).map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
-              </select>
-            </label>
-          ) : <p className="text-xs text-red-600">No other contractor is available in the system — onboard another contractor first, then unbind.</p>}
-        </div>
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
-          <button onClick={() => setUnbindFor(null)} className="h-10 px-4 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Cancel</button>
-          <button disabled={busy || !unbindSuccessor} onClick={() => { const row = unbindFor; setUnbindFor(null); void decideUnbind(row, Number(unbindSuccessor)); }} className="h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-50">Move workers &amp; unbind</button>
-        </div>
-      </div>
-    </div>}
+      </div>;
+    })()}
   </div>;
 }
 

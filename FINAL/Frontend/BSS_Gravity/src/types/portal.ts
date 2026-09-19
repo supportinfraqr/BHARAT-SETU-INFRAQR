@@ -132,7 +132,7 @@ export type ContractorWorker = {
   /** The underlying worker↔contractor binding and its site (for moving a worker). */
   bindingId?: number; siteId?: string;
   designation: string; doj: string; compliance: 'Compliant' | 'Expiring' | 'Non-compliant';
-  status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired';
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired' | 'Site Changed';
   refCode?: string; department?: string; gender?: string; age?: string; category?: string; skills?: string[]; photoUrl?: string;
   /** Extended identity — only present for workers bound to the requesting contractor. */
   aadhaar?: string; dob?: string; fatherName?: string; bloodGroup?: string;
@@ -207,13 +207,15 @@ export type ContractorJobPosting = {
 
 export type ContractorBindingRequest = {
   id: string; type: 'Worker' | 'Employer'; entityName: string; bssId: string; site: string; employer: string; designation: string; wage: string; requestedOn: string;
-  status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired';
+  status: 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 'Expired' | 'Site Changed';
   /** Who raised the request and who accepted it (role labels). */
   initiatedBy?: string; acceptedBy?: string;
   consentWorker?: boolean; consentContractor?: boolean;
   unbindRequested?: boolean; unbindConsentWorker?: boolean; unbindConsentContractor?: boolean;
   /** Present on Contractor ↔ Employer binding rows. */
   bindingId?: number;
+  /** Present on Contractor ↔ Worker rows — the worker's current site (for moving them). */
+  siteId?: string; employerId?: number | null;
   /** Per-site allotment permissions for a Contractor ↔ Employer binding. */
   allotments?: SiteAllotment[];
   /** Lifecycle timeline (requested / accepted / unbind / unbound). */
@@ -551,6 +553,8 @@ export type EmployerApproval = {
   secondaryBindingIds?: number[];
   /** Workers that would be orphaned if this contractor's access ends. */
   workersAtRisk?: number;
+  /** Approved sites the contractor holds here — handed to a successor on unbind. */
+  sitesAtRisk?: number;
   /** Other ACCEPTED contractors the employer can shift workers to. */
   successorCandidates?: Array<{ bindingId: number | null; contractorId: number; name: string }>;
   consentEmployer?: boolean;
@@ -644,7 +648,7 @@ export type LeaveEncashmentRecord = { id:string; period:string; days:number; rat
 export type WorkerDocument = { name:string; mandatory:boolean; owner:'Worker'|'Contractor'|'System'; status:string; date:string|null; downloadUrl?:string };
 export type WorkerJobRequest = { id:string; employer:string; contractor:string; site:string; designation:string; wage:number; currency:string; payPeriod:string; duration:string; facilities:string[]; status:'Pending'|'Accepted'|'Rejected'|'Cancelled'|'Expired'; dateReceived:string };
 export type WorkerAvailableJob = { id:string; jobId:number; title:string; subTitle:string; employer:string; postedDate:string; description:string; wage:string; state:string; city:string; designation:string; experience:string; dobLimit:string; vacancies:number; matchScore:number; matchBadge:boolean };
-export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'; initiatedBy?:string; acceptedBy?:string; contractorDetails?:{name:string;code:string;tradeName:string;lin:string;contactPerson:string;email:string;state:string;address:string}; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean; history?: BindingHistoryEvent[] };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
+export type WorkerBindingRequest = { id:number; ref:string; contractor:string; contractorCode:string; lin:string; employer:string; site:string; designation:string; wage:string; requestedOn:string; status:'Pending'|'Accepted'|'Rejected'|'Expired'|'Cancelled'|'Site Changed'; initiatedBy?:string; acceptedBy?:string; contractorDetails?:{name:string;code:string;tradeName:string;lin:string;contactPerson:string;email:string;state:string;address:string}; consentWorker?:boolean; consentContractor?:boolean; unbindRequested?:boolean; unbindConsentWorker?:boolean; unbindConsentContractor?:boolean; history?: BindingHistoryEvent[] };export type LabourLawItem = { ruleId: import('@/lib/labour-compliance').RuleId; status: import('@/lib/labour-compliance').RuleStatus; headline: string; detail: string; updatedAt: string };
 export type EmployerLabourCompliance = { ruleId: import('@/lib/labour-compliance').RuleId; scope: import('@/lib/labour-compliance').GovtScope; status: import('@/lib/labour-compliance').RuleStatus; note: string; verifiedAt: string };
 export type CourseSubmissionView = { content:string; fileUrl:string; status:string; score:number|null; feedback:string; submittedAt:string };
 export type CourseAssignmentView = { id:string; title:string; passScore:number; score:number|null; passed:boolean; type:'QUIZ'|'WRITING'|'UPLOAD'; instructions:string; questions:Array<{id:string;question:string;options:string[]}>; submission:CourseSubmissionView|null };

@@ -58,6 +58,9 @@ export async function POST(request: Request) {
       consent.stage = body.otp ? 'OTP' : 'APP';
       if (body.otp) consent.otp = String(body.otp);
       if (body.side === 'contractor' || body.side === 'worker') consent.side = body.side;
+    } else if (action === 'decline-unbind') {
+      consent.action = 'decline-unbind';
+      if (body.side === 'contractor' || body.side === 'worker') consent.side = body.side;
     } else {
       return NextResponse.json({ error: 'Unsupported binding action.' }, { status: 400 });
     }

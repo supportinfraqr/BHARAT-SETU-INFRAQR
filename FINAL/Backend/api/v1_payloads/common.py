@@ -129,7 +129,10 @@ _GRIEVANCE_CATEGORY = {"WAGES": "Wages", "SAFETY": "Safety", "HARASSMENT": "Hara
                        "ACCOMMODATION": "Accommodation", "BENEFITS": "Benefits", "OTHER": "Other"}
 _WORKER_BINDING_STATUS = {"PENDING": "Pending", "ACCEPTED": "Accepted",
                           "REJECTED": "Rejected", "CANCELLED": "Cancelled",
-                          "EXPIRED": "Expired"}
+                          "EXPIRED": "Expired", "TRANSFERRED": "Site Changed"}
+# Bindings that are finished — they must never be counted as "live" (a moved
+# worker's old binding is TRANSFERRED, so it is terminal too).
+TERMINAL_BINDING_STATUSES = ["REJECTED", "CANCELLED", "EXPIRED", "TRANSFERRED"]
 _GP_TYPE_LABEL = {"TGP": "Temporary", "PGP": "Permanent"}
 _GP_STATUS_LABEL = {"ACTIVE": "Approved", "PENDING": "Pending", "REJECTED": "Rejected",
                     "EXPIRED": "Expired", "REVOKED": "Revoked"}
@@ -284,6 +287,7 @@ __all__ = [
     "SiteHoliday",
     "SiteLeavePolicy",
     "SubmissionEvidence",
+    "TERMINAL_BINDING_STATUSES",
     "User",
     "UserPreference",
     "WagePayment",
