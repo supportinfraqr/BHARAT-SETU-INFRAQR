@@ -254,6 +254,7 @@ def _contractor_gate_pass_row(g):
         "status": "Blocked" if blocked else _GP_STATUS_LABEL.get(_d(g.status), _d(g.status)),
         "blocked": blocked,
         "eligibility": _gate_pass_eligibility(g.worker),
+        "branding": _gate_pass_branding(site),
     }
 
 
@@ -300,6 +301,7 @@ def _contractor_gate_passes(user):
             "offeredWage": _num(b.offered_wage),
             "ctc": _num(b.computed_ctc),
             "costBreakdown": b.cost_breakdown or {},
+            "branding": _gate_pass_branding(site),
             })
             continue
         label = _GP_TYPE_LABEL.get(gp_type, gp_type)
@@ -323,6 +325,7 @@ def _contractor_gate_passes(user):
             "eligible": True,
             "missing": [],
             "eligibility": _gate_pass_eligibility(b.worker),
+            "branding": _gate_pass_branding(site),
         })
     return rows[:200]
 

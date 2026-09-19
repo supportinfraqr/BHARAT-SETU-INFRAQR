@@ -90,8 +90,8 @@ export default function DocumentsModule() {
     return { owner, view, workerLike };
   }, [worker]);
 
-  async function viewPass(pass: { type: string; number: string; validFrom: string; validTo: string; blocked?: boolean }) {
-    const html = await buildGatePassHtml(docView.owner, docView.view, docView.workerLike, pass.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: pass.validFrom, validTo: pass.validTo, number: pass.number });
+  async function viewPass(pass: { type: string; number: string; validFrom: string; validTo: string; blocked?: boolean; branding?: { companyName?: string; logoUrl?: string; header?: string } }) {
+    const html = await buildGatePassHtml(docView.owner, docView.view, docView.workerLike, pass.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: pass.validFrom, validTo: pass.validTo, number: pass.number, branding: pass.branding });
     setPassPreview({ html, title: `${docView.workerLike.name} · ${pass.type} Gate Pass` });
   }
 

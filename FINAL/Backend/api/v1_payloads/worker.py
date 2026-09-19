@@ -505,6 +505,7 @@ def _worker_gate_passes(user):
             "requestedBy": _party_name(g.issued_by),
             "approvedBy": _party_name(g.approved_by),
             "approvedAt": _dts(g.approved_at),
+            "branding": _gate_pass_branding(g.site),
         })
     return rows
 

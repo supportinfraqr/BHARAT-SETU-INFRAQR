@@ -51,7 +51,7 @@ export default function EmployerGatePassPage() {
     const worker = docCtx.workers.find(item => item.bssId === row.workerId || item.name === row.workerName);
     if (!worker) { setError(`No worker record found for ${row.workerName}.`); return; }
     const type = row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass';
-    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, type, { validFrom: row.validFrom, validTo: row.validTo, number: row.number, status: row.status });
+    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, type, { validFrom: row.validFrom, validTo: row.validTo, number: row.number, status: row.status, branding: row.branding });
     setPassPreview({ html, title: `${row.workerName} · ${row.type} Gate Pass` });
   }
 

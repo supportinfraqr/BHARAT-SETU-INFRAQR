@@ -105,6 +105,16 @@ Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy && d
 
 Prod (explicit approval): `ssh -i "$KEY" $HOST 'cd ~/bss/FINAL/deploy-prod && sudo docker compose exec -T backend python manage.py seed_demo_accounts'`
 
+## Gate-pass auto-expiry cron (Gate Pass Management System §7)
+
+`FINAL/scripts/expire_gate_passes.sh` flips ACTIVE gate passes past their valid-to date to EXPIRED (invalidating the QR) and notifies the worker + issuing contractor. Install the **hourly** cron with `FINAL/scripts/install_expire_cron.sh` (idempotent — re-running replaces the entry, never duplicates):
+
+- **This dev machine** (installed): `BSS_MODE=local bash FINAL/scripts/install_expire_cron.sh`
+- **Staging** (installed): copy both scripts to `~/bss_scripts/`, then `BSS_MODE=staging bash ~/bss_scripts/install_expire_cron.sh`
+- **Prod** (enable when needed): copy both scripts to `~/bss_scripts/`, then `BSS_MODE=prod bash ~/bss_scripts/install_expire_cron.sh`
+
+The runner picks its mode from `BSS_MODE` (`local` = venv `manage.py`; `staging` = `docker compose`; `prod` = `sudo docker compose`). Log: `~/bss_gate_expiry.log`. Remove: `crontab -l | grep -v expire_gate_passes | crontab -`.
+
 ## DB shell (read/inspect or staging mutations)
 
 Staging: `ssh -i "$STAGING_KEY" ubuntu@$STAGING_HOST 'cd ~/bss/FINAL/deploy && docker compose exec -T backend python manage.py shell -c "…"'`

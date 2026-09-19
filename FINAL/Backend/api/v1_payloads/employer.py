@@ -440,6 +440,7 @@ def _employer_gate_pass_row(g):
         "dispatched": bool(g.dispatched),
         "dispatchedAt": _dts(g.dispatched_at) if g.dispatched_at else "",
         "eligibility": _gate_pass_eligibility(g.worker),
+        "branding": _gate_pass_branding(site),
     }
 
 
@@ -488,6 +489,7 @@ def _employer_gate_passes(user):
             "dispatched": False,
             "dispatchedAt": "",
             "eligibility": _gate_pass_eligibility(b.worker),
+            "branding": _gate_pass_branding(b.site),
         })
     return rows[:200]
 

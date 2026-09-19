@@ -22,7 +22,7 @@ export default function ContractorGatePassPage() {
   async function viewPass(row: Pass) {
     const worker = docCtx.workers.find(item => item.bssId === row.workerId || item.name === row.workerName);
     if (!worker) return;
-    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo, number: row.number, status: row.status });
+    const html = await buildGatePassHtml(docCtx.owner, docCtx.view, worker, row.type === 'Permanent' ? 'permanent-gate-pass' : 'temporary-gate-pass', { validFrom: row.validFrom, validTo: row.validTo, number: row.number, status: row.status, branding: row.branding });
     setPassPreview({ html, title: `${row.workerName} · ${row.type} Gate Pass` });
   }
 

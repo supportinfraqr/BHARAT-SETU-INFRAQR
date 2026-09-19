@@ -50,6 +50,9 @@ export type TemplateStyles = {
   showLogo: boolean;
   showBrandHeader: boolean;
   brandHeaderText: string;
+  /** Optional employer-branding overrides (gate-pass compliance template). */
+  brandLogoUrl?: string;
+  brandTagline?: string;
   footerText: string;
   theme: 'bss-navy' | 'bss-midnight' | 'bss-green' | 'bss-red' | 'bss-plain';
 };

@@ -115,7 +115,7 @@ export type WorkerRecord = {
     permanentGatePassStatus?: string; pgpNo?: string; permanentGatePassStart?: string; permanentGatePassEnd?: string;
     medicalExaminationStatus?: string; lastMedicalExamination?: string; medicalFitnessStatus?: string; nextMedicalDue?: string;
   };
-  gatePasses?: Array<{ id:number | string; type:string; number:string; site:string; validFrom:string; validTo:string; status:string; requestedAt:string; requestedBy?:string; approvedBy?:string; approvedAt?:string; blocked?:boolean }>;
+  gatePasses?: Array<{ id:number | string; type:string; number:string; site:string; validFrom:string; validTo:string; status:string; requestedAt:string; requestedBy?:string; approvedBy?:string; approvedAt?:string; blocked?:boolean; branding?: { companyName?: string; logoUrl?: string; header?: string } }>;
   complianceRecords?: Array<{ date:string; record:string; detail:string; ref:string; result:string }>;
   other?: {
     registrationSource?: string; registeredBy?: string; registrationDate?: string;
@@ -343,7 +343,7 @@ export type ContractorPortalData = {
   defaultSite?: { id: string; name: string; code: string } | null;
   workers: ContractorWorker[];
   compliances: Array<{ id: string; item: string; category: string; reference: string; employer: string; site: string; worker: string | null; issue: string; expiry: string; verification: 'Verified' | 'Pending' | 'Rejected'; status: 'Active' | 'Expiring' | 'Expired' }>;
-  gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent' | 'Not eligible'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected' | 'Blocked' | 'Not eligible'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; auto?: boolean; number?: string; blocked?: boolean; eligible?: boolean; missing?: string[]; eligibility?: GatePassEligibility }>;
+  gatePasses: Array<{ id: string; workerName: string; workerId: string; employer: string; type: 'Temporary' | 'Permanent' | 'Not eligible'; site: string; validFrom: string; validTo: string; status: 'Approved' | 'Pending' | 'Rejected' | 'Blocked' | 'Not eligible'; contact?: string; skill?: string; requestedAt?: string; requestedBy?: string; approvedBy?: string; approvedAt?: string; auto?: boolean; number?: string; blocked?: boolean; eligible?: boolean; missing?: string[]; eligibility?: GatePassEligibility; branding?: { companyName?: string; logoUrl?: string; header?: string } }>;
   applications: Array<{ id: string; workerName: string; workerId: string; employer: string; trade: string; experience: string; expectedWage: number; location: string; status: 'Pending' | 'Shortlisted' | 'Hired' | 'Rejected'; dateApplied: string; matchScore: number }>;
   availableWorkers: Array<{ id: number; workerName: string; workerId: string; trade: string; skills: string[]; experience: string; expectedWage: number; location: string; status: string; dateApplied: string; matchScore: number }>;
   employers: Array<{ id: string; name: string; employerId: string; sites: string[]; siteDetails?: Array<{ id: string; name: string; code: string; location: string; state: string }>; status: 'Active' | 'Inactive'; boundSince: string }>;
@@ -437,6 +437,8 @@ export type EmployerGatePass = {
   dispatched?: boolean;
   dispatchedAt?: string;
   eligibility?: GatePassEligibility;
+  /** Employer branding from the gate-pass compliance template. */
+  branding?: { companyName?: string; logoUrl?: string; header?: string };
 };
 
 export type EmployerSubmission = {

@@ -704,6 +704,21 @@ def _is_gate_pass_blocked(worker, employer):
     return WorkerGatePassBlock.objects.filter(worker=worker, employer=employer, blocked=True).exists()
 
 
+def _gate_pass_branding(site):
+    """Employer's gate-pass branding (company name / logo / header) from the
+    active compliance template, printed on the pass header."""
+    from bss_core.models import GatePassComplianceTemplate
+    employer = site.employer if site else None
+    template = (GatePassComplianceTemplate.objects
+                .filter(owner=employer, is_active=True).first() if employer else None)
+    branding = (template.branding if template and template.branding else {}) or {}
+    return {
+        "companyName": _d(branding.get("companyName") or ""),
+        "logoUrl": _d(branding.get("logoUrl") or ""),
+        "header": _d(branding.get("header") or ""),
+    }
+
+
 def _gate_pass_validity_days(worker, gp_type):
     """Validity window (days) for a pass, taken from the employer's active
     gate-pass compliance template (validity.temporaryDays / permanentDays),
@@ -847,6 +862,7 @@ __all__ = [
     "_auto_gate_pass_no",
     "_auto_gate_pass_type",
     "_gate_pass_missing",
+    "_gate_pass_branding",
     "_gate_pass_validity_days",
     "_benefit_row",
     "_binding_row",

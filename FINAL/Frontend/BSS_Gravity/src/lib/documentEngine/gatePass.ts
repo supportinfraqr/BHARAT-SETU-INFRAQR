@@ -13,6 +13,8 @@ export type GatePassOverrides = {
   reason?: string;
   place?: string;
   status?: string;
+  /** Employer branding from the gate-pass compliance template. */
+  branding?: { companyName?: string; logoUrl?: string; header?: string };
 };
 
 function plusDays(fromIso: string, days: number): string {
@@ -107,6 +109,16 @@ export async function buildGatePassHtml(
   // appearance), so always render from the current default sections and take
   // just the saved styles — otherwise stale saved templates mask layout fixes.
   const template = templateService.renderTemplate(owner, type);
+  // Employer branding (Gate Pass §1) — company name / logo / header from the
+  // compliance template, overriding the default BSS wordmark when provided.
+  const branding = overrides.branding;
+  if (branding && (branding.companyName || branding.logoUrl || branding.header)) {
+    template.styles.brandHeaderText = branding.companyName || template.styles.brandHeaderText;
+    template.styles.brandLogoUrl = branding.logoUrl || template.styles.brandLogoUrl;
+    template.styles.brandTagline = branding.header || template.styles.brandTagline;
+    template.styles.showBrandHeader = true;
+    if (branding.logoUrl) template.styles.showLogo = true;
+  }
   const { tokens } = resolveWorkerTokens(view, worker);
   const passNo = overrides.number || tokens['document.number'] || autoPassNo(worker.bssId, type);
   const issue = overrides.issueDate || overrides.validFrom || today();

@@ -30,6 +30,9 @@ export default function ComplianceChecklistsPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [name, setName] = useState("");
   const [required, setRequired] = useState<Record<string, boolean>>(Object.fromEntries(FIELDS.map(([k]) => [k, true])));
+  const [brandCompany, setBrandCompany] = useState("");
+  const [brandLogo, setBrandLogo] = useState("");
+  const [brandHeader, setBrandHeader] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,10 +72,15 @@ export default function ComplianceChecklistsPage() {
     try {
       const response = await fetch("/api/employer/compliance-templates", {
         method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ name: name.trim(), requiredFields: required, validity: { temporaryDays: 7, permanentDays: 365 } }),
+        body: JSON.stringify({
+          name: name.trim(),
+          requiredFields: required,
+          validity: { temporaryDays: 7, permanentDays: 365 },
+          branding: { companyName: brandCompany.trim(), logoUrl: brandLogo.trim(), header: brandHeader.trim() },
+        }),
       });
       if (!response.ok) throw new Error("The template could not be saved.");
-      setNewOpen(false); setName(""); setNotice("Compliance template created.");
+      setNewOpen(false); setName(""); setBrandCompany(""); setBrandLogo(""); setBrandHeader(""); setNotice("Compliance template created.");
       void load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Save failed."); }
     finally { setBusy(false); }
@@ -120,6 +128,12 @@ export default function ComplianceChecklistsPage() {
       <div className="p-5 space-y-4">
         <label className="text-xs font-semibold text-gray-700">Template name<input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Construction site gate compliance" className="mt-1 w-full h-10 border rounded-lg px-3 text-sm"/></label>
         <div><p className="text-xs font-semibold text-gray-700 mb-2">Required fields</p><div className="grid grid-cols-2 gap-2">{FIELDS.map(([key,label,cat]) => <label key={key} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={required[key]} onChange={e => setRequired(r => ({ ...r, [key]: e.target.checked }))} className="accent-[#073B67]"/><span className="text-gray-700">{label}<span className="text-gray-400"> · {cat}</span></span></label>)}</div></div>
+        <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 space-y-2">
+          <p className="text-xs font-semibold text-gray-700">Branding on the gate pass <span className="font-normal text-gray-400">(optional)</span></p>
+          <label className="block text-[11px] font-semibold text-gray-600">Company name<input value={brandCompany} onChange={e => setBrandCompany(e.target.value)} placeholder="e.g. Adani Infra Pvt Ltd" className="mt-1 w-full h-9 border rounded-lg px-3 text-sm bg-white"/></label>
+          <label className="block text-[11px] font-semibold text-gray-600">Logo URL<input value={brandLogo} onChange={e => setBrandLogo(e.target.value)} placeholder="https://…/logo.png" className="mt-1 w-full h-9 border rounded-lg px-3 text-sm bg-white"/></label>
+          <label className="block text-[11px] font-semibold text-gray-600">Header line<input value={brandHeader} onChange={e => setBrandHeader(e.target.value)} placeholder="e.g. Site access · Metro Package 3" className="mt-1 w-full h-9 border rounded-lg px-3 text-sm bg-white"/></label>
+        </div>
         <div className="flex justify-end gap-2"><button onClick={() => setNewOpen(false)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button><button disabled={busy || !name.trim()} onClick={() => void createTemplate()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><CheckCircle2 size={14}/>Create</button></div>
       </div>
     </section></div>}
