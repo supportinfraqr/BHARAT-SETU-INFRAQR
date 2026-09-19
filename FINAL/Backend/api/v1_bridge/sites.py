@@ -269,11 +269,31 @@ def _handle_default_site(user, body):
     return site.id
 
 
+def _auto_assign_letter_templates(site):
+    """On site creation, pin the state's active Appointment/Experience letter
+    templates so the site detail shows them (the employer can still override, and
+    rendering already falls back to the state template)."""
+    from bss_core.models import LetterTemplate
+    state = (site.state or "").strip()
+    if not state:
+        return
+    for kind, attr in (("APPOINTMENT", "appointment_letter_template"),
+                       ("EXPERIENCE", "experience_letter_template")):
+        if getattr(site, f"{attr}_id"):
+            continue
+        template = (LetterTemplate.objects
+                    .filter(letter_type=kind, state__iexact=state, is_active=True)
+                    .exclude(html="").order_by("-updated_at").first())
+        if template is not None:
+            setattr(site, attr, template)
+
+
 def _handle_site(user, body, method):
     site = None
     site_id = body.get("id")
     if site_id:
         site = Site.objects.filter(pk=site_id, employer=user).first()
+    created = site is None
 
     if site is None:
         code = str(body.get("site_code") or body.get("code") or "").strip().upper()
@@ -324,6 +344,11 @@ def _handle_site(user, body, method):
         site.experience_letter_template_id = _tid(body.get("experienceLetterTemplateId"))
 
     site.save()
+    # On create, pin the site's state letter templates (if the admin has any).
+    if created:
+        _auto_assign_letter_templates(site)
+        site.save(update_fields=["appointment_letter_template", "experience_letter_template",
+                                 "updated_at"])
     return site.id
 
 

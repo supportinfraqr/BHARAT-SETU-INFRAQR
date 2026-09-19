@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, X } from 'lucide-react';
 import type { SiteGeo } from '@/components/employer/siteGeo';
+import { INDIA_STATES } from '@/data/indiaStates';
 
 const SiteMapPicker = dynamic(() => import('@/components/employer/SiteMap').then(m => m.default), { ssr: false });
 
@@ -419,7 +420,7 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
     return () => { active = false; };
   }, []);
 
-  const stateOptions = useMemo(() => Object.keys(geography), [geography]);
+  const stateOptions = useMemo(() => [...new Set([...INDIA_STATES, ...Object.keys(geography)])].sort((a, b) => a.localeCompare(b)), [geography]);
   const cityOptions = useMemo(() => {
     const districts = geography[state] ?? {};
     const cities = new Set<string>();
@@ -499,9 +500,8 @@ export default function SiteCreateForm({ busy, error, onSubmit, onClose, initial
             <label className="text-xs font-semibold text-gray-700">Site name <span className="text-red-500">*</span><input required value={name} onChange={e => setName(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">Site code <span className="text-red-500">*</span><input required value={code} onChange={e => setCode(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">City / location <span className="text-red-500">*</span><input list="site-city-options" value={location} onChange={event => setLocation(event.target.value)} className={fieldCls} /></label>
-            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span><input list="site-state-options" value={state} onChange={event => setState(event.target.value)} className={fieldCls} /></label>
+            <label className="text-xs font-semibold text-gray-700">State (auto-filled from map if you pin) <span className="text-red-500">*</span><select required value={state} onChange={event => setState(event.target.value)} className={`${fieldCls} bg-white`}><option value="">Select state</option>{stateOptions.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
             <datalist id="site-city-options">{cityOptions.map(city => <option key={city} value={city} />)}</datalist>
-            <datalist id="site-state-options">{stateOptions.map(s => <option key={s} value={s} />)}</datalist>
             <label className="text-xs font-semibold text-gray-700">Start date <span className="text-red-500">*</span><input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">End date <span className="text-red-500">*</span><input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={fieldCls} /></label>
             <label className="text-xs font-semibold text-gray-700">Status <span className="text-red-500">*</span><select value={status} onChange={e => setStatus(e.target.value)} className={`${fieldCls} bg-white`}><option>Active</option><option>Planned</option></select></label>
