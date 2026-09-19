@@ -142,7 +142,7 @@ export const MobilitySection = forwardRef<MobilitySectionHandle, Props>(function
         <div className="flex justify-between items-start gap-3 mb-4"><h3 className="text-[15px] font-semibold text-[#1D1D1F]">Current Address</h3><label className="flex items-center gap-2 text-xs text-[#68686d] cursor-pointer"><input type="checkbox" checked={sameAsPermanent} onChange={event => { const checked = event.target.checked; setSameAsPermanent(checked); setDraft(current => ({ ...current, sameAsPermanent: checked, currentAddress: checked ? { ...current.permanentAddress } : current.currentAddress })); }}/><span>Same as permanent</span></label></div>
         <AddressEditor kind="currentAddress" prefix="Current" address={draft.currentAddress} reference={reference} disabled={sameAsPermanent} error={errors['currentAddress.line'] || errors['currentAddress.location']} onChange={value => updateAddress('currentAddress', value)}/>
       </div>
-      <AddressEditor title="Permanent Address" kind="permanentAddress" prefix="Permanent" address={draft.permanentAddress} reference={reference} readOnly error={errors['permanentAddress.line'] || errors['permanentAddress.location']} onChange={value => updateAddress('permanentAddress', value)}/>
+      <AddressEditor title="Permanent Address" kind="permanentAddress" prefix="Permanent" address={draft.permanentAddress} reference={reference} error={errors['permanentAddress.line'] || errors['permanentAddress.location']} onChange={value => updateAddress('permanentAddress', value)}/>
     </div>
 
     <div className="pt-6 border-t border-black/5">
