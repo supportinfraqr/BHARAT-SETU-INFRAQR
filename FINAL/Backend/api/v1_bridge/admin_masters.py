@@ -275,8 +275,14 @@ def _user_contacts(user):
 def _set_user_contacts(user, mobile, email):
     from bss_core.models import UserCredential
     if mobile is not None:
+        mobile = _normalize_mobile(mobile) or str(mobile)
+        clash = (UserCredential.objects
+                 .filter(identity_type="mobile", identity_value=mobile)
+                 .exclude(user=user).exists())
+        if clash:
+            raise PortalMutationError("This mobile is already linked to another account.", 409)
         UserCredential.objects.update_or_create(
-            user=user, identity_type="mobile", defaults={"identity_value": str(mobile)})
+            user=user, identity_type="mobile", defaults={"identity_value": mobile})
     if email is not None:
         UserCredential.objects.update_or_create(
             user=user, identity_type="email", defaults={"identity_value": str(email)})

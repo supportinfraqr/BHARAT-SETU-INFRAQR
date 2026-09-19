@@ -15,12 +15,7 @@ def login(request):
     identifier = body.get("identifier")
     credential = body.get("credential") or ""
 
-    requested_roles = None
-    if role:
-        role_lower = role.lower()
-        requested_roles = [portal for portal, label in PORTAL_ROLE.items() if label.lower() == role_lower]
-    if not requested_roles:
-        requested_roles = [role] if role in dict(User.ROLE_CHOICES) else None
+    requested_roles = _requested_roles(role)
 
     if not identifier:
         return Response({"error": "identifier is required"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -29,7 +24,8 @@ def login(request):
     if not user:
         return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
     if requested_roles and user.role not in requested_roles:
-        return Response({"error": "Role mismatch for this account"},
+        label = PORTAL_ROLE.get(user.role, user.role)
+        return Response({"error": f"This account is registered as a {label}. Please use the {label} portal."},
                         status=status.HTTP_401_UNAUTHORIZED)
 
     if not _verify_credential(user, method, credential):
@@ -47,24 +43,33 @@ def otp_challenge(request):
     body = request.data or {}
     identifier = body.get("identifier")
     mode = str(body.get("mode") or "login").strip().lower()
+    role = body.get("role")
     if not identifier:
         return Response({"error": "identifier is required"}, status=status.HTTP_400_BAD_REQUEST)
     user = _find_user(identifier)
     if mode == "register":
         if user is not None:
+            label = PORTAL_ROLE.get(user.role, user.role)
             return Response(
-                {"error": "An account already exists with this mobile / BSS ID. Please log in instead."},
+                {"error": f"This mobile is already registered as a {label} account. Please log in instead."},
                 status=status.HTTP_409_CONFLICT)
-        digits = "".join(ch for ch in str(identifier) if ch.isdigit())
-        if len(digits) < 10:
+        mobile = _normalize_mobile(identifier)
+        if not mobile:
             return Response({"error": "Enter a valid 10-digit mobile number to register."},
                             status=status.HTTP_400_BAD_REQUEST)
-        mobile = str(identifier)
     else:
         if user is None:
             return Response(
                 {"error": "No account found for this BSS ID / mobile number. Please register first."},
                 status=status.HTTP_404_NOT_FOUND)
+        # A phone belongs to exactly one account/role — never issue an OTP for a
+        # different portal than the one the number is registered under.
+        requested_roles = _requested_roles(role)
+        if requested_roles and user.role not in requested_roles:
+            label = PORTAL_ROLE.get(user.role, user.role)
+            return Response(
+                {"error": f"This mobile is registered as a {label} account. Please use the {label} portal."},
+                status=status.HTTP_403_FORBIDDEN)
         mobile = _user_mobile(user)
     if not _otp_send_allowed("register" if mode == "register" else "login", mobile):
         return Response({"error": "Too many OTP requests. Please try again in a few minutes."},
@@ -179,8 +184,8 @@ def worker_claim_mobile(request):
         return Response({"error": "Workers only."}, status=status.HTTP_403_FORBIDDEN)
     body = request.data or {}
     action = str(body.get("action") or "request-otp").lower()
-    mobile = "".join(ch for ch in str(body.get("mobile") or "") if ch.isdigit())
-    if len(mobile) != 10 or mobile[0] not in "6789":
+    mobile = _normalize_mobile(body.get("mobile"))
+    if not mobile:
         return Response({"error": "Enter a valid 10-digit Indian mobile number."},
                         status=status.HTTP_400_BAD_REQUEST)
     taken = (UserCredential.objects.filter(identity_type="mobile", identity_value=mobile)
@@ -233,18 +238,24 @@ def _register_account(request, role):
     if not contact:
         return Response({"error": "contact is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Canonical phone so formatting variants (+91…, 0…, spaces) cannot create a
+    # second account for the same number.
+    mobile = _normalize_mobile(contact) or contact
+
     otp_value = body.get("otp")
-    if otp_value and not _verify_login_otp(contact, otp_value):
+    if otp_value and not _verify_login_otp(mobile, otp_value):
         return Response({"error": "invalid or expired OTP"}, status=status.HTTP_401_UNAUTHORIZED)
 
-    if _find_user(contact) is not None:
+    existing = _find_user(mobile)
+    if existing is not None:
+        label = PORTAL_ROLE.get(existing.role, existing.role)
         return Response(
-            {"error": "An account already exists with this mobile number. Please log in instead."},
+            {"error": f"This mobile is already registered as a {label} account. Please log in instead."},
             status=status.HTTP_409_CONFLICT)
 
-    identifier = f"{role}_{contact[-10:]}" if len(contact) > 10 else f"{role}_{contact}"
+    identifier = f"{role}_{mobile[-10:]}" if len(mobile) > 10 else f"{role}_{mobile}"
     if User.objects.filter(username=identifier).exists():
-        identifier = f"{role}_{contact[-10:]}_{uuid.uuid4().hex[:4]}"
+        identifier = f"{role}_{mobile[-10:]}_{uuid.uuid4().hex[:4]}"
 
     with transaction.atomic():
         user = User.objects.create_user(
@@ -253,7 +264,7 @@ def _register_account(request, role):
         if role == "worker":
             identity = WorkerIdentity.objects.create(
                 user=user, bss_worker_id=bss_ids.new_bss_worker_id(),
-                name="", mobile_number=contact)
+                name="", mobile_number=mobile)
             WorkerOther.objects.get_or_create(user=user)
             _record_registration_consent(user)
             _ensure_id_card_dates(user)
@@ -261,16 +272,16 @@ def _register_account(request, role):
         elif role == "contractor":
             profile = ContractorProfile.objects.create(
                 user=user, contractor_name="", contractor_code=bss_ids.new_bss_contractor_code(),
-                approval_status="PENDING", mobile=contact)
+                approval_status="PENDING", mobile=mobile)
             bss_id = profile.contractor_code
         else:  # employer
             profile = EmployerProfile.objects.create(
                 user=user, employer_name="", employer_code=bss_ids.new_bss_employer_code(),
-                approval_status="PENDING", mobile=contact)
+                approval_status="PENDING", mobile=mobile)
             bss_id = profile.employer_code
-        UserCredential.objects.get_or_create(
-            identity_type="mobile", identity_value=contact,
-            defaults={"user": user, "is_primary": True, "verified": True})
+        UserCredential.objects.create(
+            identity_type="mobile", identity_value=mobile,
+            user=user, is_primary=True, verified=True)
 
     payload = _make_session_payload(user)
     payload["bssId"] = bss_id

@@ -272,6 +272,34 @@ def _make_session_payload(user):
     }
 
 
+def _normalize_mobile(value):
+    """Canonical 10-digit mobile, or "" when not a 10-digit number.
+
+    Collapses formatting variants so the same real phone cannot be registered
+    twice under different roles: strips non-digits, drops a leading country code
+    (91) or trunk 0, then requires 10 digits.
+    """
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    if len(digits) == 10:
+        return digits
+    return ""
+
+
+def _requested_roles(role):
+    """The user roles a requested portal role maps to ([] when none given)."""
+    if not role:
+        return []
+    role_lower = str(role).lower()
+    roles = [portal for portal, label in PORTAL_ROLE.items() if label.lower() == role_lower]
+    if not roles and role in dict(User.ROLE_CHOICES):
+        roles = [role]
+    return roles
+
+
 def _find_user(identifier):
     user = User.objects.filter(username=identifier).first()
     if user:
@@ -279,6 +307,13 @@ def _find_user(identifier):
     cred = UserCredential.objects.filter(identity_value=identifier).first()
     if cred:
         return cred.user
+    # A mobile entered with a country code / trunk prefix / spaces should still
+    # resolve to the account that owns the canonical number.
+    normalized = _normalize_mobile(identifier)
+    if normalized and normalized != str(identifier or "").strip():
+        cred = UserCredential.objects.filter(identity_value=normalized).first()
+        if cred:
+            return cred.user
     # BSS ID lookup (worker / contractor / employer). Codes are stored
     # uppercase (random alphanumeric); tolerate lowercase / surrounding
     # whitespace from manual entry and legacy numeric IDs.
@@ -572,6 +607,8 @@ __all__ = [
     "_deliver_otp_async",
     "_demo_otp_mobiles",
     "_find_user",
+    "_normalize_mobile",
+    "_requested_roles",
     "_generate_otp_value",
     "_issue_otp",
     "_issue_tokens",
