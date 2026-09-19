@@ -170,7 +170,7 @@ export default function IdentityCardPage() {
 
   const fallbackIssue = new Date();
   const fallbackValidity = new Date();
-  fallbackValidity.setFullYear(fallbackValidity.getFullYear() + 1);
+  fallbackValidity.setFullYear(fallbackValidity.getFullYear() + 5);
   const formatCardDate = (value?: string) => {
     if (!value) return '';
     const parsed = new Date(value);

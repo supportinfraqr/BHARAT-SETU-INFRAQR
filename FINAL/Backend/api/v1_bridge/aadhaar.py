@@ -25,12 +25,12 @@ def _parse_dob(value):
 
 
 def _id_card_validity(issue):
-    """A worker ID card is valid for one year from its issue date (29 Feb is
+    """A worker ID card is valid for five years from its issue date (29 Feb is
     clamped to 28 Feb in non-leap years)."""
     try:
-        return issue.replace(year=issue.year + 1)
+        return issue.replace(year=issue.year + 5)
     except ValueError:
-        return issue.replace(year=issue.year + 1, day=28)
+        return issue.replace(year=issue.year + 5, day=28)
 
 
 def _ensure_id_card_dates(user, issue=None):
