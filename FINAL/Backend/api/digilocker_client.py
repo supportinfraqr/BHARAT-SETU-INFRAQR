@@ -7,6 +7,7 @@ import hashlib
 import os
 import re
 import secrets
+import time
 import uuid
 
 import requests
@@ -139,11 +140,18 @@ def fetch_eaadhaar(access_token: str) -> str:
 
 def download_document(access_token: str, uri: str) -> bytes:
     url = settings.DIGILOCKER_FILE_URL + _url_quote(uri)
-    resp = requests.get(
-        url, headers={"Authorization": f"Bearer {access_token}"}, timeout=30)
-    if resp.status_code != 200:
-        raise DigiLockerError(f"file download failed: {resp.status_code} {resp.text[:160]}")
-    return resp.content
+    last = None
+    # Two attempts — DigiLocker's file endpoint occasionally returns a transient
+    # error right after the issued-docs call; a single retry clears it.
+    for attempt in range(2):
+        resp = requests.get(
+            url, headers={"Authorization": f"Bearer {access_token}"}, timeout=30)
+        if resp.status_code == 200:
+            return resp.content
+        last = f"{resp.status_code} {resp.text[:160]}"
+        if attempt == 0:
+            time.sleep(1.5)
+    raise DigiLockerError(f"file download failed: {last}")
 
 
 def extract_pan(uri_or_name: str) -> str:
