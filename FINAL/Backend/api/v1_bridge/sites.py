@@ -425,6 +425,21 @@ def _employer_set_gate_pass_dispatch(user, body):
         gp.dispatched_by = user if want else None
         gp.save(update_fields=["dispatched", "dispatched_at", "dispatched_by", "updated_at"])
         updated.append(gp.id)
+        # Gate Pass §5 — notify the worker and contractor when a pass is dispatched.
+        if want:
+            recipients = [gp.worker]
+            if gp.issued_by_id:
+                recipients.append(gp.issued_by)
+            for party in recipients:
+                if party is None or party.id == user.id:
+                    continue
+                _create_notification(
+                    user=party, title="Gate pass dispatched",
+                    body=(f"Gate pass {gp.gate_pass_no} is now active"
+                          + (f" ({gp.start_date} → {gp.end_date})" if gp.start_date and gp.end_date else "")
+                          + " and available in your portal."),
+                    notif_type="INFO",
+                    link="/worker/gate-pass" if party.role == "worker" else "/contractor/gate-pass")
     if not updated:
         raise PortalMutationError("No gate passes matched.", 404)
     rows = [payloads._employer_gate_pass_row(g)
@@ -493,7 +508,7 @@ def _renew_gate_pass(user, body):
         worker=gp.worker, site=gp.site, gate_pass_type=gp_type,
         gate_pass_no=payloads._auto_gate_pass_no(gp.worker, gp_type),
         status="ACTIVE", start_date=today,
-        end_date=today + timedelta(days=365 if gp_type == "PGP" else 7),
+        end_date=today + timedelta(days=payloads._gate_pass_validity_days(gp.worker, gp_type)),
         issued_by=user, source=gp.source, renewed_from=gp,
         dispatched=gp.dispatched, dispatched_at=gp.dispatched_at,
         dispatched_by=gp.dispatched_by)
@@ -535,7 +550,8 @@ def _handle_gate_pass(user, body):
             if decision in ("approved", "approve"):
                 gp.status = "ACTIVE"
                 gp.start_date = today
-                gp.end_date = today + timedelta(days=365 if gp.gate_pass_type == "PGP" else 7)
+                gp.end_date = today + timedelta(
+                    days=payloads._gate_pass_validity_days(gp.worker, gp.gate_pass_type))
                 gp.approved_by = user
                 gp.approved_at = timezone.now()
             elif decision in ("rejected", "reject"):
@@ -547,6 +563,24 @@ def _handle_gate_pass(user, body):
                 raise PortalMutationError("Select approve or reject.", 400)
             gp.save()
             updated.append(gp.id)
+            # Gate Pass §5 — notify the worker and the requesting contractor.
+            recipients = [gp.worker]
+            if gp.issued_by_id:
+                recipients.append(gp.issued_by)
+            for party in recipients:
+                if party is None or party.id == user.id:
+                    continue
+                if gp.status == "ACTIVE":
+                    title, body_text, tone = ("Gate pass approved",
+                                              f"Gate pass {gp.gate_pass_no} was approved — valid "
+                                              f"{gp.start_date} to {gp.end_date}.", "APPROVAL")
+                else:
+                    title, body_text, tone = ("Gate pass rejected",
+                                              f"Gate pass {gp.gate_pass_no} was rejected by the "
+                                              f"principal employer.", "WARNING")
+                _create_notification(
+                    user=party, title=title, body=body_text, notif_type=tone,
+                    link="/worker/gate-pass" if party.role == "worker" else "/contractor/gate-pass")
         if not updated:
             raise PortalMutationError("No gate pass requests matched.", 404)
         rows = [payloads._employer_gate_pass_row(g)

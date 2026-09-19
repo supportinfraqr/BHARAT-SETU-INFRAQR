@@ -154,21 +154,34 @@ def compliance_checklists(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def compliance_checklist_field(request, checklist_id):
-    """An officer completes a checklist field (mirrors onto the worker record)."""
-    from bss_core.models import WorkerComplianceChecklist
+    """Complete a checklist field.
+
+    The principal employer may complete any field (and assign the responsible
+    officer); an assigned officer may complete their own field. Completing a
+    field mirrors onto the worker record so gate-pass eligibility updates."""
+    from bss_core.models import User, WorkerComplianceChecklist
     checklist = (WorkerComplianceChecklist.objects
-                 .filter(pk=checklist_id, binding__site__employer=request.user)
-                 .select_related("worker", "template").first())
+                 .filter(pk=checklist_id)
+                 .select_related("worker", "template", "binding__site").first())
     if checklist is None:
         return Response({"error": "Checklist not found."}, status=status.HTTP_404_NOT_FOUND)
     body = request.data if isinstance(request.data, dict) else {}
     key = str(body.get("key") or "").strip()
     if not key:
         return Response({"error": "A field key is required."}, status=status.HTTP_400_BAD_REQUEST)
+    field = checklist.fields.filter(key=key).first()
+    if field is None:
+        return Response({"error": "Unknown checklist field."}, status=status.HTTP_404_NOT_FOUND)
+    employer_id = (checklist.binding.site.employer_id
+                   if checklist.binding and checklist.binding.site else None)
+    is_employer = employer_id == request.user.id
+    is_officer = field.officer_id == request.user.id
+    if not (is_employer or is_officer):
+        return Response({"error": "Only the principal employer or the assigned officer can complete this field."},
+                        status=status.HTTP_403_FORBIDDEN)
     done = bool(body.get("done", body.get("status") == "Done"))
     officer = request.user
-    if body.get("officerId"):
-        from bss_core.models import User
+    if is_employer and body.get("officerId"):
         officer = User.objects.filter(pk=body["officerId"]).first() or request.user
     field = _set_field(checklist, key, done, officer=officer)
     log_audit(request.user, "UPDATE", "compliance_checklist_field", field.id,

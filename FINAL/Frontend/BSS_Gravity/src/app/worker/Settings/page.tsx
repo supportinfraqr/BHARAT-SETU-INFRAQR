@@ -192,7 +192,8 @@ export default function SettingsPage() {
           <Toggle label="Show photo on public verification" detail="Authorised roles remain unaffected" checked={prefs.consentToPublicPhoto} onChange={v => void updateSetting('consentToPublicPhoto', v)} />
           <Toggle label="Allow role-based data sharing" detail="Workbook permissions are always enforced" checked={prefs.consentToDataSharing} onChange={v => void updateSetting('consentToDataSharing', v)} />
           <Toggle label="Allow binding & unbinding" detail="Contractors can send binding requests; both parties must still consent" checked={prefs.bindingEnabled} onChange={v => void updateSetting('bindingEnabled', v)} />
-          <a href="/data-sharing" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
+          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
+          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
         </SettingSection>
       </div>
 

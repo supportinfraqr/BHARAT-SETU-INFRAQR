@@ -167,7 +167,8 @@ export default function PortalSettingsPanel({
           {config.privacy.map(([key, label, detail]) => (
             <ToggleRow key={key} label={label} detail={detail} checked={Boolean(settings[key])} onChange={v => set(key, v)} />
           ))}
-          <a href="/data-sharing" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
+          <a href="/policy" className="mt-3 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Read the privacy policy<ChevronRight size={14} /></a>
+          <a href="/data-sharing" className="mt-2 flex items-center justify-between text-xs font-semibold text-[#073B67] hover:underline">Review data-sharing policy<ChevronRight size={14} /></a>
         </SettingSection>
       </div>
 

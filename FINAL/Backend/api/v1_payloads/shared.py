@@ -449,6 +449,27 @@ def _gate_pass_eligibility(worker):
                 and str(banking.bank_verification_status or "").strip().lower() == "verified")
     uan = bool(social and social.uan_verified and (social.epfo_uan or "").strip())
     esi = bool(social and social.esic_verified and (social.esic_ip_number or "").strip())
+    # Officer-completed checklist fields also satisfy the category (Gate Pass §2:
+    # the Compliance Officer records Aadhaar / Bank / UAN / ESI; the medical and
+    # health & safety officers record theirs). This keeps the checklist and the
+    # gate-pass eligibility in agreement.
+    from bss_core.models import WorkerComplianceChecklist
+    checklist = (WorkerComplianceChecklist.objects.filter(worker=worker)
+                 .order_by("-id").first())
+    done_keys = (set(checklist.fields.filter(status="DONE").values_list("key", flat=True))
+                 if checklist else set())
+    if done_keys:
+        medical = medical or "medical" in done_keys
+        safety_kit = safety_kit or "safety_kit" in done_keys
+        safety_training = safety_training or "safety_training" in done_keys
+        site_induction = site_induction or "site_induction" in done_keys
+        aadhaar = aadhaar or "aadhaar" in done_keys
+        bank = bank or "bank" in done_keys
+        uan = uan or "uan" in done_keys
+        esi = esi or "esi" in done_keys
+        health_safety = safety_kit and safety_training and site_induction
+        ppe = safety_kit
+        welfare_safety = safety_training and site_induction
     # Category aggregation → gate-pass eligibility:
     #   Medical + Health & Safety            → Temporary
     #   Medical + Health & Safety + Compliance → Permanent
@@ -683,15 +704,38 @@ def _is_gate_pass_blocked(worker, employer):
     return WorkerGatePassBlock.objects.filter(worker=worker, employer=employer, blocked=True).exists()
 
 
+def _gate_pass_validity_days(worker, gp_type):
+    """Validity window (days) for a pass, taken from the employer's active
+    gate-pass compliance template (validity.temporaryDays / permanentDays),
+    falling back to 7 days for Temporary and 365 for Permanent."""
+    from bss_core.models import GatePassComplianceTemplate, WorkerContractorBinding
+    default = 365 if gp_type == "PGP" else 7
+    binding = (WorkerContractorBinding.objects
+               .filter(worker=worker, binding_status="ACCEPTED")
+               .select_related("site__employer").first())
+    employer = binding.site.employer if binding and binding.site else None
+    template = (GatePassComplianceTemplate.objects
+                .filter(owner=employer, is_active=True).first() if employer else None)
+    validity = (template.validity if template and template.validity else {}) or {}
+    key = "permanentDays" if gp_type == "PGP" else "temporaryDays"
+    try:
+        days = int(validity.get(key) or default)
+    except (TypeError, ValueError):
+        days = default
+    return max(1, days)
+
+
 def _auto_gate_pass_dates(worker, gp_type):
-    """Auto pass validity: temporary passes run 7 days from today; permanent
-    passes mirror the worker's BSS ID card (Issue Date / Valid Till)."""
+    """Auto pass validity from the employer's compliance template: temporary
+    passes run temporaryDays from today; permanent passes mirror the worker's
+    BSS ID card (falling back to permanentDays)."""
     today = timezone.localdate()
     if gp_type == "TGP":
-        return today, today + datetime.timedelta(days=7)
+        return today, today + datetime.timedelta(days=_gate_pass_validity_days(worker, "TGP"))
     employment = WorkerEmployment.objects.filter(user=worker).first()
     issue = (employment.id_card_issue_date if employment else None) or today
-    till = (employment.id_card_validity_till if employment else None) or (issue + datetime.timedelta(days=365))
+    till = (employment.id_card_validity_till if employment else None) or (
+        issue + datetime.timedelta(days=_gate_pass_validity_days(worker, "PGP")))
     return issue, till
 
 
@@ -803,6 +847,7 @@ __all__ = [
     "_auto_gate_pass_no",
     "_auto_gate_pass_type",
     "_gate_pass_missing",
+    "_gate_pass_validity_days",
     "_benefit_row",
     "_binding_row",
     "_ce_binding_row",
