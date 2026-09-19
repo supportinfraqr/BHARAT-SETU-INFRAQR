@@ -50,6 +50,46 @@ def _worker_relationship(worker_user, viewer):
     return "public"
 
 
+def _employer_relationship(employer_user, viewer):
+    """'self' | 'bound' | 'public' for a scanned principal employer."""
+    if viewer is None or not getattr(viewer, "is_authenticated", False):
+        return "public"
+    if getattr(viewer, "id", None) == employer_user.id:
+        return "self"
+    role = getattr(viewer, "role", "")
+    if role == "contractor":
+        if ContractorEmployerBinding.objects.filter(
+                contractor=viewer, employer=employer_user,
+                binding_status="ACCEPTED").exists():
+            return "bound"
+    if role == "worker":
+        if WorkerContractorBinding.objects.filter(
+                worker=viewer, binding_status="ACCEPTED",
+                site__employer=employer_user).exists():
+            return "bound"
+    return "public"
+
+
+def _contractor_relationship(contractor_user, viewer):
+    """'self' | 'bound' | 'public' for a scanned contractor."""
+    if viewer is None or not getattr(viewer, "is_authenticated", False):
+        return "public"
+    if getattr(viewer, "id", None) == contractor_user.id:
+        return "self"
+    role = getattr(viewer, "role", "")
+    if role == "employer":
+        if ContractorEmployerBinding.objects.filter(
+                contractor=contractor_user, employer=viewer,
+                binding_status="ACCEPTED").exists():
+            return "bound"
+    if role == "worker":
+        if WorkerContractorBinding.objects.filter(
+                worker=viewer, contractor=contractor_user,
+                binding_status="ACCEPTED").exists():
+            return "bound"
+    return "public"
+
+
 def _worker_details(wi, user):
     """Extensive post-binding record for a worker."""
     emp = WorkerEmployment.objects.filter(user=user).order_by("-id").first()
@@ -130,8 +170,9 @@ def build_identity_verify(bss_id, viewer=None):
         ep = EmployerProfile.objects.filter(employer_code=bss_id).first()
         if not ep:
             return None
-        return {
-            "relationship": "public",
+        relationship = _employer_relationship(ep.user, viewer)
+        data = {
+            "relationship": relationship,
             "id": ep.user_id,
             "name": _d(ep.employer_name),
             "company": _d(ep.trade_name),
@@ -144,13 +185,33 @@ def build_identity_verify(bss_id, viewer=None):
                 "verified": bool(ep.approval_status == "APPROVED"),
             },
         }
+        if relationship in ("bound", "self"):
+            sites = [s for s in Site.objects.filter(employer=ep.user)
+                     .values_list("site_name", flat=True)[:20] if s]
+            data["details"] = {"org": {
+                "tradeName": _d(ep.trade_name),
+                "category": _d(ep.employer_category),
+                "contactPerson": _d(ep.contact_person),
+                "mobile": _d(ep.mobile),
+                "email": _d(ep.email),
+                "address": _d(ep.address),
+                "state": _d(ep.state),
+                "district": _d(ep.district),
+                "lin": _d(ep.lin),
+                "cin": _d(ep.cin),
+                "sites": sites,
+                "contractors": ContractorEmployerBinding.objects.filter(
+                    employer=ep.user, binding_status="ACCEPTED").count(),
+            }}
+        return data
     if bss_id.upper().startswith("BSS-C") or bss_id.upper().startswith("BSSC"):
         try:
             cp = ContractorProfile.objects.get(contractor_code=bss_id)
         except ContractorProfile.DoesNotExist:
             return None
-        return {
-            "relationship": "public",
+        relationship = _contractor_relationship(cp.user, viewer)
+        data = {
+            "relationship": relationship,
             "id": cp.user_id,
             "name": _d(cp.contractor_name),
             "company": _d(cp.trade_name),
@@ -163,6 +224,24 @@ def build_identity_verify(bss_id, viewer=None):
                 "verified": bool(cp.is_verified_badge),
             },
         }
+        if relationship in ("bound", "self"):
+            data["details"] = {"org": {
+                "tradeName": _d(cp.trade_name),
+                "contactPerson": _d(cp.contact_person),
+                "mobile": _d(cp.mobile),
+                "email": _d(cp.email),
+                "address": _d(cp.address),
+                "state": _d(cp.state),
+                "district": _d(cp.district),
+                "lin": _d(cp.lin),
+                "clraLicence": _d(cp.clra_licence_no),
+                "operatingStates": _d(cp.operating_states),
+                "pan": _d(cp.pan_no),
+                "gstin": _d(cp.gstin),
+                "workers": WorkerContractorBinding.objects.filter(
+                    contractor=cp.user, binding_status="ACCEPTED").count(),
+            }}
+        return data
     wi = WorkerIdentity.objects.filter(bss_worker_id=bss_id).first()
     if not wi:
         return None

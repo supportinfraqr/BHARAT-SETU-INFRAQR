@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BadgeCheck, Banknote, Briefcase, CalendarDays, Droplet, GraduationCap, HeartPulse, IdCard, Landmark, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { BadgeCheck, Banknote, Briefcase, Building2, CalendarDays, Droplet, GraduationCap, HeartPulse, IdCard, Landmark, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
 
 export type ScanVerifyData = {
   relationship?: "public" | "bound" | "self";
@@ -38,6 +38,12 @@ export type ScanVerifyData = {
     employment?: { contractor?: string; employer?: string; site?: string; designation?: string; department?: string; shift?: string; doj?: string; natureOfJob?: string; typeOfWork?: string };
     wages?: { lastGross?: number | null; frequency?: string; periodEnd?: string } | null;
     welfare?: { ppe?: string; safetyTraining?: boolean; insurance?: string; policeVerification?: string };
+    org?: {
+      tradeName?: string; category?: string; contactPerson?: string; mobile?: string; email?: string;
+      address?: string; state?: string; district?: string; lin?: string; cin?: string;
+      clraLicence?: string; operatingStates?: string; pan?: string; gstin?: string;
+      sites?: string[]; contractors?: number; workers?: number;
+    };
   };
 };
 
@@ -130,13 +136,41 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
 
       {!extended && (
         <p className="p-3 bg-blue-50 rounded-lg text-xs text-blue-900">
-          Sensitive identifiers, contact, address and banking details are withheld. They are shared automatically once this worker is bound to you.
+          Sensitive identifiers, contact, address and banking details are withheld. They are shared automatically once the binding is complete.
         </p>
       )}
 
       {/* Extensive post-binding tier */}
       {extended && d && (
         <div className="space-y-3">
+          {d.org ? (
+            <>
+              <Section icon={<Building2 size={13} />} title={d.org.category === "Contractor" ? "Contractor details" : "Organisation details"}>
+                <Field label="Trade name" value={d.org.tradeName} />
+                <Field label="Category" value={d.org.category} />
+                <Field label="Contact person" value={d.org.contactPerson} />
+                <Field label="Mobile" value={d.org.mobile} />
+                <Field label="Email" value={d.org.email} />
+                <Field label="State" value={d.org.state} />
+                <Field label="District" value={d.org.district} />
+                <Field label="LIN" value={d.org.lin} />
+                <Field label="CIN" value={d.org.cin} />
+                <Field label="PAN" value={d.org.pan} />
+                <Field label="GSTIN" value={d.org.gstin} />
+                <Field label="CLRA licence" value={d.org.clraLicence} />
+                <Field label="Operating states" value={d.org.operatingStates} />
+                <Field label="Workers" value={d.org.workers ? String(d.org.workers) : ""} />
+                <Field label="Contractors" value={d.org.contractors ? String(d.org.contractors) : ""} />
+                <Field label="Registered address" value={d.org.address} />
+              </Section>
+              {(d.org.sites ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(d.org.sites ?? []).map(s => <span key={s} className="text-[10px] font-semibold text-gray-600 bg-gray-100 rounded-full px-2 py-0.5">{s}</span>)}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
           <Section icon={<IdCard size={13} />} title="Personal">
             <Field label="Date of birth" value={d.dateOfBirth ? <span className="inline-flex items-center gap-1"><CalendarDays size={12} />{d.dateOfBirth}</span> : ""} />
             <Field label="Father's name" value={d.fatherName} />
@@ -210,6 +244,8 @@ export default function ScanIdentityCard({ data }: { data: ScanVerifyData }) {
               <Field label="Insurance" value={d.welfare.insurance} />
               <Field label="Police verification" value={d.welfare.policeVerification} />
             </Section>
+          )}
+            </>
           )}
         </div>
       )}

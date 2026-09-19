@@ -85,22 +85,20 @@ export default function ContractorScanPage() {
       if (p.type === "BSS_EMPLOYER") {
         const known = contractor.employers.find(e => e.employerId === bssId);
         const existing = contractor.bindingRequests.find(b => b.type === 'Employer' && b.bssId === bssId && ['Pending', 'Accepted'].includes(b.status));
-        let registryName = '';
-        if (!known && !existing) {
-          // The employer does not have to be engaged already — a contractor may
-          // request a binding to any employer that exists in the BSS registry.
-          const lookup = await fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' }).catch(() => null);
-          const payload = lookup && lookup.ok ? await lookup.json().catch(() => null) : null;
-          if (!payload?.data) {
-            setEntity(null);
-            setScanned(null);
-            setState("error");
-            setMessage(`No principal employer record found with BSS ID "${bssId}". Please check the BSS ID and try again.`);
-            controls.current?.stop();
-            return;
-          }
-          registryName = payload.data.company || payload.data.name || '';
+        // Always resolve the registry record so the permission-gated detail card
+        // can render (public tier when not engaged, full details once bound).
+        const lookup = await fetch(`/api/identity/verify/${encodeURIComponent(bssId)}`, { cache: 'no-store' }).catch(() => null);
+        const payload = lookup && lookup.ok ? await lookup.json().catch(() => null) : null;
+        if (!known && !existing && !payload?.data) {
+          setEntity(null);
+          setScanned(null);
+          setState("error");
+          setMessage(`No principal employer record found with BSS ID "${bssId}". Please check the BSS ID and try again.`);
+          controls.current?.stop();
+          return;
         }
+        if (payload?.data) setVerifyData(payload.data);
+        const registryName = payload?.data?.company || payload?.data?.name || '';
         const employerName = known?.name ?? existing?.entityName ?? registryName ?? '';
         setAlreadyPending(Boolean(existing) || sentHere);
         setEntity({ kind: 'employer', bssId, name: employerName || ('Principal Employer ' + bssId.slice(-4)), employer: employerName || 'Principal Employer', site: known?.sites?.[0] ?? existing?.site ?? 'Sites to be allotted', designation: 'Billing contractor relationship' });
@@ -294,7 +292,7 @@ export default function ContractorScanPage() {
                 <div><dt className="text-gray-400">Designation</dt><dd className="font-semibold text-gray-800 mt-0.5">{entity.designation}</dd></div>
                 <div><dt className="text-gray-400">Current relationship</dt><dd className="font-semibold text-gray-800 mt-0.5">{contractor.workers.some(w => w.bssId === entity.bssId) ? 'Already bound' : alreadyPending ? 'Binding request pending' : 'Not bound — request required'}</dd></div>
               </dl>
-              {entity.kind === 'worker' && verifyData && <ScanIdentityCard data={verifyData} />}
+              {verifyData && <ScanIdentityCard data={verifyData} />}
               <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId) ? 'This worker is bound to you. Mark attendance for today; it syncs to the worker\u2019s Attendance page.' : entity.kind === 'worker' && alreadyPending ? 'A binding request is already pending with this worker. Binding completes once the worker approves it.' : `A binding request asks ${entity.kind === 'worker' ? 'the worker to accept employment' : 'the principal employer to accept the contractor relationship'}. Binding completes only after both parties approve.`}</p>
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && contractor.sites.length > 0 && (
                 <div>

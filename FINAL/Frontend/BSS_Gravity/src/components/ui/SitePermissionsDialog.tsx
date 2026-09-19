@@ -215,19 +215,19 @@ export default function SitePermissionsDialog({
                         onClick={() => onRelease(row.siteId)}
                         className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold hover:bg-rose-100 transition-colors disabled:opacity-60"
                       >
-                        Request unbind
+                        Request release
                       </button>
                     )}
                     {row.canEmployerRelease && (
                       <>
-                        {(row.workersAtRisk ?? 0) > 0 && (
+                        {(row.successorCandidates ?? []).length > 0 && (
                           <select
                             value={successorValue(row)}
                             onChange={e => chooseSuccessor(row, e.target.value)}
                             aria-label="Successor contractor for this site's workers"
                             className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
                           >
-                            <option value="">Successor…</option>
+                            <option value="">{(row.workersAtRisk ?? 0) > 0 ? 'Successor…' : 'Successor (optional)…'}</option>
                             {(row.successorCandidates ?? []).map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
                           </select>
                         )}
@@ -243,14 +243,14 @@ export default function SitePermissionsDialog({
                     )}
                     {row.canApproveRelease && (
                       <>
-                        {(row.workersAtRisk ?? 0) > 0 && (
+                        {(row.successorCandidates ?? []).length > 0 && (
                           <select
                             value={successorValue(row)}
                             onChange={e => chooseSuccessor(row, e.target.value)}
                             aria-label="Successor contractor for this site's workers"
                             className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-semibold text-gray-700"
                           >
-                            <option value="">Successor…</option>
+                            <option value="">{(row.workersAtRisk ?? 0) > 0 ? 'Successor…' : 'Successor (optional)…'}</option>
                             {(row.successorCandidates ?? []).map(c => <option key={c.contractorId} value={c.contractorId}>{c.name}</option>)}
                           </select>
                         )}
