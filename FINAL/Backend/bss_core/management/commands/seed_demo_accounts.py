@@ -32,6 +32,7 @@ from bss_core.models import (
 WORKER_PASSWORD = "Bss@Worker123"
 CONTRACTOR_PASSWORD = "Bss@Contractor123"
 EMPLOYER_PASSWORD = "Bss@Employer123"
+ADMIN_PASSWORD = "Bss@Admin123"
 DEMO_MPIN = "1234"
 
 # (phone, name) — easy demo ids. 1111111111 is the primary demo worker.
@@ -52,6 +53,11 @@ CONTRACTORS = [
 EMPLOYERS = [
     ("7777777777", "Adani Infra Pvt Ltd"),
     ("8888888888", "L&T Construction"),
+]
+
+# (phone, name) — BSS Admin console account (OTP login).
+ADMINS = [
+    ("9999999999", "BSS Admin"),
 ]
 
 # Contact/registration details shown to bound workers (contractor & employer
@@ -409,6 +415,11 @@ class Command(BaseCommand):
                 prof.save(update_fields=["employer_code"])
             _set_mobile(user, phone, DEMO_MPIN)
             self.stdout.write(f"employer  {phone}  {prof.employer_code}  {name}")
+
+        for phone, name in ADMINS:
+            user = _get_or_create_user(f"bss_admin_{phone}", ADMIN_PASSWORD, "bss_admin")
+            _set_mobile(user, phone, DEMO_MPIN)
+            self.stdout.write(f"bss_admin {phone}  {name}")
 
         # --- Demo Rozgar job postings (drive /worker/rozgar Available Jobs) ---
         from bss_core.models import ContractorJob
