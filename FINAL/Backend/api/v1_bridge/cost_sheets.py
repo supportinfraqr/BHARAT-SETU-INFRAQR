@@ -29,6 +29,9 @@ def _template_row(t, full=False):
         "id": t.id, "name": payloads._d(t.name), "code": payloads._d(t.code),
         "templateType": t.template_type, "appliesTo": t.applies_to,
         "industry": payloads._d(t.industry), "state": payloads._d(t.state),
+        "states": list(t.states or []),
+        "siteId": t.site_id,
+        "siteName": payloads._d(t.site.site_name) if t.site_id else "",
         "effectiveDate": payloads._dts(t.effective_date) if t.effective_date else "",
         "effectiveTo": payloads._dts(t.effective_to) if t.effective_to else "",
         "workerCategory": payloads._d(t.worker_category), "designation": payloads._d(t.designation),
@@ -91,6 +94,11 @@ def _apply_template(t, body):
     for key, attr in _TEMPLATE_DATES.items():
         if body.get(key) is not None:
             setattr(t, attr, _date(body[key]))
+    if isinstance(body.get("states"), list):
+        t.states = [str(s)[:60] for s in body["states"] if str(s).strip()]
+    if body.get("siteId") is not None:
+        from bss_core.models import Site
+        t.site = Site.objects.filter(pk=body["siteId"]).first() if body["siteId"] else None
 
 
 def _apply_children(t, body):
@@ -260,13 +268,100 @@ def cost_sheet_preview(request, template_id):
     return Response({"data": result}, status=status.HTTP_200_OK)
 
 
+class _DraftQS(list):
+    def all(self):
+        return self
+
+    def first(self):
+        return self[0] if self else None
+
+
+def _draft_template(body):
+    """A lightweight template-like object so an unsaved builder draft can be run
+    through the same rule + cost engine as a saved template."""
+    mw = body.get("minimumWage") if isinstance(body.get("minimumWage"), dict) else {}
+    obj = type("DraftTemplate", (), {})()
+    obj.id = 0
+    obj.parent_id = None
+    obj.parent = None
+    obj.inherits_parent_rules = True
+    obj.code = str(body.get("code") or "DRAFT")
+    obj.name = str(body.get("name") or "Draft")
+    obj.currency = str(body.get("currency") or "INR")
+    mw_obj = type("MW", (), {})()
+    mw_obj.basic_wage = mw.get("basicWage")
+    mw_obj.vda = mw.get("vda")
+    obj.minimum_wages = _DraftQS([mw_obj])
+    statutory = []
+    for s in (body.get("statutory") or []):
+        o = type("SL", (), {})()
+        o.component = s.get("component")
+        o.rate = s.get("rate")
+        o.rate_type = s.get("rateType")
+        o.applicable = s.get("applicable", True)
+        o.mandatory = s.get("mandatory", False)
+        o.condition = s.get("condition", "")
+        statutory.append(o)
+    obj.statutory_lines = _DraftQS(statutory)
+    custom = []
+    for c in (body.get("custom") or []):
+        o = type("CL", (), {})()
+        o.name = c.get("name")
+        o.amount = c.get("amount")
+        o.rate_type = c.get("rateType", "FIXED")
+        o.frequency = c.get("frequency", "MONTHLY")
+        o.applies_to = c.get("appliesTo", "both")
+        o.editable_by_org = c.get("editableByOrg", True)
+        custom.append(o)
+    obj.custom_lines = _DraftQS(custom)
+    return obj
+
+
+@api_view(["POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def cost_sheet_preview_draft(request):
+    """Live preview of an unsaved cost-sheet draft (same rule + cost engine)."""
+    from api import costsheet
+    if not _require_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    body = request.data if isinstance(request.data, dict) else {}
+    result = costsheet.compute_worker_cost(
+        _draft_template(body), basic_wage=body.get("basicWage"), vda=body.get("vda"),
+        include_contractor=bool(body.get("includeContractor")),
+        overrides=body.get("overrides") if isinstance(body.get("overrides"), dict) else None)
+    return Response({"data": result}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
+def cost_sheet_sites(request):
+    """Sites the admin can pin a site-specific cost sheet to."""
+    from bss_core.models import Site
+    if not _require_admin(request):
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    rows = [{
+        "id": s.id, "name": payloads._d(s.site_name), "code": payloads._d(s.site_code),
+        "state": payloads._d(s.state),
+        "employer": payloads._d(s.employer.username if s.employer else ""),
+    } for s in Site.objects.select_related("employer").order_by("site_name")[:1000]]
+    return Response({"rows": rows}, status=status.HTTP_200_OK)
+
+
 _TRANSITIONS = {
-    "submit": ("COMPLIANCE", {"DRAFT"}),
-    "compliance-pass": ("FINANCE", {"COMPLIANCE"}),
-    "compliance-fail": ("DRAFT", {"COMPLIANCE"}),
-    "finance-approve": ("PUBLISHED", {"FINANCE"}),
-    "finance-reject": ("DRAFT", {"FINANCE"}),
-    "publish": ("PUBLISHED", {"DRAFT", "COMPLIANCE", "FINANCE"}),
+    # Doc flow: Draft → Employer Review → Published (reject → back to Draft).
+    "submit": ("REVIEW", {"DRAFT"}),
+    "employer-approve": ("PUBLISHED", {"REVIEW"}),
+    "employer-reject": ("DRAFT", {"REVIEW"}),
+    "approve": ("PUBLISHED", {"REVIEW"}),
+    "reject": ("DRAFT", {"REVIEW"}),
+    # Back-compat aliases for the earlier Compliance/Finance chain.
+    "compliance-pass": ("REVIEW", {"DRAFT", "COMPLIANCE"}),
+    "compliance-fail": ("DRAFT", {"REVIEW", "COMPLIANCE"}),
+    "finance-approve": ("PUBLISHED", {"REVIEW", "FINANCE"}),
+    "finance-reject": ("DRAFT", {"REVIEW", "FINANCE"}),
+    "publish": ("PUBLISHED", {"DRAFT", "REVIEW", "COMPLIANCE", "FINANCE"}),
     "archive": ("ARCHIVED", {"PUBLISHED"}),
 }
 
@@ -275,8 +370,8 @@ _TRANSITIONS = {
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def cost_sheet_transition(request, template_id):
-    """Advance a template through the approval workflow (Draft → Compliance →
-    Finance → Published)."""
+    """Advance a template through the approval workflow (Draft → Employer Review
+    → Published)."""
     from bss_core.models import CostSheetTemplate
     if not _require_admin(request):
         return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
@@ -507,8 +602,9 @@ def cost_sheet_new_version(request, template_id):
 
 
 __all__ = ["cost_sheets", "cost_sheet_detail", "cost_sheet_preview",
+           "cost_sheet_preview_draft",
            "cost_sheet_transition", "cost_sheets_available", "cost_sheet_clone",
-           "cost_sheet_statutory_master", "cost_sheet_min_wage_lookup",
+           "cost_sheet_statutory_master", "cost_sheet_min_wage_lookup", "cost_sheet_sites",
            "org_cost_sheet_update", "org_cost_sheet_preview",
            "cost_sheet_new_version",
            "_template_row", "_apply_template", "_clone_template"]

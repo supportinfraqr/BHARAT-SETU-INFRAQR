@@ -11,9 +11,17 @@ type Statutory = { component:string; rate:number; rateType:string; applicable:bo
 type Custom = { name:string; amount:number; rateType:string; frequency:string; appliesTo:string; editableByOrg:boolean };
 type Template = {
   id:number; name:string; code:string; templateType:string; appliesTo:string; industry:string; state:string;
+  states:string[]; siteId:number | null; siteName?:string;
   effectiveDate:string; effectiveTo:string; workerCategory:string; designation:string; currency:string;
   calculationFrequency:string; status:string; version:number; inheritsParentRules:boolean; notes:string;
   designations:Designation[]; minimumWage:MinimumWage | null; statutory:Statutory[]; custom:Custom[];
+};
+
+type CostPreview = {
+  basicWage:number; vda:number; minimumWage:number; dailyWage:number;
+  statutory:Array<{ component:string; amount:number }>; statutoryTotal:number;
+  custom:Array<{ name:string; computed:number }>; customTotal:number;
+  employerCost:number; contractorBilling:number | null; ctc:number; currency:string;
 };
 
 const DEFAULT_STATUTORY: Statutory[] = [
@@ -29,8 +37,30 @@ const DEFAULT_STATUTORY: Statutory[] = [
   { component:"NATIONAL_HOLIDAYS", rate:0, rateType:"DAYS", applicable:true, condition:"Mandatory paid holidays", mandatory:true },
 ];
 const EMPTY_MW: MinimumWage = { state:"", zone:"", district:"", scheduledEmployment:"", workerCategory:"", basicWage:0, vda:0, minimumMonthlyWage:0, minimumDailyWage:0, notificationNumber:"", effectiveDate:"" };
+
+// The doc's standard (optional) custom cost heads — one-click to add.
+const STANDARD_HEADS: Custom[] = [
+  { name:"Uniform", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"PPE / Safety Equipment", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Medical Examination", amount:0, rateType:"FIXED", frequency:"ANNUAL", appliesTo:"both", editableByOrg:true },
+  { name:"Insurance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Training", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Food", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Accommodation", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Transport", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Administrative Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Reliever Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Site Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Shift Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Risk Allowance", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true },
+  { name:"Profit Margin", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Service Charges", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"Applicable Taxes (GST)", amount:0, rateType:"PERCENT", frequency:"MONTHLY", appliesTo:"contractor", editableByOrg:true },
+  { name:"BSS Platform Cost", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:false },
+];
 const emptyTemplate = (): Template => ({
   id:0, name:"", code:"", templateType:"UNIVERSAL", appliesTo:"both", industry:"", state:"",
+  states:[], siteId:null,
   effectiveDate:"", effectiveTo:"", workerCategory:"", designation:"", currency:"INR",
   calculationFrequency:"MONTHLY", status:"DRAFT", version:1, inheritsParentRules:true, notes:"",
   designations:[], minimumWage:{ ...EMPTY_MW }, statutory:DEFAULT_STATUTORY.map(s => ({ ...s })), custom:[],
@@ -43,8 +73,12 @@ export default function CostSheetTemplatesPage() {
   const [rows, setRows] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState<Template | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<CostPreview | null>(null);
+  const [previewWage, setPreviewWage] = useState('');
+  const [sites, setSites] = useState<Array<{ id:number; name:string; code:string; state:string; employer:string }>>([]);
   const [statutoryMaster, setStatutoryMaster] = useState<Statutory[]>(DEFAULT_STATUTORY);
 
   // Statutory component defaults come from the statutory master (never hardcoded).
@@ -95,6 +129,31 @@ export default function CostSheetTemplatesPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    fetch('/api/admin/cost-sheets/sites', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { rows?: typeof sites } | null) => setSites(j?.rows ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Live cost preview — re-runs the rule + cost engine on the current draft.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clear when the editor closes
+    if (!draft) { setPreview(null); return; }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch('/api/admin/cost-sheets/preview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...draft, basicWage: previewWage ? Number(previewWage) : undefined, includeContractor: true }),
+        signal: controller.signal,
+      })
+        .then(r => (r.ok ? r.json() : null))
+        .then((j: { data?: CostPreview } | null) => setPreview(j?.data ?? null))
+        .catch(() => {});
+    }, 350);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [draft, previewWage]);
+
   async function save() {
     if (!draft) return;
     setBusy(true); setError("");
@@ -133,6 +192,21 @@ export default function CostSheetTemplatesPage() {
 
   const set = <K extends keyof Template>(key: K, value: Template[K]) => setDraft(d => d ? { ...d, [key]: value } : d);
 
+  async function transition(row: Template, action: string) {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const response = await fetch(`/api/admin/cost-sheets/${row.id}/transition`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const body = await response.json().catch(() => ({})) as { data?:Template; error?:string };
+      if (!response.ok || !body.data) throw new Error(body.error ?? "The workflow could not be updated.");
+      setRows(current => current.map(r => r.id === row.id ? { ...r, status: body.data!.status } : r));
+      setNotice(`Template ${action.replace(/-/g, " ")} — done.`);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "The workflow could not be updated."); }
+    finally { setBusy(false); }
+  }
+
   const columns: DataColumn<Template>[] = [
     { id:"name", header:"Template", value:r => r.name, render:r => <div><strong className="text-gray-900">{r.name}</strong><p className="font-mono text-[10px] text-gray-400">{r.code}</p></div> },
     { id:"state", header:"State / Industry", value:r => `${r.state || "All India"} · ${r.industry || "All"}` },
@@ -144,6 +218,12 @@ export default function CostSheetTemplatesPage() {
     { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => (
       <div className="flex items-center gap-2">
         <button onClick={() => setDraft({ ...r, minimumWage: r.minimumWage ?? { ...EMPTY_MW } })} className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"><Pencil size={12}/>Edit</button>
+        {r.status === "DRAFT" && <button disabled={busy} onClick={() => void transition(r, "submit")} className="text-xs font-semibold text-[#073B67] hover:underline disabled:opacity-50">Submit for review</button>}
+        {r.status === "REVIEW" && <>
+          <button disabled={busy} onClick={() => void transition(r, "employer-approve")} className="text-xs font-semibold text-green-700 hover:underline disabled:opacity-50">Approve &amp; publish</button>
+          <button disabled={busy} onClick={() => void transition(r, "employer-reject")} className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50">Reject</button>
+        </>}
+        {r.status === "PUBLISHED" && <button disabled={busy} onClick={() => void transition(r, "archive")} className="text-xs font-semibold text-gray-600 hover:underline disabled:opacity-50">Archive</button>}
         {r.status === "PUBLISHED" && <button disabled={busy} onClick={() => void newVersion(r)} className="text-xs font-semibold text-gray-700 hover:text-[#073B67] inline-flex items-center gap-1 disabled:opacity-50">New version</button>}
         <button onClick={() => void remove(r)} className="text-xs font-semibold text-red-600 hover:underline inline-flex items-center gap-1"><Trash2 size={12}/>Delete</button>
       </div>
@@ -157,6 +237,7 @@ export default function CostSheetTemplatesPage() {
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
+    {notice && <p role="status" className="bss-alert bss-alert-success">{notice}</p>}
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading templates…</p>
       : <EnterpriseDataTable title="Cost sheet templates" rows={rows} columns={columns} rowKey={r => String(r.id)} filename="cost-sheet-templates"/>}
@@ -177,6 +258,8 @@ export default function CostSheetTemplatesPage() {
               <label className={label}>Applicable for<select value={draft.appliesTo} onChange={e => set("appliesTo", e.target.value)} className={input}><option value="employer">Employer</option><option value="contractor">Contractor</option><option value="both">Both</option></select></label>
               <label className={label}>Industry<input value={draft.industry} onChange={e => set("industry", e.target.value)} placeholder="Construction" className={input}/></label>
               <label className={label}>State / All India<select value={draft.state} onChange={e => set("state", e.target.value)} className={input}><option value="">All India</option>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+              <label className={label}>Geography (multi-state, optional)<select multiple value={draft.states} onChange={e => set("states", Array.from(e.target.selectedOptions).map(o => o.value))} className={input + " h-28"}>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+              {draft.templateType === "SITE" && <label className={label}>Site (required for site-specific)<select value={draft.siteId ?? ""} onChange={e => set("siteId", e.target.value ? Number(e.target.value) : null)} className={input}><option value="">Select site</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}</select></label>}
               <label className={label}>Worker category<input value={draft.workerCategory} onChange={e => set("workerCategory", e.target.value)} placeholder="Semi-skilled" className={input}/></label>
               <label className={label}>Designation<input value={draft.designation} onChange={e => set("designation", e.target.value)} placeholder="Mason helper" className={input}/></label>
               <label className={label}>Effective date<input type="date" value={draft.effectiveDate} onChange={e => set("effectiveDate", e.target.value)} className={input}/></label>
@@ -212,6 +295,7 @@ export default function CostSheetTemplatesPage() {
               <label className={label}>Basic wage<input readOnly value={draft.minimumWage?.basicWage ?? 0} className={input + " bg-gray-50"}/></label>
               <label className={label}>VDA<input readOnly value={draft.minimumWage?.vda ?? 0} className={input + " bg-gray-50"}/></label>
               <label className={label}>Min monthly wage<input readOnly value={draft.minimumWage?.minimumMonthlyWage ?? 0} className={input + " bg-gray-50"}/></label>
+              <label className={label}>Min daily wage<input readOnly value={draft.minimumWage?.minimumDailyWage ?? 0} className={input + " bg-gray-50"}/></label>
               <label className={label}>Notification no.<input readOnly value={draft.minimumWage?.notificationNumber || ""} className={input + " bg-gray-50"}/></label>
               <label className={label}>Effective date<input readOnly value={draft.minimumWage?.effectiveDate || ""} className={input + " bg-gray-50"}/></label>
             </div>
@@ -245,8 +329,31 @@ export default function CostSheetTemplatesPage() {
                 <label className="flex items-center gap-1 text-[10px] font-semibold text-gray-600 whitespace-nowrap"><input type="checkbox" checked={c.editableByOrg} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, editableByOrg:e.target.checked } : x))} className="accent-[#073B67]"/>Editable by org</label>
                 <button type="button" onClick={() => set("custom", draft.custom.filter((_, j) => j !== i))} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 size={14}/></button>
               </div>)}
-              <button type="button" onClick={() => set("custom", [...draft.custom, { name:"", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add cost head</button>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => set("custom", [...draft.custom, { name:"", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add cost head</button>
+                <button type="button" onClick={() => { const names = new Set(draft.custom.map(c => c.name)); set("custom", [...draft.custom, ...STANDARD_HEADS.filter(h => !names.has(h.name)).map(h => ({ ...h }))]); }} className="h-8 px-3 rounded-lg border border-[#073B67]/30 bg-[#073B67]/5 text-[#073B67] text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add standard heads</button>
+              </div>
             </div>
+          </section>
+
+          {/* Step 4 — live preview (rule + cost engine) */}
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">4 · Preview (rule + cost engine)</h3>
+            <p className="text-[11px] text-gray-400 mb-3">Live 3-layer breakdown for one worker. Leave blank to use the minimum wage, or enter a basic wage to preview.</p>
+            <label className={label}>Basic wage (optional override)
+              <input type="number" value={previewWage} onChange={e => setPreviewWage(e.target.value)} placeholder="e.g. 18000" className={input}/>
+            </label>
+            {preview ? <div className="mt-3 rounded-xl border border-gray-100 overflow-hidden text-xs">
+              <div className="grid grid-cols-3 gap-px bg-gray-100">
+                <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Minimum wage</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.minimumWage.toLocaleString('en-IN')}</p></div>
+                <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Statutory</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.statutoryTotal.toLocaleString('en-IN')}</p></div>
+                <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Custom</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.customTotal.toLocaleString('en-IN')}</p></div>
+              </div>
+              <div className="grid grid-cols-2 gap-px bg-gray-100">
+                <div className="bg-[#F0F4FA] p-3"><p className="text-[10px] uppercase text-[#073B67]">Employer cost</p><p className="font-bold text-[#073B67] mt-0.5">{preview.currency} {preview.employerCost.toLocaleString('en-IN')}</p></div>
+                <div className="bg-[#073B67] p-3 text-white"><p className="text-[10px] uppercase opacity-70">Contractor billing / CTC</p><p className="font-bold mt-0.5">{preview.currency} {(preview.contractorBilling ?? preview.ctc).toLocaleString('en-IN')}</p></div>
+              </div>
+            </div> : <p className="text-[11px] text-gray-400 mt-3">Preview updates as you edit…</p>}
           </section>
         </div>
         <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex justify-end gap-2">

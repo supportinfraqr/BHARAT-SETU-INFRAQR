@@ -20,9 +20,9 @@ class CostSheetTemplate(models.Model):
     TYPE = [("UNIVERSAL", "Universal"), ("STATE", "State-specific"),
             ("INDUSTRY", "Industry-specific"), ("SITE", "Site-specific")]
     APPLIES_TO = [("employer", "Employer"), ("contractor", "Contractor"), ("both", "Both")]
-    STATUS = [("DRAFT", "Draft"), ("COMPLIANCE", "Compliance review"),
-              ("FINANCE", "Finance review"), ("PUBLISHED", "Published"),
-              ("ARCHIVED", "Archived")]
+    # Doc flow: Draft → Employer Review → Published (rejected → back to Draft).
+    STATUS = [("DRAFT", "Draft"), ("REVIEW", "Employer review"),
+              ("PUBLISHED", "Published"), ("ARCHIVED", "Archived")]
     FREQ = [("MONTHLY", "Monthly"), ("DAILY", "Daily"), ("PER_SHIFT", "Per-shift")]
 
     name = models.CharField(max_length=160)
@@ -31,6 +31,12 @@ class CostSheetTemplate(models.Model):
     applies_to = models.CharField(max_length=20, choices=APPLIES_TO, default="both")
     industry = models.CharField(max_length=120, blank=True)
     state = models.CharField(max_length=60, blank=True)  # "" = All India
+    # Multi-state geography (doc: Geography multi-select). `state` stays the
+    # primary state used for the minimum-wage lookup.
+    states = models.JSONField(default=list, blank=True)
+    # Site-specific templates (type = SITE) pin to one site.
+    site = models.ForeignKey("bss_core.Site", on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name="+")
     effective_date = models.DateField(null=True, blank=True)
     effective_to = models.DateField(null=True, blank=True)
     worker_category = models.CharField(max_length=60, blank=True)
