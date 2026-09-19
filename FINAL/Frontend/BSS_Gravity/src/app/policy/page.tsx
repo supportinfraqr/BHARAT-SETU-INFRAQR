@@ -1,4 +1,5 @@
 import PublicSiteHeader from '@/components/PublicSiteHeader';
+import PolicyLinks from '@/components/PolicyLinks';
 
 type Block =
   | { kind: 'p'; text: string }
@@ -308,6 +309,8 @@ export default function PrivacyPolicy() {
               </p>
             </section>
           </div>
+
+          <PolicyLinks current="policy" />
         </div>
       </main>
     </div>

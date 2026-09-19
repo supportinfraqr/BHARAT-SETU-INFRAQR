@@ -1,4 +1,5 @@
 import PublicSiteHeader from '@/components/PublicSiteHeader';
+import PolicyLinks from '@/components/PolicyLinks';
 
 const RECIPIENTS: { who: string; detail: string }[] = [
   {
@@ -67,6 +68,8 @@ export default function DataSharingPolicy() {
             {' '}and{' '}
             <a href="/terms" className="text-[#1E3A8A] font-semibold hover:underline">Terms &amp; Conditions</a>.
           </p>
+
+          <PolicyLinks current="data-sharing" />
         </div>
       </main>
     </div>
