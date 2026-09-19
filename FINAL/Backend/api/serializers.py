@@ -475,8 +475,8 @@ class DigiLockerDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = DigiLockerDocument
         fields = ("id", "profile", "user", "uri", "doctype", "issuer", "doc_date",
-                  "file_path", "file_name", "file_url", "pan_number", "status", "downloaded_at",
-                  "created_at")
+                  "file_path", "file_name", "file_url", "pan_number", "status", "error_detail",
+                  "downloaded_at", "created_at")
         read_only_fields = ("id", "file_path", "file_name", "file_url", "status", "downloaded_at", "created_at")
 
     def get_file_url(self, obj):

@@ -9,6 +9,7 @@ Includes the domain workflows encoded in the schema:
 """
 
 import hashlib
+import logging
 import os
 import secrets
 import uuid
@@ -907,12 +908,15 @@ def _background_fetch_documents(session, access_token, profile, user):
                         _sync_document_register(user, master_code, file_bytes, fname, "application/pdf")
                     except Exception:
                         pass
-            except Exception:
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "DigiLocker download failed for uri=%s: %s", uri, exc)
                 DigiLockerDocument.objects.get_or_create(
                     profile=profile, uri=uri,
                     defaults={"user": user, "doctype": (item.get("doctype") or "")[:120],
                               "issuer": (item.get("issuer") or "")[:300],
-                              "doc_date": (item.get("date") or ""), "status": "FAILED"})
+                              "doc_date": (item.get("date") or ""), "status": "FAILED",
+                              "error_detail": str(exc)[:255]})
     finally:
         session.status = "COMPLETED"
         session.save(update_fields=["status", "updated_at"])

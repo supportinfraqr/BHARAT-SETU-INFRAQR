@@ -54,6 +54,7 @@ class DigiLockerDocument(models.Model):
     file_name = models.CharField(max_length=255, blank=True)
     pan_number = models.CharField(max_length=20, blank=True)
     status = models.CharField(max_length=20, choices=STATUS, default="DOWNLOADED")
+    error_detail = models.CharField(max_length=255, blank=True)
     downloaded_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

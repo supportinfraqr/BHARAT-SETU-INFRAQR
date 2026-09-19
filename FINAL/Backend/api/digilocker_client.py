@@ -142,7 +142,7 @@ def download_document(access_token: str, uri: str) -> bytes:
     resp = requests.get(
         url, headers={"Authorization": f"Bearer {access_token}"}, timeout=30)
     if resp.status_code != 200:
-        raise DigiLockerError(f"file download failed: {resp.status_code}")
+        raise DigiLockerError(f"file download failed: {resp.status_code} {resp.text[:160]}")
     return resp.content
 
 
