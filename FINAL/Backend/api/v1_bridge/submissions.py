@@ -52,6 +52,10 @@ def worker_verify_document(request):
         return Response({"verified": False, "docType": doc_type, "message": message},
                         status=status.HTTP_200_OK)
 
+    # Auto-read fields from the OCR text so the UI can offer a pre-fill
+    # (name / DOB / gender / number / address) from the uploaded card.
+    fields = ocr_client.extract_fields(doc_type, text)
+
     # Persist the verified number.
     if doc_type in ("aadhaar", "pan"):
         identity = WorkerIdentity.objects.filter(user=user).first()
@@ -72,7 +76,8 @@ def worker_verify_document(request):
             setattr(ss, "epfo_uan" if doc_type == "uan" else "esic_ip_number", number)
         ss.save()
 
-    return Response({"verified": True, "docType": doc_type, "message": message},
+    return Response({"verified": True, "docType": doc_type, "message": message,
+                     "fields": fields},
                     status=status.HTTP_200_OK)
 
 
