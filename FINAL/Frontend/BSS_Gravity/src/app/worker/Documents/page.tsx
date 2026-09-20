@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, Trash2, ChevronLeft, BadgeCheck, ScanSearch } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, AlertTriangle, Upload, Eye, XCircle, Download, RefreshCcw, Trash2, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useWorker } from '@/contexts/WorkerContext';
 import { buildGatePassHtml } from '@/lib/documentEngine/gatePass';
@@ -36,15 +36,6 @@ const STATUS_LABELS: Record<string, string> = {
   ISSUED: 'Issued',
 };
 
-// Documents whose upload can be OCR-verified & autofilled (doc code → verify-document docType).
-const OCR_DOC_TYPES: Record<string, string> = {
-  AADHAR: 'aadhaar',
-  AADHAAR: 'aadhaar',
-  PAN: 'pan',
-  UAN: 'uan',
-  ESIC: 'esic',
-};
-
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   const d = new Date(value);
@@ -55,7 +46,7 @@ function formatDate(value: string | null): string | null {
 export default function DocumentsModule() {
   const { t } = useLanguage();
   const router = useRouter();
-  const { worker, refresh } = useWorker();
+  const { worker } = useWorker();
   const gatePasses = worker.gatePasses ?? [];
   const [passPreview, setPassPreview] = useState<{ html: string; title: string } | null>(null);
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -65,10 +56,6 @@ export default function DocumentsModule() {
   const [notice, setNotice] = useState('');
   const [uploadTarget, setUploadTarget] = useState<{ code: string; name: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [verifyTarget, setVerifyTarget] = useState<{ code: string; docType: string; name: string } | null>(null);
-  const [verifyBusy, setVerifyBusy] = useState(false);
-  const [verifyResult, setVerifyResult] = useState<{ ok: boolean; message: string; fields?: Record<string, string> } | null>(null);
-  const verifyInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -138,43 +125,6 @@ export default function DocumentsModule() {
     }
   };
 
-  const verifyChoose = (doc: DocumentRow) => {
-    const docType = OCR_DOC_TYPES[doc.code];
-    if (!docType) return;
-    setVerifyTarget({ code: doc.code, docType, name: doc.name });
-    setVerifyResult(null);
-    verifyInputRef.current?.click();
-  };
-
-  const verifyFile = async (file?: File) => {
-    if (!file || !verifyTarget) return;
-    if (file.size > 10 * 1024 * 1024) { setVerifyResult({ ok: false, message: 'Document must be 10 MB or smaller.' }); return; }
-    setVerifyBusy(true);
-    setError('');
-    setNotice('');
-    setVerifyResult(null);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('docType', verifyTarget.docType);
-      form.append('docName', verifyTarget.name);
-      const response = await fetch('/api/portal/verify-document', { method: 'POST', body: form });
-      const json = await response.json() as { verified?: boolean; message?: string; fields?: Record<string, string>; error?: string };
-      if (json.error) { setVerifyResult({ ok: false, message: json.error }); return; }
-      const ok = json.verified === true;
-      if (ok) {
-        await refresh();
-        await load();
-      }
-      setVerifyResult({ ok, message: json.message || (ok ? 'Verified.' : 'Could not verify.'), fields: json.fields });
-    } catch (err) {
-      setVerifyResult({ ok: false, message: err instanceof Error ? err.message : 'Verification failed.' });
-    } finally {
-      setVerifyBusy(false);
-      if (verifyInputRef.current) verifyInputRef.current.value = '';
-    }
-  };
-
   const remove = async (doc: DocumentRow) => {
     if (!doc.id) return;
     if (!window.confirm(`Delete the uploaded ${doc.name}?`)) return;
@@ -237,10 +187,7 @@ export default function DocumentsModule() {
         if (gp) return <button onClick={() => { void viewPass(gp); }} disabled={gp.blocked} className="h-8 px-3 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold inline-flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"><Eye size={13}/>View pass</button>;
         if (gatePassDisabled(d)) return <span className="text-[11px] font-semibold text-gray-400">Not applicable</span>;
         const locked = Boolean(d.locked);
-        const ocrDocType = OCR_DOC_TYPES[d.code];
-        const canVerify = Boolean(ocrDocType && !locked && d.owner !== 'System');
         return <div className="flex gap-1.5 items-center">
-          {canVerify && <button onClick={() => verifyChoose(d)} disabled={verifyBusy} title="OCR-verify this document and autofill its number" className="p-1.5 text-green-700 hover:text-green-800 bg-green-50 rounded border border-green-200" aria-label="Verify & autofill"><BadgeCheck size={15} /></button>}
           {d.id && label(d.status) !== 'Missing' && <button onClick={() => openDocument(d)} className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="View Document"><Eye size={15} /></button>}
           {d.id && <a href={`/api/worker/documents/${d.id}/file`} download className="p-1.5 text-gray-400 hover:text-[#073B67] bg-gray-50 rounded border" title="Download"><Download size={15} /></a>}
           {locked ? (
@@ -282,53 +229,13 @@ export default function DocumentsModule() {
       </div>
 
       <input ref={inputRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => void receiveFile(e.target.files?.[0])} />
-      <input ref={verifyInputRef} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={e => void verifyFile(e.target.files?.[0])} />
 
       {error && <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {notice && <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-700">{notice}</div>}
-      {verifyResult && (
-        <div className={`rounded-xl border px-4 py-3 text-sm ${verifyResult.ok ? 'border-green-100 bg-green-50 text-green-800' : 'border-red-100 bg-red-50 text-red-700'}`}>
-          <div className="flex items-start gap-2">
-            {verifyResult.ok
-              ? <CheckCircle2 size={17} className="mt-0.5 text-green-600 shrink-0" />
-              : <XCircle size={17} className="mt-0.5 text-red-500 shrink-0" />}
-            <div className="flex-1">
-              <p className="font-semibold flex items-center gap-2">{verifyBusy ? 'Verifying…' : verifyResult.message}</p>
-              {verifyBusy && <p className="text-xs mt-1 opacity-80">Running OCR on the uploaded document — this can take a few seconds.</p>}
-              {!verifyBusy && verifyTarget && (
-                <p className={`text-xs mt-1 ${verifyResult.ok ? 'text-green-700/80' : 'text-red-700/80'}`}
-                   dangerouslySetInnerHTML={{
-                     __html:
-                       verifyResult.ok
-                         ? `&#10003; ${verifyTarget.name} checked against its printed content — recognised numbers are saved to your profile for autofill.`
-                         : `&times; ${verifyTarget.name} could not be confirmed from the document content. You can still upload it below; it will stay "Under Verification" until reviewed.`,
-                   }}
-                />
-              )}
-              {!verifyBusy && verifyResult.ok && verifyResult.fields && Object.keys(verifyResult.fields).length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {Object.entries(verifyResult.fields).map(([k, v]) => v && (
-                    <span key={k} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-white/70 border border-green-200 text-green-800">
-                      <ScanSearch size={11} /> {String(k).replace(/^./, c => c.toUpperCase())}: {v}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => { setVerifyResult(null); setVerifyTarget(null); }}
-              className="text-gray-400 hover:text-gray-600 text-xs font-semibold shrink-0"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
 
       <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
         <p className="text-xs text-gray-600">
-          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed — a manual upload is never marked <strong>Verified</strong>. Use the <strong>verify</strong> icon (&#10003;) on Aadhaar, PAN, UAN or ESIC rows to run an instant OCR check against the card&apos;s printed content and <strong>autofill its number</strong> into your profile; it stays unverified until the employer/contractor reviews it. Link your <strong>DigiLocker</strong> account to fetch government-issued copies of Aadhaar, PAN, UAN and Educational certificates; those arrive <strong>Verified</strong> and locked. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
+          Upload each mandatory document as <strong>PDF, JPEG or PNG</strong> (max 10 MB). Uploads are saved to your BSS record and move to <strong>Under Verification</strong> until reviewed — a manual upload is never marked <strong>Verified</strong>. Link your <strong>DigiLocker</strong> account to fetch government-issued copies of Aadhaar, PAN, UAN and Educational certificates; those arrive <strong>Verified</strong> and locked. Documents marked <strong>Auto-Generated</strong> (e.g. gate passes) are issued by the system after employer/contractor approvals and cannot be uploaded here.
         </p>
       </section>
 
