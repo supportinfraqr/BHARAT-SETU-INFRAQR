@@ -145,6 +145,21 @@ export default function ContractorCompliancePage() {
     finally { setBusy(false); }
   };
 
+  const downloadValidationErrors = () => {
+    if (!report) return;
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows: string[][] = [
+      ['Type', 'Row', 'Field', 'Message'],
+      ...report.errors.map(i => ['Error', String(i.row ?? ''), i.field ?? '', i.message]),
+      ...report.warnings.map(i => ['Warning', String(i.row ?? ''), i.field ?? '', i.message]),
+    ];
+    const csv = rows.map(r => r.map(esc).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `clra-validation-${month}-${state}.csv`.replace(/\s+/g, '_');
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   const generateRegisters = async () => {
     if (!masterFile) { setError('Choose a Master File before generating registers.'); return; }
     setBusy(true); setError(''); setNotice('');
@@ -247,6 +262,7 @@ export default function ContractorCompliancePage() {
               {report.errors.length ? <TriangleAlert size={14}/> : <CheckCircle2 size={14}/>}
               {report.errors.length ? `${report.errors.length} error(s) — generation is blocked` : 'Validation passed'}
               <span className="ml-auto font-semibold text-gray-500">{report.rowCount} rows · {report.validRows} valid · {report.siteCount} site(s) · {report.locationCount} location(s)</span>
+              <button type="button" onClick={downloadValidationErrors} className="ml-3 shrink-0 inline-flex items-center gap-1 font-semibold text-gray-700 hover:underline"><Download size={12}/>Errors (CSV)</button>
             </div>
             {report.errors.length > 0 && <ul className="divide-y divide-gray-100 max-h-40 overflow-y-auto">{report.errors.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-red-700"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
             {report.warnings.length > 0 && <ul className="divide-y divide-gray-100 max-h-32 overflow-y-auto border-t border-gray-100">{report.warnings.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-amber-700"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
@@ -389,13 +405,13 @@ function BatchDrilldown({ batchId, onClose }: { batchId:string; onClose:() => vo
         <div className="rounded-xl border border-gray-100 p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Applicable documents — {site.site}{site.siteCode ? ` (${site.siteCode})` : ''} · {site.state}</p>
           {site.documents.length
-            ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="text-gray-700">{doc.purpose}</span><span className="flex items-center gap-2 text-gray-400">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <button disabled={busy} onClick={() => void openRegister(doc.templateId as number, doc.purpose)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button> : <span className="text-gray-300">no template</span>}</span></li>)}</ul>
+            ? <ul className="space-y-1.5">{site.documents.map((doc, i) => <li key={i} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs"><span className="text-gray-700">{doc.purpose}</span><span className="flex items-center gap-2 text-gray-400">{doc.form}{doc.mandatory ? ' · mandatory' : ''}{doc.templateId ? <><button disabled={busy} onClick={() => void openRegister(doc.templateId as number, doc.purpose)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button><a href={`/api/contractor/compliance-batches/${batchId}/register/${doc.templateId}/xlsx`} className="text-gray-500 font-semibold hover:underline">Excel</a></> : <span className="text-gray-300">no template</span>}</span></li>)}</ul>
             : <p className="text-xs text-gray-400">The applicability matrix has no form rows for {site.state}.</p>}
         </div>
         <div className="rounded-xl border border-gray-100 p-4">
           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Register templates ({site.templates.length})</p>
           {site.templates.length
-            ? <div className="flex flex-wrap gap-2">{site.templates.map(t => <span key={t.id} className="inline-flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-1.5 text-xs"><strong className="font-mono text-[#073B67]">{t.formCode}</strong><span className="text-gray-400">{t.columns} field(s)</span><button disabled={busy} onClick={() => void openRegister(t.id, t.formCode)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button>{t.hasFile && <a href={`/api/register-templates/${t.id}/file`} download className="text-gray-500 hover:underline">source</a>}</span>)}</div>
+            ? <div className="flex flex-wrap gap-2">{site.templates.map(t => <span key={t.id} className="inline-flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-1.5 text-xs"><strong className="font-mono text-[#073B67]">{t.formCode}</strong><span className="text-gray-400">{t.columns} field(s)</span><button disabled={busy} onClick={() => void openRegister(t.id, t.formCode)} className="text-blue-700 font-semibold hover:underline disabled:opacity-50">View register</button><a href={`/api/contractor/compliance-batches/${batchId}/register/${t.id}/xlsx`} className="text-gray-500 font-semibold hover:underline">Excel</a>{t.hasFile && <a href={`/api/register-templates/${t.id}/file`} download className="text-gray-500 hover:underline">source</a>}</span>)}</div>
             : <p className="text-xs text-gray-400">No templates configured for {site.state}.</p>}
         </div>
       </div>}

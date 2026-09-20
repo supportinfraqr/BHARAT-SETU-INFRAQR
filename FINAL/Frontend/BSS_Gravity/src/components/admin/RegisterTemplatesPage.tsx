@@ -4,12 +4,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Download, FileSpreadsheet, Loader2, Pencil, Search, X } from 'lucide-react';
 import EnterpriseDataTable, { type DataColumn } from '@/components/worker/EnterpriseDataTable';
 
+type FieldMapping = { column: string; fieldKey: string };
+type CalcRule = { targetField: string; label: string; formula: string };
+
 type TemplateRow = {
   id: number; state: string; formCode: string; title: string; sourceFormat: string;
   columns: string[]; meta: { lines?: string[]; file?: string }; html: string; active: boolean;
+  fieldMappings?: FieldMapping[]; calculationRules?: CalcRule[];
   formatAvailable?: boolean;
   version: number; fileName: string; hasFile: boolean;
 };
+
+const FIELD_KEYS = ['sl', 'name', 'bssId', 'fatherName', 'gender', 'designation', 'department', 'doj', 'mobile', 'site', 'location'];
 
 const REGISTER_TOKENS = [
   'TITLE', 'FORM_CODE', 'STATE', 'CONTRACTOR_NAME', 'EMPLOYER_NAME', 'SITE_NAME', 'SITE_CODE',
@@ -26,6 +32,8 @@ export default function RegisterTemplatesPage() {
   const [view, setView] = useState<TemplateRow | null>(null);
   const [htmlFor, setHtmlFor] = useState<TemplateRow | null>(null);
   const [htmlDraft, setHtmlDraft] = useState('');
+  const [mapDraft, setMapDraft] = useState<FieldMapping[]>([]);
+  const [calcDraft, setCalcDraft] = useState<CalcRule[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -54,12 +62,12 @@ export default function RegisterTemplatesPage() {
     try {
       const response = await fetch(`/api/admin/register-templates/${htmlFor.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: htmlDraft }),
+        body: JSON.stringify({ html: htmlDraft, fieldMappings: mapDraft, calculationRules: calcDraft }),
       });
       const body = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(body.error ?? 'Save failed.');
-      setRows(current => current.map(r => r.id === htmlFor.id ? { ...r, html: htmlDraft } : r));
-      setHtmlFor(null); setNotice('Register HTML saved.');
+      setRows(current => current.map(r => r.id === htmlFor.id ? { ...r, html: htmlDraft, fieldMappings: mapDraft, calculationRules: calcDraft } : r));
+      setHtmlFor(null); setNotice('Register template saved.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Save failed.'); }
     finally { setBusy(false); }
   }
@@ -73,7 +81,7 @@ export default function RegisterTemplatesPage() {
     { id:'version', header:'Version', value:r => r.version },
     { id:'actions', header:'Actions', filterable:false, value:r => r.id, render:r => (
       <div className="flex items-center gap-2">
-        <button onClick={() => { setHtmlFor(r); setHtmlDraft(r.html || ''); setError(''); }} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><Pencil size={13}/>{r.html ? 'Edit HTML' : 'Add HTML'}</button>
+        <button onClick={() => { setHtmlFor(r); setHtmlDraft(r.html || ''); setMapDraft(r.fieldMappings ?? []); setCalcDraft(r.calculationRules ?? []); setError(''); }} className="inline-flex items-center gap-1 text-xs font-semibold text-[#073B67] hover:underline"><Pencil size={13}/>{r.html || (r.fieldMappings?.length ?? 0) ? 'Edit' : 'Configure'}</button>
         <button onClick={() => setView(r)} className="text-xs font-semibold text-blue-700 hover:underline">View fields</button>
         {r.hasFile && <a href={`/api/register-templates/${r.id}/file`} download className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-[#073B67]"><Download size={13}/>Source</a>}
       </div>
@@ -131,8 +139,36 @@ export default function RegisterTemplatesPage() {
           <div className="flex flex-wrap gap-1.5">
             {REGISTER_TOKENS.map(tok => <button key={tok} type="button" onClick={() => setHtmlDraft(d => d + `{{${tok}}}`)} className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">{`{{${tok}}}`}</button>)}
           </div>
-          <textarea value={htmlDraft} onChange={e => setHtmlDraft(e.target.value)} rows={18} spellCheck={false} placeholder="<!doctype html>… <table><thead><tr>{{HEAD}}</tr></thead><tbody>{{ROWS}}</tbody></table> …" className="w-full rounded-lg border border-gray-200 p-3 font-mono text-[11px] leading-relaxed" />
+          <textarea value={htmlDraft} onChange={e => setHtmlDraft(e.target.value)} rows={14} spellCheck={false} placeholder="<!doctype html>… <table><thead><tr>{{HEAD}}</tr></thead><tbody>{{ROWS}}</tbody></table> …" className="w-full rounded-lg border border-gray-200 p-3 font-mono text-[11px] leading-relaxed" />
           <p className="text-[11px] text-gray-400">Tokens: header/meta values plus <code>{'{{HEAD}}'}</code> (table header cells) and <code>{'{{ROWS}}'}</code> (data rows) from the uploaded master file.</p>
+
+          <div className="border-t border-gray-100 pt-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Field mapping ({mapDraft.length})</p>
+            <p className="text-[11px] text-gray-400 mb-2">Map each register column to a master-file field. Leave blank to auto-detect.</p>
+            <div className="space-y-1.5">
+              {htmlFor.columns.map(col => {
+                const cur = mapDraft.find(m => m.column === col)?.fieldKey ?? '';
+                return <div key={col} className="grid grid-cols-[1fr_180px] gap-2 items-center">
+                  <span className="text-[11px] text-gray-700 truncate" title={col}>{col}</span>
+                  <select value={cur} onChange={e => setMapDraft(d => { const others = d.filter(m => m.column !== col); return e.target.value ? [...others, { column: col, fieldKey: e.target.value }] : others; })} className="h-8 border border-gray-200 rounded-lg px-2 text-[11px] bg-white"><option value="">Auto-detect</option>{FIELD_KEYS.map(k => <option key={k} value={k}>{k}</option>)}</select>
+                </div>;
+              })}
+              {!htmlFor.columns.length && <p className="text-[11px] text-gray-400">No parsed columns for this template (form-style register).</p>}
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Calculation rules ({calcDraft.length})</p>
+            <p className="text-[11px] text-gray-400 mb-2">e.g. target <code>otAmount</code>, formula <code>otHours * otRate</code> (field keys + arithmetic).</p>
+            <div className="space-y-1.5">
+              {calcDraft.map((r, i) => <div key={i} className="grid grid-cols-[1fr_1.4fr_auto] gap-2 items-center">
+                <input value={r.targetField} onChange={e => setCalcDraft(d => d.map((x, j) => j === i ? { ...x, targetField: e.target.value } : x))} placeholder="targetField" className="h-8 border border-gray-200 rounded-lg px-2 text-[11px]"/>
+                <input value={r.formula} onChange={e => setCalcDraft(d => d.map((x, j) => j === i ? { ...x, formula: e.target.value } : x))} placeholder="otHours * otRate" className="h-8 border border-gray-200 rounded-lg px-2 text-[11px] font-mono"/>
+                <button type="button" onClick={() => setCalcDraft(d => d.filter((_, j) => j !== i))} className="w-8 h-8 grid place-items-center text-gray-400 hover:text-red-600"><X size={14}/></button>
+              </div>)}
+              <button type="button" onClick={() => setCalcDraft(d => [...d, { targetField:'', label:'', formula:'' }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1">Add rule</button>
+            </div>
+          </div>
         </div>
         <footer className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
           <button onClick={() => setHtmlFor(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>

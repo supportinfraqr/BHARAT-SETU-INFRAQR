@@ -16,6 +16,9 @@ python manage.py seed_leave_types || echo "WARNING: seed_leave_types failed"
 echo "== Ensuring default letter templates (mandatory seed) =="
 python manage.py seed_letter_templates || echo "WARNING: seed_letter_templates failed"
 
+echo "== Ensuring CLRA register field mappings + calculation rules (mandatory seed) =="
+python manage.py seed_register_config || echo "WARNING: seed_register_config failed"
+
 echo "== Collecting static =="
 # Incremental (no --clear): only copies changed files, so the container comes
 # back up fast and the site isn't briefly 502 during a deploy.

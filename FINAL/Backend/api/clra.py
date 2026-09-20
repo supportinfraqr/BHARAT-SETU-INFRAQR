@@ -145,6 +145,50 @@ MASTER_TEMPLATE_COLUMNS = ["BSS ID", "Name", "Site", "Location", "Designation",
                            "Department", "Mobile", "Date of Joining"]
 
 
+# ── admin-configured field mapping + calculation rules ──────────────────────
+_FORMULA_RE = re.compile(r"^[A-Za-z0-9_+\-*/(). ]+$")
+
+
+def _to_num(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def eval_formula(formula, values):
+    """Evaluate a simple arithmetic formula against a row's field values.
+
+    Only digits, operators, parentheses and field identifiers are permitted, so
+    an admin-authored formula cannot execute anything but arithmetic."""
+    if not formula or not _FORMULA_RE.match(str(formula)):
+        return None
+    try:
+        return eval(str(formula), {"__builtins__": {}},
+                    {k: _to_num(v) for k, v in (values or {}).items()})
+    except Exception:  # noqa: BLE001 — a bad formula just yields no value
+        return None
+
+
+def apply_calculation_rules(rows, rules):
+    """Apply admin calculation rules to each row, adding the computed values
+    under the rule's ``targetField`` so columns/placeholders can reference them."""
+    rules = [r for r in (rules or []) if r.get("formula") and r.get("targetField")]
+    if not rules:
+        return rows
+    out = []
+    for row in rows:
+        enriched = dict(row)
+        values = dict(row)
+        for rule in rules:
+            result = eval_formula(rule["formula"], values)
+            if result is not None:
+                enriched[rule["targetField"]] = round(result, 2)
+                values[rule["targetField"]] = result
+        out.append(enriched)
+    return out
+
+
 # ── master-file validation ───────────────────────────────────────────────────
 REQUIRED_KEYS = ("name", "site")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$|^\d{2}[/-]\d{2}[/-]\d{4}$")
@@ -247,7 +291,9 @@ def _write_template_sheet(wb, template, rows, header_fill, header_font):
     _bold(ws, "A1", 12)
     ws["A2"] = (f"Form: {template.get('formCode', '')}    "
                 f"State: {template.get('state', '')}")
-    mapping = [match_column(col) for col in columns]
+    field_mappings = template.get("fieldMappings") or {}
+    mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
+    rows = apply_calculation_rules(rows, template.get("calculationRules"))
     for col, label in enumerate(columns, start=1):
         cell = ws.cell(row=4, column=col, value=label)
         cell.fill = header_fill
@@ -260,6 +306,19 @@ def _write_template_sheet(wb, template, rows, header_fill, header_font):
             elif key:
                 ws.cell(row=4 + i, column=col, value=row.get(key, ""))
     return ws
+
+
+def build_register_workbook(template, rows):
+    """Return the bytes of a single-register XLSX (honours admin field mapping
+    and calculation rules)."""
+    wb = Workbook()
+    wb.remove(wb.active)
+    header_fill = PatternFill("solid", fgColor="0A192F")
+    header_font = Font(bold=True, color="FFFFFF")
+    _write_template_sheet(wb, template, rows, header_fill, header_font)
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
 
 
 def build_workbook(rows, *, contractor="", site="", site_code="", state="",
@@ -338,7 +397,9 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
     ``{{TOKENS}}`` for the header/meta and ``{{HEAD}}`` / ``{{ROWS}}`` for the
     data table. Otherwise a plain columns-based table is generated."""
     columns = [str(c) for c in (template.get("columns") or [])]
-    mapping = [match_column(col) for col in columns]
+    field_mappings = template.get("fieldMappings") or {}
+    mapping = [(field_mappings.get(col) or match_column(col)) for col in columns]
+    rows = apply_calculation_rules(rows, template.get("calculationRules"))
     title = template.get("title") or template.get("formCode") or "Register"
     head = "".join(f"<th>{_esc(col)}</th>" for col in columns)
     body = []

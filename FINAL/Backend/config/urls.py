@@ -120,6 +120,7 @@ _v1_patterns = _v1(
     ("contractor/compliance-batches/<int:batch_id>/summary", v1_bridge.compliance_batch_summary, "v1_compliance_batch_summary"),
     ("contractor/compliance-batches/<int:batch_id>/site-documents", v1_bridge.compliance_batch_site_documents, "v1_compliance_batch_site_documents"),
     ("contractor/compliance-batches/<int:batch_id>/register/<int:template_id>", v1_bridge.compliance_batch_register, "v1_compliance_batch_register"),
+    ("contractor/compliance-batches/<int:batch_id>/register/<int:template_id>/xlsx", v1_bridge.compliance_batch_register_export, "v1_compliance_batch_register_xlsx"),
     ("worker/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_worker_submission_file", {"role_path": "worker"}),
     ("contractor/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_contractor_submission_file", {"role_path": "contractor"}),
     ("employer/submissions/<int:submission_id>/file", v1_bridge.submission_file_download, "v1_employer_submission_file", {"role_path": "employer"}),

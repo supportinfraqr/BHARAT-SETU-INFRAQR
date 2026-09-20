@@ -107,6 +107,8 @@ from .registry import (
 from .compliance import (
     RegisterDocumentMaster,
     RegisterTemplate,
+    RegisterFieldMapping,
+    RegisterCalculationRule,
     StateCode,
     StateFormApplicability,
     StateFeeMaster,
@@ -175,7 +177,8 @@ __all__ = [
     "PartyDirector", "PartyStatutoryRegistration", "PartyContact",
     "PartyBank", "PartyContract", "PartyDocument", "PartyConsentDeclaration",
     "PartyMaster",
-    "RegisterDocumentMaster", "RegisterTemplate", "StateCode", "StateFormApplicability",
+    "RegisterDocumentMaster", "RegisterTemplate", "RegisterFieldMapping", "RegisterCalculationRule",
+    "StateCode", "StateFormApplicability",
     "StateFeeMaster", "StatutoryMaster", "ComplianceMaster", "ComplianceDocument",
     "ComplianceReport", "ComplianceReportItem", "EmployerDocumentMapping",
     "EmployerRegisterMapping", "EmployerActMapping", "PtMaster", "PtSlab",

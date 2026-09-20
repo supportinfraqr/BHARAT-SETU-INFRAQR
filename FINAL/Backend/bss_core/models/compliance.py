@@ -72,6 +72,47 @@ class RegisterTemplate(models.Model):
         return f"{self.state} {self.form_code}"
 
 
+class RegisterFieldMapping(models.Model):
+    """Admin override: a register-template column → a master-file field key.
+
+    When present, these mappings take precedence over the automatic
+    ``match_column`` heuristic so the admin can pin a column to a field."""
+
+    template = models.ForeignKey(RegisterTemplate, on_delete=models.CASCADE,
+                                 related_name="field_mappings")
+    column = models.CharField(max_length=200)
+    field_key = models.CharField(max_length=60)
+    sort_order = models.SmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "register_field_mapping"
+        constraints = [models.UniqueConstraint(fields=["template", "column"],
+                                               name="uq_register_field_col")]
+
+    def __str__(self):
+        return f"{self.column} → {self.field_key}"
+
+
+class RegisterCalculationRule(models.Model):
+    """Admin-configured calculation for a register field, e.g. ``ot_hours * ot_rate``.
+
+    The formula uses master-file field keys and basic arithmetic; it is evaluated
+    per row and its result is exposed to the template as ``{{CALC_<target>}}``."""
+
+    template = models.ForeignKey(RegisterTemplate, on_delete=models.CASCADE,
+                                 related_name="calculation_rules")
+    target_field = models.CharField(max_length=80)
+    label = models.CharField(max_length=120, blank=True)
+    formula = models.CharField(max_length=255)
+    sort_order = models.SmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "register_calculation_rule"
+
+    def __str__(self):
+        return f"{self.target_field} = {self.formula}"
+
+
 class StateCode(models.Model):
     """State / UT reference: 2-letter code + LWF / NH-FH applicability."""
 

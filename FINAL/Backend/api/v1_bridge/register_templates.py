@@ -17,6 +17,10 @@ def _template_row(t):
         "columns": list(t.columns or []),
         "meta": t.meta or {},
         "html": t.html or "",
+        "fieldMappings": [{"column": m.column, "fieldKey": m.field_key}
+                          for m in t.field_mappings.all()],
+        "calculationRules": [{"targetField": r.target_field, "label": r.label, "formula": r.formula}
+                             for r in t.calculation_rules.all()],
         "active": t.is_active,
         "formatAvailable": t.format_available,
         "version": t.version,
@@ -115,6 +119,25 @@ def register_template_detail(request, template_id):
     if body.get("active") is not None:
         template.is_active = bool(body.get("active"))
     template.save()
+    if isinstance(body.get("fieldMappings"), list):
+        from bss_core.models import RegisterFieldMapping
+        template.field_mappings.all().delete()
+        for order, m in enumerate(body["fieldMappings"]):
+            if not isinstance(m, dict) or not str(m.get("column") or "").strip():
+                continue
+            RegisterFieldMapping.objects.create(
+                template=template, column=str(m["column"])[:200],
+                field_key=str(m.get("fieldKey") or "")[:60], sort_order=order)
+    if isinstance(body.get("calculationRules"), list):
+        from bss_core.models import RegisterCalculationRule
+        template.calculation_rules.all().delete()
+        for order, r in enumerate(body["calculationRules"]):
+            if not isinstance(r, dict) or not str(r.get("formula") or "").strip():
+                continue
+            RegisterCalculationRule.objects.create(
+                template=template, target_field=str(r.get("targetField") or "")[:80],
+                label=str(r.get("label") or "")[:120], formula=str(r["formula"])[:255],
+                sort_order=order)
     log_audit(request.user, "UPDATE", "register_template", template.id,
               after={"summary": f"Updated register template {template.state} {template.form_code}"})
     return Response({"data": _template_row(template)}, status=status.HTTP_200_OK)
