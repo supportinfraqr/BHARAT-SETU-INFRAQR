@@ -16,6 +16,19 @@ python manage.py seed_leave_types || echo "WARNING: seed_leave_types failed"
 echo "== Ensuring default letter templates (mandatory seed) =="
 python manage.py seed_letter_templates || echo "WARNING: seed_letter_templates failed"
 
+# One-time CLRA library import (state-wise register templates + applicability
+# matrix). Baked into the image at data/clra-registers.zip; skipped when the
+# library is already present so versions aren't churned on every deploy. Runs
+# before seed_register_config so the seeded mappings target real templates.
+CLRA_ZIP="${CLRA_ZIP:-/app/data/clra-registers.zip}"
+if [ -f "$CLRA_ZIP" ]; then
+  echo "== Ensuring CLRA register library (one-time import) =="
+  python manage.py import_clra_templates --zip "$CLRA_ZIP" --only-if-empty \
+    || echo "WARNING: import_clra_templates failed"
+  python manage.py import_clra_applicability --zip "$CLRA_ZIP" --only-if-empty \
+    || echo "WARNING: import_clra_applicability failed"
+fi
+
 echo "== Ensuring CLRA register field mappings + calculation rules (mandatory seed) =="
 python manage.py seed_register_config || echo "WARNING: seed_register_config failed"
 

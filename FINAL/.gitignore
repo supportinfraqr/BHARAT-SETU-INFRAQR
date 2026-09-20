@@ -24,4 +24,5 @@ staticfiles/
 
 # Archives / backups
 *.zip
+!Backend/data/clra-registers.zip
 *.rar

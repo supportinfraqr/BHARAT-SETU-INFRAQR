@@ -136,9 +136,15 @@ class Command(BaseCommand):
         parser.add_argument("--zip", dest="zip_path", default=DEFAULT_ZIP)
         parser.add_argument("--dir", dest="dir_path")
         parser.add_argument("--state", dest="only_state", help="Import a single state only.")
+        parser.add_argument("--only-if-empty", dest="only_if_empty", action="store_true",
+                            help="Skip the import when RegisterTemplate rows already exist.")
 
     def handle(self, *args, **options):
         from bss_core.models import RegisterTemplate
+
+        if options.get("only_if_empty") and RegisterTemplate.objects.exists():
+            self.stdout.write("CLRA templates already present — import skipped.")
+            return
 
         entries = []
         if options.get("dir_path"):

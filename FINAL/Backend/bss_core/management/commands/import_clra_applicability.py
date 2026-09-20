@@ -91,11 +91,17 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--zip", dest="zip_path", default=DEFAULT_ZIP)
+        parser.add_argument("--only-if-empty", dest="only_if_empty", action="store_true",
+                            help="Skip the import when the applicability matrix already exists.")
 
     def handle(self, *args, **options):
         import xlrd
         from bss_core.models import (RegisterTemplate, StateCode,
                                      StateFormApplicability, StateFeeMaster)
+
+        if options.get("only_if_empty") and StateFormApplicability.objects.exists():
+            self.stdout.write("CLRA applicability already present — import skipped.")
+            return
 
         zip_path = options["zip_path"]
         if not os.path.exists(zip_path):
