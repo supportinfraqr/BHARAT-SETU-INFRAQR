@@ -47,14 +47,23 @@ def worker_verify_document(request):
     except ocr_client.OcrError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    ok, message = ocr_client.verify_document_text(doc_type, text, expected_number=number, expected_name=name)
-    if not ok:
-        return Response({"verified": False, "docType": doc_type, "message": message},
-                        status=status.HTTP_200_OK)
-
     # Auto-read fields from the OCR text so the UI can offer a pre-fill
     # (name / DOB / gender / number / address) from the uploaded card.
     fields = ocr_client.extract_fields(doc_type, text)
+
+    # Autofill: when the worker didn't type a number, accept the one read off
+    # the card itself (whitespace-insensitive), so "upload & verify" needs no
+    # manual entry.
+    if not number:
+        auto = fields.get(doc_type)  # aadhaar|pan|uan|esic key matches the field key
+        if auto:
+            number = auto
+
+    ok, message = ocr_client.verify_document_text(doc_type, text, expected_number=number, expected_name=name)
+    if not ok:
+        return Response({"verified": False, "docType": doc_type, "message": message,
+                         "fields": fields},
+                        status=status.HTTP_200_OK)
 
     # Persist the verified number.
     if doc_type in ("aadhaar", "pan"):
