@@ -37,13 +37,15 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
   const label = (row: AdminRow) => String(row.name ?? row.employer ?? row.username ?? row.state ?? row.id);
 
   const columns: DataColumn<AdminRow>[] = config.columns.map(col => ({ id: col.id, header: col.header, value: col.value, render: col.render }));
-  columns.push({ id: 'actions', header: 'Actions', filterable: false, value: r => String(r.id), render: r => (
-    <div className="flex gap-1 items-center">
-      <button onClick={() => { setEditing(r); setModal('edit'); setError(''); }} aria-label="Edit" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50"><Pencil size={14}/></button>
-      {config.statusField && <button onClick={() => void toggleStatus(r)} aria-label="Toggle status" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-green-700 hover:bg-green-50" title={String(r[config.statusField]) === 'Active' ? 'Deactivate' : 'Activate'}>{String(r[config.statusField]) === 'Active' ? <CheckCircle2 size={14}/> : <ShieldCheck size={14}/>}</button>}
-      {config.canDelete && <button onClick={() => setDeleteTarget(r)} aria-label="Delete" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>}
-    </div>
-  ) });
+  if (!config.readOnly) {
+    columns.push({ id: 'actions', header: 'Actions', filterable: false, value: r => String(r.id), render: r => (
+      <div className="flex gap-1 items-center">
+        <button onClick={() => { setEditing(r); setModal('edit'); setError(''); }} aria-label="Edit" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50"><Pencil size={14}/></button>
+        {config.statusField && <button onClick={() => void toggleStatus(r)} aria-label="Toggle status" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-green-700 hover:bg-green-50" title={String(r[config.statusField]) === 'Active' ? 'Deactivate' : 'Activate'}>{String(r[config.statusField]) === 'Active' ? <CheckCircle2 size={14}/> : <ShieldCheck size={14}/>}</button>}
+        {config.canDelete && <button onClick={() => setDeleteTarget(r)} aria-label="Delete" className="w-7 h-7 grid place-items-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>}
+      </div>
+    ) });
+  }
 
   async function toggleStatus(row: AdminRow) {
     const field = config.statusField!;
@@ -70,8 +72,19 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
       const raw = values.get(field.name);
       record[field.name] = field.type === 'number' ? Number(raw || 0) : String(raw ?? '');
     });
+    const isEdit = modal === 'edit' && editing;
+    // On add, required fields must be filled. On edit the row already exists, so
+    // blank values are fine (e.g. an empty password means "keep the current one")
+    // — the backend owns validation there.
+    if (modal === 'add') {
+      const missing = config.fields.filter(field => field.required && !String(record[field.name] ?? '').trim());
+      if (missing.length) {
+        setError(`Complete the required fields: ${missing.map(f => f.label).join(', ')}.`);
+        setBusy(false);
+        return;
+      }
+    }
     try {
-      const isEdit = modal === 'edit' && editing;
       const response = await fetch(`/api/admin/masters/${encodeURIComponent(configKey)}${isEdit ? `/${editing!.id}` : ''}`, {
         method:isEdit ? 'PATCH' : 'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(record),
       });
@@ -101,7 +114,7 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">{config.title}</h1><p className="text-sm text-gray-500 mt-1">{config.description}</p></div>
-      <button onClick={() => { setModal('add'); setEditing(null); setError(''); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>Add record</button>
+      {!config.readOnly && <button onClick={() => { setModal('add'); setEditing(null); setError(''); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>Add record</button>}
     </header>
 
     {notice && <p role="status" className="bss-alert bss-alert-success flex items-center gap-2"><CheckCircle2 size={15}/>{notice}</p>}
@@ -113,8 +126,8 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
     {/* Add / Edit modal */}
     {modal && <div className="fixed inset-0 z-[80] bg-black/50 grid place-items-center p-4"><section role="dialog" aria-modal="true" aria-label={modal === 'edit' ? 'Edit record' : 'Add record'} className="w-full max-w-2xl bg-white rounded-2xl overflow-hidden">
       <header className="p-5 border-b border-gray-100 flex justify-between items-center"><div><h2 className="font-semibold text-sm">{modal === 'edit' ? 'Edit record' : `Add ${config.title}`}</h2><p className="text-xs text-gray-500 mt-1">Fields follow the BSS Admin master schema.</p></div><button onClick={() => setModal(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button></header>
-      <form onSubmit={save} className="p-5 grid sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
-        {config.fields.map(field => <Field key={field.name} field={field} value={modal === 'edit' ? editing?.[field.name] : config.initial?.[field.name]}/>)}
+      <form onSubmit={save} noValidate className="p-5 grid sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
+        {config.fields.map(field => <Field key={field.name} field={field} isEdit={modal === 'edit'} value={modal === 'edit' ? editing?.[field.name] : config.initial?.[field.name]}/>)}
         {error && <p role="alert" className="sm:col-span-2 text-sm text-red-700">{error}</p>}
         <div className="sm:col-span-2 flex justify-end gap-2 pt-2"><button type="button" onClick={() => setModal(null)} className="px-4 py-2 text-sm">Cancel</button><button disabled={busy} className="px-4 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-60">{busy ? 'Saving…' : modal === 'edit' ? 'Save changes' : 'Save record'}</button></div>
       </form>
@@ -130,13 +143,16 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
   </div>;
 }
 
-function Field({ field, value }: { field: AdminField; value: unknown }) {
+function Field({ field, value, isEdit }: { field: AdminField; value: unknown; isEdit?: boolean }) {
   const base = field.type === 'textarea' ? inputArea : input;
+  const isPassword = field.name === 'password';
+  // A blank password field on edit means "keep the current password".
+  const placeholder = isPassword && isEdit ? 'Leave blank to keep the current password' : field.placeholder;
   if (field.type === 'select') {
     return <label className="text-xs font-semibold text-gray-700">{field.label}<select name={field.name} required={field.required} defaultValue={String(value ?? '')} className={base + ' bg-white'}><option value="">Select</option>{field.options!.map(option => <option key={option}>{option}</option>)}</select></label>;
   }
   if (field.type === 'textarea') {
-    return <label className="text-xs font-semibold text-gray-700">{field.label}<textarea name={field.name} required={field.required} defaultValue={String(value ?? '')} rows={3} className={base} placeholder={field.placeholder}/></label>;
+    return <label className="text-xs font-semibold text-gray-700">{field.label}<textarea name={field.name} required={field.required} defaultValue={String(value ?? '')} rows={3} className={base} placeholder={placeholder}/></label>;
   }
-  return <label className="text-xs font-semibold text-gray-700">{field.label}<input name={field.name} type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'} required={field.required} defaultValue={String(value ?? '')} className={base} placeholder={field.placeholder}/></label>;
+  return <label className="text-xs font-semibold text-gray-700">{field.label}<input name={field.name} type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'} required={field.required} defaultValue={String(value ?? '')} className={base} placeholder={placeholder}/></label>;
 }

@@ -16,11 +16,12 @@ Usage:
 import os
 import re
 import zipfile
+from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-DEFAULT_ZIP = ("/home/yasser/BSS_Project/FINAL/Requirements/"
-               "CLRA Registers PAN India (3).zip")
+DEFAULT_ZIP = os.path.join(
+    Path(__file__).resolve().parents[4], "Requirements", "CLRA Registers PAN India (3).zip")
 MATRIX_FILE = "State wise form of  CLRA.xls"
 
 # Matrix spelling → the name used by RegisterTemplate / Site.state.

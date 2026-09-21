@@ -1,6 +1,8 @@
 // BSS Admin masters — mock data & schema configs (BSS_Admin.csv source of truth).
 // Structured so each master can later be wired to an API endpoint.
 
+import { INDIA_STATES } from '@/data/indiaStates';
+
 export type AdminFieldType = 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox' | 'multi';
 export type AdminField = { name: string; label: string; type: AdminFieldType; options?: string[]; required?: boolean; placeholder?: string };
 export type AdminRow = Record<string, string | number | boolean | string[]>;
@@ -14,10 +16,13 @@ export type MasterConfig = {
   rows: AdminRow[];
   statusField?: string;
   canDelete?: boolean;
+  // Read-only master — records are managed elsewhere (e.g. Users); the page
+  // shows the data with no Add / Edit / Deactivate / Delete actions.
+  readOnly?: boolean;
   initial?: AdminRow;
 };
 
-const STATES = ['Maharashtra', 'Gujarat', 'Karnataka', 'Uttar Pradesh', 'West Bengal', 'Bihar', 'Tamil Nadu', 'Delhi'];
+const STATES = INDIA_STATES;
 const YES_NO = ['Yes', 'No'];
 const ACTIVE_STATUS = ['Active', 'Inactive'];
 
@@ -259,8 +264,9 @@ export const PARTY_MASTER: MasterConfig = {
 };
 
 export const USERS_MASTER: MasterConfig = {
-  key: 'users', title: 'User Registration', description: 'Global user registration — user to party mapping (party type + party name), name, user name, password, contact and email. Passwords are masked.',
+  key: 'users', title: 'User Registration', description: 'Global user registration — read-only list of user accounts and their party mappings. Accounts are managed through the registration / sign-up flows; admin cannot edit these records.',
   statusField: 'status',
+  readOnly: true,
   columns: [
     { id: 'username', header: 'User Name', value: r => String(r.username), render: r => <span className="font-mono text-blue-700">{r.username}</span> },
     { id: 'name', header: 'Name', value: r => String(r.name) },
@@ -347,8 +353,34 @@ export const MENU_PERMISSIONS: Record<string, string[]> = {
 export const PERMISSION_MODULES = ['Workers', 'Contractors', 'Employers', 'Sites', 'Compliance', 'Payroll', 'Gate Pass', 'QR / Binding', 'Masters', 'Reports'];
 export const PERMISSION_ACTIONS = ['View', 'Create', 'Edit', 'Delete', 'Approve', 'Export', 'Manage'];
 
-export const ADMIN_MASTERS: MasterConfig[] = [PARTY_MASTER, USERS_MASTER, PT_MASTER, LWF_MASTER, LICENSE_MASTER, MINIMUM_WAGE_MASTER, DOCUMENT_MASTER, COMPLIANCE_MASTER, REGISTER_DOC_MASTER, EMPLOYER_DOCUMENT_MAPPING, EMPLOYER_ACT_MAPPING, EMPLOYER_REGISTER_MAPPING];
+export const STATUTORY_MASTER: MasterConfig = {
+  key: 'statutory', title: 'Statutory Master', description: 'Central statutory component rules & rates (EPF 12%, ESIC 3.25%, LWF, Bonus, Gratuity) locked for platform compliance.',
+  statusField: 'status',
+  columns: [
+    { id: 'component', header: 'Statutory Component', value: r => String(r.component) },
+    { id: 'rate', header: 'Rate / Value', value: r => String(r.rate) },
+    { id: 'rateType', header: 'Rate Type / Unit', value: r => String(r.rateType) },
+    { id: 'condition', header: 'Applicability Condition', value: r => String(r.condition) },
+    { id: 'status', header: 'Status', value: r => String(r.status), render: r => <StatusBadge value={String(r.status)}/> },
+  ],
+  fields: [
+    { name: 'component', label: 'Statutory Component', type: 'select', options: ['EPF (Employer PF)', 'ESIC (Employer)', 'Bonus', 'Gratuity', 'Labour Welfare Fund', 'Leave Reserve', 'Weekly Off', 'National Holidays'], required: true },
+    { name: 'status', label: 'Status', type: 'select', options: ACTIVE_STATUS, required: true },
+    { name: 'rate', label: 'Default Rate / %', type: 'number', required: true },
+    { name: 'rateType', label: 'Rate Type', type: 'select', options: ['Percent of wages', 'Fixed amount', 'Days'], required: true },
+    { name: 'condition', label: 'Applicability Condition', type: 'text', placeholder: 'e.g. Wage <= 21,000 / Establishments with 20+ workers' },
+  ],
+  rows: [
+    { id: 1, component: 'EPF (Employer PF)', rate: 12, rateType: 'Percent of wages', condition: 'Establishments with 20+ employees', status: 'Active' },
+    { id: 2, component: 'ESIC (Employer)', rate: 3.25, rateType: 'Percent of wages', condition: 'Conditional (wage <= 21,000 threshold)', status: 'Active' },
+    { id: 3, component: 'Bonus', rate: 8.33, rateType: 'Percent of wages', condition: 'Eligible workers under Payment of Bonus Act', status: 'Active' },
+    { id: 4, component: 'Gratuity', rate: 4.81, rateType: 'Percent of wages', condition: '5+ years continuous service', status: 'Active' },
+    { id: 5, component: 'Labour Welfare Fund (LWF)', rate: 0.75, rateType: 'Percent of wages', condition: 'State specific LWF rules', status: 'Active' },
+  ],
+  initial: { component: 'EPF (Employer PF)', status: 'Active', rate: 12, rateType: 'Percent of wages', condition: 'Establishments with 20+ employees' },
+};
 
+export const ADMIN_MASTERS: MasterConfig[] = [PARTY_MASTER, USERS_MASTER, STATUTORY_MASTER, PT_MASTER, LWF_MASTER, LICENSE_MASTER, MINIMUM_WAGE_MASTER, DOCUMENT_MASTER, COMPLIANCE_MASTER, REGISTER_DOC_MASTER, EMPLOYER_DOCUMENT_MAPPING, EMPLOYER_ACT_MAPPING, EMPLOYER_REGISTER_MAPPING];
 
 // ── tiny shared badge helpers ────────────────────────────────────────────────
 export function StatusBadge({ value }: { value: string }) {
@@ -361,6 +393,7 @@ export function Criticality({ value }: { value: string }) { const tone = value =
 export const MASTER_BY_KEY: Record<string, MasterConfig> = {
   party: PARTY_MASTER,
   users: USERS_MASTER,
+  statutory: STATUTORY_MASTER,
   'professional-tax': PT_MASTER,
   lwf: LWF_MASTER,
   license: LICENSE_MASTER,

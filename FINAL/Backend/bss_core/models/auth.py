@@ -51,6 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
 
     username = models.CharField("Login", max_length=150, unique=True)
+    full_name = models.CharField("Full name", max_length=160, blank=True)
     role = models.CharField(max_length=40, choices=ROLE_CHOICES, default="worker", db_index=True)
     account_active = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)

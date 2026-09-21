@@ -10,18 +10,24 @@ import LanguageSelect from '@/components/i18n/LanguageSelect';
 import BrandText from '@/components/BrandText';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const mastersGroup = { key: 'Masters', icon: BookOpenCheck, items: [
-  ['Party Master', '/admin/masters/party'],
+// Wage & statutory cost configuration (rates, minimum wage, cost sheets) is its
+// own cluster — separate from the CLRA statutory register library.
+const wageCostGroup = { key: 'Wages & Statutory Cost', icon: Banknote, items: [
+  ['Statutory Master', '/admin/masters/statutory'],
+  ['Minimum Wage', '/admin/masters/minimum-wage'],
+  ['Cost Sheet Templates', '/admin/masters/cost-sheet'],
   ['Professional Tax', '/admin/masters/professional-tax'],
   ['LWF', '/admin/masters/lwf'],
   ['License Management', '/admin/masters/license'],
-  ['Minimum Wage', '/admin/masters/minimum-wage'],
-  ['Document Master', '/admin/masters/document'],
-  ['Compliance Master', '/admin/masters/compliance'],
-  ['Register Doc Master', '/admin/masters/register-doc'],
-  ['Register Templates', '/admin/masters/register-template'],
+] as const };
+const clraGroup = { key: 'CLRA Registers', icon: BookOpenCheck, items: [
+  ['Statutory Registers & Forms', '/admin/masters/register-template'],
   ['State Applicability', '/admin/masters/state-applicability'],
-  ['Cost Sheet Templates', '/admin/masters/cost-sheet'],
+  ['Compliance Master', '/admin/masters/compliance'],
+  ['Document Master', '/admin/masters/document'],
+] as const };
+const partyGroup = { key: 'Party & Templates', icon: BookOpenCheck, items: [
+  ['Party Master', '/admin/masters/party'],
   ['Letter Templates', '/admin/masters/letter-templates'],
 ] as const };
 const mappingsGroup = { key: 'Mappings', icon: Link2, items: [
@@ -40,7 +46,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [profile, setProfile] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const groups = [mastersGroup, mappingsGroup, accessGroup];
+  const groups = [wageCostGroup, clraGroup, partyGroup, mappingsGroup, accessGroup];
   const flat = groups.reduce<Array<readonly [string, string]>>((acc, g) => acc.concat(g.items as unknown as readonly [string, string][]), []);
 
   const itemActive = (href: string) => pathname === href || pathname.startsWith(href + '/');

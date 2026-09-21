@@ -423,6 +423,7 @@ def render_register_html(template, rows, *, contractor="", employer="", site="",
             "EMPLOYER_NAME": _esc(employer), "SITE_NAME": _esc(site), "SITE_CODE": _esc(site_code),
             "MONTH": _esc(month), "YEAR": _esc(year), "FINANCIAL_YEAR": _esc(financial_year),
             "GENERATED_ON": _esc(generated_on), "RECORD_COUNT": str(len(rows)),
+            "ACT": _esc(template.get("act", "")),
             "HEAD": head, "ROWS": "".join(body),
         }
         out = admin_html

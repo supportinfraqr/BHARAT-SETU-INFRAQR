@@ -21,3 +21,16 @@ export async function PATCH(request: Request, context: Context) {
     return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) { return apiError(error, 'The register template could not be updated.'); }
 }
+
+export async function DELETE(request: Request, context: Context) {
+  try {
+    assertTrustedMutation(request);
+    const session = await requireApiSession('BSS Admin');
+    const { id } = await context.params;
+    const config = getRuntimeConfig();
+    const result = await upstreamRequest(config.apiBaseUrl, `/v1/admin/register-templates/${encodeURIComponent(id)}`, session, {
+      method: 'DELETE',
+    });
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
+  } catch (error) { return apiError(error, 'The register template could not be deleted.'); }
+}

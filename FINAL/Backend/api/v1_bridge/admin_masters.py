@@ -30,6 +30,9 @@ _ROLE_TO_CODE = {"Worker": "worker", "Contractor": "contractor", "Employer": "em
                  "Government": "government", "BSS Staff": "bss_staff", "BSS Admin": "bss_admin"}
 _ROLE_TO_LABEL = {code: label for label, code in _ROLE_TO_CODE.items()}
 
+_RATETYPE_TO_LABEL = {"PERCENT": "Percent of wages", "FIXED": "Fixed amount", "DAYS": "Days"}
+_RATETYPE_TO_CODE = {label: code for code, label in _RATETYPE_TO_LABEL.items()}
+
 
 def _num(value):
     """Decimal-ish value or None (blank / non-numeric such as 'Unlimited')."""
@@ -66,6 +69,8 @@ def _get_field(obj, kind, attr):
         return "Active" if getattr(obj, "account_active", True) else "Pending"
     if kind == "cycle":
         return _CYCLE_TO_LABEL.get(str(value or "").upper(), str(value or ""))
+    if kind == "ratetype":
+        return _RATETYPE_TO_LABEL.get(str(value or "").upper(), str(value or ""))
     if kind == "number":
         return float(value) if value is not None else ""
     if kind == "date":
@@ -86,6 +91,8 @@ def _set_field(obj, kind, attr, value, length=255):
         obj.account_active = label == "Active"
     elif kind == "cycle":
         setattr(obj, attr, _CYCLE_TO_CODE.get(str(value or "").strip(), "MONTHLY"))
+    elif kind == "ratetype":
+        setattr(obj, attr, _RATETYPE_TO_CODE.get(str(value or "").strip(), "PERCENT"))
     elif kind == "number":
         setattr(obj, attr, _num(value))
     elif kind == "date":
@@ -99,7 +106,8 @@ def _specs():
     from bss_core.models import (ComplianceMaster, EmployerActMapping,
                                  EmployerDocumentMapping, EmployerRegisterMapping,
                                  LicenseMaster, LwfMaster, MinimumWage,
-                                 PartyMaster, PtMaster, RegisterDocumentMaster)
+                                 PartyMaster, PtMaster, RegisterDocumentMaster,
+                                 StatutoryMaster)
 
     party = {
         "model": PartyMaster, "order": "id", "can_delete": True,
@@ -215,13 +223,23 @@ def _specs():
         "foreign": {"employer": ("employer", "employer", "employer")},
     }
 
+    statutory = {
+        "model": StatutoryMaster, "order": "id",
+        "fields": {
+            "component": ("label", "text"), "rateType": ("rate_type", "ratetype"),
+            "condition": ("condition", "text"), "rate": ("rate", "number"),
+            "status": ("is_active", "active"),
+        },
+    }
+
     return {
-        "party": party, "professional-tax": pt, "lwf": lwf, "license": license_m,
+        "party": party, "statutory": statutory, "professional-tax": pt, "lwf": lwf, "license": license_m,
         "minimum-wage": min_wage, "document": document, "register-doc": register_doc,
         "compliance": compliance, "employer-document": employer_document,
         "employer-register": employer_register, "employer-act": employer_act,
         "users": {
             "model": User, "order": "-id", "special": "users", "can_delete": True,
+            "read_only": True,  # accounts are managed via registration — admin cannot mutate
             "fields": {
                 "username": ("username", "text"), "partyType": ("role", "role"),
                 "status": ("account_active", "status"),
@@ -272,9 +290,72 @@ def _user_contacts(user):
     return creds.get("mobile", ""), creds.get("email", "")
 
 
+def _details(obj):
+    """The JSON `details` bag — models that lack it (e.g. User) yield {}."""
+    return getattr(obj, "details", None) or {}
+
+
+def _user_name(user):
+    """Display name for the User Registration master, resolved by role.
+
+    A user-set ``full_name`` (editable in this master) takes precedence; the
+    role profile supplies the fallback (worker identity / employer / contractor)."""
+    if user.full_name:
+        return user.full_name
+    if user.role == "worker":
+        identity = getattr(user, "worker_identity", None)
+        return payloads._d(identity.name if identity else "")
+    profile = getattr(user, "employer_profile", None) or getattr(user, "contractor_profile", None)
+    if profile:
+        return payloads._d(getattr(profile, "employer_name", "") or getattr(profile, "contractor_name", ""))
+    return ""
+
+
+def _user_party_name(user):
+    """Party mapping display for the User Registration master."""
+    if user.role == "employer":
+        profile = getattr(user, "employer_profile", None)
+        return payloads._d(profile.employer_name if profile else "")
+    if user.role == "contractor":
+        profile = getattr(user, "contractor_profile", None)
+        return payloads._d(profile.contractor_name if profile else "")
+    if user.role == "worker":
+        identity = getattr(user, "worker_identity", None)
+        return payloads._d(identity.name if identity else "")
+    return _user_name(user)
+
+
+def _set_user_display(user, body):
+    """Persist the editable Name / Party Name fields for the users master.
+
+    ``name`` stores on ``User.full_name`` (all roles). ``partyName`` maps to the
+    role profile where one exists; otherwise it mirrors the display name."""
+    if body.get("name") is not None:
+        user.full_name = str(body["name"] or "")[:160]
+    party = (body.get("partyName") if body.get("partyName") is not None else None)
+    if party is None or str(party) == payloads._d(_user_party_name(user)):
+        return
+    party = str(party)[:120]
+    if user.role == "employer":
+        profile = getattr(user, "employer_profile", None)
+        if profile:
+            profile.employer_name = party
+            profile.save(update_fields=["employer_name"])
+    elif user.role == "contractor":
+        profile = getattr(user, "contractor_profile", None)
+        if profile:
+            profile.contractor_name = party
+            profile.save(update_fields=["contractor_name"])
+    elif user.role == "worker":
+        identity = getattr(user, "worker_identity", None)
+        if identity:
+            identity.name = party
+            identity.save(update_fields=["name"])
+
+
 def _set_user_contacts(user, mobile, email):
     from bss_core.models import UserCredential
-    if mobile is not None:
+    if mobile is not None and str(mobile or "").strip():
         mobile = _normalize_mobile(mobile) or str(mobile)
         clash = (UserCredential.objects
                  .filter(identity_type="mobile", identity_value=mobile)
@@ -283,38 +364,49 @@ def _set_user_contacts(user, mobile, email):
             raise PortalMutationError("This mobile is already linked to another account.", 409)
         UserCredential.objects.update_or_create(
             user=user, identity_type="mobile", defaults={"identity_value": mobile})
-    if email is not None:
+    if email is not None and str(email or "").strip():
         UserCredential.objects.update_or_create(
             user=user, identity_type="email", defaults={"identity_value": str(email)})
 
 
 def _row(spec, obj):
     out = {"id": obj.pk}
+    details = _details(obj)
     for name, (attr, kind) in spec["fields"].items():
-        out[name] = _get_field(obj, kind, attr) if attr else (obj.details or {}).get(name, "")
+        out[name] = _get_field(obj, kind, attr) if attr else details.get(name, "")
     for name, (_attr, _resolver, display) in spec.get("foreign", {}).items():
         out[name] = _foreign_display(obj, display)
     if spec.get("special") == "users":
         out["mobile"], out["email"] = _user_contacts(obj)
+        out["name"] = _user_name(obj)
+        out["partyName"] = _user_party_name(obj)
+        out["password"] = ""
     return out
 
 
 def _apply(spec, obj, body):
-    details = dict(obj.details or {})
+    details = _details(obj)
     for name, (attr, kind) in spec["fields"].items():
         if name not in body:
             continue
         if attr:
             _set_field(obj, kind, attr, body.get(name))
-        else:
+        elif hasattr(obj, "details"):
             details[name] = body.get(name)
-    obj.details = details
+    if hasattr(obj, "details"):
+        obj.details = details
     for name, (attr, resolver, _display) in spec.get("foreign", {}).items():
         if name in body:
             setattr(obj, attr, _RESOLVERS[resolver](body.get(name)))
     if spec.get("special") == "users":
         if body.get("password"):
             obj.set_password(str(body["password"]))
+        _set_user_display(obj, body)
+
+
+def _apply_user_contacts(spec, obj, body):
+    """User mobile/email credentials — must run after the row is saved (FK)."""
+    if spec.get("special") == "users":
         _set_user_contacts(obj, body.get("mobile"), body.get("email"))
 
 
@@ -339,6 +431,8 @@ def _masters(request, key):
     if request.method == "GET":
         rows = [_row(spec, obj) for obj in _queryset(spec).order_by(spec.get("order", "id"))[:500]]
         return {"rows": rows}
+    if spec.get("read_only"):
+        raise PortalMutationError("This master is read-only (records are managed elsewhere).", 403)
     # POST — create
     body = request.data if isinstance(request.data, dict) else {}
     obj = model()
@@ -353,6 +447,7 @@ def _masters(request, key):
     if hasattr(obj, "industry") and not (getattr(obj, "industry", "") or "").strip():
         obj.industry = "All Industries"
     obj.save()
+    _apply_user_contacts(spec, obj, body)
     return {"row": _row(spec, obj)}
 
 
@@ -363,10 +458,13 @@ def _master_detail(request, key, pk):
     obj = _queryset(spec).filter(pk=pk).first()
     if obj is None:
         raise PortalMutationError("Record not found.", 404)
+    if request.method in ("PATCH", "POST", "DELETE") and spec.get("read_only"):
+        raise PortalMutationError("This master is read-only (records are managed elsewhere).", 403)
     if request.method in ("PATCH", "POST"):
         body = request.data if isinstance(request.data, dict) else {}
         _apply(spec, obj, body)
         obj.save()
+        _apply_user_contacts(spec, obj, body)
         return {"row": _row(spec, obj)}
     if request.method == "DELETE":
         if not spec.get("can_delete", True):

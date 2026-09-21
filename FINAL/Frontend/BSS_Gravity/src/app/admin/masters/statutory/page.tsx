@@ -1,8 +1,7 @@
 import MasterCrudPage from '@/components/admin/MasterCrudPage';
-
 import { requireSession } from '@/server/session';
 
-export default async function AdminRegisterDocPage() {
+export default async function AdminStatutoryMasterPage() {
   await requireSession('BSS Admin');
-  return <MasterCrudPage configKey="register-doc"/>;
+  return <MasterCrudPage configKey="statutory"/>;
 }

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bharat Shram Setu — Daily Progress Report (19 Sep 2026)</title>
+<style>
+  :root { --navy:#073B67; --navy2:#0F172A; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --ok:#15803D; --okbg:#ecfdf3; --pend:#B45309; --pendbg:#fffbeb; --wip:#1d4ed8; --wipbg:#eff6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f5f6f8; color:var(--ink); font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif; }
+  .page { max-width:960px; margin:0 auto; padding:32px 28px 64px; }
+  header.top { border-bottom:3px solid var(--navy); padding-bottom:16px; margin-bottom:24px; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .mark { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,#022B5E,#0a5aa0); display:grid; place-items:center; color:#fff; font-weight:800; letter-spacing:.5px; }
+  h1 { font-size:22px; margin:0; color:var(--navy); letter-spacing:.2px; }
+  .sub { color:var(--muted); font-size:12px; margin-top:2px; }
+  .meta { display:flex; flex-wrap:wrap; gap:18px; margin-top:14px; font-size:12px; color:#374151; }
+  .meta b { color:var(--navy); }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.9px; color:var(--navy2); margin:30px 0 12px; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .lead { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; font-size:13.5px; line-height:1.65; color:#374151; }
+  .grid { display:grid; gap:12px; grid-template-columns:1fr; }
+  @media (min-width:720px){ .grid.two { grid-template-columns:1fr 1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
+  .card h3 { margin:0 0 6px; font-size:13.5px; color:var(--navy2); }
+  .card p { margin:0; font-size:12.5px; line-height:1.6; color:#4b5563; }
+  .pill { display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+  .pill.ok { color:var(--ok); background:var(--okbg); border:1px solid #bbf7d0; }
+  .pill.pend { color:var(--pend); background:var(--pendbg); border:1px solid #fde68a; }
+  .pill.wip { color:var(--wip); background:var(--wipbg); border:1px solid #bfdbfe; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:12.5px; }
+  thead th { background:var(--navy2); color:#fff; text-align:left; font-weight:600; padding:10px 12px; font-size:11.5px; letter-spacing:.3px; }
+  tbody td { padding:10px 12px; border-top:1px solid var(--line); vertical-align:top; color:#374151; }
+  tbody tr:nth-child(even) td { background:#fafbfc; }
+  .num { color:var(--muted); font-variant-numeric:tabular-nums; width:34px; }
+  .badge-done { color:var(--ok); font-weight:700; white-space:nowrap; }
+  .badge-pend { color:var(--pend); font-weight:700; white-space:nowrap; }
+  .note { font-size:12px; color:var(--muted); margin-top:6px; }
+  .highlight { border-left:4px solid var(--navy); }
+  footer { margin-top:36px; border-top:1px solid var(--line); padding-top:12px; font-size:11px; color:var(--muted); text-align:center; }
+  @media print { body{background:#fff;} .page{max-width:none;padding:0 6mm;} h2{page-break-after:avoid;} table, .card, .lead{page-break-inside:avoid;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark">BSS</span>
+      <div>
+        <h1>Bharat Shram Setu — Daily Progress Report</h1>
+        <div class="sub">National Worker Welfare Management System (NWWMS) · One Nation, One ID, One Platform</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span><b>Date:</b> Saturday, 19 September 2026</span>
+      <span><b>Scope:</b> Portal + Admin + Compliance</span>
+      <span><b>Status:</b> On track</span>
+    </div>
+  </header>
+
+  <div class="lead">
+    Today's work covered the <b>admin-side letter template management</b> for appointment-letter generation,
+    the <b>state-wise appointment / experience (releasing) letter</b> flow, the gate-pass management system
+    refinements, the privacy/terms policy set, and a set of portal usability fixes. The points below summarise
+    each item and its status.
+  </div>
+
+  <h2>Headline work — Admin &amp; Letter Templates</h2>
+  <div class="grid two">
+    <div class="card highlight">
+      <h3>Admin — Template Management (Appointment Letter generation)</h3>
+      <p>New <b>BSS Admin → Masters → Letter Templates</b> screen. Admin can create, edit and delete
+      <b>HTML</b> letter templates, defined <b>state-wise</b> (an all-India default plus per-state variants),
+      for both <b>Appointment</b> and <b>Experience / Releasing</b> letters. A token palette inserts
+      <code>{{tokens}}</code> (worker name, BSS ID, designation, DOJ, wage, contractor, employer, site, ref no., date).</p>
+    </div>
+    <div class="card highlight">
+      <h3>Contractor &amp; Employer — Template Generation &amp; Settings</h3>
+      <p>Each <b>site</b> now selects its Appointment and Experience letter templates (Employer → Site detail →
+      "Worker letters"). Every worker of that site then receives letters in that format. Rendering resolves
+      <b>site choice → state template → all-India default</b> and falls back to the built-in layout when unset.</p>
+    </div>
+    <div class="card">
+      <h3>State-wise Experience Letter format</h3>
+      <p>Experience / releasing letters are produced from the same state-wise HTML templates, so each state's
+      format and wording is applied consistently across all workers at a site.</p>
+    </div>
+    <div class="card">
+      <h3>Privacy Policy content</h3>
+      <p>Full <b>Privacy Policy</b> published (Parts I–V: privacy, data-protection &amp; worker rights, international
+      standards, IP, AI governance), plus the <b>Data-Sharing Policy</b> and <b>Terms of Service</b>, cross-linked
+      and reachable from the in-app privacy settings.</p>
+    </div>
+  </div>
+
+  <h2>Points completed / addressed</h2>
+  <table>
+    <thead>
+      <tr><th class="num">#</th><th>Item</th><th>Status</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Auto Refresh functionality</td><td class="badge-pend">Pending</td><td>Deferred by request; only notifications poll today. Live-on-operation to be taken up next.</td></tr>
+      <tr><td class="num">2</td><td>Binding Request – View Detail option</td><td class="badge-done">Done</td><td>Permission-gated detail view on QR scan (public → bound/self), for worker and employer/contractor QR.</td></tr>
+      <tr><td class="num">3</td><td>Excel data formatting for Contractor and Principal Employer</td><td class="badge-done">Done</td><td>XLSX export helper used across contractor/employer registers.</td></tr>
+      <tr><td class="num">4</td><td>Privacy Policy content</td><td class="badge-done">Done</td><td>Privacy, Data-Sharing and Terms pages published and cross-linked.</td></tr>
+      <tr><td class="num">5</td><td>Contractor &amp; Employer – Template Generation and Settings option</td><td class="badge-done">Done</td><td>Admin authors templates; employer selects per site (see headline section).</td></tr>
+      <tr><td class="num">6</td><td>Site Map rework option</td><td class="badge-done">Done</td><td>Site map + geocoding used on site create/detail.</td></tr>
+      <tr><td class="num">7</td><td>BSS ID – 15-character format and prefix/symbol removal</td><td class="badge-done">Done</td><td>Collision-free 15-char worker ID; prefixes/symbols normalised.</td></tr>
+      <tr><td class="num">8</td><td>BSS ID frozen everywhere (not editable)</td><td class="badge-done">Done</td><td>BSS ID is system-owned and read-only across portals.</td></tr>
+      <tr><td class="num">9</td><td>Resend OTP functionality</td><td class="badge-done">Done</td><td>Resend control with cooldown / attempt limits.</td></tr>
+      <tr><td class="num">10</td><td>Login only after registration; unregistered login blocked with message</td><td class="badge-done">Done</td><td>"No account found for this BSS ID / mobile number. Please register first."</td></tr>
+      <tr><td class="num">11</td><td>Father Name from Aadhaar registration (CO / DO / SO)</td><td class="badge-done">Done</td><td>Care-of mapping (S/O · D/O · W/O) captured from Aadhaar and shown on the worker record.</td></tr>
+      <tr><td class="num">12</td><td>Site change after binding / unbinding</td><td class="badge-done">Done</td><td>Change Site breaks the old binding and creates a new one (site-level successor shift on unbind).</td></tr>
+      <tr><td class="num">13</td><td>State-wise Experience Letter format</td><td class="badge-done">Done</td><td>State-wise HTML templates (see headline section).</td></tr>
+      <tr><td class="num">14</td><td>Worker Binding limit and already-bound worker validation</td><td class="badge-done">Done</td><td>Already-bound / pending checks prevent duplicate live bindings.</td></tr>
+      <tr><td class="num">15</td><td>Gate Pass – Request-based process and Employer mapping</td><td class="badge-done">Done</td><td>Contractor requests → employer approves; employer-wise mapping enforced.</td></tr>
+      <tr><td class="num">16</td><td>Gate Pass – Add and Dispatch option</td><td class="badge-done">Done</td><td>Employer can add/dispatch; worker sees a pass only once dispatched.</td></tr>
+      <tr><td class="num">17</td><td>Filling Type – Temporary / Permanent</td><td class="badge-done">Done</td><td>TGP / PGP derived from eligibility (Medical + H&amp;S → Temporary; + Compliance → Permanent).</td></tr>
+      <tr><td class="num">18</td><td>Watermark on back side of ID card</td><td class="badge-done">Done</td><td>Watermark applied on the card back.</td></tr>
+      <tr><td class="num">19</td><td>Listen option at scan &amp; bind (top/bottom)</td><td class="badge-done">Done</td><td>Listen button available on the scan &amp; bind screens.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Pending / upcoming</h2>
+  <table>
+    <thead>
+      <tr><th>Item</th><th>Status</th><th>Plan</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>CLRA Register</td><td class="badge-pend">In progress</td><td>To be completed <b>today</b>.</td></tr>
+      <tr><td>Compliance</td><td class="badge-pend">Pending</td><td>Targeted <b>Sunday / Monday</b>.</td></tr>
+      <tr><td>Payroll</td><td class="badge-pend">Pending</td><td>Targeted <b>Sunday / Monday</b>.</td></tr>
+      <tr><td>Auto Refresh (live-on-operation)</td><td class="badge-pend">Pending</td><td>Deferred; to be scheduled.</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    Bharat Shram Setu · Daily Progress Report · 19 September 2026 · Generated from the current codebase state.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -114,6 +114,7 @@ _v1_patterns = _v1(
     ("employer/compliance-checklists", v1_bridge.compliance_checklists, "v1_compliance_checklists"),
     ("employer/compliance-checklists/<int:checklist_id>/field", v1_bridge.compliance_checklist_field, "v1_compliance_checklist_field"),
     ("register-templates/<int:template_id>/file", v1_bridge.register_template_file, "v1_register_template_file"),
+    ("employer/register-templates", v1_bridge.employer_register_templates, "v1_employer_register_templates"),
     ("contractor/clra/templates", v1_bridge.contractor_register_templates, "v1_contractor_register_templates"),
     ("contractor/clra/master-template", v1_bridge.clra_master_template, "v1_clra_master_template"),
     ("contractor/clra/validate", v1_bridge.contractor_clra_validate, "v1_contractor_clra_validate"),

@@ -33,6 +33,8 @@ export default function ContractorScanPage() {
   const [unbindRequested, setUnbindRequested] = useState(false);
   const [scanned, setScanned] = useState<Payload | null>(null);
   const [selectedSite, setSelectedSite] = useState(contractor.defaultSite?.name ?? contractor.sites[0]?.name ?? '');
+  const [costSheets, setCostSheets] = useState<Array<{ id:number; name:string; code:string; designation?:string }>>([]);
+  const [costSheetId, setCostSheetId] = useState('');
   const [offeredWage, setOfferedWage] = useState('');
   const [wageError, setWageError] = useState('');
   const [sendError, setSendError] = useState('');
@@ -62,6 +64,17 @@ export default function ContractorScanPage() {
   };
 
   useEffect(() => () => controls.current?.stop(), []);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/contractor/cost-sheets', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((j: { rows?: Array<{ id:number; name:string; code:string; designation?:string }> } | null) => {
+        if (active && j?.rows) setCostSheets(j.rows.filter(t => t.id >= 0));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const verify = async (text: string) => {
     try {
@@ -169,9 +182,10 @@ export default function ContractorScanPage() {
     if (!scanned || !entity) return;
     const isWorkerBinding = entity.kind === 'worker';
     const wageValue = Number(offeredWage);
-    if (isWorkerBinding && !(wageValue > 0)) {
+    const hasCostSheet = Boolean(costSheetId);
+    if (isWorkerBinding && !hasCostSheet && !(wageValue > 0)) {
       setConfirmOpen(false);
-      setWageError('Enter the offered monthly wage (₹) before sending the binding request.');
+      setWageError('Pick a cost sheet template or enter the offered monthly wage (₹) before sending the binding request.');
       return;
     }
     setRequestSent(true);
@@ -180,7 +194,7 @@ export default function ContractorScanPage() {
       const response = await fetch('/api/bindings/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, offeredWage: isWorkerBinding ? wageValue : undefined }),
+        body: JSON.stringify({ type: scanned.type, bssId: scanned.bssId, siteToken: scanned.siteToken, site: entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site, offeredWage: isWorkerBinding ? (hasCostSheet ? undefined : wageValue) : undefined, costSheetId: isWorkerBinding && hasCostSheet ? Number(costSheetId) : undefined }),
       });
       const result = await response.json().catch(() => ({})) as { error?: string; data?: { status?: string } };
       if (!response.ok) throw new Error(result.error || 'Binding request could not be created.');
@@ -314,11 +328,27 @@ export default function ContractorScanPage() {
                 </div>
               )}
               {entity.kind === 'worker' && !contractor.workers.some(w => w.bssId === entity.bssId) && !alreadyPending && (
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Offered monthly wage (₹)</label>
-                  <input inputMode="numeric" value={offeredWage} onChange={e => { setOfferedWage(e.target.value.replace(/[^\d]/g, '')); setWageError(''); }} placeholder="e.g. 18000" className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"/>
-                  <p className="text-[11px] text-gray-400 mt-1">Recorded on the binding and printed on the worker&apos;s appointment letter.</p>
-                  {wageError && <p className="text-[11px] text-red-600 font-semibold mt-1">{wageError}</p>}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Cost sheet template (recommended)</label>
+                    <select value={costSheetId} onChange={e => { setCostSheetId(e.target.value); setWageError(''); }} className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white">
+                      <option value="">No template — enter wage manually</option>
+                      {costSheets.map(s => <option key={s.id} value={s.id}>{s.name} · {s.code}</option>)}
+                    </select>
+                    {costSheetId ? (
+                      <p className="text-[11px] text-[#073B67] font-semibold mt-1">Wage, statutory, custom costs and CTC are auto-computed from the template — no manual wage needed.</p>
+                    ) : (
+                      <p className="text-[11px] text-gray-400 mt-1">Pick your available published template to auto-compute the wage and CTC.</p>
+                    )}
+                  </div>
+                  {!costSheetId && (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">Offered monthly wage (₹)</label>
+                      <input inputMode="numeric" value={offeredWage} onChange={e => { setOfferedWage(e.target.value.replace(/[^\d]/g, '')); setWageError(''); }} placeholder="e.g. 18000" className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"/>
+                      <p className="text-[11px] text-gray-400 mt-1">Recorded on the binding and printed on the worker&apos;s appointment letter.</p>
+                      {wageError && <p className="text-[11px] text-red-600 font-semibold mt-1">{wageError}</p>}
+                    </div>
+                  )}
                 </div>
               )}
               {entity.kind === 'worker' && contractor.workers.some(w => w.bssId === entity.bssId)
@@ -339,7 +369,7 @@ export default function ContractorScanPage() {
                         {sendError && <p role="alert" className="p-3 bg-red-50 border border-red-100 text-red-700 rounded-xl text-xs font-semibold flex items-start gap-2"><XCircle size={14} className="mt-0.5 flex-shrink-0"/><span>{sendError}</span></p>}
                         {entity.kind === 'worker' && contractor.sites.length === 0
                           ? <button type="button" disabled className="w-full h-11 rounded-xl bg-gray-200 text-gray-500 text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"><TriangleAlert size={17}/>No site allotted — cannot bind</button>
-                          : <button onClick={() => { if (entity.kind === 'worker' && !(Number(offeredWage) > 0)) { setWageError('Enter the offered monthly wage (₹) before sending the binding request.'); return; } setWageError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
+                          : <button onClick={() => { if (entity.kind === 'worker' && !costSheetId && !(Number(offeredWage) > 0)) { setWageError('Pick a cost sheet template or enter the offered monthly wage (₹) before sending the binding request.'); return; } setWageError(''); setConfirmOpen(true); }} className="w-full h-11 rounded-xl bg-[#073B67] text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#062D4F]"><Link2 size={17}/>Send binding request</button>}
                       </div>}
             </div>
           ):result?(
@@ -367,7 +397,11 @@ export default function ContractorScanPage() {
         ...(entity.bssId ? [{ label: 'BSS ID', value: entity.bssId }] : []),
         { label: scanned?.type === 'BSS_SITE' ? 'Site code' : 'Site', value: (entity.kind === 'worker' ? (selectedSite || entity.site) : entity.site) || '—' },
         { label: 'Designation', value: entity.designation || '—' },
-        ...(entity.kind === 'worker' ? [{ label: 'Offered monthly wage', value: `₹${Number(offeredWage).toLocaleString('en-IN')}` }] : []),
+        ...(entity.kind === 'worker'
+          ? costSheetId
+            ? [{ label: 'Cost sheet template', value: costSheets.find(s => String(s.id) === costSheetId)?.name ?? 'Selected template' }]
+            : [{ label: 'Offered monthly wage', value: `₹${Number(offeredWage).toLocaleString('en-IN')}` }]
+          : []),
       ] : []}
       confirmLabel="Send binding request"
       onCancel={() => setConfirmOpen(false)}

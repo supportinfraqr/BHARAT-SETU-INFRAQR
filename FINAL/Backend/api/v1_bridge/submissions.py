@@ -352,12 +352,14 @@ def contractor_compliance_batches(request):
     ]
     # Prefer the PAN-India State+Form register templates (parsed column schema),
     # filtered by the applicability matrix; fall back to the generic layout.
-    from .register_templates import applicable_templates
+    from .register_templates import applicable_templates, gate_templates_by_adoption
+    site_templates = gate_templates_by_adoption(
+        applicable_templates(state)[0], site.employer if site else None, state) if state else []
     templates = [
         {"formCode": t.form_code, "title": t.title, "state": t.state,
          "columns": list(t.columns or [])}
-        for t in applicable_templates(state)[0]
-    ] if state else []
+        for t in site_templates
+    ]
     generated_on = timezone.localdate()
     data = clra.build_workbook(
         rows, contractor=payloads._party_name(user),
@@ -491,8 +493,13 @@ def compliance_batch_site_documents(request, batch_id):
 
     # The applicability matrix is the authority on which forms apply in a state;
     # the templates are filtered to it (fallback: every template in the folder).
-    from .register_templates import applicable_templates, state_strength
+    from .register_templates import applicable_templates, employer_adopted_ids, state_strength
     templates_list, mapped_forms = applicable_templates(state)
+    # Hard gate: once the site's employer has adopted CLRA forms for this state,
+    # the site only sees the adopted ones (site-wise contractor availability).
+    adopted = employer_adopted_ids(employer, state)
+    if adopted:
+        templates_list = [t for t in templates_list if t.id in adopted]
     by_form = {t.form_code.strip().upper(): t for t in templates_list}
 
     # Employer document mapping (which documents this employer is subject to).
@@ -511,6 +518,8 @@ def compliance_batch_site_documents(request, batch_id):
     for row in StateFormApplicability.objects.filter(state__iexact=state).order_by("purpose"):
         label = (row.form_label or "").strip().upper()
         if not label.startswith("FORM"):
+            continue
+        if adopted and label not in by_form:
             continue
         template = by_form.get(label)
         documents.append({

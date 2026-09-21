@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bharat Shram Setu - Employment Card</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 30px;
+    background: #f3f5f7;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #142d4c;
+}
+
+.cards-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 35px;
+    flex-wrap: wrap;
+}
+
+/* =========================
+   CARD
+========================= */
+
+.card {
+    width: 595px;
+    min-height: 375px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    background: white;
+    box-shadow: 0 7px 22px rgba(0,0,0,.18);
+}
+
+.card-title {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* =========================
+   FRONT
+========================= */
+
+.front {
+    background: linear-gradient(
+        to bottom,
+        #ffffff 0%,
+        #ffffff 78%,
+        #d9edf7 100%
+    );
+}
+
+.front-header {
+    height: 105px;
+    padding: 18px 22px;
+    color: white;
+    background:
+        radial-gradient(circle at 85% 20%, rgba(255,255,255,.12), transparent 30%),
+        linear-gradient(135deg, #074d92, #0862a8 60%, #0c477f);
+    position: relative;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-symbol {
+    position: relative;
+    width: 55px;
+    height: 48px;
+}
+
+.person {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.person.orange {
+    width: 21px;
+    height: 21px;
+    background: #f47b20;
+    top: 0;
+    left: 18px;
+}
+
+.person.green {
+    width: 17px;
+    height: 17px;
+    background: #54ad43;
+    top: 10px;
+    left: 0;
+}
+
+.person.blue {
+    width: 17px;
+    height: 17px;
+    background: #22a9e8;
+    top: 10px;
+    right: 0;
+}
+
+.body {
+    position: absolute;
+    border-radius: 50% 50% 15px 15px;
+}
+
+.body.orange {
+    width: 38px;
+    height: 20px;
+    background: #f47b20;
+    left: 10px;
+    top: 19px;
+}
+
+.body.green {
+    width: 30px;
+    height: 17px;
+    background: #54ad43;
+    left: -2px;
+    top: 25px;
+}
+
+.body.blue {
+    width: 30px;
+    height: 17px;
+    background: #22a9e8;
+    right: -2px;
+    top: 25px;
+}
+
+.bss {
+    position: absolute;
+    bottom: -4px;
+    left: 4px;
+    font-size: 23px;
+    font-weight: 800;
+}
+
+.header-text h1 {
+    margin: 0;
+    font-size: 25px;
+    letter-spacing: .3px;
+}
+
+.header-text h2 {
+    margin: 2px 0 0;
+    font-size: 20px;
+}
+
+.header-right {
+    position: absolute;
+    right: 20px;
+    top: 42px;
+    text-align: right;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.header-right strong {
+    display: block;
+    font-size: 13px;
+}
+
+.tricolor {
+    height: 30px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -15px;
+    overflow: hidden;
+}
+
+.tricolor::before {
+    content: "";
+    position: absolute;
+    width: 120%;
+    height: 22px;
+    left: -10%;
+    top: 0;
+    border-top: 7px solid #ef7920;
+    border-bottom: 7px solid #168b45;
+    border-radius: 50%;
+}
+
+.motto {
+    text-align: center;
+    font-size: 11px;
+    color: #253e58;
+    padding: 11px 0 7px;
+}
+
+/* front content */
+
+.front-content {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 16px;
+    padding: 0 25px;
+}
+
+.photo-column {
+    text-align: center;
+}
+
+.photo {
+    width: 185px;
+    height: 220px;
+    border-radius: 12px;
+    border: 2px solid #1a508d;
+    object-fit: cover;
+    background: #dbe7ed;
+}
+
+.qr {
+    width: 145px;
+    height: 145px;
+    margin: 12px auto 4px;
+    border: 2px solid #1a508d;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+}
+
+.qr-pattern {
+    width: 115px;
+    height: 115px;
+    background:
+        repeating-conic-gradient(#000 0 25%, #fff 0 50%)
+        50% / 14px 14px;
+    position: relative;
+}
+
+.qr-pattern::before,
+.qr-pattern::after {
+    content: "";
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border: 6px solid #000;
+    background: white;
+}
+
+.qr-pattern::before {
+    top: 3px;
+    left: 3px;
+}
+
+.qr-pattern::after {
+    bottom: 3px;
+    right: 3px;
+}
+
+.scan-text {
+    font-size: 9px;
+    font-weight: bold;
+    line-height: 12px;
+    color: #203a55;
+}
+
+/* Details */
+
+.details {
+    padding-top: 5px;
+}
+
+.detail-row {
+    min-height: 47px;
+    border-bottom: 1px solid #d9dee3;
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    align-items: center;
+}
+
+.detail-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #075292;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.detail-label {
+    display: block;
+    font-size: 12px;
+    color: #374b61;
+    margin-bottom: 2px;
+}
+
+.detail-value {
+    display: block;
+    font-size: 16px;
+    font-weight: bold;
+    color: #151b22;
+}
+
+.blood {
+    color: #d72c28;
+}
+
+/* Front bottom */
+
+.front-footer {
+    height: 47px;
+    margin-top: 13px;
+    background: #064c8f;
+    color: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.footer-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.footer-icon {
+    font-size: 18px;
+}
+
+/* =========================
+   BACK
+========================= */
+
+.back {
+    padding-bottom: 10px;
+    background: linear-gradient(#ffffff, #f4f8fa);
+}
+
+.back-header {
+    height: 75px;
+    padding: 15px 25px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e1e6ea;
+}
+
+.back-logo {
+    font-size: 27px;
+    font-weight: 900;
+    color: #073e7a;
+}
+
+.back-logo small {
+    display: block;
+    font-size: 9px;
+    letter-spacing: .4px;
+    color: #1c617e;
+}
+
+.back-title {
+    margin-left: 15px;
+    border-left: 2px solid #f07a1d;
+    padding-left: 12px;
+    font-weight: bold;
+    color: #153d68;
+    line-height: 17px;
+    font-size: 13px;
+}
+
+.info-section {
+    padding: 9px 18px 0;
+}
+
+.info-box {
+    min-height: 55px;
+    margin-bottom: 7px;
+    background: linear-gradient(90deg, #edf4f9, #f7f9fa);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 54px 155px 1fr;
+    align-items: center;
+    padding: 8px 13px;
+}
+
+.info-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    font-weight: bold;
+}
+
+.green {
+    background: #158d5c;
+}
+
+.blue {
+    background: #126cc2;
+}
+
+.orange {
+    background: #ed701c;
+}
+
+.purple {
+    background: #6634a7;
+}
+
+.info-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #153e6d;
+}
+
+.info-value {
+    border-left: 1px solid #aebdca;
+    padding-left: 13px;
+    font-size: 11px;
+    line-height: 16px;
+    color: #1e2b37;
+}
+
+.info-value strong {
+    font-size: 14px;
+    display: block;
+}
+
+/* Emergency */
+
+.emergency-row {
+    display: grid;
+    grid-template-columns: 1.35fr .85fr;
+    gap: 10px;
+    padding: 0 18px;
+    margin-top: 2px;
+}
+
+.emergency,
+.blood-box {
+    border-radius: 13px;
+    padding: 11px 13px;
+    background: #fff0ee;
+    min-height: 83px;
+}
+
+.emergency {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+}
+
+.emergency-icon {
+    width: 38px;
+    height: 38px;
+    background: #d9382c;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.emergency-title,
+.blood-title {
+    color: #cc2927;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.emergency-details {
+    font-size: 11px;
+    line-height: 15px;
+    margin-top: 5px;
+}
+
+.blood-box {
+    position: relative;
+}
+
+.blood-large {
+    font-size: 31px;
+    color: #cf2524;
+    font-weight: bold;
+    margin-top: 3px;
+}
+
+.blood-note {
+    position: absolute;
+    right: 8px;
+    bottom: 13px;
+    width: 65px;
+    font-size: 9px;
+    line-height: 12px;
+}
+
+/* QR information */
+
+.verify {
+    margin: 9px 18px 0;
+    min-height: 55px;
+    display: grid;
+    grid-template-columns: 55px 1fr 1fr;
+    align-items: center;
+    border-top: 1px solid #d7dfe5;
+    padding-top: 7px;
+}
+
+.verify-icon {
+    width: 36px;
+    height: 36px;
+    border: 2px solid #07529a;
+    border-radius: 7px;
+    color: #07529a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+}
+
+.verify-text {
+    font-size: 10px;
+    line-height: 14px;
+}
+
+.verify-text strong {
+    color: #064d91;
+}
+
+.slogan {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    font-style: italic;
+    color: #075292;
+}
+
+/* Bottom logos */
+
+.bottom-logos {
+    border-top: 1px solid #d4dce2;
+    margin-top: 5px;
+    padding: 8px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bottom-logo {
+    text-align: center;
+    font-weight: bold;
+    font-size: 12px;
+    color: #1e4c78;
+}
+
+.bottom-logo span {
+    display: block;
+    font-size: 9px;
+    font-weight: normal;
+}
+
+.powered {
+    font-size: 8px;
+    color: #555;
+}
+
+.legal {
+    text-align: center;
+    font-size: 7px;
+    color: #555;
+    margin-top: 6px;
+}
+
+/* =========================
+   PRINT
+========================= */
+
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .cards-wrapper {
+        gap: 15px;
+    }
+
+    .card {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+
+    .card-title {
+        display: none;
+    }
+}
+
+@media(max-width: 650px) {
+    body {
+        padding: 10px;
+    }
+
+    .card {
+        width: 100%;
+        transform-origin: top left;
+    }
+
+    .front-content {
+        grid-template-columns: 150px 1fr;
+    }
+
+    .photo {
+        width: 140px;
+        height: 175px;
+    }
+
+    .info-box {
+        grid-template-columns: 45px 130px 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="cards-wrapper">
+
+    <!-- ================= FRONT ================= -->
+
+    <div>
+        <div class="card front">
+
+            <div class="front-header">
+
+                <div class="logo">
+                    <div class="logo-symbol">
+                        <div class="person orange"></div>
+                        <div class="person green"></div>
+                        <div class="person blue"></div>
+
+                        <div class="body orange"></div>
+                        <div class="body green"></div>
+                        <div class="body blue"></div>
+
+                        <div class="bss">BSS</div>
+                    </div>
+
+                    <div class="header-text">
+                        <h1>BHARAT SHRAM SETU</h1>
+                        <h2>Employment Card</h2>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <strong>Skilled Workers</strong>
+                    Stronger India
+                </div>
+
+                <div class="tricolor"></div>
+            </div>
+
+            <div class="motto">
+                Dignified Work &nbsp; | &nbsp; Secure Tomorrow &nbsp; | &nbsp; Viksit Bharat 2047
+            </div>
+
+            <div class="front-content">
+
+                <div class="photo-column">
+
+                    <!-- Replace this with the worker's photo -->
+                    <img
+                        class="photo"
+                        src="worker-photo.jpg"
+                        alt="Worker Photo"
+                    >
+
+                    <div class="qr">
+                        <div class="qr-pattern"></div>
+                    </div>
+
+                    <div class="scan-text">
+                        Scan to verify identity<br>
+                        and employment details
+                    </div>
+
+                </div>
+
+                <div class="details">
+
+                    <div class="detail-row">
+                        <div class="detail-icon">●</div>
+                        <div>
+                            <span class="detail-label">Name</span>
+                            <span class="detail-value">RAHUL KUMAR</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-icon">▣</div>
+                        <div>
+                            <span class="detail-label">BSS ID</span>
+                            <span class="detail-value">BSS-25X7-00012345</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-icon">♟</div>
+                        <div>
+                            <span class="detail-label">Worker Category</span>
+                            <span class="detail-value">Skilled</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-icon">▣</div>
+                        <div>
+                            <span class="detail-label">Date of Birth</span>
+                            <span class="detail-value">15/08/1992</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-icon">⚥</div>
+                        <div>
+                            <span class="detail-label">Gender</span>
+                            <span class="detail-value">Male</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-icon">♦</div>
+                        <div>
+                            <span class="detail-label">Blood Group</span>
+                            <span class="detail-value blood">O+</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-icon">☎</div>
+                        <div>
+                            <span class="detail-label">Mobile Number</span>
+                            <span class="detail-value">98765 43210</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="front-footer">
+                <div class="footer-item">
+                    <span class="footer-icon">✓</span>
+                    Verified Worker
+                </div>
+
+                <div class="footer-item">
+                    <span class="footer-icon">♟</span>
+                    Formal Employment
+                </div>
+
+                <div class="footer-item">
+                    <span class="footer-icon">▥</span>
+                    Better Opportunities
+                </div>
+            </div>
+
+        </div>
+
+        <div class="card-title">FRONT</div>
+    </div>
+
+
+    <!-- ================= BACK ================= -->
+
+    <div>
+        <div class="card back">
+
+            <div class="back-header">
+
+                <div class="back-logo">
+                    BSS
+                    <small>BHARAT SHRAM SETU</small>
+                </div>
+
+                <div class="back-title">
+                    Employment Card<br>
+                    <small>One Workforce • One Platform • A Stronger India</small>
+                </div>
+
+                <div class="back-title" style="margin-left:auto">
+                    SAFE<br>
+                    SKILLED<br>
+                    EMPLOYED<br>
+                    EMPOWERED
+                </div>
+
+            </div>
+
+            <div class="info-section">
+
+                <!-- Contractor -->
+
+                <div class="info-box">
+                    <div class="info-icon green">⚒</div>
+
+                    <div class="info-label">
+                        Contractor Details
+                    </div>
+
+                    <div class="info-value">
+                        <strong>ABC Infrastructure Services Pvt. Ltd.</strong>
+                        Contractor ID: CTR-000458<br>
+                        Contact: 88001 23456
+                    </div>
+                </div>
+
+
+                <!-- Employer -->
+
+                <div class="info-box">
+                    <div class="info-icon blue">▦</div>
+
+                    <div class="info-label">
+                        Employer / Principal<br>
+                        Employer
+                    </div>
+
+                    <div class="info-value">
+                        <strong>XYZ Construction Limited</strong>
+                        Employer ID: EMP-000789<br>
+                        Contact: 011-4567 8900
+                    </div>
+                </div>
+
+
+                <!-- Site -->
+
+                <div class="info-box">
+                    <div class="info-icon orange">●</div>
+
+                    <div class="info-label">
+                        Site Details
+                    </div>
+
+                    <div class="info-value">
+                        <strong>Metro Rail Package – 3</strong>
+                        Sector 62, Noida, Uttar Pradesh – 201309<br>
+                        Site ID: SITE-00123
+                    </div>
+                </div>
+
+
+                <!-- Accommodation -->
+
+                <div class="info-box">
+                    <div class="info-icon purple">⌂</div>
+
+                    <div class="info-label">
+                        Accommodation Details
+                    </div>
+
+                    <div class="info-value">
+                        <strong>Labour Camp – Block B</strong>
+                        Sector 62, Noida, Uttar Pradesh – 201309<br>
+                        Room No.: B-208
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- Emergency / Blood -->
+
+            <div class="emergency-row">
+
+                <div class="emergency">
+
+                    <div class="emergency-icon">☎</div>
+
+                    <div>
+                        <div class="emergency-title">
+                            Emergency Contact
+                        </div>
+
+                        <div class="emergency-details">
+                            Name: &nbsp; Suresh Kumar (Brother)<br>
+                            Number: &nbsp; 98765 67890<br>
+                            Relation: &nbsp; Brother
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="blood-box">
+
+                    <div class="blood-title">
+                        💧 Blood Group
+                    </div>
+
+                    <div class="blood-large">
+                        O+
+                    </div>
+
+                    <div class="blood-note">
+                        In case of emergency<br>
+                        please contact
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Verify -->
+
+            <div class="verify">
+
+                <div class="verify-icon">
+                    ♙
+                </div>
+
+                <div class="verify-text">
+                    <strong>Scan QR to access</strong><br>
+                    full verified profile, employment history,<br>
+                    skills, compliance and welfare details.
+                </div>
+
+                <div class="slogan">
+                    Workers Build Today<br>
+                    <span>for a Brighter Tomorrow</span>
+                </div>
+
+            </div>
+
+
+            <!-- Logos -->
+
+            <div class="bottom-logos">
+
+                <div class="bottom-logo">
+                    ✓
+                    <br>
+                    <strong>Talent Compliance India</strong>
+                    <span>
+                        Building trusted digital infrastructure<br>
+                        for India's workforce
+                    </span>
+                </div>
+
+                <div class="bottom-logo">
+                    <strong>Digital India</strong>
+                    <span>Power to Empower</span>
+                </div>
+
+                <div class="bottom-logo">
+                    <strong>Viksit Bharat<br>2047</strong>
+                </div>
+
+            </div>
+
+            <div class="legal">
+                This card is the property of Bharat Shram Setu.
+                Misuse is punishable under applicable laws.
+            </div>
+
+        </div>
+
+        <div class="card-title">BACK</div>
+    </div>
+
+</div>
+
+</body>
+</html>

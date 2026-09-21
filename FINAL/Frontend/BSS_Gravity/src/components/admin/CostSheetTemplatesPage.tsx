@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Save, Trash2, Wand2, X } from "lucide-react";
 import EnterpriseDataTable, { type DataColumn } from "@/components/worker/EnterpriseDataTable";
 import { INDIA_STATES } from "@/data/indiaStates";
 
@@ -66,6 +66,30 @@ const emptyTemplate = (): Template => ({
   designations:[], minimumWage:{ ...EMPTY_MW }, statutory:DEFAULT_STATUTORY.map(s => ({ ...s })), custom:[],
 });
 
+const INDUSTRY_CODES: Record<string, string> = {
+  Construction: "CON", Manufacturing: "MAN", Retail: "RET", Hospitality: "HOS",
+  "Facility Management": "FAC", "Logistics & Warehousing": "LOG",
+  "IT & Telecom": "IT", Healthcare: "HTH",
+};
+const CATEGORY_CODES: Record<string, string> = {
+  "Unskilled": "US", "Semi-skilled": "SS", "Skilled": "SK", "Highly skilled": "HS",
+};
+
+// Auto-generate a code like BSS-CON-SS-MH-001 (per the doc's example).
+function generateCode(t: { industry:string; workerCategory:string; state:string }): string {
+  const industry = (INDUSTRY_CODES[t.industry.trim()] ?? t.industry.trim().slice(0, 3).toUpperCase()) || "GEN";
+  const category = (CATEGORY_CODES[t.workerCategory.trim()] ?? t.workerCategory.trim().slice(0, 2).toUpperCase()) || "XX";
+  const state = t.state.trim() ? t.state.trim().replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() : "AI";
+  return `BSS-${industry}-${category}-${state}`;
+}
+
+const STEP_LABELS = ["Start template", "Configure", "Data sources & review"];
+const TEMPLATE_TYPE_OPTIONS = [
+  { value: "UNIVERSAL", label: "Universal", hint: "All India, top-level base rules" },
+  { value: "STATE", label: "State-specific", hint: "One or more states" },
+  { value: "INDUSTRY", label: "Industry-specific", hint: "One industry, any state" },
+  { value: "SITE", label: "Site-specific", hint: "A single site" },
+];
 const input = "mt-1 w-full h-9 rounded-lg border border-gray-200 px-3 text-xs";
 const label = "text-[11px] font-semibold text-gray-600";
 
@@ -78,6 +102,7 @@ export default function CostSheetTemplatesPage() {
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<CostPreview | null>(null);
   const [previewWage, setPreviewWage] = useState('');
+  const [step, setStep] = useState<number>(1);
   const [sites, setSites] = useState<Array<{ id:number; name:string; code:string; state:string; employer:string }>>([]);
   const [statutoryMaster, setStatutoryMaster] = useState<Statutory[]>(DEFAULT_STATUTORY);
 
@@ -126,7 +151,7 @@ export default function CostSheetTemplatesPage() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load templates."); }
     finally { setLoading(false); }
   }, []);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- initial + filter reload
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
@@ -217,7 +242,7 @@ export default function CostSheetTemplatesPage() {
     { id:"lines", header:"Lines", value:r => r.custom.length + r.statutory.length, render:r => <span className="text-gray-500">{r.statutory.filter(s => s.applicable).length} statutory · {r.custom.length} custom</span> },
     { id:"actions", header:"Actions", filterable:false, value:r => r.id, render:r => (
       <div className="flex items-center gap-2">
-        <button onClick={() => setDraft({ ...r, minimumWage: r.minimumWage ?? { ...EMPTY_MW } })} className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"><Pencil size={12}/>Edit</button>
+        <button onClick={() => { const base = { ...r, minimumWage: r.minimumWage ?? { ...EMPTY_MW } }; setDraft({ ...base, states: (r.states?.length ? r.states : r.state ? [r.state] : []) }); setStep(1); }} className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"><Pencil size={12}/>Edit</button>
         {r.status === "DRAFT" && <button disabled={busy} onClick={() => void transition(r, "submit")} className="text-xs font-semibold text-[#073B67] hover:underline disabled:opacity-50">Submit for review</button>}
         {r.status === "REVIEW" && <>
           <button disabled={busy} onClick={() => void transition(r, "employer-approve")} className="text-xs font-semibold text-green-700 hover:underline disabled:opacity-50">Approve &amp; publish</button>
@@ -233,7 +258,7 @@ export default function CostSheetTemplatesPage() {
   return <div className="space-y-6 pb-10">
     <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-[0.12em]">BSS Admin · Masters</p><h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-gray-950 mt-1">Cost Sheet Templates</h1><p className="text-sm text-gray-500 mt-1">Universal worker cost templates — platform-locked statutory rules + minimum-wage link + org-configurable custom costs. Drives a worker&apos;s wage, employer cost and CTC.</p></div>
-      <button onClick={() => { setDraft(makeEmpty()); setError(""); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>New template</button>
+      <button onClick={() => { setDraft(makeEmpty()); setStep(1); setError(""); }} className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-sm font-semibold flex items-center gap-2 hover:bg-black"><Plus size={16}/>New template</button>
     </header>
 
     {error && <p role="alert" className="bss-alert bss-alert-error">{error}</p>}
@@ -243,122 +268,208 @@ export default function CostSheetTemplatesPage() {
       : <EnterpriseDataTable title="Cost sheet templates" rows={rows} columns={columns} rowKey={r => String(r.id)} filename="cost-sheet-templates"/>}
 
     {draft && <div className="fixed inset-0 z-[90] bg-black/50 flex justify-end" role="presentation">
-      <section role="dialog" aria-modal="true" aria-label="Cost sheet template builder" className="bg-white w-full max-w-3xl h-full overflow-y-auto">
+      <section role="dialog" aria-modal="true" aria-label="Cost sheet template builder" className="bg-white w-full max-w-3xl h-full flex flex-col">
         <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-5 py-4 flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cost sheet template</p><h2 className="font-semibold text-gray-950 mt-0.5">{draft.id ? draft.name : "New template"}</h2><p className="text-xs text-gray-500 mt-0.5">Step 1 identity · Step 2 scope · Step 3 minimum wage, statutory &amp; custom costs.</p></div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cost sheet template {step} of {STEP_LABELS.length}</p>
+            <h2 className="font-semibold text-gray-950 mt-0.5">{draft.id ? draft.name : "New master template"}</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Follows the Universal worker cost template flow — identity → configuration → data sources → review.</p>
+          </div>
           <button onClick={() => setDraft(null)} aria-label="Close" className="w-8 h-8 grid place-items-center rounded-lg hover:bg-gray-50"><X size={16}/></button>
         </header>
-        <div className="p-5 space-y-6">
-          {/* Step 1 */}
-          <section>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">1 · Template identity</h3>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <label className={label}>Template name<input value={draft.name} onChange={e => set("name", e.target.value)} className={input}/></label>
-              <label className={label}>Template code<input value={draft.code} onChange={e => set("code", e.target.value)} placeholder="auto-generate" className={input}/></label>
-              <label className={label}>Applicable for<select value={draft.appliesTo} onChange={e => set("appliesTo", e.target.value)} className={input}><option value="employer">Employer</option><option value="contractor">Contractor</option><option value="both">Both</option></select></label>
-              <label className={label}>Industry<input value={draft.industry} onChange={e => set("industry", e.target.value)} placeholder="Construction" className={input}/></label>
-              <label className={label}>State / All India<select value={draft.state} onChange={e => set("state", e.target.value)} className={input}><option value="">All India</option>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
-              <label className={label}>Geography (multi-state, optional)<select multiple value={draft.states} onChange={e => set("states", Array.from(e.target.selectedOptions).map(o => o.value))} className={input + " h-28"}>{INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select></label>
-              {draft.templateType === "SITE" && <label className={label}>Site (required for site-specific)<select value={draft.siteId ?? ""} onChange={e => set("siteId", e.target.value ? Number(e.target.value) : null)} className={input}><option value="">Select site</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}</select></label>}
-              <label className={label}>Worker category<input value={draft.workerCategory} onChange={e => set("workerCategory", e.target.value)} placeholder="Semi-skilled" className={input}/></label>
-              <label className={label}>Designation<input value={draft.designation} onChange={e => set("designation", e.target.value)} placeholder="Mason helper" className={input}/></label>
-              <label className={label}>Effective date<input type="date" value={draft.effectiveDate} onChange={e => set("effectiveDate", e.target.value)} className={input}/></label>
-              <label className={label}>Effective to<input type="date" value={draft.effectiveTo} onChange={e => set("effectiveTo", e.target.value)} className={input}/></label>
-              <label className={label}>Calculation frequency<select value={draft.calculationFrequency} onChange={e => set("calculationFrequency", e.target.value)} className={input}><option value="MONTHLY">Monthly</option><option value="DAILY">Daily</option><option value="PER_SHIFT">Per-shift</option></select></label>
-              <label className={label}>Currency<input value={draft.currency} onChange={e => set("currency", e.target.value)} className={input}/></label>
-            </div>
-          </section>
 
-          {/* Step 2 */}
-          <section>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">2 · Type &amp; designations</h3>
-            <label className={label}>Template type<select value={draft.templateType} onChange={e => set("templateType", e.target.value)} className={input + " mb-3"}><option value="UNIVERSAL">Universal</option><option value="STATE">State-specific</option><option value="INDUSTRY">Industry-specific</option><option value="SITE">Site-specific</option></select></label>
-            <div className="space-y-2">
-              {draft.designations.map((d, i) => <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
-                <input value={d.workerCategory} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, workerCategory:e.target.value } : x))} placeholder="Category" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-                <input value={d.subCategory} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, subCategory:e.target.value } : x))} placeholder="Sub-category" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-                <input value={d.designation} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, designation:e.target.value } : x))} placeholder="Designation" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-                <button type="button" onClick={() => set("designations", draft.designations.filter((_, j) => j !== i))} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 size={14}/></button>
-              </div>)}
-              <button type="button" onClick={() => set("designations", [...draft.designations, { workerCategory:draft.workerCategory, subCategory:"", designation:"", inheritsParentRules:true }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add designation</button>
-            </div>
-          </section>
-
-          {/* Step 3A */}
-          <section>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">3A · Minimum wage (statutory)</h3>
-            <p className="text-[11px] text-gray-400 mb-3">Auto-fetched from the Wage Master by state + category + effective date. The admin only confirms the zone — values are read-only statutory.</p>
-            <div className="grid sm:grid-cols-3 gap-3">
-              <label className={label}>State<input readOnly value={draft.minimumWage?.state || draft.state} className={input + " bg-gray-50"}/></label>
-              <label className={label}>Zone<select value={draft.minimumWage?.zone || ""} onChange={e => set("minimumWage", { ...(draft.minimumWage ?? EMPTY_MW), zone:e.target.value })} className={input}><option value="">Select</option><option>Zone 1</option><option>Zone 2</option><option>Zone 3</option><option>Zone A</option><option>Zone B</option><option>Zone C</option></select></label>
-              <label className={label}>District<input readOnly value={draft.minimumWage?.district || ""} className={input + " bg-gray-50"}/></label>
-              <label className={label}>Basic wage<input readOnly value={draft.minimumWage?.basicWage ?? 0} className={input + " bg-gray-50"}/></label>
-              <label className={label}>VDA<input readOnly value={draft.minimumWage?.vda ?? 0} className={input + " bg-gray-50"}/></label>
-              <label className={label}>Min monthly wage<input readOnly value={draft.minimumWage?.minimumMonthlyWage ?? 0} className={input + " bg-gray-50"}/></label>
-              <label className={label}>Min daily wage<input readOnly value={draft.minimumWage?.minimumDailyWage ?? 0} className={input + " bg-gray-50"}/></label>
-              <label className={label}>Notification no.<input readOnly value={draft.minimumWage?.notificationNumber || ""} className={input + " bg-gray-50"}/></label>
-              <label className={label}>Effective date<input readOnly value={draft.minimumWage?.effectiveDate || ""} className={input + " bg-gray-50"}/></label>
-            </div>
-          </section>
-
-          {/* Step 3B */}
-          <section>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">3B · Statutory components</h3>
-            <p className="text-[11px] text-gray-400 mb-3">Rates come from the statutory master and stay locked for employers/contractors.</p>
-            <div className="rounded-xl border border-gray-100 divide-y divide-gray-100">
-              {draft.statutory.map((s, i) => <div key={s.component} className="flex flex-wrap items-center gap-3 px-3 py-2 text-xs">
-                <label className="flex items-center gap-2 w-52"><input type="checkbox" checked={s.applicable} onChange={e => set("statutory", draft.statutory.map((x, j) => j === i ? { ...x, applicable:e.target.checked } : x))} className="accent-[#073B67]"/><span className="font-semibold text-gray-800">{s.component.replace(/_/g, " ")}</span></label>
-                <input type="number" step="0.01" value={s.rate} onChange={e => set("statutory", draft.statutory.map((x, j) => j === i ? { ...x, rate:Number(e.target.value) } : x))} className="h-8 w-24 border border-gray-200 rounded-lg px-2 text-xs"/>
-                <span className="text-gray-400">{s.rateType === "PERCENT" ? "% of wages" : s.rateType === "DAYS" ? "days" : "fixed"}</span>
-                <span className="text-gray-400 flex-1 truncate">{s.condition}</span>
-                {s.mandatory && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">Mandatory</span>}
-              </div>)}
-            </div>
-          </section>
-
-          {/* Step 3C */}
-          <section>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">3C · Custom cost components</h3>
-            <p className="text-[11px] text-gray-400 mb-3">Org-specific costs. &ldquo;Editable by org&rdquo; controls whether employers/contractors may change the amount.</p>
-            <div className="space-y-2">
-              {draft.custom.map((c, i) => <div key={i} className="grid grid-cols-[1.4fr_90px_110px_110px_auto_auto] gap-2 items-center">
-                <input value={c.name} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, name:e.target.value } : x))} placeholder="Cost head" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-                <input type="number" value={c.amount} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, amount:Number(e.target.value) } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
-                <select value={c.frequency} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, frequency:e.target.value } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="ONE_TIME">One-time</option><option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option></select>
-                <select value={c.appliesTo} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, appliesTo:e.target.value } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="both">Both</option><option value="employer">Employer</option><option value="contractor">Contractor</option></select>
-                <label className="flex items-center gap-1 text-[10px] font-semibold text-gray-600 whitespace-nowrap"><input type="checkbox" checked={c.editableByOrg} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, editableByOrg:e.target.checked } : x))} className="accent-[#073B67]"/>Editable by org</label>
-                <button type="button" onClick={() => set("custom", draft.custom.filter((_, j) => j !== i))} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 size={14}/></button>
-              </div>)}
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => set("custom", [...draft.custom, { name:"", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add cost head</button>
-                <button type="button" onClick={() => { const names = new Set(draft.custom.map(c => c.name)); set("custom", [...draft.custom, ...STANDARD_HEADS.filter(h => !names.has(h.name)).map(h => ({ ...h }))]); }} className="h-8 px-3 rounded-lg border border-[#073B67]/30 bg-[#073B67]/5 text-[#073B67] text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add standard heads</button>
-              </div>
-            </div>
-          </section>
-
-          {/* Step 4 — live preview (rule + cost engine) */}
-          <section>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">4 · Preview (rule + cost engine)</h3>
-            <p className="text-[11px] text-gray-400 mb-3">Live 3-layer breakdown for one worker. Leave blank to use the minimum wage, or enter a basic wage to preview.</p>
-            <label className={label}>Basic wage (optional override)
-              <input type="number" value={previewWage} onChange={e => setPreviewWage(e.target.value)} placeholder="e.g. 18000" className={input}/>
-            </label>
-            {preview ? <div className="mt-3 rounded-xl border border-gray-100 overflow-hidden text-xs">
-              <div className="grid grid-cols-3 gap-px bg-gray-100">
-                <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Minimum wage</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.minimumWage.toLocaleString('en-IN')}</p></div>
-                <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Statutory</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.statutoryTotal.toLocaleString('en-IN')}</p></div>
-                <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Custom</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.customTotal.toLocaleString('en-IN')}</p></div>
-              </div>
-              <div className="grid grid-cols-2 gap-px bg-gray-100">
-                <div className="bg-[#F0F4FA] p-3"><p className="text-[10px] uppercase text-[#073B67]">Employer cost</p><p className="font-bold text-[#073B67] mt-0.5">{preview.currency} {preview.employerCost.toLocaleString('en-IN')}</p></div>
-                <div className="bg-[#073B67] p-3 text-white"><p className="text-[10px] uppercase opacity-70">Contractor billing / CTC</p><p className="font-bold mt-0.5">{preview.currency} {(preview.contractorBilling ?? preview.ctc).toLocaleString('en-IN')}</p></div>
-              </div>
-            </div> : <p className="text-[11px] text-gray-400 mt-3">Preview updates as you edit…</p>}
-          </section>
+        {/* Stepper */}
+        <div className="px-5 pt-4 pb-2">
+          <ol className="flex items-center gap-1.5">
+            {STEP_LABELS.map((item, i) => {
+              const n = i + 1;
+              const done = step > n;
+              const active = step === n;
+              return <li key={item} className={`flex items-center gap-1.5 ${i < STEP_LABELS.length - 1 ? "flex-1" : ""}`}>
+                <span className={`w-6 h-6 grid place-items-center rounded-full text-[10px] font-bold shrink-0 ${done ? "bg-green-600 text-white" : active ? "bg-[#073B67] text-white" : "bg-gray-100 text-gray-400"}`}>{done ? <CheckCircle2 size={13}/> : n}</span>
+                <span className={`text-[10px] font-semibold ${active ? "text-[#073B67]" : done ? "text-green-700" : "text-gray-400"}`} title={item}>{item}</span>
+                {i < STEP_LABELS.length - 1 && <span className={`h-px flex-1 min-w-3 ${done ? "bg-green-600" : "bg-gray-200"}`}/>}
+              </li>;
+            })}
+          </ol>
         </div>
-        <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex justify-end gap-2">
-          <button onClick={() => setDraft(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>
-          <button disabled={busy || !draft.name.trim()} onClick={() => void save()} className="h-10 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? "Saving…" : "Save template"}</button>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {/* ── Step 1 · Start new master template ─────────────────────────── */}
+          {step === 1 && <section>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">1 · Start new master template</h3>
+            <p className="text-[11px] text-gray-400 mb-3">Identity of the universal template. A duplicate check runs against state + industry + category + designation on save; the record is created as a Draft.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className={label}>Template name *<input value={draft.name} onChange={e => set("name", e.target.value)} placeholder='e.g. "Construction semi-skilled worker - Maharashtra"' className={input}/></label>
+              <label className={label}>Template code
+                <div className="flex gap-2"><input value={draft.code} onChange={e => set("code", e.target.value)} placeholder="BSS-CON-SS-MH-001" className={input}/><button type="button" onClick={() => set("code", generateCode(draft))} className="h-9 px-2.5 rounded-lg border border-gray-200 text-[10px] font-bold inline-flex items-center gap-1 shrink-0"><Wand2 size={12}/>Auto</button></div>
+              </label>
+              <label className={label}>Industry / sector *<select value={draft.industry} onChange={e => set("industry", e.target.value)} className={input}><option value="">Select industry</option><option value="Construction">Construction</option><option value="Manufacturing">Manufacturing</option><option value="Retail">Retail</option><option value="Hospitality">Hospitality</option><option value="Facility Management">Facility Management</option><option value="Logistics & Warehousing">Logistics &amp; Warehousing</option><option value="IT & Telecom">IT &amp; Telecom</option><option value="Healthcare">Healthcare</option></select></label>
+              <label className={label}>Worker category *<select value={draft.workerCategory} onChange={e => set("workerCategory", e.target.value)} className={input}><option value="">Select category</option><option value="Unskilled">Unskilled</option><option value="Semi-skilled">Semi-skilled</option><option value="Skilled">Skilled</option><option value="Highly skilled">Highly skilled</option></select></label>
+              <label className={label}>Worker designation<input value={draft.designation} onChange={e => set("designation", e.target.value)} placeholder="e.g. Mason helper, Security guard" className={input}/></label>
+              <label className={label}>Effective from *<input type="date" value={draft.effectiveDate} onChange={e => set("effectiveDate", e.target.value)} className={input}/></label>
+              <label className={label}>Calculation frequency<select value={draft.calculationFrequency} onChange={e => set("calculationFrequency", e.target.value)} className={input}><option value="MONTHLY">Monthly</option><option value="DAILY">Daily</option><option value="PER_SHIFT">Per-shift</option></select></label>
+              <label className={label}>Currency<select value={draft.currency} onChange={e => set("currency", e.target.value)} className={input}><option value="INR">INR (₹)</option><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="AED">AED (AED)</option></select></label>
+            </div>
+          </section>}
+
+          {/* ── Step 2 · Configure template ─────────────────────────────────── */}
+          {step === 2 && <div className="space-y-6">
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">Template type</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {TEMPLATE_TYPE_OPTIONS.map(opt => (
+                  <label key={opt.value} className={`flex items-start gap-2.5 rounded-xl border p-3 cursor-pointer ${draft.templateType === opt.value ? "border-[#073B67] bg-[#073B67]/5" : "border-gray-200"}`}>
+                    <input type="radio" name="templateType" checked={draft.templateType === opt.value} onChange={() => { set("templateType", opt.value); if (opt.value === "UNIVERSAL") setDraft(d => d ? { ...d, states: [], state: "" } : d); }} className="accent-[#073B67] mt-0.5"/>
+                    <span><span className="block text-xs font-bold text-gray-800">{opt.label}</span><span className="block text-[10px] text-gray-400 mt-0.5">{opt.hint}</span></span>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">Scope</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {draft.templateType === "UNIVERSAL"
+                  ? <label className={label}>Geography<input readOnly value="All India — universal template, no state required" className={input + " bg-gray-50"}/></label>
+                  : <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-semibold text-gray-600">Geography</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#073B67] text-white">{draft.states.length} selected</span>
+                    </div>
+                    <div className="h-44 overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100">
+                      {INDIA_STATES.map(s => {
+                        const checked = draft.states.includes(s);
+                        return <label key={s} className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-gray-50">
+                          <input type="checkbox" checked={checked} onChange={() => setDraft(d => {
+                            if (!d) return d;
+                            const states = checked ? d.states.filter(x => x !== s) : [...d.states, s];
+                            return { ...d, states, state: states[0] ?? "" };
+                          })} className="accent-[#073B67]"/>{s}
+                        </label>;
+                      })}
+                    </div>
+                    <span className="mt-1 block text-[10px] font-normal text-gray-400">Tick the states this template applies to — the first ticked one drives the minimum-wage lookup.</span>
+                  </div>}
+                <label className={label}>Applicable for<select value={draft.appliesTo} onChange={e => set("appliesTo", e.target.value)} className={input}><option value="both">Both (Employer &amp; Contractor)</option><option value="employer">Employer</option><option value="contractor">Contractor</option></select></label>
+                {draft.templateType === "SITE" && <label className={label}>Site (required for site-specific)<select value={draft.siteId ?? ""} onChange={e => set("siteId", e.target.value ? Number(e.target.value) : null)} className={input}><option value="">Select site</option>{sites.map(s => <option key={s.id} value={s.id}>{s.name} — {s.employer}</option>)}</select></label>}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">Worker Category Hierarchy</h3>
+              <p className="text-[11px] text-gray-400 mb-3">Category → sub-category → designation. Each row inherits parent statutory rules by default.</p>
+              <div className="grid sm:grid-cols-3 gap-3 mb-3">
+                <label className={label}>Industry<select value={draft.industry} onChange={e => set("industry", e.target.value)} className={input}><option value="">Select industry</option><option value="Construction">Construction</option><option value="Manufacturing">Manufacturing</option><option value="Retail">Retail</option><option value="Hospitality">Hospitality</option><option value="Facility Management">Facility Management</option><option value="Logistics & Warehousing">Logistics &amp; Warehousing</option><option value="IT & Telecom">IT &amp; Telecom</option><option value="Healthcare">Healthcare</option></select></label>
+                <label className={label}>Effective period (from)<input type="date" value={draft.effectiveDate} onChange={e => set("effectiveDate", e.target.value)} className={input}/></label>
+                <label className={label}>Effective period (to — optional)<input type="date" value={draft.effectiveTo} onChange={e => set("effectiveTo", e.target.value)} className={input}/></label>
+              </div>
+              <div className="space-y-2">
+                {draft.designations.map((d, i) => <div key={i} className="rounded-xl border border-gray-100 p-2.5 grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-2 items-center">
+                  <select value={d.workerCategory || draft.workerCategory} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, workerCategory:e.target.value } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="Unskilled">Unskilled</option><option value="Semi-skilled">Semi-skilled</option><option value="Skilled">Skilled</option><option value="Highly skilled">Highly skilled</option></select>
+                  <input value={d.subCategory} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, subCategory:e.target.value } : x))} placeholder="Sub-category (optional) e.g. General labour" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                  <input value={d.designation} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, designation:e.target.value } : x))} placeholder="Designation e.g. Loader, cleaner, helper" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                  <label className="flex items-center gap-1 text-[10px] font-medium text-gray-600 whitespace-nowrap"><input type="checkbox" checked={d.inheritsParentRules} onChange={e => set("designations", draft.designations.map((x, j) => j === i ? { ...x, inheritsParentRules:e.target.checked } : x))} className="accent-[#073B67]"/>Inherits parent rules</label>
+                  <button type="button" onClick={() => set("designations", draft.designations.filter((_, j) => j !== i))} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 size={14}/></button>
+                </div>)}
+                <button type="button" onClick={() => set("designations", [...draft.designations, { workerCategory:draft.workerCategory || "Semi-skilled", subCategory:"", designation:"", inheritsParentRules:true }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add another designation</button>
+              </div>
+            </section>
+          </div>}
+
+          {/* ── Step 3 · Map data sources ───────────────────────────────────── */}
+          {step === 3 && <div className="space-y-6">
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">3A · Minimum wage (statutory)</h3>
+              <p className="text-[11px] text-gray-400 mb-3">Auto-fetched from the Wage Master by state + worker category + effective date. Values are locked — the admin only confirms the wage zone.</p>
+              {draft.minimumWage?.state ? <div className="grid sm:grid-cols-3 gap-3">
+                <label className={label}>State<input readOnly value={draft.minimumWage.state || ""} className={input + " bg-gray-50"}/></label>
+                <label className={label}>Zone (admin confirm)<select value={draft.minimumWage?.zone || ""} onChange={e => set("minimumWage", { ...(draft.minimumWage ?? EMPTY_MW), zone:e.target.value })} className={input}><option value="">Select</option><option>Zone 1</option><option>Zone 2</option><option>Zone 3</option><option>Zone A</option><option>Zone B</option><option>Zone C</option></select></label>
+                <label className={label}>District<input readOnly value={draft.minimumWage.district || ""} className={input + " bg-gray-50"}/></label>
+                <label className={label}>Scheduled employment<input readOnly value={draft.minimumWage.scheduledEmployment || ""} className={input + " bg-gray-50"}/></label>
+                <label className={label}>Basic wage (₹)<input readOnly value={draft.minimumWage.basicWage ?? 0} className={input + " bg-gray-50"}/></label>
+                <label className={label}>VDA (₹)<input readOnly value={draft.minimumWage.vda ?? 0} className={input + " bg-gray-50"}/></label>
+                <label className={label}>Min monthly wage (₹)<input readOnly value={draft.minimumWage.minimumMonthlyWage ?? 0} className={input + " bg-gray-50"}/></label>
+                <label className={label}>Min daily wage (₹)<input readOnly value={draft.minimumWage.minimumDailyWage ?? 0} className={input + " bg-gray-50"}/></label>
+                <label className={label}>Notification no.<input readOnly value={draft.minimumWage.notificationNumber || ""} className={input + " bg-gray-50"}/></label>
+              </div> : <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-xs text-gray-400">Minimum wage auto-links once you set State, Worker category and Effective date on Step 1. Edit those fields and come back.</div>}
+            </section>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">3B · Statutory components</h3>
+              <p className="text-[11px] text-gray-400 mb-3">Rates come from the statutory master and stay locked for employers/contractors. The admin only marks which components apply.</p>
+              <div className="rounded-xl border border-gray-100 divide-y divide-gray-100">
+                {draft.statutory.map((s, i) => <div key={s.component} className="flex flex-wrap items-center gap-3 px-3 py-2 text-xs">
+                  <label className="flex items-center gap-2 w-56"><input type="checkbox" checked={s.applicable} onChange={e => set("statutory", draft.statutory.map((x, j) => j === i ? { ...x, applicable:e.target.checked } : x))} className="accent-[#073B67]"/><span className="font-semibold text-gray-800">{s.component.replace(/_/g, " ")}</span></label>
+                  <input readOnly value={s.rate} className="h-8 w-24 border border-gray-200 rounded-lg px-2 text-xs bg-gray-50"/>
+                  <span className="text-gray-400">{s.rateType === "PERCENT" ? "% of wages" : s.rateType === "DAYS" ? "days" : "fixed"}</span>
+                  <span className="text-gray-400 flex-1 truncate">{s.condition}</span>
+                  {s.mandatory && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">Mandatory</span>}
+                </div>)}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">3C · Custom cost components</h3>
+              <p className="text-[11px] text-gray-400 mb-3">Optional non-statutory cost heads. &ldquo;Editable by org&rdquo; controls whether employers/contractors may change the amount later.</p>
+              <div className="space-y-2">
+                {draft.custom.map((c, i) => <div key={i} className="grid grid-cols-[1.4fr_90px_110px_110px_auto_auto] gap-2 items-center">
+                  <input value={c.name} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, name:e.target.value } : x))} placeholder="Cost head" className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                  <input type="number" value={c.amount} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, amount:Number(e.target.value) } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs"/>
+                  <select value={c.frequency} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, frequency:e.target.value } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="ONE_TIME">One-time</option><option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option></select>
+                  <select value={c.appliesTo} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, appliesTo:e.target.value } : x))} className="h-9 border border-gray-200 rounded-lg px-2 text-xs bg-white"><option value="both">Both</option><option value="employer">Employer</option><option value="contractor">Contractor</option></select>
+                  <label className="flex items-center gap-1 text-[10px] font-semibold text-gray-600 whitespace-nowrap"><input type="checkbox" checked={c.editableByOrg} onChange={e => set("custom", draft.custom.map((x, j) => j === i ? { ...x, editableByOrg:e.target.checked } : x))} className="accent-[#073B67]"/>Editable by org</label>
+                  <button type="button" onClick={() => set("custom", draft.custom.filter((_, j) => j !== i))} className="w-8 h-9 grid place-items-center text-gray-400 hover:text-red-600"><Trash2 size={14}/></button>
+                </div>)}
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => set("custom", [...draft.custom, { name:"", amount:0, rateType:"FIXED", frequency:"MONTHLY", appliesTo:"both", editableByOrg:true }])} className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add cost head</button>
+                  <button type="button" onClick={() => { const names = new Set(draft.custom.map(c => c.name)); set("custom", [...draft.custom, ...STANDARD_HEADS.filter(h => !names.has(h.name)).map(h => ({ ...h }))]); }} className="h-8 px-3 rounded-lg border border-[#073B67]/30 bg-[#073B67]/5 text-[#073B67] text-xs font-semibold inline-flex items-center gap-1"><Plus size={13}/>Add standard heads</button>
+                </div>
+              </div>
+            </section>
+          </div>}
+
+          {/* ── Step 3 · Data sources + review ─────────────────────────────── */}
+          {step === 3 && <div className="space-y-5">
+            <section className="rounded-xl border border-gray-100 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-3">Review</h3>
+              <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                {[["Name", draft.name || "—"], ["Code", draft.code || "—"], ["Type", draft.templateType], ["Applies to", draft.appliesTo], ["Industry", draft.industry || "All"], ["State(s)", draft.states.length ? draft.states.join(", ") : "All India"], ["Worker category", draft.workerCategory || "—"], ["Designation", draft.designation || "—"], ["Effective", `${draft.effectiveDate || "—"} → ${draft.effectiveTo || "open"}`], ["Frequency", draft.calculationFrequency]].map(([k, v]) => <div key={k}><dt className="text-gray-400">{k}</dt><dd className="font-semibold text-gray-800">{v}</dd></div>)}
+                <div><dt className="text-gray-400">Designations</dt><dd className="font-semibold text-gray-800">{draft.designations.filter(d => d.designation).length}</dd></div>
+                <div><dt className="text-gray-400">Statutory applicable</dt><dd className="font-semibold text-gray-800">{draft.statutory.filter(s => s.applicable).length} of {draft.statutory.length}</dd></div>
+                <div><dt className="text-gray-400">Custom cost heads</dt><dd className="font-semibold text-gray-800">{draft.custom.length}</dd></div>
+              </dl>
+            </section>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#073B67] mb-1">Live cost preview (rule + cost engine)</h3>
+              <p className="text-[11px] text-gray-400 mb-3">3-layer breakdown for one worker. Leave blank to use the minimum wage, or enter a wage to override.</p>
+              <label className={label}>Basic wage (optional override)
+                <input type="number" value={previewWage} onChange={e => setPreviewWage(e.target.value)} placeholder="e.g. 18000" className={input}/>
+              </label>
+              {preview ? <div className="mt-3 rounded-xl border border-gray-100 overflow-hidden text-xs">
+                <div className="grid grid-cols-3 gap-px bg-gray-100">
+                  <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Minimum wage</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.minimumWage.toLocaleString('en-IN')}</p></div>
+                  <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Statutory</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.statutoryTotal.toLocaleString('en-IN')}</p></div>
+                  <div className="bg-white p-3"><p className="text-[10px] uppercase text-gray-400">Custom</p><p className="font-bold text-gray-900 mt-0.5">{preview.currency} {preview.customTotal.toLocaleString('en-IN')}</p></div>
+                </div>
+                <div className="grid grid-cols-2 gap-px bg-gray-100">
+                  <div className="bg-[#F0F4FA] p-3"><p className="text-[10px] uppercase text-[#073B67]">Employer cost</p><p className="font-bold text-[#073B67] mt-0.5">{preview.currency} {preview.employerCost.toLocaleString('en-IN')}</p></div>
+                  <div className="bg-[#073B67] p-3 text-white"><p className="text-[10px] uppercase opacity-70">Contractor billing / CTC</p><p className="font-bold mt-0.5">{preview.currency} {(preview.contractorBilling ?? preview.ctc).toLocaleString('en-IN')}</p></div>
+                </div>
+              </div> : <p className="text-[11px] text-gray-400 mt-3">Preview updates as you edit…</p>}
+            </section>
+          </div>}
+        </div>
+
+        <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex items-center justify-between gap-2">
+          <div className="flex gap-2">
+            <button type="button" disabled={step === 1} onClick={() => setStep(s => Math.max(1, s - 1))} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 disabled:opacity-40 inline-flex items-center gap-1"><ChevronLeft size={14}/>Back</button>
+            <button onClick={() => setDraft(null)} className="h-10 px-4 rounded-lg border border-gray-200 text-xs font-bold text-gray-600">Cancel</button>
+          </div>
+          {step < 3
+            ? <button type="button" onClick={() => setStep(s => Math.min(3, s + 1))} className="h-10 px-5 rounded-lg bg-[#073B67] text-white text-xs font-bold inline-flex items-center gap-1">{STEP_LABELS[step]} — Next<ChevronRight size={14}/></button>
+            : <button disabled={busy || !draft.name.trim()} onClick={() => void save()} className="h-10 px-5 rounded-lg bg-[#0F172A] text-white text-xs font-bold disabled:opacity-60 inline-flex items-center gap-1.5"><Save size={14}/>{busy ? "Saving…" : draft.id ? "Save changes" : "Save template (Draft)"}</button>}
         </footer>
       </section>
     </div>}

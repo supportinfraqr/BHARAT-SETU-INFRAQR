@@ -13,7 +13,7 @@ const MASTER_LINKS: Array<[string, string, string, typeof Users]> = [
   ['minimum-wage', 'Minimum Wage', '/admin/masters/minimum-wage', FileText],
   ['document', 'Document Master', '/admin/masters/document', FileText],
   ['compliance', 'Compliance Master', '/admin/masters/compliance', ShieldCheck],
-  ['register-doc', 'Register Doc Master', '/admin/masters/register-doc', BookOpenCheck],
+  ['register-doc', 'Statutory Registers & Forms', '/admin/masters/register-template', BookOpenCheck],
 ];
 const MAPPING_LINKS: Array<[string, string, string]> = [
   ['employer-document', 'Employer Document Mapping', '/admin/mappings/employer-document'],

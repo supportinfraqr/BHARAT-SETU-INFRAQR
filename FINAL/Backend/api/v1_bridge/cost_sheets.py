@@ -163,11 +163,19 @@ def _apply_children(t, body):
 
 
 def _duplicate_exists(body, exclude_pk=None):
+    """Duplicate guard is type-aware: universal/state/industry templates clash on
+    (type, state, industry, worker category, designation); site templates clash
+    only on (site). A state/industry override on top of a universal base is valid."""
     from bss_core.models import CostSheetTemplate
-    qs = CostSheetTemplate.objects.filter(
-        state=str(body.get("state") or ""), industry=str(body.get("industry") or ""),
-        worker_category=str(body.get("workerCategory") or ""),
-        designation=str(body.get("designation") or ""))
+    template_type = str(body.get("templateType") or "UNIVERSAL").upper()[:20]
+    if template_type == "SITE":
+        qs = CostSheetTemplate.objects.filter(template_type="SITE", site_id=body.get("siteId"))
+    else:
+        qs = CostSheetTemplate.objects.filter(
+            template_type=template_type,
+            state=str(body.get("state") or ""), industry=str(body.get("industry") or ""),
+            worker_category=str(body.get("workerCategory") or ""),
+            designation=str(body.get("designation") or ""))
     if exclude_pk:
         qs = qs.exclude(pk=exclude_pk)
     return qs.exists()
@@ -439,18 +447,59 @@ def _clone_template(source, owner, name=None):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def cost_sheets_available(request):
-    """Templates an org can use: published platform templates matching its role,
-    plus its own customised copies."""
-    from bss_core.models import CostSheetTemplate
+    """Published, platform templates an org can use, scoped to its geography,
+    industry and sites. Access model:
+      - Universal            → everyone sees it
+      - State-specific       → orgs whose site state matches one of the states
+      - Industry-specific    → orgs whose industry matches
+      - Site-specific        → only orgs bound/allotted to that site
+    Contractors get the same published library (read-only) — customisation
+    (clone) is employer-only."""
+    from bss_core.models import CostSheetTemplate, Site
+    from .bindings import _contractor_site_ids
     role = request.user.role
     if role not in ("contractor", "employer", "bss_admin"):
         return Response({"error": "not authorized"}, status=status.HTTP_403_FORBIDDEN)
     applies = {"contractor": ("contractor", "both"), "employer": ("employer", "both"),
                "bss_admin": ("contractor", "employer", "both")}[role]
+
     published = CostSheetTemplate.objects.filter(
         status="PUBLISHED", applies_to__in=applies, owner__isnull=True)
+
+    if role == "employer":
+        site_ids = set(Site.objects.filter(employer=request.user).values_list("id", flat=True))
+        site_states = set(Site.objects.filter(id__in=site_ids).exclude(state="")
+                          .values_list("state", flat=True))
+        industries = set()
+        profile = getattr(request.user, "employer_profile", None)
+        if profile and (profile.industry or "").strip():
+            industries.add(profile.industry)
+    elif role == "contractor":
+        site_ids = _contractor_site_ids(request.user)
+        site_states = set(Site.objects.filter(id__in=site_ids).exclude(state="")
+                          .values_list("state", flat=True))
+        employer_ids = set(Site.objects.filter(id__in=site_ids)
+                           .values_list("employer_id", flat=True))
+        industries = set(EmployerProfile.objects.filter(user_id__in=employer_ids)
+                         .exclude(industry="").values_list("industry", flat=True))
+    else:
+        site_ids, site_states, industries = set(), set(), set()
+
+    if role in ("employer", "contractor"):
+        scope = Q(template_type="UNIVERSAL") | Q(state__in=["", ])
+        if site_states:
+            states = list(site_states)
+            scope |= Q(template_type="STATE", state__in=states) \
+                | Q(template_type="STATE", states__has_any=states)
+        if industries:
+            scope |= Q(template_type="INDUSTRY", industry__in=industries)
+        if site_ids:
+            scope |= Q(template_type="SITE", site_id__in=site_ids)
+        published = published.filter(scope)
+
     mine = CostSheetTemplate.objects.filter(owner=request.user)
-    rows = [_template_row(t, full=True) for t in (published | mine).distinct().order_by("name")[:300]]
+    rows = [_template_row(t, full=True) for t in (published | mine)
+            .distinct().order_by("name")[:300]]
     return Response({"rows": rows}, status=status.HTTP_200_OK)
 
 
@@ -458,11 +507,14 @@ def cost_sheets_available(request):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def cost_sheet_clone(request, template_id):
-    """Employer/contractor clones a published template into their own cost sheet."""
+    """Employer clones a published template into their own cost sheet.
+
+    Contractors only *see* the published library at binding/selection time —
+    customisation is employer-only."""
     from bss_core.models import CostSheetTemplate
-    role = request.user.role
-    if role not in ("contractor", "employer"):
-        return Response({"error": "Only employers and contractors can customise a template."},
+    if request.user.role != "employer":
+        return Response({"error": "Only employers can customise a cost template "
+                                  "(contractors select from the published library)."},
                         status=status.HTTP_403_FORBIDDEN)
     source = CostSheetTemplate.objects.filter(pk=template_id).first()
     if source is None:

@@ -42,16 +42,37 @@ class RegisterTemplate(models.Model):
 
     Each row keeps the ordered column headers parsed from the source register so
     the contractor's uploaded master data can be rendered into the register.
-    One active template per (state, form); re-import bumps the version."""
+    One active template per (state, form); re-import bumps the version.
+
+    Admin-authored forms (the Universal Compliance field dictionary) are stored
+    on the same row: ``fields`` is the ordered list of sections/labelled fields
+    (data type, source, mandatory, read-only, signature/approval flags) and the
+    ``html`` layout renders them in the Register output."""
+
+    TEMPLATE_TYPES = [("register", "Register"), ("return", "Return"),
+                      ("form", "Form"), ("checklist", "Checklist"), ("report", "Report")]
+    STATUS = [("draft", "Draft"), ("approved", "Approved"),
+              ("published", "Published"), ("retired", "Retired")]
 
     state = models.CharField(max_length=60, db_index=True)
     form_code = models.CharField(max_length=60)
     title = models.CharField(max_length=200, blank=True)
+    template_type = models.CharField(max_length=20, choices=TEMPLATE_TYPES, default="register")
+    status = models.CharField(max_length=20, choices=STATUS, default="draft")
+    act = models.CharField(max_length=160, blank=True)
+    frequency = models.CharField(max_length=60, blank=True)
+    # Statutory metadata (absorbed from the RegisterDocumentMaster master).
+    criticality = models.CharField(max_length=20, blank=True)
+    is_mandatory = models.BooleanField(default=False)
     source_format = models.CharField(max_length=10, blank=True)  # xlsx / xls / docx
     document = models.ForeignKey(RegisterDocumentMaster, on_delete=models.SET_NULL,
                                  null=True, blank=True, related_name="templates")
     columns = models.JSONField(default=list, blank=True)
     meta = models.JSONField(default=dict, blank=True)
+    # Ordered sections & fields (Universal Compliance field dictionary):
+    # [{"section","label","dataType","dataSource","sourceField",
+    #   "mandatory","readOnly","signature","approval","sort"}]
+    fields = models.JSONField(default=list, blank=True)
     # Admin-authored HTML layout for the register (with {{tokens}} / {{ROWS}}).
     # When blank, the register is rendered from `columns` as a plain table.
     html = models.TextField(blank=True)
@@ -111,6 +132,33 @@ class RegisterCalculationRule(models.Model):
 
     def __str__(self):
         return f"{self.target_field} = {self.formula}"
+
+
+class EmployerRegisterTemplateAdoption(models.Model):
+    """An employer adopting a State+Form CLRA register for its sites.
+
+    Adoption is per (employer, state, template). Once at least one row exists for
+    an employer in a state, that state is *gated*: the employer's contractors only
+    see the adopted forms for their sites in that state (site-wise). States with
+    no adoption rows keep the full applicable library (backward compatible)."""
+
+    employer = models.ForeignKey(User, on_delete=models.CASCADE,
+                                 related_name="register_template_adoptions")
+    template = models.ForeignKey(RegisterTemplate, on_delete=models.CASCADE,
+                                 related_name="employer_adoptions")
+    state = models.CharField(max_length=60, db_index=True)
+    is_active = models.BooleanField(default=True)
+    adopted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "employer_register_template_adoption"
+        constraints = [models.UniqueConstraint(
+            fields=["employer", "template"], name="uq_employer_register_template")]
+        indexes = [models.Index(fields=["employer", "state"],
+                                name="idx_emp_reg_tpl_state")]
+
+    def __str__(self):
+        return f"{self.employer_id} {self.state} -> {self.template_id}"
 
 
 class StateCode(models.Model):

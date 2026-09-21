@@ -109,6 +109,7 @@ from .compliance import (
     RegisterTemplate,
     RegisterFieldMapping,
     RegisterCalculationRule,
+    EmployerRegisterTemplateAdoption,
     StateCode,
     StateFormApplicability,
     StateFeeMaster,
