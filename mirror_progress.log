@@ -1,0 +1,4 @@
+rsync: [Receiver] mkdir "/home/ubuntu/BSS_Project/FINAL" failed: No such file or directory (2)
+rsync error: error in file IO (code 11) at main.c(800) [Receiver=3.4.1]
+rsync_exit=11
+GATE=MISMATCH
