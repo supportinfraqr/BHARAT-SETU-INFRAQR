@@ -72,7 +72,7 @@ const BACKEND_FIELD_KEYS = ['contractor', 'employer', 'site', 'siteCode', 'state
 const FREQUENCY_CHOICES = ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly'];
 
 const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Central', 'Chhattisgarh', 'Goa', 'Gujarat',
   'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
   'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan',
   'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
@@ -320,17 +320,84 @@ function htmlShell(body: string): string {
   </style></head><body>${body}</body></html>`;
 }
 
+const getTodayFormatted = () => {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const getTodayReadable = () => {
+  return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const getTodaySlash = () => {
+  return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+const getCurrentTime = () => {
+  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+};
+
 const SAMPLE_TOKENS: Record<string, string> = {
   CONTRACTOR_NAME: 'Contractor Pvt Ltd', EMPLOYER_NAME: 'Principal Employer Ltd',
   SITE_NAME: 'Gurgaon Site', SITE_CODE: 'HR001', ACT: 'CLRA Act, 1970',
-  MONTH: 'August', YEAR: '2026', FINANCIAL_YEAR: '2026-27', GENERATED_ON: '2026-09-22',
+  MONTH: 'August', YEAR: '2026', FINANCIAL_YEAR: '2026-27',
+  GENERATED_ON: getTodayFormatted(),
+  TODAY_DATE: getTodayFormatted(),
+  TODAY: getTodayReadable(),
+  CURRENT_DATE: getTodaySlash(),
+  DATE: getTodayFormatted(),
+  TIME: getCurrentTime(),
   RECORD_COUNT: '3',
+
+  // Worker BSS ID & Demographic Tokens
+  'worker.bss_id': 'BSSW000001', 'worker_bssid': 'BSSW000001',
+  'worker_bssid.dob': '1995-08-15', 'worker.dob': '1995-08-15',
+  'worker_bssid.name': 'Rahul Kumar', 'worker.name': 'Rahul Kumar',
+  'worker_bssid.gender': 'Male', 'worker.gender': 'Male',
+  'worker_bssid.father_name': 'Suresh Kumar', 'worker.father_name': 'Suresh Kumar',
+  'worker_bssid.mobile': '9876543210', 'worker.mobile': '9876543210',
+  'worker_bssid.address': 'H.No 123, Sector 14, Gurgaon', 'worker.address': 'H.No 123, Sector 14, Gurgaon',
+  'worker_bssid.uan': '100908070605', 'worker.uan': '100908070605',
+  'worker_bssid.esic': '31009876543210001', 'worker.esic': '31009876543210001',
+  'worker_bssid.doj': '2025-01-15', 'worker.doj': '2025-01-15',
+  'worker_bssid.designation': 'Senior Mason', 'worker.designation': 'Senior Mason',
+  'worker_bssid.department': 'Civil Works', 'worker.department': 'Civil Works',
+  'worker_bssid.aadhaar': 'XXXX-XXXX-4321', 'worker.aadhaar': 'XXXX-XXXX-4321',
+
+  // Contractor BSS ID & Master Tokens
+  'contractor.bss_id': 'BSSC000044', 'contractor_bssid': 'BSSC000044',
+  'contractor_bssid.dob': '1982-04-10', 'contractor.dob': '1982-04-10',
+  'contractor_bssid.name': 'Contractor Pvt Ltd', 'contractor.name': 'Contractor Pvt Ltd',
+  'contractor.code': 'CONT4444', 'contractor.pan': 'ABCDE1234F',
+  'contractor.gstin': '06ABCDE1234F1Z5', 'contractor.cin': 'U74999HR2020PTC085123',
+  'contractor.mobile': '9988776655', 'contractor.email': 'compliance@contractor.com',
+  'contractor.address': 'Plot 45, Udyog Vihar Phase 4, Gurgaon, HR',
+  'contractor.pf_code': 'GNBGN0012345000', 'contractor.esic_code': '12000345670000101',
+  'contractor.license_no': 'CLRA/HR/2025/9876',
+
+  // Employer & Site Master Tokens
+  'employer.name': 'Principal Employer Ltd', 'employer.cin': 'L12345DL2010PLC200000',
+  'employer.pan': 'AAACE5432G', 'employer.gstin': '07AAACE5432G1Z8',
+  'employer.address': 'Cyber City, Tower B, Floor 10, Gurgaon',
+  'site.name': 'Gurgaon Industrial Site', 'site.code': 'HR001',
+  'site.address': 'Sector 37, Industrial Estate, Gurgaon', 'site.state': 'Haryana',
+  'site.manager': 'Amit Verma',
 };
 
 const SYS_SAMPLE: Record<string, string> = {
   contractor: 'Contractor Pvt Ltd', employer: 'Principal Employer Ltd', site: 'Gurgaon Site',
   siteCode: 'HR001', state: 'Haryana', month: 'August', year: '2026',
-  financialYear: '2026-27', recordCount: '3', generatedOn: '2026-09-22',
+  financialYear: '2026-27', recordCount: '3',
+  generatedOn: getTodayFormatted(),
+  todayDate: getTodayFormatted(),
+  today: getTodayReadable(),
+  currentDate: getTodaySlash(),
+  date: getTodayFormatted(),
+  time: getCurrentTime(),
+  ...SAMPLE_TOKENS,
 };
 
 const ROW_SAMPLE: Record<string, string> = {
@@ -338,6 +405,7 @@ const ROW_SAMPLE: Record<string, string> = {
   designation: 'Mason', department: 'Civil', doj: '2025-01-15', mobile: '98XXXXXX01',
   site: 'HR001', location: 'Gurgaon', grossWages: '13000', basicWages: '9000',
   totalDeductions: '1000', netSalary: '12000', daysWorked: '26', otHours: '10', otRate: '50', otEarnings: '500',
+  ...SAMPLE_TOKENS,
 };
 
 function sampleHeadRows(columns: string[], mappings: FieldMapping[]): { head: string; rows: string } {
@@ -365,6 +433,12 @@ function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft):
     FORM_CODE: b.formCode || '{{FORM_CODE}}',
     STATE: b.state || '{{STATE}}',
     ACT: b.act || '{{ACT}}',
+    TODAY_DATE: getTodayFormatted(),
+    TODAY: getTodayReadable(),
+    CURRENT_DATE: getTodaySlash(),
+    DATE: getTodayFormatted(),
+    TIME: getCurrentTime(),
+    GENERATED_ON: getTodayFormatted(),
   };
   if (mode === 'register') {
     const { head, rows } = sampleHeadRows(b.columns, b.fieldMappings);
@@ -392,25 +466,90 @@ function renderPreview(mode: 'doc' | 'register', body: string, b: BuilderDraft):
   return htmlShell(out);
 }
 
-// Searchable variable picker: a search box filters the dropdown's options.
+// Searchable variable picker: an interactive combobox with floating filtered dropdown menu.
 type PickerOption = { value: string; label: string };
 
-function SearchableSelect({ value, options, onSelect, placeholder = 'Search…', width = 'w-40' }: {
+function SearchableSelect({ value, options, onSelect, placeholder = 'Search…', width = 'w-44' }: {
   value?: string; options: PickerOption[]; onSelect: (value: string) => void; placeholder?: string; width?: string;
 }) {
   const [q, setQ] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setDropUp(spaceBelow < 240);
+    }
+  }, [isOpen]);
+
+  const selectedOpt = options.find(o => o.value === value);
   const term = q.toLowerCase().trim();
-  const matches = term ? options.filter(o => o.label.toLowerCase().includes(term)) : options;
-  return <div className="flex items-center gap-1.5">
-    <div className="relative">
-      <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"/>
-      <input value={q} onChange={e => setQ(e.target.value)} placeholder={placeholder} className={`h-8 border border-slate-300 rounded-lg pl-7 pr-2 text-xs bg-white focus:outline-none focus:border-blue-500 ${width}`}/>
+  const matches = term
+    ? options.filter(o => o.label.toLowerCase().includes(term) || o.value.toLowerCase().includes(term))
+    : options;
+
+  const displayVal = isOpen ? q : (selectedOpt ? selectedOpt.label : (value || ''));
+
+  return (
+    <div ref={containerRef} className="relative inline-block text-xs text-slate-800">
+      <div className="relative flex items-center">
+        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
+        <input
+          type="text"
+          value={displayVal}
+          onFocus={() => { setIsOpen(true); setQ(''); }}
+          onChange={e => { setQ(e.target.value); setIsOpen(true); }}
+          placeholder={placeholder}
+          className={`h-8 border border-slate-300 rounded-lg pl-7 pr-6 text-xs bg-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500 font-mono ${width}`}
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-[10px]"
+        >
+          {isOpen ? '▲' : '▼'}
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className={`absolute z-[9999] left-0 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-64 max-h-52 overflow-y-auto bg-white border border-slate-300 rounded-lg shadow-2xl divide-y divide-slate-100`}>
+          {matches.length === 0 ? (
+            <div className="p-2.5 text-slate-400 text-[11px] italic text-center">No matching tokens found</div>
+          ) : (
+            matches.slice(0, 80).map(o => (
+              <div
+                key={o.value}
+                onClick={() => {
+                  onSelect(o.value);
+                  setQ('');
+                  setIsOpen(false);
+                }}
+                className={`p-2 hover:bg-blue-50 cursor-pointer transition-colors flex flex-col gap-0.5 ${o.value === value ? 'bg-blue-50/90 font-bold text-blue-900 border-l-2 border-blue-600' : 'text-slate-800'}`}
+              >
+                <span className="font-mono text-[11px] font-semibold text-blue-700">{o.value}</span>
+                {o.label !== o.value && (
+                  <span className="text-[10px] text-slate-500">{o.label}</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
-    <select value={value ?? ''} onChange={e => onSelect(e.target.value)} className="h-8 border border-slate-300 rounded-lg px-2 text-xs font-mono bg-white max-w-[260px]">
-      <option value="">— Select —</option>
-      {matches.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  </div>;
+  );
 }
 
 // Advanced Interactive Document & Spreadsheet Studio Suite
@@ -482,7 +621,82 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
 
   const toolBtn = 'h-7 px-2 rounded border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center justify-center bg-white shadow-xs';
   const tabBtn = (active: boolean) => `h-7 px-3 rounded text-xs font-bold transition-all ${active ? 'bg-[#073B67] text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100'}`;
-  const tokens = ['{{TITLE}}', '{{FORM_CODE}}', '{{STATE}}', '{{CONTRACTOR_NAME}}', '{{EMPLOYER_NAME}}', '{{SITE_NAME}}', '{{SITE_CODE}}', '{{MONTH}}', '{{YEAR}}', '{{FINANCIAL_YEAR}}', '{{GENERATED_ON}}', '{{RECORD_COUNT}}'];
+  const tokens = [
+    '{{TITLE}}', '{{FORM_CODE}}', '{{STATE}}',
+    '{{TODAY_DATE}}', '{{TODAY}}', '{{CURRENT_DATE}}', '{{DATE}}', '{{TIME}}',
+    '{{CONTRACTOR_NAME}}', '{{EMPLOYER_NAME}}', '{{SITE_NAME}}', '{{SITE_CODE}}',
+    '{{MONTH}}', '{{YEAR}}', '{{FINANCIAL_YEAR}}', '{{GENERATED_ON}}', '{{RECORD_COUNT}}'
+  ];
+
+  const systemTokenOptions: PickerOption[] = [
+    // Date & Time Tokens
+    { value: '{{TODAY_DATE}}', label: '{{TODAY_DATE}} · Today (YYYY-MM-DD)' },
+    { value: '{{TODAY}}', label: '{{TODAY}} · Today (DD MMM YYYY)' },
+    { value: '{{CURRENT_DATE}}', label: '{{CURRENT_DATE}} · Today (DD/MM/YYYY)' },
+    { value: '{{DATE}}', label: '{{DATE}} · Current Date' },
+    { value: '{{TIME}}', label: '{{TIME}} · Current Time' },
+    { value: '{{GENERATED_ON}}', label: '{{GENERATED_ON}} · Generation Date' },
+    { value: '{{MONTH}}', label: '{{MONTH}} · Current Month' },
+    { value: '{{YEAR}}', label: '{{YEAR}} · Current Year' },
+    { value: '{{FINANCIAL_YEAR}}', label: '{{FINANCIAL_YEAR}} · Financial Year' },
+
+    // Worker BSS ID & Demographic Tokens
+    { value: '{{worker_bssid}}', label: '{{worker_bssid}} · Worker BSS ID (e.g. BSSW000001)' },
+    { value: '{{worker.bss_id}}', label: '{{worker.bss_id}} · Worker BSS ID' },
+    { value: '{{worker_bssid.dob}}', label: '{{worker_bssid.dob}} · Worker Date of Birth' },
+    { value: '{{worker.dob}}', label: '{{worker.dob}} · Worker Date of Birth' },
+    { value: '{{worker_bssid.name}}', label: '{{worker_bssid.name}} · Worker Full Name' },
+    { value: '{{worker.name}}', label: '{{worker.name}} · Worker Full Name' },
+    { value: '{{worker_bssid.gender}}', label: '{{worker_bssid.gender}} · Worker Gender' },
+    { value: '{{worker_bssid.father_name}}', label: '{{worker_bssid.father_name}} · Worker Father/Spouse Name' },
+    { value: '{{worker_bssid.mobile}}', label: '{{worker_bssid.mobile}} · Worker Mobile Number' },
+    { value: '{{worker_bssid.address}}', label: '{{worker_bssid.address}} · Worker Residential Address' },
+    { value: '{{worker_bssid.uan}}', label: '{{worker_bssid.uan}} · Worker UAN Number' },
+    { value: '{{worker_bssid.esic}}', label: '{{worker_bssid.esic}} · Worker ESIC IP Number' },
+    { value: '{{worker_bssid.doj}}', label: '{{worker_bssid.doj}} · Worker Date of Joining' },
+    { value: '{{worker_bssid.designation}}', label: '{{worker_bssid.designation}} · Worker Designation / Trade' },
+    { value: '{{worker_bssid.department}}', label: '{{worker_bssid.department}} · Worker Department' },
+    { value: '{{worker_bssid.aadhaar}}', label: '{{worker_bssid.aadhaar}} · Worker Masked Aadhaar' },
+
+    // Contractor BSS ID & Master Tokens
+    { value: '{{contractor_bssid}}', label: '{{contractor_bssid}} · Contractor BSS ID (e.g. BSSC000044)' },
+    { value: '{{contractor.bss_id}}', label: '{{contractor.bss_id}} · Contractor BSS ID' },
+    { value: '{{contractor_bssid.dob}}', label: '{{contractor_bssid.dob}} · Contractor DOB / Inc. Date' },
+    { value: '{{contractor.dob}}', label: '{{contractor.dob}} · Contractor DOB / Inc. Date' },
+    { value: '{{contractor_bssid.name}}', label: '{{contractor_bssid.name}} · Contractor Company Name' },
+    { value: '{{contractor.name}}', label: '{{contractor.name}} · Contractor Company Name' },
+    { value: '{{contractor.code}}', label: '{{contractor.code}} · Contractor Master Code' },
+    { value: '{{contractor.pan}}', label: '{{contractor.pan}} · Contractor PAN Card Number' },
+    { value: '{{contractor.gstin}}', label: '{{contractor.gstin}} · Contractor GSTIN Number' },
+    { value: '{{contractor.cin}}', label: '{{contractor.cin}} · Contractor CIN Number' },
+    { value: '{{contractor.mobile}}', label: '{{contractor.mobile}} · Contractor Contact Mobile' },
+    { value: '{{contractor.email}}', label: '{{contractor.email}} · Contractor Official Email' },
+    { value: '{{contractor.address}}', label: '{{contractor.address}} · Contractor Registered Address' },
+    { value: '{{contractor.pf_code}}', label: '{{contractor.pf_code}} · Contractor PF Establishment Code' },
+    { value: '{{contractor.esic_code}}', label: '{{contractor.esic_code}} · Contractor ESIC Code Number' },
+    { value: '{{contractor.license_no}}', label: '{{contractor.license_no}} · Contractor CLRA License Number' },
+
+    // Employer & Site Master Tokens
+    { value: '{{CONTRACTOR_NAME}}', label: '{{CONTRACTOR_NAME}} · Contractor Name' },
+    { value: '{{EMPLOYER_NAME}}', label: '{{EMPLOYER_NAME}} · Principal Employer' },
+    { value: '{{employer.name}}', label: '{{employer.name}} · Principal Employer Name' },
+    { value: '{{employer.cin}}', label: '{{employer.cin}} · Employer Corporate CIN' },
+    { value: '{{employer.pan}}', label: '{{employer.pan}} · Employer PAN Number' },
+    { value: '{{employer.gstin}}', label: '{{employer.gstin}} · Employer GSTIN Number' },
+    { value: '{{employer.address}}', label: '{{employer.address}} · Employer Registered Address' },
+    { value: '{{SITE_NAME}}', label: '{{SITE_NAME}} · Site Name' },
+    { value: '{{SITE_CODE}}', label: '{{SITE_CODE}} · Site Code' },
+    { value: '{{site.name}}', label: '{{site.name}} · Work Site Name' },
+    { value: '{{site.code}}', label: '{{site.code}} · Work Site Code' },
+    { value: '{{site.address}}', label: '{{site.address}} · Work Site Address' },
+    { value: '{{site.state}}', label: '{{site.state}} · Work Site State' },
+    { value: '{{site.manager}}', label: '{{site.manager}} · Site Manager Name' },
+  ];
+
+  const allTokenOptions: PickerOption[] = [
+    ...systemTokenOptions,
+    ...fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}` })),
+  ];
 
   const [tokenSearch, setTokenSearch] = useState('');
   const filteredTokens = fieldKeys.filter(k => k.toLowerCase().includes(tokenSearch.toLowerCase().trim()));
@@ -523,7 +737,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
 
     {/* EXCEL SPREADSHEET STUDIO MODE */}
     {mode === 'register' && tab === 'visual' && (
-      <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm space-y-3 p-3">
+      <div className="border border-slate-200 rounded-xl overflow-visible bg-white shadow-sm space-y-3 p-3">
         {/* 1. Centered Header Title Row Section */}
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
           <div className="flex items-center justify-between">
@@ -573,7 +787,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
 
               <div className="md:col-span-5 flex gap-1">
                 <input type="text" value={kvValInput} onChange={e => setKvValInput(e.target.value)} placeholder="Token / Value (e.g., {{CONTRACTOR_NAME}})" className="flex-1 h-8 px-2.5 text-xs font-mono bg-white border border-slate-300 rounded focus:outline-none focus:border-blue-600" />
-                <SearchableSelect options={fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}` }))} onSelect={val => { if (val) setKvValInput(val); }} placeholder="Search token…" width="w-36"/>
+                <SearchableSelect options={allTokenOptions} onSelect={val => { if (val) setKvValInput(val); }} placeholder="Search token…" width="w-36"/>
               </div>
 
               <button type="button" disabled={!kvKeyInput.trim()} onClick={() => {
@@ -700,7 +914,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
 
         {/* Column Mapping Inspector Panel */}
         {selectedCol !== null && draft.columns[selectedCol] && (
-          <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="relative z-20 p-3 bg-blue-50/70 border border-blue-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2">
               <span className="font-bold text-[#073B67]">Selected Column ({String.fromCharCode(65 + (selectedCol % 26))}):</span>
               <span className="font-semibold px-2 py-0.5 bg-white border border-blue-300 rounded font-mono text-slate-800">{draft.columns[selectedCol]}</span>
@@ -728,7 +942,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
 
     {/* WORD DOCUMENT STUDIO MODE */}
     {mode === 'doc' && tab === 'visual' && (
-      <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-100 shadow-sm space-y-3 p-3">
+      <div className="border border-slate-200 rounded-xl overflow-visible bg-slate-100 shadow-sm space-y-3 p-3">
         {/* WYSIWYG Ribbon Bar */}
         <div className="flex flex-wrap items-center gap-1.5 p-2 bg-white border border-slate-200 rounded-lg shadow-xs">
           <select onChange={e => cmd('formatBlock', e.target.value)} className="h-7 border border-slate-200 rounded px-1 text-xs font-semibold bg-slate-50 cursor-pointer">
@@ -755,7 +969,7 @@ function AdvancedStudioEditor({ mode, initialHtml, draft, fieldKeys, backendKeys
           <button type="button" className={toolBtn} onClick={() => cmd('insertHTML', '<table style="width:100%;border-collapse:collapse;margin:10px 0;text-align:left;" border="1"><thead><tr style="background:#f1f5f9;"><th style="padding:6px;border:1px solid #999;">Sl. No.</th><th style="padding:6px;border:1px solid #999;">Header / Designation</th><th style="padding:6px;border:1px solid #999;">Wages / Rate</th></tr></thead><tbody><tr><td style="padding:6px;border:1px solid #999;">{{sl}}</td><td style="padding:6px;border:1px solid #999;">{{Designation}}</td><td style="padding:6px;border:1px solid #999;">{{Fixed_Basic_Wages}}</td></tr></tbody></table><p><br></p>')}>+ Table</button>
           <button type="button" className={toolBtn} onClick={() => cmd('insertHTML', '<div style="display:flex;justify-content:space-between;margin-top:40px;padding-top:10px;border-top:1px border #ccc;"><div><b>Authorised Signatory</b><br><small>Seal & Signature</small></div><div><b>Date:</b> ____________</div></div><p><br></p>')}>+ Signature Block</button>
           <div className="h-4 w-px bg-slate-300 mx-1"/>
-          <SearchableSelect options={fieldKeys.map(k => ({ value: `{{${k}}}`, label: `{{${k}}}` }))} onSelect={val => { if (val) insertToken(val); }} placeholder="Search master field…" width="w-44"/>
+          <SearchableSelect options={allTokenOptions} onSelect={val => { if (val) insertToken(val); }} placeholder="Search master field…" width="w-44"/>
         </div>
 
         {/* Paper Canvas Container */}
@@ -941,7 +1155,8 @@ export default function RegisterTemplatesPage() {
       )}
       <label className="relative"><Search size={14} className="absolute left-3 top-2.5 text-gray-400"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search form or title…" className="h-9 rounded-lg border border-gray-200 pl-9 pr-3 text-xs w-64"/></label>
       <span className="text-xs text-gray-400">{rows.length} template{rows.length === 1 ? '' : 's'}</span>
-      <button onClick={() => { setBuilder(blankDraft()); setError(''); }} className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold"><FilePlus2 size={14}/>New form</button>
+      <a href="/admin/masters/form-names" className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50"><FileSpreadsheet size={14}/>Additional Forms</a>
+      <button onClick={() => { setBuilder(blankDraft()); setError(''); }} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-[#073B67] text-white text-xs font-bold"><FilePlus2 size={14}/>New form</button>
     </div>
 
     {loading ? <p className="flex items-center gap-2 text-sm text-gray-500 py-10"><Loader2 size={16} className="animate-spin"/>Loading templates…</p>

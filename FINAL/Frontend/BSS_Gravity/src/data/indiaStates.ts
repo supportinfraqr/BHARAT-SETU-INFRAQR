@@ -5,6 +5,7 @@ export const INDIA_STATES: string[] = [
   'Arunachal Pradesh',
   'Assam',
   'Bihar',
+  'Central',
   'Chandigarh',
   'Chhattisgarh',
   'Dadra and Nagar Haveli and Daman and Diu',

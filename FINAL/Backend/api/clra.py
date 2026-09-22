@@ -240,10 +240,77 @@ def resolve_cell(key, row, context=None, index=None):
     return ""
 
 
+# ── frequency / reporting period ─────────────────────────────────────────────
+# Indian financial year runs April → March.
+MONTHS_FY = ["April", "May", "June", "July", "August", "September",
+             "October", "November", "December", "January", "February", "March"]
+_CAL_MONTH = {"January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+              "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12}
+
+
+def _fy_label(month, year):
+    try:
+        y = int(str(year).strip())
+    except (TypeError, ValueError):
+        return f"{year}-?"
+    start = y - 1 if month in ("January", "February", "March") else y
+    return f"{start}-{str(start + 1)[-2:]}"
+
+
+def _last_day(year, cal_month):
+    from datetime import date, timedelta
+    if cal_month == 12:
+        return date(year, 12, 31)
+    return date(year, cal_month + 1, 1) - timedelta(days=1)
+
+
+def reporting_period(month, year, frequency, today=None):
+    """Return ``{label, due, periodEnd}`` for a frequency, decided by the
+    **current date** (``today``).
+
+    - **Monthly** (and blank/unknown): due every time; period = the month.
+    - **Quarterly / Half-Yearly / Yearly**: due only once the period has ended
+      on or before today (so a Yearly form auto-generates once, after the FY
+      closes — March year-end)."""
+    from datetime import date
+    today = today or date.today()
+    month = str(month or "").strip()
+    try:
+        y = int(str(year).strip())
+    except (TypeError, ValueError):
+        y = None
+    if month not in MONTHS_FY or y is None:
+        return {"label": f"{month} {year}".strip(), "due": True, "periodEnd": ""}
+
+    fy = _fy_label(month, year)
+    idx = MONTHS_FY.index(month)          # 0 = April … 11 = March
+    fy_start = y - 1 if idx >= 9 else y   # calendar year the FY starts
+    freq = str(frequency or "").strip().lower()
+
+    if freq.startswith("quarter"):
+        end_idx = ((idx // 3) + 1) * 3 - 1
+        label = f"Q{idx // 3 + 1} {fy}"
+    elif freq.startswith("half"):
+        end_idx = 5 if idx < 6 else 11
+        label = f"H{1 if idx < 6 else 2} {fy}"
+    elif freq.startswith(("year", "annual")):
+        end_idx = 11
+        label = f"FY {fy}"
+    else:
+        return {"label": f"{month} {y}", "due": True, "periodEnd": ""}
+
+    end_year = fy_start + (1 if end_idx >= 9 else 0)
+    end_date = _last_day(end_year, _CAL_MONTH[MONTHS_FY[end_idx]])
+    return {"label": label, "due": today >= end_date, "periodEnd": end_date.isoformat()}
+
+
 # ── master-file validation ───────────────────────────────────────────────────
 REQUIRED_KEYS = ("name", "site")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$|^\d{2}[/-]\d{2}[/-]\d{4}$")
-_BSS_RE = re.compile(r"^(BSS-W[A-Za-z0-9]{10,11}|BSS[A-Za-z0-9]{8,})$")
+_BSS_RE = re.compile(r"^BSS[-A-Za-z0-9]{6,}$")
+_NUM_RE = re.compile(r"^-?\d+(\.\d+)?$")
+_NUMERIC_KEYS = ("daysWorked", "grossWages", "totalDeductions", "netSalary",
+                 "otHours", "otRate", "otEarnings", "basicWages")
 
 
 def validate_master(rows, *, state="", month="", year=""):
@@ -276,13 +343,20 @@ def validate_master(rows, *, state="", month="", year=""):
         if not site:
             errors.append({"row": index, "field": "site", "message": "Site is blank."})
         code = (row.get("bssId") or "").strip()
-        if code and not _BSS_RE.match(code):
-            warnings.append({"row": index, "field": "bssId",
-                             "message": f"'{code}' does not look like a BSS ID."})
+        if not code:
+            warnings.append({"row": index, "field": "bssId", "message": "BSS ID is blank."})
+        elif not _BSS_RE.match(code):
+            errors.append({"row": index, "field": "bssId",
+                           "message": f"'{code}' is not a valid BSS ID."})
         doj = (row.get("doj") or "").strip()
         if doj and not _DATE_RE.match(doj):
             warnings.append({"row": index, "field": "doj",
                              "message": f"Date '{doj}' is not YYYY-MM-DD or DD/MM/YYYY."})
+        for nkey in _NUMERIC_KEYS:
+            val = str(row.get(nkey) or "").strip()
+            if val and not _NUM_RE.match(val):
+                warnings.append({"row": index, "field": nkey,
+                                 "message": f"'{val}' is not a valid number."})
         if code:
             if code in seen_codes:
                 errors.append({"row": index, "field": "bssId",

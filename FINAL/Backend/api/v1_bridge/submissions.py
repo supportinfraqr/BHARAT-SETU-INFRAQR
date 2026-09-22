@@ -386,8 +386,24 @@ def contractor_compliance_batches(request):
             status=status.HTTP_400_BAD_REQUEST)
     site_templates = gate_templates_by_adoption(
         applicable_templates(state)[0], site.employer if site else None, state) if state else []
+
+    # Frequency-aware: only generate forms due in the chosen month (monthly always;
+    # quarterly/half-yearly/yearly at their period end) unless the caller overrides.
+    include_non_due = str(request.data.get("includeNonDue") or "").lower() in ("1", "true", "yes")
+    selected, skipped = [], []
+    for template in site_templates:
+        period = clra.reporting_period(month, year, template.frequency)
+        if period["due"] or include_non_due:
+            selected.append(template)
+        else:
+            skipped.append({"formCode": template.form_code, "title": template.title,
+                            "frequency": template.frequency or "Monthly", "period": period["label"]})
+    site_templates = selected
+
     templates = [
         {"formCode": t.form_code, "title": t.title, "state": t.state,
+         "frequency": t.frequency or "Monthly",
+         "period": clra.reporting_period(month, year, t.frequency)["label"],
          "columns": list(t.columns or []), "html": t.html or "",
          "act": t.act, "calculationRules": [
              {"targetField": r.target_field, "formula": r.formula}
@@ -413,7 +429,9 @@ def contractor_compliance_batches(request):
         location_count=len({r.get("location", "") for r in rows if r.get("location")}) or 1,
         generated_on=generated_on, generated_by=payloads._party_name(user),
         rows_count=len(rows),
-        notes=f"{register_count} register(s) generated from {len(rows)} worker row(s).",
+        notes=(f"{register_count} register(s) generated from {len(rows)} worker row(s)"
+               + (f"; {len(skipped)} not due this period: "
+                  + ", ".join(f"{s['formCode']} ({s['frequency']})" for s in skipped[:6]) if skipped else "")),
         status="GENERATED",
     )
     stamp = f"{year or generated_on.year}-{month or generated_on.strftime('%b')}".replace(" ", "")
@@ -456,10 +474,19 @@ def compliance_batch_download(request, role_path, batch_id):
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
 def contractor_clra_validate(request):
-    """Validate an uploaded CLRA master file (multipart: master, state, month, year)
-    and return the error/warning report without generating anything."""
+    """Validate an uploaded CLRA master file and return a full report:
+    field/BSS-ID checks, the derived state, employer adoption, and per-template
+    column→master-field coverage (does the data flow into the right template)."""
+    from collections import Counter
+    from django.contrib.auth import get_user_model
     from api import clra
-    if request.user.role != "contractor":
+    from bss_core.models import Site, WorkerIdentity
+    from .bindings import _contractor_site_ids
+    from .register_templates import (applicable_templates, employer_adopted_ids,
+                                     gate_templates_by_adoption)
+
+    user = request.user
+    if user.role != "contractor":
         return Response({"error": "Only contractors can validate master files."},
                         status=status.HTTP_403_FORBIDDEN)
     master = request.FILES.get("master")
@@ -469,11 +496,64 @@ def contractor_clra_validate(request):
         rows = clra.parse_master(master)
     except clra.MasterFileError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-    report = clra.validate_master(
-        rows,
-        state=(request.data.get("state") or "").strip(),
-        month=(request.data.get("month") or "").strip(),
-        year=(request.data.get("year") or "").strip())
+
+    month = (request.data.get("month") or "").strip()
+    year = (request.data.get("year") or "").strip()
+    states = [str(r.get("state") or "").strip() for r in rows if str(r.get("state") or "").strip()]
+    state = (request.data.get("state") or "").strip() or (Counter(states).most_common(1)[0][0] if states else "")
+
+    report = clra.validate_master(rows, state=state, month=month, year=year)
+    report["state"] = state
+
+    # Employer adoption + template coverage (data flowing into the right template).
+    site_ids = _contractor_site_ids(user)
+    site = None
+    if state:
+        site = Site.objects.filter(id__in=site_ids, state__iexact=state).first()
+    if site is None:
+        site = Site.objects.filter(id__in=site_ids).order_by("id").first()
+    employer = site.employer if site else None
+    adopted = employer_adopted_ids(employer, state) if (employer is not None and state) else set()
+    if state and not adopted:
+        report["errors"].append({"row": 0, "field": "adoption",
+                                 "message": f"The principal employer has not adopted CLRA registers for {state} — generation is blocked."})
+    site_templates = (gate_templates_by_adoption(applicable_templates(state)[0], employer, state)
+                      if state else [])
+    if state and not site_templates:
+        report["errors"].append({"row": 0, "field": "template",
+                                 "message": f"No active register template is available for {state}."})
+
+    template_rows = []
+    for template in site_templates:
+        columns = [str(c) for c in (template.columns or [])]
+        field_map = {m.column: m.field_key for m in template.field_mappings.all()}
+        unmapped = [c for c in columns if not (field_map.get(c) or clra.match_column(c))]
+        coverage = round((len(columns) - len(unmapped)) / len(columns) * 100) if columns else 0
+        template_rows.append({
+            "formCode": template.form_code, "title": template.title,
+            "columns": len(columns), "unmapped": unmapped, "coverage": coverage,
+        })
+        if unmapped:
+            shown = ", ".join(unmapped[:6]) + ("…" if len(unmapped) > 6 else "")
+            report["warnings"].append({"row": 0, "field": template.form_code,
+                                       "message": f"{len(unmapped)} column(s) have no master-file mapping: {shown}."})
+    report["templates"] = template_rows
+
+    # BSS ID existence against the worker master.
+    codes = [str(r.get("bssId") or "").strip() for r in rows]
+    codes = [c for c in codes if c]
+    if codes:
+        known = set(WorkerIdentity.objects.filter(bss_worker_id__in=codes)
+                    .values_list("bss_worker_id", flat=True))
+        unknown = [c for c in codes if c not in known]
+        report["bss"] = {"checked": len(codes), "known": len(codes) - len(unknown),
+                         "unknown": len(unknown), "unknownSample": unknown[:10]}
+        if unknown:
+            report["warnings"].append({"row": 0, "field": "bssId",
+                                       "message": f"{len(unknown)} BSS ID(s) are not registered in BSS (e.g., {', '.join(unknown[:5])})."})
+    else:
+        report["bss"] = {"checked": 0, "known": 0, "unknown": 0, "unknownSample": []}
+
     return Response({"data": report}, status=status.HTTP_200_OK)
 
 
@@ -565,6 +645,41 @@ def compliance_batch_site_documents(request, batch_id):
             "frequency": (template.title if template else ""),
             "outputFormat": template.resolved_output_format() if template else "",
         })
+    # Extra form names with no register template (submitted directly).
+    # Admin catalog forms are non-mandatory and appear only when the employer
+    # selected them; the employer's own forms always appear.
+    from bss_core.models import CustomFormName, EmployerFormSelection
+    catalog = list(CustomFormName.objects.filter(is_active=True, state__iexact=state,
+                                                 employer__isnull=True).order_by("sort_order", "name"))
+    if employer is not None:
+        selections = {s.form_name_id: s for s in EmployerFormSelection.objects.filter(
+            employer=employer, is_active=True, form_name__in=catalog)}
+        for obj in catalog:
+            selection = selections.get(obj.id)
+            if selection is None:
+                continue
+            documents.append({
+                "purpose": obj.name, "form": obj.name, "templateId": None,
+                "mandatory": bool(selection.is_mandatory), "frequency": obj.frequency,
+                "outputFormat": "", "custom": True, "scope": "admin",
+                "requiresDocument": bool(obj.requires_document),
+            })
+        for obj in CustomFormName.objects.filter(is_active=True, state__iexact=state,
+                                                 employer=employer).order_by("sort_order", "name"):
+            documents.append({
+                "purpose": obj.name, "form": obj.name, "templateId": None,
+                "mandatory": bool(obj.is_mandatory), "frequency": obj.frequency,
+                "outputFormat": "", "custom": True, "scope": "employer",
+                "requiresDocument": bool(obj.requires_document),
+            })
+    else:
+        for obj in catalog:
+            documents.append({
+                "purpose": obj.name, "form": obj.name, "templateId": None,
+                "mandatory": False, "frequency": obj.frequency,
+                "outputFormat": "", "custom": True, "scope": "admin",
+                "requiresDocument": bool(obj.requires_document),
+            })
     templates = [{
         "id": t.id, "formCode": t.form_code, "title": t.title,
         "columns": len(t.columns or []), "hasFile": bool(t.source_file),

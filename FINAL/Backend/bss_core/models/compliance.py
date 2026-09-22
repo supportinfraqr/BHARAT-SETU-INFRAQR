@@ -680,3 +680,59 @@ class SapSyncLog(models.Model):
 
     class Meta:
         db_table = "employer_sap_sync_log"
+
+
+class CustomFormName(models.Model):
+    """Ad-hoc compliance form names with **no register template** — submitted
+    directly (evidence upload) by the contractor, optionally mandatory.
+
+    ``employer`` null = a BSS Admin-defined form for the state (applies to all
+    employers in that state); otherwise the employer's own form. Both are merged
+    into the site's applicable documents alongside the templated registers.
+    """
+
+    employer = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE,
+                                 related_name="custom_form_names")
+    state = models.CharField(max_length=60, db_index=True)
+    name = models.CharField(max_length=160)
+    is_mandatory = models.BooleanField(default=False)
+    # True = a document/PDF upload is required; False = "submission only"
+    # (the contractor just marks it submitted — no document/PDF needed).
+    requires_document = models.BooleanField(default=True)
+    frequency = models.CharField(max_length=40, blank=True)
+    description = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.SmallIntegerField(default=0)
+    created_by = models.CharField(max_length=120, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "custom_form_name"
+        constraints = [models.UniqueConstraint(fields=["employer", "state", "name"],
+                                               name="uq_custom_form_employer_state_name")]
+        indexes = [models.Index(fields=["state"], name="idx_custom_form_state")]
+
+    def __str__(self):
+        return f"{self.state} · {self.name}"
+
+
+class EmployerFormSelection(models.Model):
+    """An employer's selection of an Admin (global) additional form for its
+    contractors, with the employer's own mandatory flag."""
+
+    employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="form_selections")
+    form_name = models.ForeignKey(CustomFormName, on_delete=models.CASCADE,
+                                  related_name="employer_selections")
+    is_mandatory = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "employer_form_selection"
+        constraints = [models.UniqueConstraint(fields=["employer", "form_name"],
+                                               name="uq_employer_form_selection")]
+
+    def __str__(self):
+        return f"employer {self.employer_id} · form {self.form_name_id}"

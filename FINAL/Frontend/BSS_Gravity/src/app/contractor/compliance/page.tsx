@@ -13,19 +13,41 @@ const emptyRow = (site = ''): RowDraft => ({ item:'', category:'', reference:'',
 
 type Tab = 'records' | 'registers' | 'master' | 'report';
 type ValidationIssue = { row:number; field:string; message:string };
-type ValidationReport = { errors:ValidationIssue[]; warnings:ValidationIssue[]; rowCount:number; validRows:number; siteCount:number; locationCount:number; sites:string[] };
+type ValidationReport = { errors:ValidationIssue[]; warnings:ValidationIssue[]; rowCount:number; validRows:number; siteCount:number; locationCount:number; sites:string[]; state?:string; templates?:Array<{ formCode:string; title:string; columns:number; unmapped:string[]; coverage:number }>; bss?:{ checked:number; known:number; unknown:number; unknownSample:string[] } };
+type RegRow = { id:number; state:string; formCode:string; title:string; frequency?:string; criticality?:string; columns:string[]; isMandatory?:boolean; outputFormat?:string };
+
+function daysLeft(expiry: string): number | null {
+  if (!expiry) return null;
+  const d = new Date(expiry);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.ceil((d.getTime() - Date.now()) / 86_400_000);
+}
+
+const MONTHS_FY = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+const CAL_MONTH: Record<string, number> = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
+// Due is decided by the current date: monthly always; quarterly/half-yearly/
+// yearly only once their period has ended (yearly = after the FY closes in March).
+function periodInfo(month: string, year: string, frequency?: string): { label: string; due: boolean; periodEnd?: string } {
+  const f = (frequency || '').toLowerCase();
+  const y = Number(year);
+  const idx = MONTHS_FY.indexOf(month);
+  if (idx < 0 || !Number.isFinite(y)) return { label: `${month} ${year}`.trim(), due: true };
+  const fyStart = idx >= 9 ? y - 1 : y;
+  const fyLabel = `${fyStart}-${String(fyStart + 1).slice(-2)}`;
+  let endIdx: number; let label: string;
+  if (f.startsWith('quarter')) { endIdx = (Math.floor(idx / 3) + 1) * 3 - 1; label = `Q${Math.floor(idx / 3) + 1} ${fyLabel}`; }
+  else if (f.startsWith('half')) { endIdx = idx < 6 ? 5 : 11; label = `H${idx < 6 ? 1 : 2} ${fyLabel}`; }
+  else if (f.startsWith('year') || f.startsWith('annual')) { endIdx = 11; label = `FY ${fyLabel}`; }
+  else return { label: `${month} ${y}`, due: true };
+  const endYear = fyStart + (endIdx >= 9 ? 1 : 0);
+  const end = new Date(endYear, CAL_MONTH[MONTHS_FY[endIdx]], 0); // last day of the end month
+  return { label, due: Date.now() >= end.getTime(), periodEnd: end.toISOString().slice(0, 10) };
+}
 const YEARS = ['2026', '2025', '2024'];
 const MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
 const STATES = INDIA_STATES;
 
-const registerColumns: DataColumn<ContractorPortalData['registers'][number]>[] = [
-  { id:'name', header:'Document Name', value:r => r.documentName },
-  { id:'type', header:'Document Type', value:r => r.documentType },
-  { id:'form', header:'Form No.', value:r => r.formNo, render:r => <span className="font-mono text-blue-700 font-semibold">{r.formNo}</span> },
-  { id:'criticality', header:'Criticality', value:r => r.criticality, render:r => <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.criticality === 'High' ? 'bg-red-50 text-red-700' : r.criticality === 'Medium' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{r.criticality}</span> },
-  { id:'frequency', header:'Frequency', value:r => r.frequency },
-  { id:'level', header:'Register Level', value:r => r.registerLevel },
-];
+
 
 const batchColumns: DataColumn<ContractorPortalData['complianceBatches'][number]>[] = [
   { id:'fy', header:'Financial Year', value:r => r.financialYear },
@@ -53,12 +75,14 @@ export default function ContractorCompliancePage() {
   const [state, setState] = useState(STATES[0]);
   const [masterFile, setMasterFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [includeNonDue, setIncludeNonDue] = useState(false);
   // PAN-India register template library for the selected state.
   const [templates, setTemplates] = useState<Array<{ id:number; state:string; formCode:string; title:string; columns:string[]; fileName:string; hasFile:boolean }>>([]);
   const [strength, setStrength] = useState<{ rcPe?:string; licence?:string; lwf?:string; hra?:string; nhFh?:string; ptFrequency?:string }>({});
   const [adoption, setAdoption] = useState<Record<string, { adopted:boolean; adoptedCount:number; mandatoryCount:number; total:number }>>({});
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [batchView, setBatchView] = useState<string | null>(null);
+  const [registerRows, setRegisterRows] = useState<RegRow[]>([]);
 
   // States the contractor is allowed to register for — derived from allotted sites.
   const allowedStates = Array.from(new Set(
@@ -87,6 +111,16 @@ export default function ContractorCompliancePage() {
       .catch(() => {});
     return () => { active = false; };
   }, [activeState]);
+
+  // Full register library for Register-wise Listing (all the contractor's states).
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/contractor/clra/templates', { cache:'no-store' })
+      .then(response => (response.ok ? response.json() : null))
+      .then((body: { rows?: RegRow[] } | null) => { if (active && body?.rows) setRegisterRows(body.rows); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const rowsData = scoped(contractor.compliances, c => c.employer);
   const active = rowsData.filter(r => r.status === 'Active').length;
@@ -183,6 +217,7 @@ export default function ContractorCompliancePage() {
       form.set('master', masterFile);
       if (signatureFile) form.set('signature', signatureFile);
       form.set('month', month); form.set('year', year);
+      if (includeNonDue) form.set('includeNonDue', '1');
       const response = await fetch('/api/portal/compliance-batches', { method: 'POST', body: form });
       const result = await response.json().catch(() => ({})) as { data?: ContractorPortalData['complianceBatches'][number]; error?: string };
       if (!response.ok || !result.data) throw new Error(result.error ?? 'Registers could not be generated.');
@@ -203,8 +238,30 @@ export default function ContractorCompliancePage() {
     { id:'worker', header:'Worker', value:r => r.worker ?? 'Organisation level' },
     { id:'issue', header:'Issued', value:r => r.issue },
     { id:'expiry', header:'Expires', value:r => r.expiry },
+    { id:'daysLeft', header:'Days left', value:r => r.expiry, render:r => { const n = daysLeft(r.expiry); return n === null ? <span className="text-gray-300">—</span> : <span className={n < 0 ? 'text-red-700 font-semibold' : n <= 30 ? 'text-orange-700 font-semibold' : 'text-gray-700'}>{n < 0 ? `${-n}d overdue` : `${n}d`}</span>; } },
     { id:'verification', header:'Verification', value:r => r.verification },
     { id:'status', header:'Status', value:r => r.status, render:r => <span className={r.status === 'Active' ? 'text-green-700' : r.status === 'Expiring' ? 'text-orange-700' : 'text-red-700'}>{r.status}</span> },
+    { id:'evidence', header:'Evidence', filterable:false, value:r => r.id, render:() => <a href="/contractor/submissions" className="text-blue-700 font-semibold hover:underline text-xs">Submissions</a> },
+  ];
+
+  const batchByState = contractor.complianceBatches.reduce<Record<string, ContractorPortalData['complianceBatches'][number]>>((acc, b) => {
+    const key = b.state;
+    if (!acc[key] || `${b.year}${b.month}` > `${acc[key].year}${acc[key].month}`) acc[key] = b;
+    return acc;
+  }, {});
+
+  const registerLibColumns: DataColumn<RegRow>[] = [
+    { id:'state', header:'State', value:r => r.state },
+    { id:'form', header:'Form No.', value:r => r.formCode, render:r => <span className="font-mono text-blue-700 font-semibold">{r.formCode}</span> },
+    { id:'title', header:'Register / Form', value:r => r.title || '—' },
+    { id:'type', header:'Type', value:r => (r.columns.length ? 'Register' : 'Form') },
+    { id:'criticality', header:'Criticality', value:r => r.criticality || '—', render:r => r.criticality ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.criticality === 'High' ? 'bg-red-50 text-red-700' : r.criticality === 'Medium' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{r.criticality}</span> : <span className="text-gray-300">—</span> },
+    { id:'frequency', header:'Frequency', value:r => r.frequency || '—' },
+    { id:'due', header:'Due', value:r => r.frequency || '', render:r => { const p = periodInfo(month, year, r.frequency); return p.due ? <span className="text-green-700 font-semibold text-[11px]">Due · {p.label}</span> : <span className="text-gray-400 text-[11px]">Auto later · {p.label} (from {p.periodEnd})</span>; } },
+    { id:'columns', header:'Columns', value:r => r.columns.length },
+    { id:'mandatory', header:'Mandatory', value:r => (r.isMandatory ? 'Yes' : 'No'), render:r => r.isMandatory ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-50 text-green-700">Yes</span> : <span className="text-gray-300 text-xs">—</span> },
+    { id:'generated', header:'Generated', value:r => r.state, render:r => { const b = batchByState[r.state]; return b ? <span className="text-green-700 font-semibold text-[11px]">Generated · {b.month} {b.year}</span> : <span className="text-gray-400 text-[11px]">Not generated</span>; } },
+    { id:'action', header:'Action', filterable:false, value:r => r.id, render:r => { const b = batchByState[r.state]; return b?.hasFile ? <a href={`/api/portal/compliance-batches/${b.id}`} download className="text-blue-700 font-semibold text-xs inline-flex items-center gap-1 hover:underline"><Download size={12}/>Download</a> : <span className="text-gray-300 text-xs">—</span>; } },
   ];
 
   const batchCols: DataColumn<ContractorPortalData['complianceBatches'][number]>[] = [
@@ -268,8 +325,8 @@ export default function ContractorCompliancePage() {
     </>}
 
     {tab === 'registers' && <section className="space-y-4">
-      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Statutory registers with <strong>Form No.</strong>, <strong>Criticality</strong> and <strong>Frequency</strong> — FORM XII, FORM XVI, FORM XVII etc. These map to the CLRA register generation workflow.</div>
-      <EnterpriseDataTable title="Register-wise listing" rows={contractor.registers} columns={registerColumns} rowKey={r => r.id} filename="statutory-registers"/>
+      <div className="bg-blue-50 border border-blue-100 text-blue-900 rounded-xl px-4 py-3 text-xs">Statutory registers and forms applicable to your sites — per <strong>State + Form</strong>, with criticality, frequency, and whether a register has been generated (download the generated batch).</div>
+      <EnterpriseDataTable title="Register-wise listing" rows={registerRows} columns={registerLibColumns} rowKey={r => String(r.id)} filename="statutory-registers"/>
     </section>}
 
     {tab === 'master' && <div className="space-y-5">
@@ -315,7 +372,9 @@ export default function ContractorCompliancePage() {
             <button onClick={downloadMasterTemplate} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5"><Download size={14}/>Download Master Template</button>
             <button onClick={validateMaster} disabled={busy || !masterFile || !activeAdopted} className="h-9 px-3 rounded-lg border border-gray-200 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"><CheckCircle2 size={14}/>Validate File</button>
             <button onClick={generateRegisters} disabled={busy || !activeAdopted} className="h-9 px-4 rounded-lg bg-[#073B67] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"><Landmark size={14}/>{busy ? 'Generating registers…' : 'Generate CLRA Registers'}</button>
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-gray-600 ml-1"><input type="checkbox" checked={includeNonDue} onChange={e => setIncludeNonDue(e.target.checked)} className="accent-[#073B67] w-4 h-4"/>Include forms not due this month</label>
           </div>
+          <p className="text-[11px] text-gray-400">Monthly forms generate every month. Quarterly / Half-Yearly / Yearly forms generate automatically once their period has ended (decided by today&rsquo;s date; yearly after the FY closes in March) — they&rsquo;re skipped until then. Tick above to force them early.</p>
           {report && <div className="rounded-xl border border-gray-100 overflow-hidden">
             <div className={`px-4 py-2.5 text-xs font-bold flex items-center gap-2 ${report.errors.length ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
               {report.errors.length ? <TriangleAlert size={14}/> : <CheckCircle2 size={14}/>}
@@ -325,6 +384,15 @@ export default function ContractorCompliancePage() {
             </div>
             {report.errors.length > 0 && <ul className="divide-y divide-gray-100 max-h-40 overflow-y-auto">{report.errors.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-red-700"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
             {report.warnings.length > 0 && <ul className="divide-y divide-gray-100 max-h-32 overflow-y-auto border-t border-gray-100">{report.warnings.map((issue, i) => <li key={i} className="px-4 py-2 text-[11px] text-amber-700"><strong>Row {issue.row || '—'}{issue.field ? ` · ${issue.field}` : ''}:</strong> {issue.message}</li>)}</ul>}
+            <div className="border-t border-gray-100 px-4 py-3 space-y-2 text-[11px]">
+              <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-600">
+                <span>Detected state: <strong className="text-gray-900">{report.state || '—'}</strong></span>
+                {report.bss && <span>BSS IDs: <strong className="text-green-700">{report.bss.known}</strong> registered · <strong className={report.bss.unknown ? 'text-amber-700' : 'text-gray-500'}>{report.bss.unknown}</strong> unknown{report.bss.checked ? ` of ${report.bss.checked}` : ''}</span>}
+                <span>Templates in flow: <strong className="text-gray-900">{report.templates?.length ?? 0}</strong></span>
+              </div>
+              {(report.templates?.length ?? 0) > 0 && <div className="rounded-lg border border-gray-100 overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50 text-gray-500"><tr><th className="px-3 py-1.5">Form</th><th className="px-3 py-1.5">Title</th><th className="px-3 py-1.5">Columns</th><th className="px-3 py-1.5">Mapped</th></tr></thead>
+                <tbody className="divide-y divide-gray-100">{report.templates!.map(t => <tr key={t.formCode}><td className="px-3 py-1.5 font-mono text-[#073B67]">{t.formCode}</td><td className="px-3 py-1.5 text-gray-700">{t.title || '—'}</td><td className="px-3 py-1.5 text-gray-500">{t.columns}</td><td className="px-3 py-1.5">{t.columns === 0 ? <span className="text-gray-400">—</span> : <><span className={t.coverage === 100 ? 'text-green-700 font-semibold' : 'text-amber-700 font-semibold'}>{t.coverage}%</span>{t.unmapped.length ? <span className="text-gray-400"> · {t.unmapped.length} unmapped</span> : null}</>}</td></tr>)}</tbody></table></div>}
+            </div>
           </div>}
           <p className="text-[11px] text-gray-400">Registers are generated in bulk from the uploaded master data, keyed by State and Site/Location, and listed in the generated batches below.</p>
         </div>

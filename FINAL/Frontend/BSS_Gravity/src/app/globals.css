@@ -221,7 +221,7 @@ html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-moti
   padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1279px) {
   .bss-desktop-nav {
     display: none !important;
   }
@@ -231,7 +231,7 @@ html.bss-reduce-motion *, html.bss-reduce-motion *::before, html.bss-reduce-moti
   }
 }
 
-@media (min-width: 1181px) {
+@media (min-width: 1280px) {
   .bss-desktop-nav {
     display: flex !important;
   }
