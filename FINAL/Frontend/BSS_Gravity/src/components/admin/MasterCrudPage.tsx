@@ -68,8 +68,14 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
     setBusy(true); setError('');
     const values = new FormData(event.currentTarget);
     const record: AdminRow = {};
+    const files: File[] = [];
     config.fields.forEach(field => {
       const raw = values.get(field.name);
+      if (field.type === 'file') {
+        // File inputs are uploaded separately (multipart), not in the JSON body.
+        if (raw instanceof File && raw.size > 0) files.push(raw);
+        return;
+      }
       record[field.name] = field.type === 'number' ? Number(raw || 0) : String(raw ?? '');
     });
     const isEdit = modal === 'edit' && editing;
@@ -77,7 +83,7 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
     // blank values are fine (e.g. an empty password means "keep the current one")
     // — the backend owns validation there.
     if (modal === 'add') {
-      const missing = config.fields.filter(field => field.required && !String(record[field.name] ?? '').trim());
+      const missing = config.fields.filter(field => field.type !== 'file' && field.required && !String(record[field.name] ?? '').trim());
       if (missing.length) {
         setError(`Complete the required fields: ${missing.map(f => f.label).join(', ')}.`);
         setBusy(false);
@@ -90,7 +96,17 @@ export default function MasterCrudPage({ configKey }: { configKey: string }) {
       });
       const body = await response.json().catch(() => ({})) as { row?:AdminRow; error?:string };
       if (!response.ok || !body.row) throw new Error(body.error ?? 'The record could not be saved.');
-      setRows(current => isEdit ? current.map(r => r.id === editing!.id ? body.row! : r) : [body.row!, ...current]);
+      let saved: AdminRow = body.row;
+      // Upload any attached file(s) to the record's file endpoint.
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const upload = await fetch(`/api/admin/masters/${encodeURIComponent(configKey)}/${saved.id}/file`, { method:'POST', body: fd });
+        const uploadBody = await upload.json().catch(() => ({})) as { row?:AdminRow; error?:string };
+        if (!upload.ok || uploadBody.error) throw new Error(uploadBody.error ?? 'The file could not be uploaded.');
+        if (uploadBody.row) saved = uploadBody.row;
+      }
+      setRows(current => isEdit ? current.map(r => r.id === editing!.id ? saved : r) : [saved, ...current]);
       setNotice(`${config.title}: record ${isEdit ? 'updated' : 'created'}.`);
       setModal(null); setEditing(null);
     } catch (reason) {
@@ -155,6 +171,9 @@ function Field({ field, value, isEdit }: { field: AdminField; value: unknown; is
   const placeholder = isPassword && isEdit ? 'Leave blank to keep the current password' : field.placeholder;
   if (field.type === 'select') {
     return <label className="text-xs font-semibold text-gray-700">{field.label}<select name={field.name} required={field.required} defaultValue={String(value ?? '')} className={base + ' bg-white'}>{!field.noPlaceholder && <option value="">Select</option>}{field.options!.map(option => <option key={option}>{option}</option>)}</select></label>;
+  }
+  if (field.type === 'file') {
+    return <label className="text-xs font-semibold text-gray-700">{field.label}{value ? <span className="ml-2 text-[11px] font-normal text-gray-500">Current: {String(value)}</span> : null}<input name={field.name} type="file" accept="application/pdf" className="mt-1 block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-[#0F172A] file:px-3 file:py-1.5 file:text-white file:text-xs file:font-semibold"/></label>;
   }
   if (field.type === 'textarea') {
     return <label className="text-xs font-semibold text-gray-700">{field.label}<textarea name={field.name} required={field.required} defaultValue={String(value ?? '')} rows={3} className={base} placeholder={placeholder}/></label>;

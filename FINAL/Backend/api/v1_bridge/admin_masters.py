@@ -7,6 +7,7 @@ lost between the form and the database.
 """
 
 # ruff: noqa: F401,F403
+import os
 import uuid
 
 from django.db import IntegrityError
@@ -166,6 +167,7 @@ def _specs():
         "defaults": {"industry": "All Industries"},
         "unique": ("state", "wage_zone", "grade", "employment_category", "effective_from"),
         "unique_message": "This record already exists — duplicate cannot be added",
+        "file_field": "notification_file",
         "fields": {
             "state": ("state", "text"), "zone": ("wage_zone", "text"),
             "grade": ("grade", "text"), "employmentCategory": ("employment_category", "text"),
@@ -173,6 +175,7 @@ def _specs():
             "totalPerMonth": ("total_wage", "number"),
             "effectiveFrom": ("effective_from", "date"), "effectiveTo": ("effective_to", "date"),
             "minimumWage": (None, "number"), "floorWage": (None, "number"),
+            "notificationNumber": ("notification_number", "text"),
         },
     }
     document = {
@@ -380,6 +383,9 @@ def _row(spec, obj):
         out[name] = _get_field(obj, kind, attr) if attr else details.get(name, "")
     for name, (_attr, _resolver, display) in spec.get("foreign", {}).items():
         out[name] = _foreign_display(obj, display)
+    if spec.get("file_field"):
+        stored = getattr(obj, spec["file_field"], None)
+        out["notificationFile"] = os.path.basename(stored.name) if stored else ""
     if spec.get("special") == "users":
         out["mobile"], out["email"] = _user_contacts(obj)
         out["name"] = _user_name(obj)

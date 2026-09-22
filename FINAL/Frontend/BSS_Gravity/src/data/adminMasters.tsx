@@ -3,7 +3,7 @@
 
 import { INDIA_STATES } from '@/data/indiaStates';
 
-export type AdminFieldType = 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox' | 'multi';
+export type AdminFieldType = 'text' | 'number' | 'select' | 'date' | 'textarea' | 'checkbox' | 'multi' | 'file';
 export type AdminField = { name: string; label: string; type: AdminFieldType; options?: string[]; required?: boolean; placeholder?: string; noPlaceholder?: boolean };
 export type AdminRow = Record<string, string | number | boolean | string[]>;
 
@@ -131,6 +131,8 @@ export const MINIMUM_WAGE_MASTER: MasterConfig = {
     { id: 'total', header: 'Total / Month', value: r => `₹${r.totalPerMonth}` },
     { id: 'minWage', header: 'Minimum Wage', value: r => `₹${r.minimumWage}` },
     { id: 'floor', header: 'Floor Wage', value: r => `₹${r.floorWage}` },
+    { id: 'notificationNumber', header: 'Notification No.', value: r => String(r.notificationNumber || '—') },
+    { id: 'notificationFile', header: 'Notification PDF', value: r => String(r.notificationFile || ''), render: r => r.notificationFile ? <a href={`/api/admin/masters/minimum-wage/${r.id}/file`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-blue-700 hover:underline">View PDF</a> : <span className="text-gray-400 text-xs">—</span> },
   ],
   fields: [
     { name: 'state', label: 'State', type: 'select', options: STATES, required: true },
@@ -144,9 +146,11 @@ export const MINIMUM_WAGE_MASTER: MasterConfig = {
     { name: 'floorWage', label: 'Floor Wage (₹)', type: 'number', required: true },
     { name: 'effectiveFrom', label: 'Effective From', type: 'date', required: true },
     { name: 'effectiveTo', label: 'Effective To', type: 'date' },
+    { name: 'notificationNumber', label: 'Notification Number', type: 'text', placeholder: 'e.g. MH/LAB/2026/123' },
+    { name: 'notificationFile', label: 'Notification PDF', type: 'file' },
   ],
   rows: [],
-  initial: { state: 'Maharashtra', zone: 'Zone 1', grade: 'Grade A', employmentCategory: 'Skilled', basicPerMonth: 10000, vdaPerMonth: 350, totalPerMonth: 10350, minimumWage: 10350, floorWage: 10000, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31' },
+  initial: { state: 'Maharashtra', zone: 'Zone 1', grade: 'Grade A', employmentCategory: 'Skilled', basicPerMonth: 10000, vdaPerMonth: 350, totalPerMonth: 10350, minimumWage: 10350, floorWage: 10000, effectiveFrom: '2026-04-01', effectiveTo: '2027-03-31', notificationNumber: '', notificationFile: '' },
 };
 
 export const DOCUMENT_MASTER: MasterConfig = {

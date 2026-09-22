@@ -1,6 +1,8 @@
 """Role portal payload endpoints, notifications, identity verify and admin views."""
 
 # ruff: noqa: F401,F403
+import os
+
 from .common import *  # noqa: F401,F403
 from .aadhaar import *  # noqa: F401,F403
 from .auth import *  # noqa: F401,F403
@@ -300,6 +302,41 @@ def admin_master_detail(request, key, pk):
 @api_view(["GET", "POST"])
 @authentication_classes([BssSessionAuthentication])
 @permission_classes([IsAuthenticated])
+def admin_master_file(request, key, pk):
+    """Upload (POST) or download (GET) the file attached to a master record.
+
+    Only masters that declare a ``file_field`` (e.g. Minimum Wage's notification
+    PDF) accept a file."""
+    from .admin_masters import _queryset, _row, _specs
+    if request.user.role != "bss_admin":
+        return Response({"error": "BSS Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    spec = _specs().get(key)
+    if spec is None or not spec.get("file_field"):
+        return Response({"error": "This master has no attached file."},
+                        status=status.HTTP_404_NOT_FOUND)
+    obj = _queryset(spec).filter(pk=pk).first()
+    if obj is None:
+        return Response({"error": "Record not found."}, status=status.HTTP_404_NOT_FOUND)
+    field = spec["file_field"]
+    if request.method == "GET":
+        stored = getattr(obj, field, None)
+        if not stored:
+            return Response({"error": "No file attached."}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(stored.open("rb"), as_attachment=True,
+                            filename=os.path.basename(stored.name))
+    upload = request.FILES.get("file")
+    if upload is None:
+        return Response({"error": "Choose a PDF to upload."}, status=status.HTTP_400_BAD_REQUEST)
+    setattr(obj, field, upload)
+    obj.save()
+    log_audit(request.user, "UPDATE", f"master:{key}", pk,
+              after={"summary": f"Updated {key} notification file"})
+    return Response({"row": _row(spec, obj)}, status=status.HTTP_200_OK)
+
+
+@api_view(["GET", "POST"])
+@authentication_classes([BssSessionAuthentication])
+@permission_classes([IsAuthenticated])
 def document_templates(request):
     """Durable storage for the document-engine template records of one owner.
 
@@ -385,6 +422,7 @@ __all__ = [
     "admin_permissions",
     "admin_master_counts",
     "admin_master_detail",
+    "admin_master_file",
     "admin_masters",
     "admin_operations",
     "admin_payroll",
